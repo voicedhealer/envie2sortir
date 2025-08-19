@@ -44,7 +44,7 @@ graph TD
         SeedButton["Seed Button Component\n(src/app/etablissements/seed-button.tsx)"]:::frontend
     end
 
-<pre> ```mermaid %% Backend / Next.js Server
+<pre> ``` %% Backend / Next.js Server
     subgraph "Next.js Server — App Router"
         direction TB
         RoutesDir["Routes Directory\n(src/app/)"]:::api
