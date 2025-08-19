@@ -44,7 +44,7 @@ graph TD
         SeedButton["Seed Button Component\n(src/app/etablissements/seed-button.tsx)"]:::frontend
     end
 
-    %% Backend / Next.js Server
+<pre> ```mermaid %% Backend / Next.js Server
     subgraph "Next.js Server — App Router"
         direction TB
         RoutesDir["Routes Directory\n(src/app/)"]:::api
@@ -114,4 +114,4 @@ graph TD
     classDef frontend fill:#E8F1FF,stroke:#0366d6,color:#0366d6
     classDef api fill:#FFEFD8,stroke:#D97706,color:#D97706
     classDef database fill:#E6FFFA,stroke:#059669,color:#059669
-    classDef config fill:#F3F4F6,stroke:#4B5563,color:#374151
+    classDef config fill:#F3F4F6,stroke:#4B5563,color:#374151 ``` </pre>
