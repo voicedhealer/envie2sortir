@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export async function POST() {
-  // Ajoute quelques établissements de démo si la table est vide
-  const count = await prisma.establishment.count();
-  if (count > 0) {
-    return NextResponse.json({ ok: true, alreadySeeded: true });
-  }
+  try {
+    // Ajoute quelques établissements de démo si la table est vide
+    const count = await prisma.establishment.count();
+    if (count > 0) {
+      return NextResponse.json({ ok: true, alreadySeeded: true });
+    }
 
-  await prisma.establishment.createMany({
-    data: [
+    const data = [
       {
         name: "Le Central Bar",
         slug: "central-bar",
@@ -37,11 +37,22 @@ export async function POST() {
         category: "restaurant",
         status: "pending",
       },
-    ],
-    skipDuplicates: true,
-  });
+    ] as const;
 
-  return NextResponse.json({ ok: true });
+    for (const e of data) {
+      await prisma.establishment.upsert({
+        where: { slug: e.slug },
+        create: e,
+        update: e,
+      });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (error: unknown) {
+    console.error("Seed error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+  }
 }
 
 
