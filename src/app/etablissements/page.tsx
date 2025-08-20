@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import SeedButton from "./seed-button";
 import SearchFilters from "./search-filters";
+import ActionButtons from "./action-buttons";
 
 export default async function EstablishmentsPage({
   searchParams,
@@ -34,7 +35,15 @@ export default async function EstablishmentsPage({
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold">Établissements</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Établissements</h1>
+        <Link
+          href="/etablissements/nouveau"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          + Ajouter un établissement
+        </Link>
+      </div>
 
       <SearchFilters />
 
@@ -53,16 +62,20 @@ export default async function EstablishmentsPage({
       ) : (
         <ul className="mt-6 space-y-3">
           {establishments.map((e) => (
-            <li key={e.id} className="border border-white/10 rounded p-4 hover:bg-white/5 transition-colors">
-              <Link href={`/etablissements/${e.slug}`} className="block">
-                <div className="font-medium">{e.name}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {e.address}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                  Catégorie: {e.category} • Statut: {e.status}
-                </div>
-              </Link>
+            <li key={e.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+              <div className="flex justify-between items-start">
+                <Link href={`/etablissements/${e.slug}`} className="flex-1">
+                  <div className="font-medium text-lg">{e.name}</div>
+                  <div className="text-sm text-gray-600">
+                    {e.address}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Catégorie: {e.category} • Statut: {e.status}
+                  </div>
+                </Link>
+                
+                <ActionButtons establishment={e} />
+              </div>
             </li>
           ))}
         </ul>

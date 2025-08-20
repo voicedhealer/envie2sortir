@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import ActionButtons from "../action-buttons";
 
 export default async function EstablishmentPage({
   params,
@@ -21,18 +22,20 @@ export default async function EstablishmentPage({
 
   return (
     <main className="min-h-screen p-8 max-w-5xl mx-auto">
-      <div className="mb-6">
+      <div className="flex justify-between items-start mb-6">
         <Link href="/etablissements" className="text-blue-500 hover:underline">
           ← Retour à la liste
         </Link>
+        
+        <ActionButtons establishment={establishment} />
       </div>
 
-      <div className="bg-white/5 rounded-lg p-6">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
         <h1 className="text-3xl font-bold mb-4">{establishment.name}</h1>
         
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <p className="text-gray-300 mb-4">{establishment.description}</p>
+            <p className="text-gray-700 mb-4">{establishment.description}</p>
             
             <div className="space-y-2">
               <p><strong>Adresse:</strong> {establishment.address}</p>
@@ -57,9 +60,9 @@ export default async function EstablishmentPage({
                 <h3 className="text-lg font-semibold mb-3">Événements</h3>
                 <div className="space-y-2">
                   {establishment.events.map((event) => (
-                    <div key={event.id} className="bg-white/10 p-3 rounded">
+                    <div key={event.id} className="bg-gray-50 p-3 rounded">
                       <p className="font-medium">{event.title}</p>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-gray-600">
                         {new Date(event.startDate).toLocaleDateString('fr-FR')}
                       </p>
                     </div>

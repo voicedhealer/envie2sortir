@@ -19,7 +19,7 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-20">
           <div className="flex-shrink-0">
             <Link href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
-              <Image src="/logo.svg" alt="Envie2Sortir" width={175} height={150} priority />
+              <Image src="/logo.svg" alt="Envie2Sortir" width={135} height={150} priority />
             </Link>
           </div>
           
