@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 export default function Navigation() {
   const pathname = usePathname();
@@ -13,12 +14,12 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="bg-white/5 border-b border-white/10">
+    <nav className="sticky top-0 z-50 bg-white border-b border-black/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold">
-              Envie2Sortir
+        <div className="flex justify-between items-center h-20">
+          <div className="flex-shrink-0">
+            <Link href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
+              <Image src="/logo.svg" alt="Envie2Sortir" width={175} height={150} priority />
             </Link>
           </div>
           
@@ -29,8 +30,8 @@ export default function Navigation() {
                 href={item.href}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   pathname === item.href
-                    ? "bg-white/10 text-white"
-                    : "text-gray-300 hover:text-white hover:bg-white/5"
+                    ? "bg-black/5 text-black"
+                    : "text-gray-700 hover:text-black hover:bg-black/5"
                 }`}
               >
                 {item.label}

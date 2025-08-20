@@ -10,19 +10,25 @@ export default async function EstablishmentsPage({
 }) {
   const { q, category, status } = searchParams;
   
-  const where = {
-    ...(q && {
-      OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { address: { contains: q, mode: 'insensitive' } },
-      ],
-    }),
-    ...(category && { category }),
-    ...(status && { status }),
-  };
+  const where: any = {};
+  
+  if (q) {
+    where.OR = [
+      { name: { contains: q } },
+      { address: { contains: q } },
+    ];
+  }
+  
+  if (category) {
+    where.category = category;
+  }
+  
+  if (status) {
+    where.status = status;
+  }
 
   const establishments = await prisma.establishment.findMany({
-    where,
+    where: Object.keys(where).length > 0 ? where : undefined,
     orderBy: { name: "asc" },
   });
 
