@@ -8,9 +8,7 @@ export default function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: "Accueil" },
-    { href: "/etablissements", label: "Établissements" },
-    { href: "/carte", label: "Carte" },
+    { href: "/etablissements/nouveau", label: "Ajoutez mon établissement" },
   ];
 
   return (
@@ -23,7 +21,7 @@ export default function Navigation() {
             </Link>
           </div>
           
-          <div className="flex items-center space-x-8">
+          <div className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
               <Link
                 key={item.href}
@@ -37,6 +35,13 @@ export default function Navigation() {
                 {item.label}
               </Link>
             ))}
+
+            <Link href="#connexion" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black">
+              Connexion
+            </Link>
+            <Link href="#inscription" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
+              S'inscrire
+            </Link>
           </div>
         </div>
       </div>

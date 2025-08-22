@@ -15,7 +15,7 @@ type Establishment = {
   email: string;
   website: string;
   instagram: string;
-  category: string;
+  category: string; // Prisma enum value
   status: string;
 };
 
@@ -23,9 +23,32 @@ type EstablishmentFormProps = {
   establishment?: Establishment;
 };
 
-const categories = [
-  "bar", "bowling", "escape_game", "market", "nightclub", 
-  "restaurant", "cinema", "theater", "concert", "museum", "other"
+// Nouvelles catégories affichées (label -> enum Prisma value)
+const categoryOptions: { label: string; value: string }[] = [
+  { label: "Bar d'ambiance / Pub / Brasserie", value: "bar" },
+  { label: "Établissement multi-activités", value: "other" },
+  { label: "Escape game / Jeu d'évasion", value: "escape_game" },
+  { label: "Bowling / Billard / Snooker", value: "bowling" },
+  { label: "Karting / Circuit automobile", value: "other" },
+  { label: "Laser game / Paintball", value: "other" },
+  { label: "Réalité virtuelle (VR) / Arcade", value: "other" },
+  { label: "Casino / Jeux d'argent", value: "other" },
+  { label: "Patinoire / Roller", value: "other" },
+  { label: "Accrobranche / Parcours aventure", value: "other" },
+  { label: "Parc de loisirs enfants", value: "other" },
+  { label: "Cinéma / Drive-in", value: "cinema" },
+  { label: "Discothèque / Club / Boîte de nuit", value: "nightclub" },
+  { label: "Karaoké / Bar à thème", value: "bar" },
+  { label: "Salle de jeux / Flipper", value: "other" },
+  { label: "Mini-golf / Golf indoor", value: "other" },
+  { label: "Trampoline park / Parc indoor", value: "other" },
+  { label: "Spa / Hammam / Bien-être", value: "other" },
+  { label: "Marché nocturne / Événement temporaire", value: "market" },
+  { label: "Concert / Spectacle / Théâtre", value: "concert" },
+  { label: "Rooftop / Terrasse panoramique", value: "other" },
+  { label: "Restaurant", value: "restaurant" },
+  { label: "Musée / Exposition", value: "museum" },
+  { label: "Autre", value: "other" },
 ];
 
 const statuses = ["active", "pending", "suspended"];
@@ -111,10 +134,16 @@ export default function EstablishmentForm({ establishment }: EstablishmentFormPr
       
       const method = establishment ? 'PUT' : 'POST';
       
+      const payload = {
+        ...formData,
+        // Forcer statut pending à la création
+        status: establishment ? formData.status : 'pending',
+      };
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -123,7 +152,6 @@ export default function EstablishmentForm({ establishment }: EstablishmentFormPr
 
       const result = await response.json();
       
-      // Rediriger vers la page de détails
       router.push(`/etablissements/${result.slug || establishment?.slug}`);
       router.refresh();
       
@@ -138,13 +166,11 @@ export default function EstablishmentForm({ establishment }: EstablishmentFormPr
   const handleInputChange = (field: keyof Establishment, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // Générer le slug automatiquement quand le nom change
     if (field === 'name' && !establishment) {
       const slug = generateSlug(value as string);
       setFormData(prev => ({ ...prev, slug }));
     }
     
-    // Effacer l'erreur du champ modifié
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -302,7 +328,7 @@ export default function EstablishmentForm({ establishment }: EstablishmentFormPr
           />
         </div>
 
-        {/* Catégorie et Statut */}
+        {/* Catégorie */}
         <div>
           <label className="block text-sm font-medium mb-2">
             Catégorie *
@@ -314,31 +340,32 @@ export default function EstablishmentForm({ establishment }: EstablishmentFormPr
               errors.category ? 'border-red-500' : 'border-gray-300'
             }`}
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1).replace('_', ' ')}
-              </option>
+            {categoryOptions.map((opt) => (
+              <option key={opt.label} value={opt.value}>{opt.label}</option>
             ))}
           </select>
           {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">
-            Statut
-          </label>
-          <select
-            value={formData.status}
-            onChange={(e) => handleInputChange('status', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {statuses.map((s) => (
-              <option key={s} value={s}>
-                {s === "active" ? "Actif" : s === "pending" ? "En attente" : "Suspendu"}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Statut: visible seulement en édition (administration) */}
+        {establishment && (
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Statut
+            </label>
+            <select
+              value={formData.status}
+              onChange={(e) => handleInputChange('status', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {statuses.map((s) => (
+                <option key={s} value={s}>
+                  {s === "active" ? "Actif" : s === "pending" ? "En attente" : "Suspendu"}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Boutons */}
