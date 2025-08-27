@@ -11,7 +11,7 @@ export async function POST() {
 
     const data = [
       {
-        name: "Le Central Bar",
+        name: "Le Central Bar démo",
         slug: "central-bar",
         address: "10 Rue Principale, 21000 Dijon",
         latitude: 47.322,
@@ -20,7 +20,7 @@ export async function POST() {
         status: "active",
       },
       {
-        name: "Cinéma Lumière",
+        name: "Cinéma Lumière démo",
         slug: "cinema-lumiere",
         address: "25 Avenue des Arts, 21000 Dijon",
         latitude: 47.329,
@@ -29,7 +29,7 @@ export async function POST() {
         status: "active",
       },
       {
-        name: "Ristorante Bella Vita",
+        name: "Ristorante Bella Vita démo",
         slug: "ristorante-bella-vita",
         address: "3 Rue des Gourmets, 21000 Dijon",
         latitude: 47.321,

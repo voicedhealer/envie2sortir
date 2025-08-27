@@ -1,0 +1,186 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+// Fonction pour calculer la distance entre deux points (formule haversine)
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Rayon de la Terre en km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+// Fonction pour extraire les mots-clés significatifs
+function extractKeywords(envie: string): string[] {
+  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux'];
+  
+  return envie
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .split(/[\s,]+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word))
+    .map(word => word.trim());
+}
+
+// Fonction pour vérifier si un établissement est ouvert
+function isOpenNow(horairesOuverture: any): boolean {
+  if (!horairesOuverture) return true; // Par défaut, considéré comme ouvert
+  
+  try {
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+    const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutes depuis minuit
+    
+    const horaires = horairesOuverture[dayOfWeek];
+    if (!horaires || !horaires.ouvert) return false;
+    
+    const ouverture = horaires.ouverture || 0; // Minutes depuis minuit
+    const fermeture = horaires.fermeture || 1440; // Minutes depuis minuit (24h)
+    
+    return currentTime >= ouverture && currentTime <= fermeture;
+  } catch {
+    return true; // En cas d'erreur, considéré comme ouvert
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const envie = searchParams.get('envie');
+    const ville = searchParams.get('ville');
+    const rayon = parseInt(searchParams.get('rayon') || '5');
+    const lat = parseFloat(searchParams.get('lat') || '0');
+    const lng = parseFloat(searchParams.get('lng') || '0');
+
+    if (!envie) {
+      return NextResponse.json({ error: "Paramètre 'envie' requis" }, { status: 400 });
+    }
+
+    // Extraire les mots-clés de l'envie
+    const keywords = extractKeywords(envie);
+    
+    if (keywords.length === 0) {
+      return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
+    }
+
+    // Construire la requête de base
+    let whereClause: any = {
+      status: 'active'
+    };
+
+    // Filtre par ville si spécifiée
+    if (ville && ville !== "Autour de moi") {
+      whereClause.OR = [
+        { city: { contains: ville } },
+        { address: { contains: ville } }
+      ];
+    }
+
+    // Récupérer tous les établissements avec leurs tags
+    const establishments = await prisma.establishment.findMany({
+      where: whereClause,
+      include: {
+        tags: true,
+        images: {
+          where: { isPrimary: true },
+          take: 1
+        }
+      }
+    });
+
+    // Calculer le score pour chaque établissement
+    const scoredEstablishments = establishments.map(establishment => {
+      let score = 0;
+      let matchedTags: string[] = [];
+      
+      // Score basé sur les tags
+      establishment.tags.forEach(tag => {
+        const tagLower = tag.tag.toLowerCase();
+        keywords.forEach(keyword => {
+          if (tagLower.includes(keyword) || keyword.includes(tagLower)) {
+            score += tag.poids * 10; // Poids du tag * 10
+            matchedTags.push(tag.tag);
+          }
+        });
+      });
+
+      // Score basé sur le nom et la description
+      const nameLower = establishment.name.toLowerCase();
+      const descriptionLower = (establishment.description || '').toLowerCase();
+      
+      keywords.forEach(keyword => {
+        if (nameLower.includes(keyword)) {
+          score += 20; // Nom contient le mot-clé
+        }
+        if (descriptionLower.includes(keyword)) {
+          score += 10; // Description contient le mot-clé
+        }
+      });
+
+      // Score basé sur la distance (si géolocalisation)
+      let distance = 0;
+      if (lat && lng && establishment.latitude && establishment.longitude) {
+        distance = calculateDistance(lat, lng, establishment.latitude, establishment.longitude);
+        
+        // Bonus de proximité (plus proche = meilleur score)
+        if (distance <= rayon) {
+          score += Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
+        }
+      }
+
+      // Vérifier si ouvert
+      const isOpen = isOpenNow(establishment.horairesOuverture);
+      if (isOpen) {
+        score += 15; // Bonus si ouvert
+      }
+
+      return {
+        ...establishment,
+        score,
+        distance: Math.round(distance * 100) / 100,
+        isOpen,
+        matchedTags: [...new Set(matchedTags)], // Supprimer les doublons
+        primaryImage: establishment.images[0]?.url || null
+      };
+    });
+
+    // Filtrer par rayon et trier par score
+    const filteredEstablishments = scoredEstablishments
+      .filter(est => !lat || !lng || est.distance <= rayon)
+      .filter(est => est.score > 0) // Seulement ceux qui ont un score > 0
+      .sort((a, b) => {
+        // Tri principal par score décroissant
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
+        // Tri secondaire par distance croissante
+        return a.distance - b.distance;
+      })
+      .slice(0, 15); // Limiter à 15 résultats
+
+    return NextResponse.json({
+      success: true,
+      results: filteredEstablishments,
+      total: filteredEstablishments.length,
+      query: {
+        envie,
+        ville,
+        rayon,
+        keywords,
+        coordinates: lat && lng ? { lat, lng } : null
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur recherche par envie:', error);
+    return NextResponse.json(
+      { error: "Erreur lors de la recherche" },
+      { status: 500 }
+    );
+  }
+}

@@ -124,7 +124,8 @@ export default function HeroSearch() {
 
   const handleActivityFocus = async () => {
     try {
-      const res = await fetch('/api/categories');
+      const q = cityValue && cityValue !== 'Autour de moi' ? `?q=${encodeURIComponent(cityValue)}` : '';
+      const res = await fetch('/api/categories' + q);
       const json = await res.json();
       setCategories(json.categories || []);
       setShowActivityModal(true);
@@ -177,8 +178,9 @@ export default function HeroSearch() {
       params.set("lat", userLocation.lat.toString());
       params.set("lng", userLocation.lng.toString());
     }
-    if (activity) params.set("category", activity);
-    router.push(`/etablissements?${params.toString()}`);
+    const isAll = activity.trim().toLowerCase() === 'toutes les sorties';
+    if (activity && !isAll) params.set("category", activity);
+    router.push(`/recherche?${params.toString()}`);
   };
 
   // Fermer le dropdown si clic en dehors

@@ -63,65 +63,77 @@ model Establishment {
   slug                    String                 @unique
   description             String?
   address                 String
-  latitude                Float
-  longitude               Float
+  city                    String?
+  postalCode              String?
+  country                 String                 @default("France")
+  latitude                Float?
+  longitude               Float?
   phone                   String?
   email                   String?
   website                 String?
-  instagram               String?
   category                EstablishmentCategory
-  openingHours            Json?
   status                  EstablishmentStatus    @default(pending)
-  subscriptionType        SubscriptionType       @default(basic)
-  subscriptionExpiresAt   DateTime?
-  ownerId                 String?
-  owner                   User?                  @relation("OwnerEstablishments", fields: [ownerId], references: [id])
+  specialites             String                @default("") // Stocké comme JSON string
+  motsClesRecherche       String?
+  horairesOuverture       Json?
+  
+  // Relations
+  owner                   User                   @relation("OwnerEstablishments", fields: [ownerId], references: [id])
+  ownerId                 String
   images                  Image[]
   events                  Event[]
+  tags                    EtablissementTag[]
   featuredPromotions      FeaturedPromotion[]
+  
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
-  @@index([category])
-  @@index([status])
-  @@index([latitude, longitude])
 }
 
-model Event {
-  id              String        @id @default(cuid())
-  establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id])
-  title           String
-  description     String?
-  startDate       DateTime
-  endDate         DateTime
-  imageUrl        String?
-  isFeatured      Boolean       @default(false)
+model EtablissementTag {
+  id              Int           @id @default(autoincrement())
+  etablissementId String
+  tag             String
+  typeTag         String        // 'nourriture', 'activite', 'ambiance'
+  poids           Int           @default(5) // importance 1-10
   createdAt       DateTime      @default(now())
-  @@index([startDate])
-  @@index([endDate])
+  etablissement   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+
+  @@map("etablissement_tags")
 }
 
 model Image {
   id              String        @id @default(cuid())
-  establishmentId String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id])
   url             String
-  isPrimary       Boolean       @default(false)
   altText         String?
+  isPrimary       Boolean       @default(false)
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  establishmentId String
+  createdAt       DateTime      @default(now())
+}
+
+model Event {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime?
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model FeaturedPromotion {
-  id              String                 @id @default(cuid())
-  establishmentId String
-  establishment   Establishment          @relation(fields: [establishmentId], references: [id])
-  type            FeaturedPlacementType
+  id              String                @id @default(cuid())
+  title           String
+  description     String?
   startDate       DateTime
   endDate         DateTime
-  pricePaidCents  Int
-  status          String                 @default("active")
-  @@index([type])
-  @@index([startDate])
-  @@index([endDate])
+  placementType   FeaturedPlacementType
+  establishment   Establishment         @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  establishmentId String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 }
 
 

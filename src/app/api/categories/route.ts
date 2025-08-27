@@ -16,12 +16,24 @@ const LABELS: Record<string, string> = {
   other: "Autres activités",
 };
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const q = searchParams.get("q")?.trim();
+
+    const where: any = {};
+    if (q) {
+      where.OR = [
+        { name: { contains: q } },
+        { address: { contains: q } },
+      ];
+    }
+
     const rows = await prisma.establishment.groupBy({
       by: ["category"],
       _count: { category: true },
       orderBy: { _count: { category: "desc" } },
+      where: Object.keys(where).length ? where : undefined,
     });
 
     const data = rows.map((r) => ({

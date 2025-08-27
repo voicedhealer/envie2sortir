@@ -8,6 +8,7 @@ export default function Navigation() {
   const pathname = usePathname();
 
   const navItems = [
+    { href: "/carte", label: "", icon: "/icone_maps_3.svg" },
     { href: "/etablissements/nouveau", label: "Ajoutez mon établissement" },
   ];
 
@@ -26,21 +27,36 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
                   pathname === item.href
                     ? "bg-black/5 text-black"
                     : "text-gray-700 hover:text-black hover:bg-black/5"
                 }`}
               >
+                {item.icon && (
+                  <Image 
+                    src={item.icon} 
+                    alt="" 
+                    width={10} 
+                    height={10} 
+                    className="w-7 h-7"
+                  />
+                )}
                 {item.label}
               </Link>
             ))}
 
-            <Link href="#connexion" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black">
-              Connexion
-            </Link>
             <Link href="#inscription" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
               S'inscrire
+            </Link>
+            <Link href="#connexion" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
+              <Image 
+                src="/connexion_user.svg" 
+                alt="Connexion" 
+                width={20} 
+                height={20} 
+                className="w-7 h-7"
+              />
             </Link>
           </div>
         </div>
