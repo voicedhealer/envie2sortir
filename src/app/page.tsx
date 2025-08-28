@@ -394,7 +394,7 @@ export default function Home() {
 
           <div className="border-t border-gray-700 mt-8 pt-8 text-center">
             <p className="text-gray-400">
-              © 2024 Envie2Sortir. Tous droits réservés. | 
+              © 2025 Envie2Sortir. Tous droits réservés. | 
               <a href="#" className="hover:text-white transition-colors ml-2">Mentions légales</a> | 
               <a href="#" className="hover:text-white transition-colors ml-2">Politique de confidentialité</a>
             </p>

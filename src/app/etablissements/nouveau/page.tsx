@@ -1,4 +1,5 @@
 import EstablishmentForm from "../establishment-form";
+import Image from 'next/image';
 
 export default function NewEstablishmentPage() {
   return (
@@ -23,8 +24,15 @@ export default function NewEstablishmentPage() {
         {/* Section d'introduction */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl text-white"></span>
+            <div className="w-32 h-32  mx-auto mb-0">
+              <Image 
+              src="/logo.svg" 
+              alt="Envie2Sortir Logo" 
+              width={1000} 
+              height={1000}
+              className="object-contain"
+              />
+              <span className="text-3xl text-white">Envie2Sortir</span>
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Rejoignez notre plateforme</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">

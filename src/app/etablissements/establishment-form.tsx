@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ModernCategorySelector } from "@/components/ModernCategorySelector"; 
 
 // Types
 type ProfessionalData = {
@@ -150,6 +151,62 @@ const SUBSCRIPTION_PLANS = {
   }
 };
 
+// Fonction pour mapper les nouvelles catégories vers les anciennes pour compatibilité
+const getCategoryServicesAndAmbiance = (categoryValue: string) => {
+  // Mapping des nouvelles catégories vers les anciennes structures
+  const categoryMappings: Record<string, keyof typeof CATEGORIES> = {
+    // Bars
+    'bar_ambiance': 'bar',
+    'pub_traditionnel': 'bar',
+    'brasserie_artisanale': 'bar',
+    'bar_cocktails': 'bar',
+    'bar_vins': 'bar',
+    'bar_sports': 'bar',
+    'rooftop_bar': 'bar',
+    'bar_karaoke': 'bar',
+    'bar_bières': 'bar',
+    
+    // Restaurants
+    'restaurant_gastronomique': 'restaurant',
+    'restaurant_traditionnel': 'restaurant',
+    'restaurant_familial': 'restaurant',
+    'bistrot': 'restaurant',
+    'restaurant_italien': 'restaurant',
+    'restaurant_asiatique': 'restaurant',
+    'restaurant_oriental': 'restaurant',
+    'pizzeria': 'restaurant',
+    
+    // Fast food → restaurant pour l'instant
+    'kebab': 'restaurant',
+    'burger': 'restaurant',
+    'tacos_mexicain': 'restaurant',
+    
+    // Sorties nocturnes
+    'discotheque': 'nightclub',
+    'club_techno': 'nightclub',
+    'boite_nuit_mainstream': 'nightclub',
+    
+    // Activités
+    'escape_game_horreur': 'escape_game',
+    'escape_game_aventure': 'escape_game',
+    'bowling': 'escape_game', // Temporaire
+    
+    // Cinéma
+    'cinema_mainstream': 'cinema',
+    
+    // Fallback vers les anciennes catégories
+    'bar': 'bar',
+    'restaurant': 'restaurant',
+    'nightclub': 'nightclub',
+    'escape_game': 'escape_game',
+    'cinema': 'cinema'
+  };
+  
+  const mappedCategory = categoryMappings[categoryValue];
+  return mappedCategory ? CATEGORIES[mappedCategory] : null;
+};
+
+
 export default function ProfessionalRegistrationForm() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState<FormStep>(1);
@@ -222,7 +279,11 @@ export default function ProfessionalRegistrationForm() {
     }
     
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: undefined }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
     }
   };
 
@@ -303,11 +364,14 @@ export default function ProfessionalRegistrationForm() {
     try {
       const formDataToSend = new FormData();
       
+      // Ajouter toutes les données
       Object.entries(formData).forEach(([key, value]) => {
         if (key === 'photos') {
-          value.forEach((photo: File, index: number) => {
-            formDataToSend.append(`photo_${index}`, photo);
-          });
+          if (Array.isArray(value)) {
+            (value as File[]).forEach((photo, index) => {
+              formDataToSend.append(`photo_${index}`, photo);
+            });
+          }
         } else if (Array.isArray(value)) {
           formDataToSend.append(key, JSON.stringify(value));
         } else if (value !== undefined && value !== null) {
@@ -315,19 +379,29 @@ export default function ProfessionalRegistrationForm() {
         }
       });
       
-      // Simulation d'envoi - remplacer par une vraie API
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch('/api/professional-registration', {
+        method: 'POST',
+        body: formDataToSend,
+      });
       
-      alert('Inscription réussie ! Votre établissement sera vérifié sous 24h.');
-      router.push('/');
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Erreur lors de l\'inscription');
+      }
+      
+      // Redirection vers page de confirmation
+      alert(result.message);
+      router.push(`/etablissements/${result.slug}`);
       
     } catch (error) {
       console.error('Erreur:', error);
-      alert('Erreur lors de l\'inscription');
+      alert(error instanceof Error ? error.message : 'Erreur lors de l\'inscription');
     } finally {
       setIsSubmitting(false);
     }
   };
+  
 
 /**
  * Composant de rendu dynamique pour chaque étape du formulaire professionnel.
@@ -495,28 +569,18 @@ const renderStep = () => {
             {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
           </div>
           {/* Catégorie principale */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Catégorie principale *</label>
-            <select
-              value={formData.primaryCategory}
-              onChange={(e) => handleInputChange('primaryCategory', e.target.value)}
-              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.primaryCategory ? 'border-red-500' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Sélectionnez une catégorie</option>
-              {Object.entries(CATEGORIES).map(([key, cat]) => (
-                <option key={key} value={key}>{cat.label}</option>
-              ))}
-            </select>
-            {errors.primaryCategory && <p className="text-red-500 text-sm mt-1">{errors.primaryCategory}</p>}
-          </div>
+          <ModernCategorySelector
+            value={formData.primaryCategory}
+            onChange={(value) => handleInputChange('primaryCategory', value)}
+            error={errors.primaryCategory}
+          />
         </div>
       );
+
     // === Etape 3 : Services & Ambiances ===
     case 3: {
       // On récupère la catégorie pour afficher les bons services/ambiances dynamiquement
-      const selectedCategory = CATEGORIES[formData.primaryCategory as keyof typeof CATEGORIES];
+const selectedCategory = getCategoryServicesAndAmbiance(formData.primaryCategory);
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
