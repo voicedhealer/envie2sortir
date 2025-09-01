@@ -127,7 +127,7 @@ export default function EnvieSearchResults() {
             )}
           </div>
           <Link 
-            href="/" 
+            href={`/recherche/envie?envie=${encodeURIComponent(query?.envie || '')}&rayon=${query?.rayon || 5}&ville=${encodeURIComponent(query?.ville || '')}${query?.coordinates ? `&lat=${query.coordinates.lat}&lng=${query.coordinates.lng}` : ''}`}
             className="text-sm text-orange-600 hover:text-orange-700 underline"
           >
             Modifier la recherche
@@ -190,7 +190,7 @@ export default function EnvieSearchResults() {
                           {establishment.category}
                         </span>
                         <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                          Score: {establishment.score}
+                          Score: {Math.round(establishment.score)}
                         </span>
                         {establishment.distance > 0 && (
                           <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
@@ -243,7 +243,11 @@ export default function EnvieSearchResults() {
 
         {/* Carte */}
         <div className="lg:col-span-1 lg:sticky lg:top-24 h-[600px] border rounded-xl overflow-hidden">
-          <MapComponent establishments={results as any} />
+          <MapComponent 
+            establishments={results as any} 
+            searchCenter={query?.coordinates}
+            searchRadius={query?.rayon}
+          />
         </div>
       </div>
     </main>

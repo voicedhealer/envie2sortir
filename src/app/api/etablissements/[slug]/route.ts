@@ -19,6 +19,8 @@
  * - Gestion des erreurs avec codes HTTP appropriés
  */
 
+
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -41,6 +43,15 @@ interface UpdateEstablishmentData {
   services?: string[] | string;
   ambiance?: string[] | string;
   status?: 'active' | 'pending' | 'suspended';
+  hours?: {
+    monday?: { open: string; close: string; isOpen: boolean };
+    tuesday?: { open: string; close: string; isOpen: boolean };
+    wednesday?: { open: string; close: string; isOpen: boolean };
+    thursday?: { open: string; close: string; isOpen: boolean };
+    friday?: { open: string; close: string; isOpen: boolean };
+    saturday?: { open: string; close: string; isOpen: boolean };
+    sunday?: { open: string; close: string; isOpen: boolean };
+  };
 }
 
 /**
@@ -90,7 +101,8 @@ function isValidCoordinates(lat?: number, lng?: number): boolean {
  *   category?: string,       // Catégorie (doit correspondre à l'enum)
  *   services?: string[],     // Array des services proposés
  *   ambiance?: string[],     // Array des ambiances
- *   status?: string          // Statut : 'active', 'pending', 'suspended'
+ *   status?: string,         // Statut : 'active', 'pending', 'suspended'
+ *   hours?: object           // Horaires d'ouverture par jour de la semaine
  * }
  * 
  * Responses :
@@ -206,6 +218,11 @@ export async function PUT(
       updateData.ambiance = Array.isArray(body.ambiance)
         ? JSON.stringify(body.ambiance)
         : body.ambiance;
+    }
+
+    // Gérer les horaires d'ouverture
+    if (body.hours) {
+      updateData.hours = JSON.stringify(body.hours);
     }
 
     // Mettre à jour l'établissement dans une transaction

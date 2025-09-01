@@ -214,95 +214,6 @@ const getActivitiesServicesAndAmbiance = (activities: string[]) => {
   return firstMappedCategory ? CATEGORIES[firstMappedCategory] : null;
 };
 
-// Listes génériques de secours pour Services & Ambiances (fallback)
-const GENERIC_AMBIANCES = [
-  "Familial",
-  "Entre amis", 
-  "Romantique",
-  "Décontracté",
-  "Festif"
-];
-
-// Liste universelle de services organisée par catégories
-const UNIVERSAL_SERVICES = {
-  restauration: {
-    title: "RESTAURATION & BAR",
-    icon: "🍽️",
-    services: [
-      "Bar/Boissons",
-      "Snack",
-      "Restaurant complet",
-      "Terrasse",
-      "Service traiteur"
-    ]
-  },
-  confort: {
-    title: "CONFORT & COMMODITÉS",
-    icon: "🛋️",
-    services: [
-      "WiFi gratuit",
-      "Parking gratuit",
-      "Vestiaires",
-      "Casiers",
-      "Climatisation",
-      "Accessible PMR",
-      "Toilettes adaptées",
-      "Espace fumeurs"
-    ]
-  },
-  divertissement: {
-    title: "JEUX & DIVERTISSEMENT ANNEXES",
-    icon: "🎮",
-    services: [
-      "Billard",
-      "Babyfoot",
-      "Jeux d'arcade",
-      "Pétanque",
-      "Fléchettes",
-      "Jeux de cartes/société",
-      "TV grand écran",
-      "Karaoké",
-      "Piste de danse"
-    ]
-  },
-  familial: {
-    title: "SERVICES FAMILIAUX",
-    icon: "👨‍👩‍👧‍👦",
-    services: [
-      "Menu enfant",
-      "Chaises hautes",
-      "Table à langer",
-      "Espace bébé",
-      "Animations enfants",
-      "Anniversaires",
-      "Garderie"
-    ]
-  },
-  evenementiel: {
-    title: "ÉVÉNEMENTIEL & GROUPES",
-    icon: "🎉",
-    services: [
-      "Privatisation possible",
-      "Séminaires",
-      "Team building",
-      "Réceptions",
-      "Groupes scolaires"
-    ]
-  },
-  autres: {
-    title: "AUTRES",
-    icon: "🛍️",
-    services: [
-      "Boutique souvenirs",
-      "Location équipements",
-      "Cours/stages",
-      "Réservation en ligne",
-      "Paiement CB",
-      "Animaux acceptés"
-    ]
-  }
-};
-
 
 export default function ProfessionalRegistrationForm() {
   const router = useRouter();
@@ -720,26 +631,41 @@ const renderStep = () => {
               Sélectionnez ce que votre établissement propose réellement
             </p>
           </div>
-          {/* Interface temporaire simplifiée pour Services */}
-          <div className="space-y-4">
-            <label className="block text-sm font-medium mb-4">Services de base</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {['WiFi gratuit', 'Parking', 'Accessible PMR', 'Terrasse', 'Bar/Boissons', 'Climatisation'].map((service) => (
-                <label key={service} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.services.includes(service)}
-                    onChange={() => handleArrayToggle('services', service)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm">{service}</span>
-                </label>
-              ))}
+          
+          {/* Services universels organisés par catégories */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Services & Équipements</h3>
+              <span className="text-sm text-gray-500">
+                {formData.services.length} service{formData.services.length > 1 ? 's' : ''} sélectionné{formData.services.length > 1 ? 's' : ''}
+              </span>
             </div>
+            
+            {Object.entries(UNIVERSAL_SERVICES).map(([key, category]) => (
+              <div key={key} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">{category.icon}</span>
+                  <h4 className="font-medium text-gray-900">{category.title}</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {category.services.map((service: string) => (
+                    <label key={service} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.services.includes(service)}
+                        onChange={() => handleArrayToggle('services', service)}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{service}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-
-          {/* Interface temporaire simplifiée pour Ambiances */}
-          <div className="border-t pt-6 space-y-4">
+          
+          {/* Ambiances */}
+          <div className="border-t pt-6">
             <label className="block text-sm font-medium mb-4">
               Quelle ambiance décrit le mieux votre établissement ?
             </label>
@@ -757,51 +683,6 @@ const renderStep = () => {
               ))}
             </div>
           </div>
-
-          {/* Liste de services */}
-          {/* Commenté temporairement pour corriger l'erreur selectedCategory */}
-          {false && selectedCategory &&
-            <div>
-              <label className="block text-sm font-medium mb-4">Quels services proposez-vous ? *</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedCategory.services.map((service) => (
-                  <label key={service} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.services.includes(service)}
-                      onChange={() => handleArrayToggle('services', service)}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{service}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.services && <p className="text-red-500 text-sm mt-1">{errors.services}</p>}
-            </div>
-          }
-          {/* Liste d’ambiances */}
-          {/* Commenté temporairement pour corriger l'erreur selectedCategory */}
-          {false && selectedCategory &&
-            <div>
-              <label className="block text-sm font-medium mb-4">
-                Quelle ambiance décrit le mieux votre établissement ? *
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedCategory.ambiance.map((amb) => (
-                  <label key={amb} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.ambiance.includes(amb)}
-                      onChange={() => handleArrayToggle('ambiance', amb)}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{amb}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.ambiance && <p className="text-red-500 text-sm mt-1">{errors.ambiance}</p>}
-            </div>
-          }
         </div>
       );
     }

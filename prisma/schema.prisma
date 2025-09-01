@@ -31,11 +31,12 @@ enum UserRole {
 }
 
 /**
- * CATEGORIES ULTRA-DÉTAILLÉES POUR SYSTÈME "ENVIE DE..."
- * Chaque catégorie correspond à une expérience spécifique
+ * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
+ * Chaque activité correspond à une expérience spécifique
  * Permet un matching parfait avec les intentions des clients
+ * Un établissement peut proposer plusieurs activités
  */
-enum EstablishmentCategory {
+enum EstablishmentActivity {
   // === BARS & BOISSONS ===
   bar_ambiance           // Bar d'ambiance/lounge - "envie d'un apéro chic"
   pub_traditionnel       // Pub traditionnel - "envie d'une bière entre potes"
@@ -292,8 +293,8 @@ model Establishment {
   instagram               String?                // Compte Instagram
   facebook                String?                // Page Facebook
   
-  // Catégorisation ultra-précise
-  category                EstablishmentCategory  // Catégorie principale
+  // Activités multiples - un établissement peut proposer plusieurs activités
+  activities               Json?                  // Activités proposées (JSON array)
   specialites             String                 @default("") // Spécialités (JSON string)
   motsClesRecherche       String?                // Mots-clés pour la recherche
   

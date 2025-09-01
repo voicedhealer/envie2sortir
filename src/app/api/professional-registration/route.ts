@@ -25,9 +25,10 @@ export async function POST(request: Request) {
       name: formData.get('establishmentName') as string,
       description: formData.get('description') as string || '',
       address: formData.get('address') as string,
-      primaryCategory: formData.get('primaryCategory') as string,
+      activities: JSON.parse(formData.get('activities') as string || '[]'),
       services: JSON.parse(formData.get('services') as string || '[]'),
       ambiance: JSON.parse(formData.get('ambiance') as string || '[]'),
+      hours: JSON.parse(formData.get('hours') as string || '{}'),
       website: formData.get('website') as string || '',
       instagram: formData.get('instagram') as string || '',
       facebook: formData.get('facebook') as string || '',
@@ -71,9 +72,10 @@ export async function POST(request: Request) {
           slug: generateSlug(establishmentData.name),
           description: establishmentData.description,
           address: establishmentData.address,
-          category: establishmentData.primaryCategory as any, // Utilise ton enum existant
+          activities: establishmentData.activities, // Activités multiples
           services: establishmentData.services, // Déjà un array, pas besoin de JSON.stringify
           ambiance: establishmentData.ambiance, // Déjà un array, pas besoin de JSON.stringify
+          horairesOuverture: establishmentData.hours, // Horaires d'ouverture
           website: establishmentData.website,
           instagram: establishmentData.instagram,
           facebook: establishmentData.facebook,

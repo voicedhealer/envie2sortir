@@ -144,9 +144,12 @@ export default function DemandesPage() {
                       <p>{establishment.address}</p>
                     </div>
                     <div>
-                      <p className="font-medium text-gray-700">Catégorie</p>
+                      <p className="font-medium text-gray-700">Activités</p>
                       <p className="capitalize">
-                        {establishment.category.replace(/_/g, " ")}
+                        {establishment.activities && Array.isArray(establishment.activities) 
+                          ? establishment.activities.join(', ').replace(/_/g, " ")
+                          : 'Non définies'
+                        }
                       </p>
                     </div>
                     <div>

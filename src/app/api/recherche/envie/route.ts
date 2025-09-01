@@ -68,42 +68,50 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
     }
 
-    // Construire la requête de base
-    let whereClause: any = {
-      status: 'active'
-    };
-
-    // Filtre par ville si spécifiée
-    if (ville && ville !== "Autour de moi") {
-      whereClause.OR = [
-        { city: { contains: ville } },
-        { address: { contains: ville } }
-      ];
-    }
-
-    // Récupérer tous les établissements avec leurs tags
+    // 1. Charger TOUS les établissements actifs avec coordonnées
     const establishments = await prisma.establishment.findMany({
-      where: whereClause,
-      include: {
-        tags: true,
-        images: {
-          where: { isPrimary: true },
-          take: 1
+      where: { 
+        status: 'active' as const,
+        // Seulement les établissements avec coordonnées GPS
+        latitude: { not: null },
+        longitude: { not: null }
+      },
+      include: { 
+        tags: true, 
+        images: { 
+          where: { isPrimary: true }, 
+          take: 1 
         }
       }
     });
 
-    // Calculer le score pour chaque établissement
-    const scoredEstablishments = establishments.map(establishment => {
-      let score = 0;
+    // 3. Appliquer le filtrage géographique D'ABORD
+    const establishmentsInRadius = establishments.filter(est => {
+      if (lat && lng && est.latitude && est.longitude) {
+        const distance = calculateDistance(lat, lng, est.latitude, est.longitude);
+        return distance <= rayon;
+      }
+      // Si pas de coordonnées de recherche, inclure tous les établissements
+      return true;
+    });
+
+    // 4. Calculer le score pour chaque établissement dans le rayon
+    const scoredEstablishments = establishmentsInRadius.map(establishment => {
+      let thematicScore = 0; // Score basé sur la pertinence thématique
       let matchedTags: string[] = [];
+      let distance = 0;
+      
+      // Calculer la distance si géolocalisation disponible
+      if (lat && lng && establishment.latitude && establishment.longitude) {
+        distance = calculateDistance(lat, lng, establishment.latitude, establishment.longitude);
+      }
       
       // Score basé sur les tags
       establishment.tags.forEach(tag => {
         const tagLower = tag.tag.toLowerCase();
         keywords.forEach(keyword => {
           if (tagLower.includes(keyword) || keyword.includes(tagLower)) {
-            score += tag.poids * 10; // Poids du tag * 10
+            thematicScore += tag.poids * 10; // Poids du tag * 10
             matchedTags.push(tag.tag);
           }
         });
@@ -115,33 +123,43 @@ export async function GET(request: NextRequest) {
       
       keywords.forEach(keyword => {
         if (nameLower.includes(keyword)) {
-          score += 20; // Nom contient le mot-clé
+          thematicScore += 20; // Nom contient le mot-clé
         }
         if (descriptionLower.includes(keyword)) {
-          score += 10; // Description contient le mot-clé
+          thematicScore += 10; // Description contient le mot-clé
         }
       });
 
-      // Score basé sur la distance (si géolocalisation)
-      let distance = 0;
-      if (lat && lng && establishment.latitude && establishment.longitude) {
-        distance = calculateDistance(lat, lng, establishment.latitude, establishment.longitude);
-        
-        // Bonus de proximité (plus proche = meilleur score)
-        if (distance <= rayon) {
-          score += Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
-        }
+      // Score basé sur les activités (JSON)
+      if (establishment.activities && Array.isArray(establishment.activities)) {
+        establishment.activities.forEach((activity: any) => {
+          if (typeof activity === 'string') {
+            const activityLower = activity.toLowerCase();
+            keywords.forEach(keyword => {
+              if (activityLower.includes(keyword) || keyword.includes(activityLower)) {
+                thematicScore += 25; // Activité correspondante (score élevé)
+              }
+            });
+          }
+        });
       }
 
-      // Vérifier si ouvert
+      // Vérifier si ouvert (bonus seulement si déjà pertinent thématiquement)
       const isOpen = isOpenNow(establishment.horairesOuverture);
-      if (isOpen) {
-        score += 15; // Bonus si ouvert
+      if (isOpen && thematicScore > 0) {
+        thematicScore += 15; // Bonus si ouvert ET pertinent
+      }
+
+      // Score final = score thématique + bonus de proximité
+      let finalScore = thematicScore;
+      if (thematicScore > 0 && lat && lng && establishment.latitude && establishment.longitude) {
+        finalScore += Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
       }
 
       return {
         ...establishment,
-        score,
+        score: finalScore,
+        thematicScore: thematicScore, // Score sans bonus de proximité
         distance: Math.round(distance * 100) / 100,
         isOpen,
         matchedTags: [...new Set(matchedTags)], // Supprimer les doublons
@@ -149,10 +167,9 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Filtrer par rayon et trier par score
+    // 5. Filtrer par pertinence thématique (score thématique > 0)
     const filteredEstablishments = scoredEstablishments
-      .filter(est => !lat || !lng || est.distance <= rayon)
-      .filter(est => est.score > 0) // Seulement ceux qui ont un score > 0
+      .filter(est => est.thematicScore > 0) // Seulement ceux qui correspondent à l'envie
       .sort((a, b) => {
         // Tri principal par score décroissant
         if (b.score !== a.score) {
@@ -172,7 +189,13 @@ export async function GET(request: NextRequest) {
         ville,
         rayon,
         keywords,
-        coordinates: lat && lng ? { lat, lng } : null
+        coordinates: lat && lng ? { lat, lng } : null,
+        distanceFilter: lat && lng ? `Rayon de ${rayon}km autour de (${lat}, ${lng})` : null,
+        searchStrategy: "Géographique + Filtrage thématique - établissements pertinents dans le rayon",
+        totalEstablishments: establishments.length,
+        establishmentsInRadius: establishmentsInRadius.length,
+        establishmentsWithCoords: establishments.filter(e => e.latitude && e.longitude).length,
+        relevantResults: filteredEstablishments.length
       }
     });
 

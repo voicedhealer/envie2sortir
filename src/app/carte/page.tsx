@@ -4,6 +4,18 @@ import MapComponent from "./map-component";
 
 export default async function MapPage() {
   const establishments = await prisma.establishment.findMany({
+    where: { status: 'active' },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      address: true,
+      city: true,
+      latitude: true,
+      longitude: true,
+      activities: true,
+      status: true,
+    },
     orderBy: { name: "asc" },
   });
 
