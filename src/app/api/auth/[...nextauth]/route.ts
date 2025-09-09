@@ -120,22 +120,42 @@ export const authOptions = {
       return true;
     },
     async jwt({ token, user }: { token: any; user: any }) {
+      console.log('🔐 JWT Callback - User:', user ? 'Present' : 'Not present');
+      console.log('🔐 JWT Callback - Token:', token ? 'Present' : 'Not present');
+      
       if (user) {
         token.establishmentId = user.establishmentId;
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        console.log('🔐 JWT Callback - Updated token with user data');
+      } else if (token) {
+        // Si pas d'utilisateur mais qu'on a un token, on peut essayer de récupérer les données mises à jour
+        // Cela se produit lors des appels suivants après la connexion
+        console.log('🔐 JWT Callback - No user, using existing token');
       }
       
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
+      console.log('🔐 Session Callback - Token:', token ? 'Present' : 'Not present');
+      console.log('🔐 Session Callback - Session:', session ? 'Present' : 'Not present');
+      
       if (token && session.user) {
         session.user.id = token.sub as string;
         session.user.establishmentId = token.establishmentId as string;
         session.user.role = token.role as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        
+        // Corriger l'affichage du nom
+        if (session.user.firstName && session.user.lastName) {
+          session.user.name = `${session.user.firstName} ${session.user.lastName}`;
+        } else if (session.user.firstName) {
+          session.user.name = session.user.firstName;
+        }
+        
+        console.log('🔐 Session Callback - Updated session with user data:', session.user);
       }
       return session;
     }

@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MapPin, Star, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 import Image from 'next/image';
 
 interface EstablishmentHeroProps {
   establishment: {
+    id: string;
     name: string;
     address: string;
     city?: string;
@@ -20,6 +23,10 @@ interface EstablishmentHeroProps {
 }
 
 export default function EstablishmentHero({ establishment, onFavorite, onShare }: EstablishmentHeroProps) {
+  const { data: session } = useSession();
+  const [isLiked, setIsLiked] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
   // Combiner imageUrl et images pour créer un carrousel
   const allImages = [
     ...(establishment.imageUrl ? [establishment.imageUrl] : []),
@@ -34,6 +41,25 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
   // S'assurer que l'index est valide
   const validCurrentIndex = uniqueImages.length > 0 ? Math.min(currentImageIndex, uniqueImages.length - 1) : 0;
   
+  // Vérifier si l'établissement est en favori
+  useEffect(() => {
+    if (session?.user?.role === 'user') {
+      checkFavoriteStatus();
+    }
+  }, [session, establishment.id]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const response = await fetch('/api/user/favorites');
+      if (response.ok) {
+        const data = await response.json();
+        const isFavorite = data.favorites.some((fav: any) => fav.establishment.id === establishment.id);
+        setIsLiked(isFavorite);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des favoris:', error);
+    }
+  };
 
   const nextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % uniqueImages.length);
@@ -41,6 +67,60 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
 
   const prevImage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + uniqueImages.length) % uniqueImages.length);
+  };
+
+  // Gestion des favoris
+  const handleFavorite = async () => {
+    if (!session || session.user.role !== 'user') {
+      toast.error('Vous devez être connecté pour ajouter aux favoris');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isLiked) {
+        // Retirer des favoris
+        const response = await fetch(`/api/user/favorites`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const favorite = data.favorites.find((fav: any) => fav.establishment.id === establishment.id);
+          
+          if (favorite) {
+            const deleteResponse = await fetch(`/api/user/favorites/${favorite.id}`, {
+              method: 'DELETE'
+            });
+            
+            if (deleteResponse.ok) {
+              setIsLiked(false);
+              toast.success('Retiré des favoris');
+            }
+          }
+        }
+      } else {
+        // Ajouter aux favoris
+        const response = await fetch('/api/user/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ establishmentId: establishment.id })
+        });
+
+        if (response.ok) {
+          setIsLiked(true);
+          toast.success('Ajouté aux favoris');
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Erreur lors de l\'ajout aux favoris');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la gestion des favoris:', error);
+      toast.error('Erreur lors de la gestion des favoris');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -102,10 +182,14 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
       {/* Actions en haut à droite */}
       <div className="absolute top-4 right-4 flex space-x-2">
         <button
-          onClick={onFavorite}
-          className="bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3"
+          onClick={handleFavorite}
+          disabled={isLoading}
+          className={`bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
         >
-          <Heart className="w-5 h-5 text-white" />
+          <Heart 
+            className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} 
+          />
         </button>
         <button
           onClick={onShare}

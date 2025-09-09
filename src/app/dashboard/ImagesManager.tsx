@@ -2,136 +2,234 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import Image from "next/image";
 import ImageUpload from "@/components/ImageUpload";
 
 interface ImagesManagerProps {
   establishmentId: string;
   establishmentSlug: string;
   currentImageUrl?: string | null;
+  subscription?: 'STANDARD' | 'PREMIUM';
 }
 
-// Composant wrapper pour gérer les erreurs d'image
-function SafeImage({ src, alt, className, onError, onLoad }: {
-  src: string;
-  alt: string;
-  className: string;
-  onError?: () => void;
-  onLoad?: () => void;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const handleError = () => {
-    setHasError(true);
-    setIsLoading(false);
-    onError?.();
-  };
-
-  const handleLoad = () => {
-    setIsLoading(false);
-    onLoad?.();
-  };
-
-  if (hasError) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-200">
-        <div className="text-center text-gray-500">
-          <div className="text-4xl mb-2">📷</div>
-          <div className="text-sm">Image non disponible</div>
-        </div>
-      </div>
-    );
+// Fonction utilitaire pour construire l'URL d'image
+function getImageUrl(imagePath: string): string {
+  // Vérifier que imagePath est bien une chaîne et non vide
+  if (typeof imagePath !== 'string' || imagePath === '' || imagePath === 'undefined' || imagePath === 'null') {
+    console.error('getImageUrl: imagePath invalide:', imagePath);
+    return '';
   }
-
-  return (
-    <div className="relative w-full h-full">
-      {isLoading && (
-        <div className="absolute inset-0 bg-gray-200 animate-pulse flex items-center justify-center z-10">
-          <div className="text-gray-400">Chargement...</div>
-        </div>
-      )}
-      <Image
-        src={src}
-        alt={alt}
-        fill
-        className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-        onError={handleError}
-        onLoad={handleLoad}
-      />
-    </div>
-  );
+  
+  // Si c'est déjà une URL complète, la retourner telle quelle
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  // Sinon, utiliser l'URL relative qui sera gérée par le rewrite
+  return imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
 }
 
-export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl }: ImagesManagerProps) {
+export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'STANDARD' }: ImagesManagerProps) {
   const [images, setImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string | null>(currentImageUrl || null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [establishmentData, setEstablishmentData] = useState<any>(null);
+
+  // Calculer la limite d'images selon l'abonnement
+  const maxImages = subscription === 'PREMIUM' ? 10 : 1;
+  const canUploadMore = images.length < maxImages;
+  
+  // Log pour debug
+  console.log('🔍 État des images:', { images: images.length, maxImages, canUploadMore, subscription });
+
+  // Fonction pour charger les images
+  const loadImages = async () => {
+    try {
+      console.log('🔄 Chargement des images pour:', establishmentSlug);
+      const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+        credentials: 'include' // Inclure les cookies de session
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📊 Données reçues:', data.establishment);
+        setEstablishmentData(data); // Stocker les données de l'établissement
+        const establishmentImages = data.establishment.images || [];
+        
+        if (establishmentImages.length > 0) {
+          // Extraire les URLs des images et les filtrer
+          const imageUrls = establishmentImages.map((img: any) => {
+            if (typeof img.url === 'string') {
+              return img.url;
+            } else if (img.url && typeof img.url === 'object') {
+              return img.url.url || img.url.path || '';
+            } else {
+              console.error('❌ img.url n\'est pas valide:', img.url);
+              return '';
+            }
+          }).filter(url => {
+            return typeof url === 'string' && 
+                   url !== '' && 
+                   url !== 'undefined' && 
+                   url !== 'null' && 
+                   url !== '{}' && 
+                   url.length > 0;
+          });
+          
+          setImages(imageUrls);
+          console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
+        }
+      } else {
+        console.error('❌ Erreur lors du chargement des images:', response.status);
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement des images:', error);
+    }
+  };
 
   // Charger les images existantes depuis la base de données
   useEffect(() => {
-    const loadImages = async () => {
-      try {
-        console.log('🔄 Chargement des images pour:', establishmentSlug);
-        const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
-          credentials: 'include' // Inclure les cookies de session
-        });
-        if (response.ok) {
-          const data = await response.json();
-          console.log('📊 Données reçues:', data.establishment);
-          const establishmentImages = data.establishment.images || [];
-          
-          if (establishmentImages.length > 0) {
-            const imageUrls = establishmentImages.map((img: any) => img.url);
-            console.log('🖼️ URLs des images:', imageUrls);
-            setImages(imageUrls);
-            
-            // Trouver l'image principale
-            const primaryImg = establishmentImages.find((img: any) => img.isPrimary);
-            if (primaryImg) {
-              setPrimaryImage(primaryImg.url);
-            } else if (imageUrls.length > 0) {
-              // Si aucune image n'est marquée comme principale, prendre la première
-              setPrimaryImage(imageUrls[0]);
-              console.log('🎯 Aucune image principale trouvée, utilisation de la première:', imageUrls[0]);
-            }
-          } else if (currentImageUrl) {
-            // Fallback sur l'ancien système
-            setImages([currentImageUrl]);
-            setPrimaryImage(currentImageUrl);
-          }
-        } else {
-          console.error('❌ Erreur API:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('❌ Erreur lors du chargement des images:', error);
-        // Fallback sur l'ancien système
-        if (currentImageUrl) {
-          setImages([currentImageUrl]);
-          setPrimaryImage(currentImageUrl);
-        }
-      }
-    };
-
     loadImages();
-  }, [establishmentSlug, currentImageUrl]);
+  }, [establishmentSlug]);
+
+  // Effet pour recharger les images quand establishmentData change
+  useEffect(() => {
+    if (establishmentData) {
+      const establishmentImages = establishmentData.establishment.images || [];
+      
+      if (establishmentImages.length > 0) {
+        const imageUrls = establishmentImages.map((img: any) => {
+          if (typeof img.url === 'string') {
+            return img.url;
+          } else if (img.url && typeof img.url === 'object') {
+            return img.url.url || img.url.path || '';
+          } else {
+            return '';
+          }
+        }).filter(url => {
+          return typeof url === 'string' && 
+                 url !== '' && 
+                 url !== 'undefined' && 
+                 url !== 'null' && 
+                 url !== '{}' && 
+                 url.length > 0;
+        });
+        
+        setImages(imageUrls);
+        console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
+        
+        // Trouver l'image principale
+        const primaryImg = establishmentImages.find((img: any) => img.isPrimary);
+        if (primaryImg) {
+          setPrimaryImage(primaryImg.url);
+        } else if (imageUrls.length > 0) {
+          setPrimaryImage(imageUrls[0]);
+        }
+      } else if (currentImageUrl) {
+        // Fallback sur l'ancien système
+        console.log('🔄 Fallback sur currentImageUrl:', currentImageUrl);
+        setImages([currentImageUrl]);
+        setPrimaryImage(currentImageUrl);
+      } else {
+        // Aucune image trouvée
+        console.log('📭 Aucune image trouvée');
+        setImages([]);
+        setPrimaryImage(null);
+      }
+    }
+  }, [establishmentData, currentImageUrl]);
+  useEffect(() => {
+    if (establishmentData) {
+      const establishmentImages = establishmentData.establishment.images || [];
+      const imageUrls = establishmentImages.map((img: any) => img.url);
+      setImages(imageUrls);
+      console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
+    }
+  }, [establishmentData]);
+
+  const handleFileUpload = async (file: File) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      console.log('📤 Remplacement d\'image:', file.name);
+
+      // Si on a déjà une image, on la supprime d'abord
+      if (images.length > 0) {
+        console.log('🗑️ Suppression de l\'ancienne image avant remplacement');
+        await removeImage(images[0]);
+      }
+
+      // Maintenant on peut uploader la nouvelle image
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('establishmentId', establishmentId);
+
+      const response = await fetch('/api/upload/image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erreur lors de l\'upload');
+      }
+
+      const data = await response.json();
+      console.log('✅ Nouvelle image uploadée:', data);
+
+      // Recharger les images après upload
+      await loadImages();
+      
+    } catch (error) {
+      console.error('❌ Erreur remplacement:', error);
+      setError(error instanceof Error ? error.message : 'Erreur lors du remplacement');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleImageUpload = async (imageUrl: string) => {
     try {
       setIsLoading(true);
+      console.log('📸 handleImageUpload appelé avec:', imageUrl);
       
-      // Ajouter l'image à la liste
+      // Ajouter l'image à la liste immédiatement
       const newImages = [...images, imageUrl];
       setImages(newImages);
+      console.log('📸 Images mises à jour:', newImages);
       
       // Si c'est la première image, la définir comme image principale
       if (!primaryImage) {
         setPrimaryImage(imageUrl);
         await updatePrimaryImage(imageUrl);
+        console.log('📸 Image principale définie:', imageUrl);
       }
       
       toast.success('Image ajoutée avec succès !');
+      
+      // Forcer la synchronisation immédiate
+      const loadImages = async () => {
+        try {
+          console.log('🔄 Rechargement immédiat des images depuis l\'API...');
+          const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+            credentials: 'include'
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const establishmentImages = data.establishment.images || [];
+            const imageUrls = establishmentImages.map((img: any) => img.url);
+            setImages(imageUrls);
+            setEstablishmentData(data);
+            console.log('🔄 Images rechargées après upload:', imageUrls);
+            console.log('🔄 État final:', { images: imageUrls.length, maxImages, canUploadMore: imageUrls.length < maxImages });
+          }
+        } catch (error) {
+          console.error('❌ Erreur lors du rechargement:', error);
+        }
+      };
+      
+      // Recharger immédiatement
+      await loadImages();
+      
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'image:', error);
       toast.error('Erreur lors de l\'ajout de l\'image');
@@ -178,7 +276,23 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     try {
       setIsLoading(true);
       
-      // Retirer l'image de la liste
+      // Trouver l'ID de l'image à supprimer
+      const imageToDelete = establishmentData?.establishment?.images?.find(img => img.url === imageUrl);
+      if (!imageToDelete) {
+        throw new Error('Image non trouvée');
+      }
+      
+      // Appel API pour supprimer l'image de la base de données
+      const response = await fetch(`/api/dashboard/images/${imageToDelete.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression de l\'image');
+      }
+      
+      // Retirer l'image de la liste locale
       const newImages = images.filter(img => img !== imageUrl);
       setImages(newImages);
       
@@ -186,10 +300,34 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       if (primaryImage === imageUrl) {
         const newPrimary = newImages.length > 0 ? newImages[0] : null;
         setPrimaryImage(newPrimary);
-        await updatePrimaryImage(newPrimary || '');
+        if (newPrimary) {
+          await updatePrimaryImage(newPrimary);
+        }
       }
       
       toast.success('Image supprimée avec succès !');
+      
+      // Recharger les images depuis l'API pour synchroniser
+      setTimeout(() => {
+        const loadImages = async () => {
+          try {
+            const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+              credentials: 'include'
+            });
+            if (response.ok) {
+              const data = await response.json();
+              const establishmentImages = data.establishment.images || [];
+              const imageUrls = establishmentImages.map((img: any) => img.url);
+              setImages(imageUrls);
+              console.log('🔄 Images rechargées après suppression:', imageUrls);
+            }
+          } catch (error) {
+            console.error('❌ Erreur lors du rechargement:', error);
+          }
+        };
+        loadImages();
+      }, 1000);
+      
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'image:', error);
       toast.error('Erreur lors de la suppression de l\'image');
@@ -198,8 +336,29 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     }
   };
 
+
   return (
     <div className="space-y-6">
+      {/* Input file caché pour le bouton Remplacer */}
+      <input
+        type="file"
+        id="replace-image-upload"
+        accept="image/*"
+        onChange={async (event) => {
+          console.log('📤 Input file change détecté');
+          const file = event.target.files?.[0];
+          if (!file) {
+            console.log('❌ Aucun fichier sélectionné');
+            return;
+          }
+          console.log('📁 Fichier sélectionné:', file.name, file.size, 'bytes');
+          
+          // Appeler la fonction d'upload existante
+          await handleFileUpload(file);
+        }}
+        className="hidden"
+      />
+      
       {/* Message d'erreur */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -230,13 +389,43 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Ajouter une image
         </h3>
-        <ImageUpload 
-          onImageUpload={handleImageUpload}
-          onImageRemove={() => {}}
-          establishmentId={establishmentId}
-          currentImageUrl={undefined}
-        />
+        
+        {canUploadMore ? (
+          <ImageUpload 
+            onImageUpload={handleImageUpload}
+            onImageRemove={() => {}}
+            establishmentId={establishmentId}
+            currentImageUrl={undefined}
+          />
+        ) : (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-4">🚫</div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">
+              Limite d'images atteinte
+            </h4>
+            <p className="text-gray-600 mb-4">
+              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Gratuit'}.
+            </p>
+            {subscription === 'STANDARD' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 font-medium mb-2">
+                  💡 Passez au plan Premium pour uploader jusqu'à 10 images !
+                </p>
+                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                  Voir les plans
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+        
+        <div className="mt-4 text-sm text-gray-500">
+          Images actuelles : {images.length}/{maxImages} 
+          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Gratuit)'}
+        </div>
       </div>
+
+
 
       {/* Images existantes */}
       {images.length > 0 && (
@@ -246,40 +435,73 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {images.map((imageUrl, index) => (
-              <div key={index} className="relative group">
-                <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
-                  <SafeImage
-                    src={imageUrl}
-                    alt={`Image ${index + 1}`}
-                    className="object-cover"
-                    onError={() => {
-                      console.error('Erreur chargement image:', imageUrl);
-                    }}
-                    onLoad={() => {
-                      console.log('Image chargée avec succès:', imageUrl);
-                    }}
-                  />
-                </div>
+            {images
+              .filter((imageUrl) => {
+                // Filtrer les URLs invalides AVANT le map
+                return typeof imageUrl === 'string' && 
+                       imageUrl !== '' && 
+                       imageUrl !== 'undefined' && 
+                       imageUrl !== 'null' && 
+                       imageUrl !== '{}' && 
+                       imageUrl.length > 0;
+              })
+              .map((imageUrl, index) => {
+                const fullUrl = getImageUrl(imageUrl);
+                return (
+                <div key={`${imageUrl}-${index}`} className="relative group">
+                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+                    <img
+                      src={fullUrl}
+                      alt={`Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      style={{
+                        minHeight: '200px',
+                        backgroundColor: '#f3f4f6'
+                      }}
+                      onError={(e) => {
+                        console.error('Erreur chargement image:', e);
+                      }}
+                      onLoad={() => {
+                        // Image chargée avec succès
+                      }}
+                    />
+                  </div>
                 
-                {/* Overlay avec actions */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-2">
+                {/* Overlay avec actions - FINAL */}
+                <div className="absolute inset-0 bg-transparent group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 rounded-lg flex items-center justify-center z-10">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
                     {primaryImage !== imageUrl && (
                       <button
                         onClick={() => updatePrimaryImage(imageUrl)}
                         disabled={isLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors disabled:opacity-50"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
                       >
-                        Image principale
+                        ⭐ Image principale
                       </button>
                     )}
                     <button
                       onClick={() => removeImage(imageUrl)}
                       disabled={isLoading}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors disabled:opacity-50"
+                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
                     >
-                      Supprimer
+                      🗑️ Supprimer
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log('🔄 Bouton Remplacer cliqué');
+                        // Déclencher l'upload d'une nouvelle image
+                        const fileInput = document.getElementById('replace-image-upload') as HTMLInputElement;
+                        if (fileInput) {
+                          console.log('📁 Input file trouvé, ouverture du sélecteur');
+                          fileInput.click();
+                        } else {
+                          console.error('❌ Input file non trouvé');
+                        }
+                      }}
+                      disabled={isLoading}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
+                    >
+                      📷 Remplacer
                     </button>
                   </div>
                 </div>
@@ -290,8 +512,10 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
                     Image principale
                   </div>
                 )}
+                
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

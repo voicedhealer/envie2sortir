@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createTagsData } from "@/lib/category-tags-mapping";
 import bcrypt from "bcryptjs";
+import { logSubscriptionChange } from "@/lib/subscription-logger";
 
 // Fonction pour géocoder une adresse
 async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number } | null> {
@@ -190,6 +191,14 @@ export async function POST(request: Request) {
 
       return { user, establishment };
     });
+
+    // Logger le changement de subscription
+    await logSubscriptionChange(
+      result.establishment.id,
+      result.establishment.subscription,
+      result.user.id,
+      'Inscription professionnelle'
+    );
 
     // TODO: Upload des photos (prochaine étape)
     // TODO: Envoyer email de confirmation (prochaine étape)

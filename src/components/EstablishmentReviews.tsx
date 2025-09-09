@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, MessageCircle } from 'lucide-react';
 
 interface Review {
@@ -14,38 +14,52 @@ interface Review {
 
 interface EstablishmentReviewsProps {
   establishment: {
+    id: string;
+    slug: string;
     avgRating?: number;
     totalComments?: number;
   };
 }
 
-// Données d'exemple pour les avis (à remplacer par une vraie API)
-const mockReviews: Review[] = [
-  {
-    id: '1',
-    userName: 'Marie L.',
-    rating: 5,
-    comment: 'Excellent établissement ! L\'ambiance est parfaite et le personnel très accueillant. Je recommande vivement.',
-    date: '2024-01-15',
-  },
-  {
-    id: '2',
-    userName: 'Pierre M.',
-    rating: 4,
-    comment: 'Très bon moment passé ici. La nourriture est délicieuse et les prix raisonnables. Petit bémol sur l\'attente.',
-    date: '2024-01-10',
-  },
-  {
-    id: '3',
-    userName: 'Sophie D.',
-    rating: 5,
-    comment: 'Un endroit parfait pour une soirée entre amis. La musique est au top et l\'ambiance festive !',
-    date: '2024-01-08',
-  },
-];
-
 export default function EstablishmentReviews({ establishment }: EstablishmentReviewsProps) {
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Récupérer les avis depuis l'API
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/establishments/${establishment.slug}/comments`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const formattedReviews = data.comments.map((comment: any) => ({
+            id: comment.id,
+            userName: comment.user.firstName || 'Anonyme',
+            rating: comment.rating || 0,
+            comment: comment.content,
+            date: comment.createdAt,
+            avatar: comment.user.avatar
+          }));
+          setReviews(formattedReviews);
+        } else {
+          setError('Erreur lors du chargement des avis');
+        }
+      } catch (err) {
+        console.error('Erreur lors du chargement des avis:', err);
+        setError('Erreur lors du chargement des avis');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (establishment.slug) {
+      fetchReviews();
+    }
+  }, [establishment.slug]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -76,7 +90,40 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
       .slice(0, 2);
   };
 
-  const displayedReviews = showAllReviews ? mockReviews : mockReviews.slice(0, 3);
+  const displayedReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+
+  if (isLoading) {
+    return (
+      <div className="reviews-section" id="avis">
+        <div className="reviews-header">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Star className="w-5 h-5 text-orange-500 mr-2" />
+            Avis clients
+          </h3>
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="text-gray-600 mt-2">Chargement des avis...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="reviews-section" id="avis">
+        <div className="reviews-header">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+            <Star className="w-5 h-5 text-orange-500 mr-2" />
+            Avis clients
+          </h3>
+        </div>
+        <div className="text-center py-8">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="reviews-section" id="avis">
@@ -103,47 +150,56 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
         )}
       </div>
 
-      <div className="reviews-list">
-        {displayedReviews.map((review) => (
-          <div key={review.id} className="review-item">
-            <div className="review-avatar">
-              {review.avatar ? (
-                <img 
-                  src={review.avatar} 
-                  alt={review.userName}
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <span className="text-sm">{getInitials(review.userName)}</span>
-              )}
-            </div>
-            
-            <div className="review-content">
-              <div className="review-header flex items-center justify-between">
-                <span className="review-name">{review.userName}</span>
-                <div className="review-rating flex items-center gap-1">
-                  {renderStars(review.rating)}
-                  <span className="text-sm font-medium text-gray-700 ml-1">
-                    {review.rating}/5
-                  </span>
+      {reviews.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Aucun avis pour le moment.</p>
+          <p className="text-sm text-gray-500 mt-2">Soyez le premier à laisser un avis !</p>
+        </div>
+      ) : (
+        <>
+          <div className="reviews-list">
+            {displayedReviews.map((review) => (
+              <div key={review.id} className="review-item">
+                <div className="review-avatar">
+                  {review.avatar ? (
+                    <img 
+                      src={review.avatar} 
+                      alt={review.userName}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  ) : (
+                    <span className="text-sm">{getInitials(review.userName)}</span>
+                  )}
+                </div>
+                
+                <div className="review-content">
+                  <div className="review-header flex items-center justify-between">
+                    <span className="review-name">{review.userName}</span>
+                    <div className="review-rating flex items-center gap-1">
+                      {renderStars(review.rating)}
+                      <span className="text-sm font-medium text-gray-700 ml-1">
+                        {review.rating}/5
+                      </span>
+                    </div>
+                  </div>
+                  <p className="review-text">{review.comment}</p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {formatDate(review.date)}
+                  </p>
                 </div>
               </div>
-              <p className="review-text">{review.comment}</p>
-              <p className="text-xs text-gray-500 mt-2">
-                {formatDate(review.date)}
-              </p>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {mockReviews.length > 3 && (
-        <button 
-          className="view-all-reviews"
-          onClick={() => setShowAllReviews(!showAllReviews)}
-        >
-          {showAllReviews ? 'Voir moins d\'avis' : `Voir tous les avis (${mockReviews.length})`}
-        </button>
+          {reviews.length > 3 && (
+            <button 
+              className="view-all-reviews"
+              onClick={() => setShowAllReviews(!showAllReviews)}
+            >
+              {showAllReviews ? 'Voir moins d\'avis' : `Voir tous les avis (${reviews.length})`}
+            </button>
+          )}
+        </>
       )}
 
       {/* Bouton pour ajouter un avis */}

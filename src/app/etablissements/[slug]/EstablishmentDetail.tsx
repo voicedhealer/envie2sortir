@@ -206,6 +206,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
         <div className="mb-8">
           <EstablishmentHero 
             establishment={{
+              id: establishment.id,
               name: establishment.name,
               address: establishment.address,
               city: establishment.city,

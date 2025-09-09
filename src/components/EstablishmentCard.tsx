@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 import styles from './EstablishmentCard.module.css';
 
 interface EstablishmentCardProps {
@@ -54,14 +56,36 @@ export default function EstablishmentCard({
   searchCenter, 
   from = 'recherche' 
 }: EstablishmentCardProps) {
+  const { data: session } = useSession();
   const [isLiked, setIsLiked] = useState(false);
   const [isShared, setIsShared] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const [isEventInProgress, setIsEventInProgress] = useState(false);
 
   // Utiliser l'image principale du modèle ou fallback sur l'ancien système
   const primaryImage = establishment.imageUrl || 
     (establishment.images?.find(img => img.isPrimary) || establishment.images?.[0])?.url;
+
+  // Vérifier si l'établissement est en favori
+  useEffect(() => {
+    if (session?.user?.role === 'user') {
+      checkFavoriteStatus();
+    }
+  }, [session, establishment.id]);
+
+  const checkFavoriteStatus = async () => {
+    try {
+      const response = await fetch('/api/user/favorites');
+      if (response.ok) {
+        const data = await response.json();
+        const isFavorite = data.favorites.some((fav: any) => fav.establishment.id === establishment.id);
+        setIsLiked(isFavorite);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification des favoris:', error);
+    }
+  };
 
   // Récupérer le prochain événement
   useEffect(() => {
@@ -163,10 +187,60 @@ export default function EstablishmentCard({
   const isPremiumHighlighted = establishment.subscription === 'PREMIUM' && upcomingEvent;
 
   // Gestion des interactions
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    
+    if (!session || session.user.role !== 'user') {
+      toast.error('Vous devez être connecté pour ajouter aux favoris');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (isLiked) {
+        // Retirer des favoris
+        const response = await fetch(`/api/user/favorites`);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const favorite = data.favorites.find((fav: any) => fav.establishment.id === establishment.id);
+          
+          if (favorite) {
+            const deleteResponse = await fetch(`/api/user/favorites/${favorite.id}`, {
+              method: 'DELETE'
+            });
+            
+            if (deleteResponse.ok) {
+              setIsLiked(false);
+              toast.success('Retiré des favoris');
+            }
+          }
+        }
+      } else {
+        // Ajouter aux favoris
+        const response = await fetch('/api/user/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ establishmentId: establishment.id })
+        });
+
+        if (response.ok) {
+          setIsLiked(true);
+          toast.success('Ajouté aux favoris');
+        } else {
+          const error = await response.json();
+          toast.error(error.error || 'Erreur lors de l\'ajout aux favoris');
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la gestion des favoris:', error);
+      toast.error('Erreur lors de la gestion des favoris');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleShare = (e: React.MouseEvent) => {
@@ -209,8 +283,9 @@ export default function EstablishmentCard({
             {/* Bouton Like */}
             <button
               onClick={handleLike}
-              className="p-1 transition-all duration-200 hover:scale-130"
-              title="Ajouter aux favoris"
+              disabled={isLoading}
+              className={`p-1 transition-all duration-200 hover:scale-130 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
             >
               <Heart 
                 className={`w-4 h-4 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} 

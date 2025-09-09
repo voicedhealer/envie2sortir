@@ -359,6 +359,7 @@ export default function DashboardContent({ user, establishment }: DashboardConte
           establishmentId={establishment.id}
           establishmentSlug={establishment.slug}
           currentImageUrl={establishment.imageUrl}
+          subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
         />
       ) : (
         <EventsManager 

@@ -61,6 +61,8 @@ export default function AuthPage() {
         const data = await response.json();
 
         if (data.success) {
+          console.log('✅ Inscription réussie, tentative de connexion automatique...');
+          
           // Connexion automatique après inscription
           const signInResult = await nextAuthSignIn('credentials', {
             email: formData.email,
@@ -68,9 +70,14 @@ export default function AuthPage() {
             redirect: false
           });
 
+          console.log('🔐 Résultat connexion:', signInResult);
+
           if (signInResult?.ok) {
+            console.log('✅ Connexion réussie, redirection vers /');
             router.push('/?welcome=true');
           } else {
+            console.log('❌ Échec connexion, redirection vers auth');
+            setError('Compte créé mais connexion échouée. Veuillez vous connecter manuellement.');
             router.push('/auth?registered=true');
           }
         } else {

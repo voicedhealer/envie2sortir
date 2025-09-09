@@ -18,15 +18,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ID de l\'établissement requis' }, { status: 400 });
     }
 
-    // Vérifier que l'établissement existe
+    // Vérifier que l'établissement existe et récupérer son plan d'abonnement
     const establishment = await prisma.establishment.findUnique({
       where: { id: establishmentId },
-      select: { id: true }
+      select: { 
+        id: true, 
+        subscription: true,
+        name: true
+      }
     });
 
     if (!establishment) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 });
     }
+
+    // Vérifier les restrictions d'abonnement pour l'upload d'images
+    const existingImagesCount = await prisma.image.count({
+      where: { establishmentId: establishmentId }
+    });
+
+    const maxImages = establishment.subscription === 'PREMIUM' ? 10 : 1;
+    
+    if (existingImagesCount >= maxImages) {
+      const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Gratuit';
+      return NextResponse.json({ 
+        error: `Limite d'images atteinte pour le plan ${planName}. Maximum: ${maxImages} image${maxImages > 1 ? 's' : ''}.`,
+        subscription: establishment.subscription,
+        currentCount: existingImagesCount,
+        maxAllowed: maxImages
+      }, { status: 403 });
+    }
+
+    console.log(`📸 Upload autorisé pour ${establishment.name} (${establishment.subscription}): ${existingImagesCount + 1}/${maxImages} images`);
 
     // Vérifier le type de fichier
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -73,12 +96,19 @@ export async function POST(request: NextRequest) {
         url: imageUrl,
         altText: file.name,
         establishmentId: establishmentId,
-        isPrimary: false, // Par défaut, pas image principale
+        isPrimary: true, // Marquer comme image principale
         ordre: 0
       }
     });
 
+    // Mettre à jour l'imageUrl de l'établissement
+    await prisma.establishment.update({
+      where: { id: establishmentId },
+      data: { imageUrl: imageUrl }
+    });
+
     console.log('✅ Image créée en base:', imageRecord.id);
+    console.log('✅ ImageUrl de l\'établissement mise à jour:', imageUrl);
     
     return NextResponse.json({ 
       success: true, 
