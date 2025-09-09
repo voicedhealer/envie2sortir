@@ -14,6 +14,7 @@ export default async function MapPage() {
       latitude: true,
       longitude: true,
       activities: true,
+      imageUrl: true,
       status: true,
     },
     orderBy: { name: "asc" },
@@ -22,7 +23,7 @@ export default async function MapPage() {
   return (
     <main className="min-h-screen p-8">
       <div className="mb-6">
-        <Link href="/" className="text-blue-500 hover:underline">
+        <Link href="/" className="text-orange-500 hover:underline">
           ← Retour à l'accueil
         </Link>
       </div>

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import MapComponent from "../carte/map-component";
+import EstablishmentGrid from "@/components/EstablishmentGrid";
 
 function formatAddress(address?: string | null): string {
   return address ?? "Adresse non renseignée";
@@ -32,9 +33,9 @@ function normalizeText(input: string): string {
 export default async function SearchResults({
   searchParams,
 }: {
-  searchParams: { q?: string; category?: string; lat?: string; lng?: string };
+  searchParams: Promise<{ q?: string; category?: string; lat?: string; lng?: string }>;
 }) {
-  const { q, category } = searchParams;
+  const { q, category } = await searchParams;
 
   const where: any = {};
   if (q && q.trim()) {
@@ -57,7 +58,20 @@ export default async function SearchResults({
   const establishments = await prisma.establishment.findMany({
     where: Object.keys(where).length ? where : undefined,
     orderBy: { name: "asc" },
-    include: { images: true },
+    include: { 
+      images: true,
+      events: {
+        where: {
+          startDate: {
+            gte: new Date()
+          }
+        },
+        orderBy: {
+          startDate: 'asc'
+        },
+        take: 1
+      }
+    },
   });
 
   return (
@@ -76,33 +90,13 @@ export default async function SearchResults({
       {/* Layout grille + carte */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Grille de cards */}
-        <div className="lg:col-span-2 space-y-4">
-          {establishments.length === 0 ? (
-            <div className="p-6 border rounded-xl text-gray-600">
-              Aucun établissement pour ces critères.
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 gap-4">
-              {establishments.map((e) => {
-                const primary = e.images.find((img) => img.isPrimary) ?? e.images[0];
-                return (
-                  <Link key={e.id} href={`/etablissements/${e.slug}`} className="block rounded-xl border border-gray-200 hover:shadow-md transition overflow-hidden">
-                    {primary ? (
-                      <img src={primary.url} alt={primary.altText ?? e.name} className="w-full h-44 object-cover" />
-                    ) : (
-                      <div className="w-full h-44 bg-gray-100 flex items-center justify-center text-gray-500">Aucune image</div>
-                    )}
-                    <div className="p-4">
-                      <div className="text-sm text-gray-500">{e.category}</div>
-                      <h3 className="text-lg font-semibold mt-1">{e.name}</h3>
-                      <div className="text-sm text-gray-600 mt-1">{formatAddress(e.address)}</div>
-                      <div className="mt-3 text-sm text-blue-600">Voir les détails →</div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+        <div className="lg:col-span-2">
+          <EstablishmentGrid 
+            establishments={establishments as any}
+            from="recherche"
+            title={q ? `Résultats pour "${q}"` : category ? `Catégorie : ${category}` : "Tous les établissements"}
+            subtitle={`${establishments.length} établissement${establishments.length > 1 ? 's' : ''} trouvé${establishments.length > 1 ? 's' : ''}`}
+          />
         </div>
 
         {/* Carte */}

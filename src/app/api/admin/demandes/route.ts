@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -8,9 +9,8 @@ export async function GET() {
       where: { status: "pending" },
       orderBy: { createdAt: "desc" },
       include: {
-        professionalOwner: {
+        owner: {
           select: {
-            companyName: true,
             firstName: true,
             lastName: true,
             email: true,

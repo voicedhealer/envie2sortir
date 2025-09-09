@@ -13,6 +13,7 @@ type Establishment = {
   latitude?: number;
   longitude?: number;
   activities?: any;
+  imageUrl?: string;
   status: string;
 };
 
@@ -61,7 +62,12 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       // Centrer sur le point de recherche ou Dijon par défaut
       const centerLat = searchCenter?.lat || 47.322;
       const centerLng = searchCenter?.lng || 5.041;
+      const defaultRadius = searchRadius || 5; // Rayon par défaut de 5km
 
+      // Initialiser la carte avec un zoom par défaut (sera ajusté par fitBounds)
+      const establishmentsWithCoords = establishments.filter(e => e.latitude && e.longitude);
+      const numResults = establishmentsWithCoords.length;
+      
       const map = L.map(mapRef.current).setView([centerLat, centerLng], 13);
       mapInstanceRef.current = map;
 
@@ -70,16 +76,47 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
         attribution: "© OpenStreetMap contributors",
       }).addTo(map);
 
-      // Ajouter le cercle de recherche si rayon défini
-      if (searchCenter && searchRadius) {
-        L.circle([searchCenter.lat, searchCenter.lng], {
-          radius: searchRadius * 1000, // conversion km → mètres
-          fillColor: "#ff751f",
-          fillOpacity: 0.1,
-          color: "#ff751f",
-          weight: 2
-        }).addTo(map);
-      }
+      // Ajouter le cercle de recherche (toujours affiché)
+      L.circle([centerLat, centerLng], {
+        radius: defaultRadius * 1000, // conversion km → mètres
+        fillColor: "#ff751f",
+        fillOpacity: 0.08, // Plus subtil
+        color: "#ff751f",
+        weight: 2,
+        dashArray: "8, 4", // Pointillés plus espacés
+        className: "search-radius-circle"
+      }).addTo(map);
+
+      // Ajouter un marqueur central pour le point de recherche
+      L.marker([centerLat, centerLng], {
+        icon: L.divIcon({
+          className: 'search-center-marker',
+          html: `
+            <div style="
+              background-color: #ff751f; 
+              width: 16px; 
+              height: 16px; 
+              border-radius: 50%; 
+              border: 3px solid white; 
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              position: relative;
+            ">
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 6px;
+                height: 6px;
+                background-color: white;
+                border-radius: 50%;
+              "></div>
+            </div>
+          `,
+          iconSize: [16, 16],
+          iconAnchor: [8, 8]
+        })
+      }).addTo(map);
 
       // Ajouter les marqueurs pour chaque établissement avec coordonnées
       establishments.forEach((establishment) => {
@@ -94,43 +131,77 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
           ? establishment.activities.slice(0, 2).map((a: string) => a.replace(/_/g, " ")).join(", ")
           : "Activités non définies";
 
-        const marker = L.marker([establishment.latitude, establishment.longitude])
+        // Créer un marqueur personnalisé pour l'établissement
+        const establishmentIcon = L.divIcon({
+          className: 'establishment-marker',
+          html: `
+            <div style="
+              background-color: #3b82f6; 
+              width: 24px; 
+              height: 24px; 
+              border-radius: 50% 50% 50% 0; 
+              border: 3px solid white; 
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              transform: rotate(-45deg);
+              position: relative;
+            ">
+              <div style="
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+                color: white;
+                font-size: 12px;
+                font-weight: bold;
+                text-align: center;
+                line-height: 1;
+              ">📍</div>
+            </div>
+          `,
+          iconSize: [24, 24],
+          iconAnchor: [12, 24]
+        });
+
+        const marker = L.marker([establishment.latitude, establishment.longitude], {
+          icon: establishmentIcon
+        })
           .addTo(map)
           .bindPopup(`
-            <div class="p-2">
-              <h3 class="font-bold text-lg">${establishment.name}</h3>
-              <p class="text-sm text-gray-600">${establishment.address}${establishment.city ? `, ${establishment.city}` : ''}</p>
-              <p class="text-xs text-gray-500">${activitiesText} • ${establishment.status}</p>
-              <a href="/etablissements/${establishment.slug}" class="text-blue-600 hover:underline text-sm">
+            <div class="p-3 min-w-[200px]">
+              ${establishment.imageUrl ? `
+                <div class="mb-3">
+                  <img src="${establishment.imageUrl}" alt="${establishment.name}" class="w-full h-24 object-cover rounded-lg">
+                </div>
+              ` : ''}
+              <h3 class="font-bold text-lg text-gray-900 mb-1">${establishment.name}</h3>
+              <p class="text-sm text-gray-600 mb-2">${establishment.address}${establishment.city ? `, ${establishment.city}` : ''}</p>
+              <p class="text-xs text-gray-500 mb-2">${activitiesText} • ${establishment.status}</p>
+              <a href="/etablissements/${establishment.slug}?from=carte" class="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium text-sm">
                 Voir détails →
               </a>
             </div>
           `);
       });
 
-      // Ajuster la vue pour inclure le cercle et les établissements
-      const establishmentsWithCoords = establishments.filter(e => e.latitude && e.longitude);
+      // Ajuster la vue pour que le cercle de recherche soit entièrement visible
+      // Cette approche garantit que tous les résultats dans le rayon sont visibles
       
-      if (searchCenter && searchRadius && establishmentsWithCoords.length > 0) {
-        // Créer un groupe avec le cercle et les établissements
-        const bounds = L.latLngBounds([
-          [searchCenter.lat - (searchRadius / 111), searchCenter.lng - (searchRadius / 111)],
-          [searchCenter.lat + (searchRadius / 111), searchCenter.lng + (searchRadius / 111)]
-        ]);
-        
-        // Ajouter les établissements aux bounds
-        establishmentsWithCoords.forEach(e => {
-          bounds.extend([e.latitude!, e.longitude!]);
-        });
-        
-        map.fitBounds(bounds.pad(0.1));
-      } else if (establishmentsWithCoords.length > 0) {
-        // Fallback : ajuster seulement sur les établissements
-        const group = new L.featureGroup(
-          establishmentsWithCoords.map(e => L.latLng(e.latitude!, e.longitude!))
-        );
-        map.fitBounds(group.getBounds().pad(0.1));
-      }
+      // Calculer les bounds du cercle de recherche
+      const radiusInDegrees = defaultRadius / 111; // Approximation : 1 degré ≈ 111 km
+      const circleBounds = L.latLngBounds([
+        [centerLat - radiusInDegrees, centerLng - radiusInDegrees],
+        [centerLat + radiusInDegrees, centerLng + radiusInDegrees]
+      ]);
+      
+      // Ajouter tous les établissements trouvés aux bounds
+      establishmentsWithCoords.forEach(e => {
+        circleBounds.extend([e.latitude!, e.longitude!]);
+      });
+      
+      // Ajuster la vue pour inclure le cercle complet avec un padding
+      map.fitBounds(circleBounds.pad(0.15)); // 15% de padding pour une vue confortable
+      
+      console.log(`📍 ${numResults} résultats trouvés - Ajustement de la vue pour inclure le cercle de ${defaultRadius}km avec padding 15%`);
     };
 
     loadLeaflet();

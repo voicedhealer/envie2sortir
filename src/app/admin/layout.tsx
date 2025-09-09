@@ -13,7 +13,7 @@ export default function AdminLayout({
   const handleLogout = () => {
     // Supprimer la session admin
     localStorage.removeItem("adminSession");
-    router.push("/admin/login");
+    router.push("/");
   };
 
   return (

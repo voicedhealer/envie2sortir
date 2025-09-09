@@ -1,16 +1,3 @@
-/**
- * SCHEMA PRISMA POUR ENVIE2SORTIR.FR
- * 
- * Architecture :
- * - Users : Consommateurs (favoris, likes, commentaires)
- * - Professionals : Propriétaires d'établissements (avec SIRET)
- * - Establishments : Lieux de sortie gérés par des professionnels
- * - Système d'interactions : favoris, likes, avis
- * 
- * Compatible SQLite (pas d'arrays, utilisation de JSON strings)
- * Catégorisation ultra-précise pour le système "Envie de..."
- */
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,467 +7,426 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========================================
-// ENUMS - Définition des types de données
-// ========================================
-
-enum UserRole {
-  user   // Consommateur standard
-  pro    // Professionnel (deprecated, utiliser Professional model)
-  admin  // Administrateur du site
-}
-
-/**
- * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
- * Chaque activité correspond à une expérience spécifique
- * Permet un matching parfait avec les intentions des clients
- * Un établissement peut proposer plusieurs activités
- */
-enum EstablishmentActivity {
-  // === BARS & BOISSONS ===
-  bar_ambiance           // Bar d'ambiance/lounge - "envie d'un apéro chic"
-  pub_traditionnel       // Pub traditionnel - "envie d'une bière entre potes"
-  brasserie_artisanale   // Brasserie avec bières artisanales - "envie de découvrir des bières"
-  bar_cocktails          // Bar à cocktails spécialisé - "envie de cocktails créatifs"
-  bar_vins               // Bar à vins/cave à vin - "envie de déguster du vin"
-  bar_sports             // Bar sportif avec écrans - "envie de regarder le match"
-  rooftop_bar           // Bar en rooftop/terrasse - "envie de boire en hauteur"
-  bar_karaoké           // Bar karaoké - "envie de chanter"
-  bar_jeux              // Bar avec jeux (fléchettes, babyfoot) - "envie de jouer en buvant"
-  bar_bières            // Bar spécialisé dans les bières de différent pays - "envie d'une bière belge"
-
-  // === RESTAURANTS & FOOD ===
-  restaurant_gastronomique    // Restaurant gastronomique - "envie d'un repas d'exception"
-  restaurant_traditionnel    // Restaurant traditionnel français - "envie de cuisine française"
-  restaurant_familial        // Restaurant familial - "envie d'un repas en famille"
-  bistrot                    // Bistrot de quartier - "envie d'un repas simple et bon"
-  brasserie_restaurant       // Brasserie-restaurant - "envie d'un plat du jour"
-  restaurant_rapide          // Restauration rapide - "envie de manger vite fait"
-  restaurant_italien         // Restaurant italien - "envie de pâtes/pizza"
-  restaurant_asiatique       // Restaurant asiatique - "envie de sushi/wok"
-  restaurant_oriental        // Restaurant oriental - "envie de couscous/tajine"
-  restaurant_mexicain        // Restaurant mexicain - "envie de tacos/burritos"
-  restaurant_indien          // Restaurant indien - "envie de curry"
-  restaurant_veggie          // Restaurant végétarien/vegan - "envie de manger sain"
-  creperie                   // Crêperie - "envie de crêpes"
-  pizzeria                   // Pizzeria - "envie de pizza"
-
-  // === FAST FOOD & STREET FOOD ===
-  kebab                      // Kebab - "envie d'un kebab"
-  tacos_mexicain            // Tacos mexicains - "envie de vrais tacos"
-  burger                     // Burger house - "envie d'un bon burger"
-  sandwich                   // Sandwicherie - "envie d'un sandwich"
-  fish_and_chips            // Fish & chips - "envie de friture"
-  food_truck                // Food truck - "envie de street food"
-  friterie                  // Friterie - "envie de frites"
-  poke_bowl                 // Poke bowl - "envie de manger healthy"
-
-  // === SORTIES NOCTURNES ===
-  discotheque               // Discothèque classique - "envie de danser"
-  club_prive                // Club privé/select - "envie de clubbing exclusif"
-  boite_nuit_mainstream     // Boîte de nuit grand public - "envie de faire la fête"
-  club_techno               // Club électro/techno - "envie de techno"
-  club_hip_hop              // Club hip-hop/RnB - "envie de hip-hop"
-  club_latino               // Club latino - "envie de salsa/bachata"
-  dancing_retro             // Dancing années 80/90 - "envie de nostalgie"
-  boite_estudiantine        // Soirée étudiante - "envie de soirée pas chère"
-
-  // === ACTIVITÉS SPORTIVES INTÉRIEUR ===
-  bowling                   // Bowling - "envie de faire un strike"
-  billard_americain         // Billard américain - "envie de jouer au billard"
-  billard_francais          // Billard français - "envie de carambole"
-  snooker                   // Snooker - "envie de snooker"
-  ping_pong_bar             // Bar ping-pong - "envie de ping-pong"
-  squash                    // Court de squash - "envie de squash"
-  badminton                 // Terrain badminton - "envie de badminton"
-  tennis_table              // Tennis de table - "envie de tennis de table"
-
-  // === ACTIVITÉS SPORTIVES EXTÉRIEUR ===
-  futsal                    // Terrain de futsal - "envie de foot en salle"
-  football_5vs5             // Terrain foot à 5 - "envie de foot entre potes"
-  football_7vs7             // Terrain foot à 7 - "envie d'un match"
-  tennis_exterieur          // Court de tennis extérieur - "envie de tennis"
-  padel                     // Terrain de padel - "envie de padel"
-  basketball                // Terrain de basket - "envie de basket"
-  beach_volley              // Terrain beach-volley - "envie de beach-volley"
-
-  // === ACTIVITÉS LUDIQUES & GAMING ===
-  escape_game_horreur       // Escape game horreur - "envie d'avoir peur"
-  escape_game_aventure      // Escape game aventure - "envie d'aventure"
-  escape_game_familial      // Escape game familial - "envie de jouer en famille"
-  escape_game_immersif      // Escape game VR/immersif - "envie d'immersion totale"
-  laser_game                // Laser game - "envie de bataille laser"
-  paintball_exterieur       // Paintball extérieur - "envie de combat tactique"
-  paintball_interieur       // Paintball intérieur - "envie de paintball sous toit"
-  realite_virtuelle         // Centre VR - "envie de réalité virtuelle"
-  salle_jeux_arcade         // Salle d'arcade - "envie de jeux rétro"
-  casino                    // Casino - "envie de jouer de l'argent"
-  salle_jeux_moderne        // Salle de jeux moderne (PS5, etc.) - "envie de gaming"
-
-  // === DIVERTISSEMENT CULTUREL ===
-  cinema_mainstream         // Cinéma grand public - "envie d'un film"
-  cinema_art_essai          // Cinéma d'art et d'essai - "envie de cinéma d'auteur"
-  cinema_imax               // Cinéma IMAX/premium - "envie d'un film en grand"
-  drive_in                  // Drive-in - "envie de cinéma en voiture"
-  theatre_classique         // Théâtre classique - "envie de théâtre"
-  theatre_cafe              // Café-théâtre - "envie de rire"
-  spectacle_humour          // Spectacle d'humour - "envie de stand-up"
-  concert_rock              // Salle de concert rock - "envie de concert rock"
-  concert_jazz              // Club de jazz - "envie de jazz"
-  concert_rap               // Salle de rap - "envie de rap live"
-  concert_electronique      // Concert électronique - "envie d'électro live"
-  concert_classique         // Salle de concert classique - "envie de classique"
-  concert_variete           // Concert variété française - "envie de chanson française"
-
-  // === CULTURE & DÉCOUVERTE ===
-  musee_art                 // Musée d'art - "envie de culture"
-  musee_histoire            // Musée d'histoire - "envie d'apprendre"
-  musee_science             // Musée scientifique - "envie de sciences"
-  musee_insolite            // Musée insolite/original - "envie de découvrir"
-  galerie_art               // Galerie d'art - "envie d'art contemporain"
-  centre_exposition         // Centre d'exposition - "envie d'expositions"
-  planetarium               // Planétarium - "envie d'astronomie"
-
-  // === MARCHÉS & ÉVÉNEMENTS ===
-  marche_nocturne           // Marché nocturne - "envie de marché de nuit"
-  marche_artisanal          // Marché artisanal - "envie de produits locaux"
-  marche_vintage            // Marché vintage/brocante - "envie de chiner"
-  festival_plein_air        // Festival en plein air - "envie de festival"
-  foire_commerciale         // Foire commerciale - "envie de shopping"
-  salon_professionnel       // Salon professionnel - "envie de networking"
-
-  // === BIEN-ÊTRE & DÉTENTE ===
-  spa_detente               // Spa/bien-être - "envie de détente"
-  hammam_traditionnel       // Hammam traditionnel - "envie de hammam"
-  sauna_finlandais          // Sauna finlandais - "envie de sauna"
-  spa_nordique              // Spa nordique - "envie de bains nordiques"
-  centre_massage            // Centre de massage - "envie d'un massage"
-  institut_beaute           // Institut de beauté - "envie de se faire bichonner"
-  salon_coiffure_premium    // Salon de coiffure premium - "envie d'un relooking"
-  onglerie                  // Salon d'ongles - "envie de manucure"
-
-  // === ACTIVITÉS AQUATIQUES ===
-  piscine_couverte          // Piscine couverte - "envie de nager"
-  piscine_exterieure        // Piscine extérieure - "envie de bronzer"
-  centre_aquatique          // Centre aquatique - "envie d'activités aquatiques"
-  aqua_fitness              // Cours d'aqua-fitness - "envie de sport dans l'eau"
-
-  // === LOISIRS CRÉATIFS ===
-  atelier_cuisine           // Atelier de cuisine - "envie d'apprendre à cuisiner"
-  atelier_patisserie        // Atelier de pâtisserie - "envie de faire des gâteaux"
-  atelier_poterie           // Atelier de poterie - "envie de créer"
-  atelier_peinture          // Atelier de peinture - "envie de peindre"
-  cours_danse               // Cours de danse - "envie d'apprendre à danser"
-  salle_musique             // Studio de musique - "envie de jouer de la musique"
-
-  // === PARCS & LOISIRS FAMILIAUX ===
-  parc_attraction           // Parc d'attractions - "envie de sensations"
-  parc_aquatique            // Parc aquatique - "envie de toboggans"
-  mini_golf                 // Mini-golf - "envie de mini-golf"
-  golf_practice             // Practice de golf - "envie de golf"
-  karting_interieur         // Karting intérieur - "envie de vitesse"
-  karting_exterieur         // Karting extérieur - "envie de course"
-  trampoline_park           // Parc de trampolines - "envie de sauter"
-  accrobranche              // Parcours accrobranche - "envie d'aventure en hauteur"
-
-  // === DIVERS & INSOLITES ===
-  salle_privee             // Salle privée pour événements - "envie de privatiser"
-  peniche                  // Péniche bar/restaurant - "envie de sortir sur l'eau"
-  rooftop_restaurant       // Restaurant rooftop - "envie de manger en hauteur"
-  cave_degustation         // Cave à vin dégustation - "envie de dégustation"
-  microbrasserie           // Microbrasserie - "envie de bière artisanale"
-  distillerie              // Distillerie - "envie de spiritueux"
-  autre                    // Autres activités non classées
-}
-
-enum EstablishmentStatus {
-  active     // Validé et visible publiquement
-  pending    // En attente de validation
-  suspended  // Suspendu temporairement
-}
-
-enum SubscriptionPlan {
-  FREE      // Plan gratuit (1 photo, fonctions de base)
-  PREMIUM   // Plan premium (10 photos, mise en avant)
-}
-
-enum FeaturedPlacementType {
-  homepage  // Mise en avant page d'accueil
-  search    // Mise en avant dans les résultats de recherche
-  map       // Mise en avant sur la carte
-}
-
-// ========================================
-// MODELS PRINCIPAUX
-// ========================================
-
-/**
- * USER - Consommateurs du site
- * Peuvent : chercher, liker, commenter, mettre en favoris
- * Ne peuvent PAS : créer d'établissements
- */
+/// *
+///  * USER - Utilisateurs du site (consommateurs + professionnels)
+///  * Peuvent : chercher, liker, commenter, mettre en favoris
+///  * Si establishmentId est défini : professionnel propriétaire d'un établissement
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?  // Hash du mot de passe
-  role         UserRole @default(user)
-  name         String?  // Nom d'affichage
-  phone        String?
-  preferences  Json?    // Préférences utilisateur (JSON)
-  
-  // Relations d'interaction avec les établissements
-  favorites    UserFavorite[]
-  likes        UserLike[]
-  comments     UserComment[]
-  
-  // Newsletter preferences
-  newsletterOptIn Boolean @default(true)
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
+  id              String          @id @default(cuid())
+  email           String          @unique
+  passwordHash    String?
+  role            UserRole        @default(user)
+  firstName       String?
+  lastName        String?
+  name            String?
+  phone           String?
+  preferences     Json?
+  newsletterOptIn Boolean         @default(true)
+  // Champs pour l'authentification sociale
+  provider        String?         // "local", "google", "facebook"
+  providerId      String?         // ID du provider social
+  avatar          String?         // URL de l'avatar
+  isVerified      Boolean         @default(false)
+  establishmentId String?         // ID de l'établissement (pour les pros)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  establishments  Establishment[]
+  comments        UserComment[]
+  favorites       UserFavorite[]
+  likes           UserLike[]
+
   @@map("users")
 }
 
-/**
- * PROFESSIONAL - Propriétaires d'établissements
- * Seuls autorisés à créer/gérer des établissements
- * Vérification obligatoire via SIRET
- */
+/// *
+///  * PROFESSIONAL - Propriétaires d'établissements
+///  * Seuls autorisés à créer/gérer des établissements
+///  * Vérification obligatoire via SIRET
 model Professional {
-  id                String   @id @default(cuid())
-  siret            String   @unique          // Numéro SIRET obligatoire
+  id               String           @id @default(cuid())
+  siret            String           @unique
   firstName        String
   lastName         String
-  email            String   @unique
+  email            String           @unique
   phone            String
-  companyName      String                    // Raison sociale
-  legalStatus      String                    // Statut juridique (SARL, SAS, etc.)
+  companyName      String
+  legalStatus      String
   subscriptionPlan SubscriptionPlan @default(FREE)
-  
-  // Vérification du SIRET
-  siretVerified    Boolean @default(false)
+  siretVerified    Boolean          @default(false)
   siretVerifiedAt  DateTime?
-  
-  // Relations avec les établissements
-  establishments   Establishment[]
-  
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
   @@map("professionals")
 }
 
-/**
- * ESTABLISHMENT - Établissements de sortie
- * Créés et gérés uniquement par des Professionals
- * Système de validation par l'admin avant publication
- */
+/// *
+///  * ESTABLISHMENT - Établissements de sortie
+///  * Créés et gérés uniquement par des Professionals
+///  * Système de validation par l'admin avant publication
 model Establishment {
-  id                      String                 @id @default(cuid())
-  name                    String                 // Nom commercial
-  slug                    String                 @unique // URL-friendly
-  description             String?                // Description détaillée
-  address                 String                 // Adresse complète
-  city                    String?
-  postalCode              String?
-  country                 String                 @default("France")
-  latitude                Float?                 // Coordonnées GPS
-  longitude               Float?
-  phone                   String?
-  email                   String?                // Email de contact
-  website                 String?                // Site web
-  instagram               String?                // Compte Instagram
-  facebook                String?                // Page Facebook
-  
-  // Activités multiples - un établissement peut proposer plusieurs activités
-  activities               Json?                  // Activités proposées (JSON array)
-  specialites             String                 @default("") // Spécialités (JSON string)
-  motsClesRecherche       String?                // Mots-clés pour la recherche
-  
-  // Services et ambiance (JSON strings pour SQLite)
-  services                Json?                  // Services proposés
-  ambiance                Json?                  // Type d'ambiance
-  
-  // Informations pratiques
-  horairesOuverture       Json?                  // Horaires structurés
-  prixMoyen               Float?                 // Prix moyen (€)
-  capaciteMax             Int?                   // Capacité maximale
-  accessibilite           Boolean @default(false) // Accessible PMR
-  parking                 Boolean @default(false) // Parking disponible
-  terrasse                Boolean @default(false) // Terrasse disponible
-  
-  // Statut et validation
-  status                  EstablishmentStatus    @default(pending)
-  
-  // Propriétaire (SEUL un professionnel peut posséder)
-  professionalOwner       Professional           @relation(fields: [professionalOwnerId], references: [id], onDelete: Cascade)
-  professionalOwnerId     String
-  
-  // Relations avec contenu et interactions
-  images                  Image[]
-  events                  Event[]
-  tags                    EtablissementTag[]
-  featuredPromotions      FeaturedPromotion[]
-  
-  // Relations utilisateurs (interactions)
-  favorites               UserFavorite[]
-  likes                   UserLike[]
-  comments                UserComment[]
-  
-  // Statistiques (calculées)
-  viewsCount              Int @default(0)        // Nombre de vues
-  clicksCount             Int @default(0)        // Clics vers site/tel
-  avgRating               Float?                 // Note moyenne calculée
-  totalComments           Int @default(0)        // Nombre total d'avis
-  
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  
+  id                 String              @id @default(cuid())
+  name               String
+  slug               String              @unique
+  description        String?
+  address            String
+  city               String?
+  postalCode         String?
+  country            String              @default("France")
+  latitude           Float?
+  longitude          Float?
+  phone              String?
+  email              String?
+  website            String?
+  instagram          String?
+  facebook           String?
+  activities         Json?
+  specialites        String              @default("")
+  motsClesRecherche  String?
+  services           Json?
+  ambiance           Json?
+  horairesOuverture  Json?
+  prixMoyen          Float?
+  capaciteMax        Int?
+  accessibilite      Boolean             @default(false)
+  parking            Boolean             @default(false)
+  terrasse           Boolean             @default(false)
+  status             EstablishmentStatus @default(pending)
+  subscription       SubscriptionType    @default(STANDARD)
+  ownerId            String
+  viewsCount         Int                 @default(0)
+  clicksCount        Int                 @default(0)
+  avgRating          Float?
+  totalComments      Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  tiktok             String?
+  imageUrl           String?
+  priceMax           Float?
+  priceMin           Float?
+  owner              User                @relation(fields: [ownerId], references: [id])
+  tags               EtablissementTag[]
+  events             Event[]
+  featuredPromotions FeaturedPromotion[]
+  images             Image[]
+  pricing            Pricing[]
+  tariffs            Tariff[]
+  comments           UserComment[]
+  favorites          UserFavorite[]
+  likes              UserLike[]
+
   @@map("establishments")
 }
 
-// ========================================
-// RELATIONS D'INTERACTION UTILISATEURS
-// ========================================
-
-/**
- * USER_FAVORITE - Établissements mis en favoris
- * Permet aux users de sauvegarder leurs établissements préférés
- * Active les notifications newsletter
- */
+/// *
+///  * USER_FAVORITE - Établissements mis en favoris
+///  * Permet aux users de sauvegarder leurs établissements préférés
+///  * Active les notifications newsletter
 model UserFavorite {
-  id              String @id @default(cuid())
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId          String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  establishmentId String
-  
-  // Newsletter pour cet établissement
-  receiveNewsletter Boolean @default(true)
-  
-  createdAt       DateTime @default(now())
-  
-  // Un user ne peut mettre qu'une fois en favori le même établissement
+  id                String        @id @default(cuid())
+  userId            String
+  establishmentId   String
+  receiveNewsletter Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  establishment     Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, establishmentId])
   @@map("user_favorites")
 }
 
-/**
- * USER_LIKE - Système de likes
- * Permet aux users d'exprimer leur appréciation rapidement
- */
+/// *
+///  * USER_LIKE - Système de likes
+///  * Permet aux users d'exprimer leur appréciation rapidement
 model UserLike {
-  id              String @id @default(cuid())
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String        @id @default(cuid())
   userId          String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   establishmentId String
-  
-  createdAt       DateTime @default(now())
-  
-  // Un user ne peut liker qu'une fois le même établissement
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, establishmentId])
   @@map("user_likes")
 }
 
-/**
- * USER_COMMENT - Avis et commentaires
- * Système d'avis complet avec note sur 5 étoiles
- */
+/// *
+///  * USER_COMMENT - Avis et commentaires
+///  * Système d'avis complet avec note sur 5 étoiles
 model UserComment {
-  id              String @id @default(cuid())
-  content         String                     // Texte du commentaire
-  rating          Int?                       // Note sur 5 étoiles (1-5)
-  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String        @id @default(cuid())
+  content         String
+  rating          Int?
   userId          String
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   establishmentId String
-  
-  // Moderation
-  isVisible       Boolean @default(true)     // Visible publiquement
-  reportedCount   Int @default(0)            // Nombre de signalements
-  moderatedAt     DateTime?                  // Date de modération
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  isVisible       Boolean       @default(true)
+  reportedCount   Int           @default(0)
+  moderatedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("user_comments")
 }
 
-// ========================================
-// CONTENU ET MÉDIAS
-// ========================================
-
-/**
- * IMAGE - Photos des établissements
- * Limitation selon l'abonnement : 1 (FREE) ou 10 (PREMIUM)
- */
+/// *
+///  * IMAGE - Photos des établissements
+///  * Limitation selon l'abonnement : 1 (FREE) ou 10 (PREMIUM)
 model Image {
   id              String        @id @default(cuid())
-  url             String        // URL de l'image (Cloudinary, S3, etc.)
-  altText         String?       // Texte alternatif pour accessibilité
-  isPrimary       Boolean       @default(false) // Image principale (une seule par établissement)
-  ordre           Int           @default(0)     // Ordre d'affichage
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  url             String
+  altText         String?
+  isPrimary       Boolean       @default(false)
+  ordre           Int           @default(0)
   establishmentId String
   createdAt       DateTime      @default(now())
-  
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
   @@map("images")
 }
 
-/**
- * EVENT - Événements organisés par les établissements
- * Permet aux pros de promouvoir leurs événements spéciaux
- */
+/// *
+///  * EVENT - Événements organisés par les établissements
+///  * Permet aux pros Premium de promouvoir leurs événements spéciaux
 model Event {
   id              String        @id @default(cuid())
-  name            String        // Nom de l'événement
-  description     String?       // Description détaillée
-  startDate       DateTime      // Date/heure de début
-  endDate         DateTime?     // Date/heure de fin (optionnelle)
-  price           Float?        // Prix d'entrée (€)
-  maxCapacity     Int?          // Capacité maximale
-  isRecurring     Boolean       @default(false) // Événement récurrent
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime?
+  imageUrl        String?
+  price           Float?
+  maxCapacity     Int?
+  isRecurring     Boolean       @default(false)
   establishmentId String
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
   @@map("events")
 }
 
-/**
- * ETABLISSEMENT_TAG - Tags pour la recherche
- * Système de tags pondérés pour améliorer la recherche "Envie de..."
- */
+/// *
+///  * ETABLISSEMENT_TAG - Tags pour la recherche
+///  * Système de tags pondérés pour améliorer la recherche "Envie de..."
 model EtablissementTag {
-  id                     Int           @id @default(autoincrement())
-  etablissementId        String
-  tag                    String        // Texte du tag
-  typeTag                String        // Type : 'activite', 'ambiance', 'nourriture', 'service'
-  poids                  Int           @default(5) // Importance 1-10 pour le ranking
-  createdAt              DateTime      @default(now())
-  etablissement          Establishment? @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  id              Int           @id @default(autoincrement())
+  etablissementId String
+  tag             String
+  typeTag         String
+  poids           Int           @default(5)
+  createdAt       DateTime      @default(now())
+  etablissement   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
 
   @@map("etablissement_tags")
 }
 
-/**
- * FEATURED_PROMOTION - Promotions mises en avant
- * Système de mise en avant payante pour les établissements Premium
- */
+/// *
+///  * FEATURED_PROMOTION - Promotions mises en avant
+///  * Système de mise en avant payante pour les établissements Premium
 model FeaturedPromotion {
   id              String                @id @default(cuid())
-  title           String                // Titre de la promotion
-  description     String?               // Description
-  startDate       DateTime              // Date de début
-  endDate         DateTime              // Date de fin
-  placementType   FeaturedPlacementType // Type d'emplacement
-  establishment   Establishment         @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  placementType   FeaturedPlacementType
   establishmentId String
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  establishment   Establishment         @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
   @@map("featured_promotions")
+}
+
+/// *
+///  * PRICING - Tarifs des services/activités
+///  * Permet aux établissements de définir leurs prix par service
+model Pricing {
+  id              String        @id @default(cuid())
+  serviceId       String
+  price           Float
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("pricing")
+}
+
+/// *
+///  * TARIFF - Tarifs personnalisés des établissements
+///  * Permet aux professionnels de créer leurs propres tarifs
+model Tariff {
+  id              String        @id @default(cuid())
+  label           String
+  price           Float
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("tariffs")
+}
+
+enum UserRole {
+  user
+  pro
+  admin
+}
+
+/// *
+///  * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
+///  * Chaque activité correspond à une expérience spécifique
+///  * Permet un matching parfait avec les intentions des clients
+///  * Un établissement peut proposer plusieurs activités
+enum EstablishmentActivity {
+  bar_ambiance
+  pub_traditionnel
+  brasserie_artisanale
+  bar_cocktails
+  bar_vins
+  bar_sports
+  rooftop_bar
+  bar_karaoké
+  bar_jeux
+  bar_bières
+  restaurant_gastronomique
+  restaurant_traditionnel
+  restaurant_familial
+  bistrot
+  brasserie_restaurant
+  restaurant_rapide
+  restaurant_italien
+  restaurant_asiatique
+  restaurant_oriental
+  restaurant_mexicain
+  restaurant_indien
+  restaurant_veggie
+  creperie
+  pizzeria
+  kebab
+  tacos_mexicain
+  burger
+  sandwich
+  fish_and_chips
+  food_truck
+  friterie
+  poke_bowl
+  discotheque
+  club_prive
+  boite_nuit_mainstream
+  club_techno
+  club_hip_hop
+  club_latino
+  dancing_retro
+  boite_estudiantine
+  bowling
+  billard_americain
+  billard_francais
+  snooker
+  ping_pong_bar
+  squash
+  badminton
+  tennis_table
+  futsal
+  football_5vs5
+  football_7vs7
+  tennis_exterieur
+  padel
+  basketball
+  beach_volley
+  escape_game_horreur
+  escape_game_aventure
+  escape_game_familial
+  escape_game_immersif
+  laser_game
+  paintball_exterieur
+  paintball_interieur
+  realite_virtuelle
+  salle_jeux_arcade
+  casino
+  salle_jeux_moderne
+  cinema_mainstream
+  cinema_art_essai
+  cinema_imax
+  drive_in
+  theatre_classique
+  theatre_cafe
+  spectacle_humour
+  concert_rock
+  concert_jazz
+  concert_rap
+  concert_electronique
+  concert_classique
+  concert_variete
+  musee_art
+  musee_histoire
+  musee_science
+  musee_insolite
+  galerie_art
+  centre_exposition
+  planetarium
+  marche_nocturne
+  marche_artisanal
+  marche_vintage
+  festival_plein_air
+  foire_commerciale
+  salon_professionnel
+  spa_detente
+  hammam_traditionnel
+  sauna_finlandais
+  spa_nordique
+  centre_massage
+  institut_beaute
+  salon_coiffure_premium
+  onglerie
+  piscine_couverte
+  piscine_exterieure
+  centre_aquatique
+  aqua_fitness
+  atelier_cuisine
+  atelier_patisserie
+  atelier_poterie
+  atelier_peinture
+  cours_danse
+  salle_musique
+  parc_attraction
+  parc_aquatique
+  mini_golf
+  golf_practice
+  karting_interieur
+  karting_exterieur
+  trampoline_park
+  accrobranche
+  salle_privee
+  peniche
+  rooftop_restaurant
+  cave_degustation
+  microbrasserie
+  distillerie
+  autre
+}
+
+enum EstablishmentStatus {
+  active
+  pending
+  suspended
+}
+
+enum SubscriptionPlan {
+  FREE
+  PREMIUM
+}
+
+enum SubscriptionType {
+  STANDARD
+  PREMIUM
+}
+
+enum FeaturedPlacementType {
+  homepage
+  search
+  map
 }

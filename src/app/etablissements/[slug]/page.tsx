@@ -3,26 +3,32 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import ActionButtons from "../action-buttons";
 import EstablishmentDetail from "./EstablishmentDetail";
+import { headers } from "next/headers";
 
 export default async function EstablishmentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const { slug } = await params;
+  const search = await searchParams;
+  const headersList = await headers();
+  const referer = headersList.get('referer') || '';
+  
   const establishment = await prisma.establishment.findUnique({
     where: { slug },
     include: {
       images: true,
       events: { orderBy: { startDate: "asc" } },
-      professionalOwner: {
+      owner: {
         select: {
           id: true,
           firstName: true,
           lastName: true,
           email: true,
           phone: true,
-          companyName: true,
         }
       },
     },
@@ -32,17 +38,120 @@ export default async function EstablishmentPage({
     notFound();
   }
 
+  // Déterminer la page de retour basée sur le referer ou les paramètres
+  const getBackUrl = () => {
+    // Vérifier si referer est une URL valide
+    const isValidUrl = (url: string) => {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    // Si on vient d'une recherche par envie
+    if ((referer && referer.includes('/recherche/envie')) || search.from === 'envie') {
+      if (referer && isValidUrl(referer)) {
+        const url = new URL(referer);
+        const envie = url.searchParams.get('envie');
+        const ville = url.searchParams.get('ville');
+        const rayon = url.searchParams.get('rayon');
+        const lat = url.searchParams.get('lat');
+        const lng = url.searchParams.get('lng');
+        
+        let backUrl = '/recherche/envie';
+        const params = new URLSearchParams();
+        if (envie) params.set('envie', envie);
+        if (ville) params.set('ville', ville);
+        if (rayon) params.set('rayon', rayon);
+        if (lat) params.set('lat', lat);
+        if (lng) params.set('lng', lng);
+        
+        if (params.toString()) {
+          backUrl += '?' + params.toString();
+        }
+        return backUrl;
+      }
+      return '/recherche/envie';
+    }
+    
+    // Si on vient d'une recherche classique
+    if ((referer && referer.includes('/recherche')) || search.from === 'recherche') {
+      if (referer && isValidUrl(referer)) {
+        const url = new URL(referer);
+        const q = url.searchParams.get('q');
+        const category = url.searchParams.get('category');
+        const lat = url.searchParams.get('lat');
+        const lng = url.searchParams.get('lng');
+        
+        let backUrl = '/recherche';
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (category) params.set('category', category);
+        if (lat) params.set('lat', lat);
+        if (lng) params.set('lng', lng);
+        
+        if (params.toString()) {
+          backUrl += '?' + params.toString();
+        }
+        return backUrl;
+      }
+      return '/recherche';
+    }
+    
+    // Si on vient de la carte
+    if ((referer && referer.includes('/carte')) || search.from === 'carte') {
+      return '/carte';
+    }
+    
+    // Si on vient du dashboard, retourner au dashboard
+    if ((referer && referer.includes('/dashboard')) || search.from === 'dashboard') {
+      return '/dashboard';
+    }
+    
+    // Si on vient de la page d'accueil
+    if (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard')) {
+      return '/';
+    }
+    
+    // Par défaut, retourner à la liste des établissements (gestion)
+    return '/etablissements';
+  };
+
+  const getBackLabel = () => {
+    if ((referer && referer.includes('/recherche/envie')) || search.from === 'envie') {
+      return '← Retour aux résultats';
+    }
+    if ((referer && referer.includes('/recherche')) || search.from === 'recherche') {
+      return '← Retour aux résultats';
+    }
+    if ((referer && referer.includes('/carte')) || search.from === 'carte') {
+      return '← Retour à la carte';
+    }
+    if ((referer && referer.includes('/dashboard')) || search.from === 'dashboard') {
+      return '← Retour à la gestion';
+    }
+    if (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard')) {
+      return '← Retour à l\'accueil';
+    }
+    return '← Retour à la liste';
+  };
+
+  // Déterminer si c'est un mode dashboard (uniquement via paramètre URL explicite)
+  const isDashboard = search.dashboard === 'true';
+
   return (
     <main className="min-h-screen p-8 max-w-7xl mx-auto">
       <div className="flex justify-between items-start mb-6">
-        <Link href="/etablissements" className="text-blue-500 hover:underline">
-          ← Retour à la liste
+        <Link href={getBackUrl()} className="text-orange-500 hover:text-orange-600 hover:underline transition-colors">
+          {getBackLabel()}
         </Link>
         
-        <ActionButtons establishment={establishment} />
+        <ActionButtons establishment={establishment} isDashboard={isDashboard} />
       </div>
 
-      <EstablishmentDetail establishment={establishment} />
+      <EstablishmentDetail establishment={establishment} isDashboard={isDashboard} />
     </main>
   );
 }

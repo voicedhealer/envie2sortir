@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "./navigation";
+import AuthProvider from "./components/AuthProvider";
+import { Toaster } from "react-hot-toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -20,9 +22,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${inter.variable} antialiased`}>
-        <Navigation />
-        {children}
+      <body className={`${inter.variable} antialiased`} suppressHydrationWarning={true}>
+        <AuthProvider>
+          <Navigation />
+          {children}
+          <Toaster position="top-right" />
+        </AuthProvider>
       </body>
     </html>
   );

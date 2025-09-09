@@ -26,6 +26,12 @@ export interface EstablishmentFormData {
   services: string[];
   ambiance: string[];
   
+  // Moyens de paiement
+  paymentMethods: string[];
+  
+  // Tags de recherche
+  tags: string[];
+  
   // Photos
   photos: File[];
   
@@ -48,8 +54,10 @@ const STEPS_CONFIG = [
   { step: 1, title: 'Informations générales', key: 'general' },
   { step: 2, title: 'Horaires', key: 'hours' },
   { step: 3, title: 'Services & Ambiance', key: 'services' },
-  { step: 4, title: 'Photos & Abonnement', key: 'photos' },
-  { step: 5, title: 'Contact & Réseaux', key: 'contact' },
+  { step: 4, title: 'Moyens de paiement', key: 'payment' },
+  { step: 5, title: 'Tags & Mots-clés', key: 'tags' },
+  { step: 6, title: 'Abonnement', key: 'subscription' },
+  { step: 7, title: 'Contact & Réseaux', key: 'contact' },
 ];
 
 // Configuration des jours de la semaine
@@ -181,11 +189,11 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
         </div>
       </div>
 
-      {/* Photos */}
+      {/* Moyens de paiement */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">
-            📸 Photos & Abonnement
+            💳 Moyens de paiement
           </h3>
           <button
             onClick={() => onEdit(4)}
@@ -194,8 +202,56 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
             Modifier
           </button>
         </div>
+        <div>
+          <span className="font-medium text-gray-700">Moyens acceptés :</span>
+          <span className="ml-2 text-gray-900">{formatList(data.paymentMethods)}</span>
+        </div>
+      </div>
+
+      {/* Tags de recherche */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            🏷️ Tags de recherche
+          </h3>
+          <button
+            onClick={() => onEdit(5)}
+            className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Modifier
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {data.tags.length > 0 ? (
+            data.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-800 rounded-full"
+              >
+                {tag.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              </span>
+            ))
+          ) : (
+            <span className="text-gray-500 italic">Aucun tag sélectionné</span>
+          )}
+        </div>
+      </div>
+
+      {/* Abonnement */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            📸 Abonnement
+          </h3>
+          <button
+            onClick={() => onEdit(6)}
+            className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          >
+            Modifier
+          </button>
+        </div>
         <div className="text-gray-900">
-          {formatPhotos(data.photos)}
+          Les photos sont ajoutées sur la page pro
         </div>
       </div>
 
@@ -206,7 +262,7 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
             📞 Contact & Réseaux sociaux
           </h3>
           <button
-            onClick={() => onEdit(5)}
+            onClick={() => onEdit(7)}
             className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
           >
             Modifier

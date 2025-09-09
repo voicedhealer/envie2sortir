@@ -20,15 +20,18 @@ interface EstablishmentDetail {
   instagram: string;
   facebook: string;
   createdAt: string;
-  professionalOwner: {
-    siret: string;
-    companyName: string;
+  owner: {
     firstName: string;
     lastName: string;
     email: string;
     phone: string;
-    legalStatus: string;
   };
+  tags: Array<{
+    id: number;
+    tag: string;
+    typeTag: string;
+    poids: number;
+  }>;
 }
 
 // Fonction helper pour parser les services/ambiances de manière sécurisée
@@ -252,40 +255,22 @@ export default function DemandeDetailPage({
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <p className="text-sm font-medium text-gray-700">SIRET</p>
-              <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.siret}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700">Raison sociale</p>
-              <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.companyName}
-              </p>
-            </div>
-            <div>
               <p className="text-sm font-medium text-gray-700">Nom complet</p>
               <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.firstName}{" "}
-                {establishment.professionalOwner.lastName}
+                {establishment.owner.firstName}{" "}
+                {establishment.owner.lastName}
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">Email</p>
               <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.email}
+                {establishment.owner.email}
               </p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700">Téléphone</p>
               <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.phone}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700">Statut légal</p>
-              <p className="text-gray-900 mt-1">
-                {establishment.professionalOwner.legalStatus}
+                {establishment.owner.phone}
               </p>
             </div>
           </div>
@@ -321,6 +306,47 @@ export default function DemandeDetailPage({
                     {ambiance}
                   </span>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tags */}
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">
+            Tags associés
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Tags automatiques (activités)</p>
+              <div className="flex flex-wrap gap-2">
+                {establishment.tags
+                  .filter(tag => tag.typeTag === 'activite')
+                  .sort((a, b) => b.poids - a.poids)
+                  .map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                    >
+                      {tag.tag} ({tag.poids})
+                    </span>
+                  ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Tags manuels</p>
+              <div className="flex flex-wrap gap-2">
+                {establishment.tags
+                  .filter(tag => tag.typeTag === 'manuel')
+                  .sort((a, b) => b.poids - a.poids)
+                  .map((tag) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
+                    >
+                      {tag.tag} ({tag.poids})
+                    </span>
+                  ))}
               </div>
             </div>
           </div>

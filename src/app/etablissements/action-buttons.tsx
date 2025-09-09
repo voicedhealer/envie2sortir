@@ -11,7 +11,7 @@ type Establishment = {
   status: string;
 };
 
-export default function ActionButtons({ establishment }: { establishment: Establishment }) {
+export default function ActionButtons({ establishment, isDashboard = false }: { establishment: Establishment; isDashboard?: boolean }) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -42,6 +42,11 @@ export default function ActionButtons({ establishment }: { establishment: Establ
       setIsDeleting(false);
     }
   };
+
+  // Ne pas afficher les boutons d'édition en mode public
+  if (!isDashboard) {
+    return null;
+  }
 
   return (
     <div className="flex gap-2 ml-4">

@@ -11,7 +11,7 @@ export default function Home() {
             <div className="max-w-3xl">
               <span className="inline-block px-3 py-1 text-xs rounded-full bg-black/5 text-gray-700">La plateforme ultra-locale de TOUS les divertissements</span>
               <h1 className="mt-4 text-4xl md:text-6xl font-extrabold tracking-tight" style={{color: '#171717'}}>
-                DÉCOUVREZ TOUTES LES SORTIES, PRÈS DE CHEZ VOUS
+                DÉCOUVREZ TOUTES VOS ENVIES, PRÈS DE CHEZ VOUS
               </h1>
               <div className="mt-8">
                 <EnvieSearchBar />

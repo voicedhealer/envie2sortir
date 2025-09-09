@@ -3,23 +3,62 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { ModernActivitiesSelector } from "@/components/ModernActivitiesSelector"; 
 import OpeningHoursInput, { HoursData } from '@/components/forms/OpeningHoursInput';
 import SummaryStep, { EstablishmentFormData } from '@/components/forms/SummaryStep';
 import AdresseStep, { AddressData } from '@/components/forms/AdresseStep';
+import TagsSelector from '@/components/forms/TagsSelector';
+
+// Fonction pour obtenir les suggestions basées sur les activités
+function getSuggestedTags(activities: string[]): string[] {
+  const suggestions: string[] = [];
+  
+  activities.forEach(activity => {
+    // Mapping des activités vers des tags suggérés
+    const activitySuggestions: { [key: string]: string[] } = {
+      'pizzeria': ['pizza', 'italien', 'pâtes', 'livraison', 'emporter', 'familial'],
+      'restaurant_italien': ['pizza', 'italien', 'pâtes', 'antipasti', 'vins', 'familial'],
+      'restaurant_français': ['français', 'traditionnel', 'terroir', 'gastronomique', 'vins'],
+      'restaurant_asiatique': ['asiatique', 'sushi', 'wok', 'japonais', 'chinois', 'thé'],
+      'kebab': ['kebab', 'turc', 'sandwich', 'livraison', 'rapide', 'budget'],
+      'burger': ['burger', 'américain', 'frites', 'rapide', 'familial', 'budget'],
+      'bar_ambiance': ['cocktails', 'ambiance', 'lounge', 'chic', 'soirée', 'romantique'],
+      'pub_traditionnel': ['bières', 'pub', 'sport', 'décontracté', 'groupe', 'happy-hour'],
+      'brasserie_artisanale': ['bières', 'artisanal', 'local', 'dégustation', 'authentique'],
+      'bar_cocktails': ['cocktails', 'mixologie', 'sophistiqué', 'premium', 'chic'],
+      'bar_vins': ['vins', 'œnologie', 'dégustation', 'raffiné', 'culturel'],
+      'bar_sports': ['sport', 'bières', 'écrans', 'groupe', 'festif', 'happy-hour'],
+      'discotheque': ['danse', 'dj', 'musique', 'festif', 'nuit', 'groupe'],
+      'club_techno': ['électro', 'techno', 'danse', 'underground', 'nuit'],
+      'bowling': ['bowling', 'famille', 'groupe', 'compétition', 'amusant'],
+      'escape_game_horreur': ['escape-game', 'aventure', 'équipe', 'défi', 'énigme', 'groupe'],
+      'futsal': ['football', 'sport', 'équipe', 'compétition', 'groupe']
+    };
+    
+    if (activitySuggestions[activity]) {
+      suggestions.push(...activitySuggestions[activity]);
+    }
+  });
+  
+  // Supprimer les doublons et retourner les 15 premiers
+  return [...new Set(suggestions)].slice(0, 15);
+}
 
 // Types
 type ProfessionalData = {
+  // Données de compte (nouvelle étape 0)
+  accountEmail: string;
+  accountPassword: string;
+  accountPasswordConfirm: string;
+  accountFirstName: string;
+  accountLastName: string;
+  accountPhone?: string;
+  
   // Données légales/administratives
   siret: string;
   companyName: string;
   legalStatus: string;
-  
-  // Données personnelles du responsable
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
   
   // Données de l'établissement
   establishmentName: string;
@@ -31,6 +70,12 @@ type ProfessionalData = {
   services: string[];
   ambiance: string[];
   
+  // Moyens de paiement
+  paymentMethods: string[];
+  
+  // Tags de recherche
+  tags: string[];
+  
   // Photos
   photos: File[];
   
@@ -41,12 +86,17 @@ type ProfessionalData = {
   website?: string;
   instagram?: string;
   facebook?: string;
+  tiktok?: string;
+  
+  // Prix
+  priceMin?: number;
+  priceMax?: number;
   
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
 };
 
-type FormStep = 1 | 2 | 3 | 4 | 5 | 6;
+type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 // Icônes simples en SVG
 const Icons = {
@@ -289,6 +339,20 @@ const UNIVERSAL_SERVICES = {
       "Groupes scolaires"
     ]
   },
+  paiement: {
+    title: "MOYENS DE PAIEMENT",
+    icon: "💳",
+    services: [
+      "Espèces",
+      "Carte bancaire",
+      "Paiement mobile (Apple Pay, Google Pay)",
+      "Chèque",
+      "Virement",
+      "Tickets restaurant",
+      "Chèques vacances ANCV",
+      "Crypto-monnaies"
+    ]
+  },
   autres: {
     title: "AUTRES",
     icon: "🛍️",
@@ -297,7 +361,6 @@ const UNIVERSAL_SERVICES = {
       "Location équipements",
       "Cours/stages",
       "Réservation en ligne",
-      "Paiement CB",
       "Animaux acceptés"
     ]
   }
@@ -306,15 +369,20 @@ const UNIVERSAL_SERVICES = {
 
 export default function ProfessionalRegistrationForm() {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<FormStep>(1);
+  const [currentStep, setCurrentStep] = useState<FormStep>(0);
   const [formData, setFormData] = useState<ProfessionalData>({
+    // Données de compte (étape 0)
+    accountEmail: "",
+    accountPassword: "",
+    accountPasswordConfirm: "",
+    accountFirstName: "",
+    accountLastName: "",
+    accountPhone: "",
+    
+    // Données légales/administratives
     siret: "",
     companyName: "",
     legalStatus: "",
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
     establishmentName: "",
     description: "",
     address: {
@@ -327,8 +395,12 @@ export default function ProfessionalRegistrationForm() {
     activities: [],
     services: [],
     ambiance: [],
+    paymentMethods: [],
+    tags: [],
     photos: [],
     hours: {},
+    priceMin: undefined,
+    priceMax: undefined,
     subscriptionPlan: "free"
   });
 
@@ -363,8 +435,8 @@ export default function ProfessionalRegistrationForm() {
       setFormData(prev => ({
         ...prev,
         companyName: mockData.denomination || "",
-        legalStatus: mockData.categorieJuridiqueUniteLegale || "",
-        address: mockData.adresse || ""
+        legalStatus: mockData.categorieJuridiqueUniteLegale || ""
+        // Note: address reste inchangé car c'est un objet AddressData, pas une string
       }));
     } catch (error) {
       setSiretVerification({ status: 'invalid' });
@@ -400,7 +472,11 @@ export default function ProfessionalRegistrationForm() {
     }
   };
 
-  const handleArrayToggle = (field: 'subCategories' | 'services' | 'ambiance', value: string) => {
+  const handleTagsChange = (tags: string[]) => {
+    setFormData(prev => ({ ...prev, tags }));
+  };
+
+  const handleArrayToggle = (field: 'services' | 'ambiance', value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].includes(value)
@@ -409,34 +485,32 @@ export default function ProfessionalRegistrationForm() {
     }));
   };
 
-  const handlePhotoUpload = (files: FileList) => {
-    const maxPhotos = formData.subscriptionPlan === 'premium' ? 10 : 1;
-    const newPhotos = Array.from(files).slice(0, maxPhotos - formData.photos.length);
-    
-    setFormData(prev => ({
-      ...prev,
-      photos: [...prev.photos, ...newPhotos]
-    }));
-  };
-
-  const removePhoto = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
-  };
+  // Les photos sont maintenant gérées sur la page pro
 
   const validateStep = (step: FormStep): boolean => {
     const newErrors: Record<string, string> = {};
 
     switch (step) {
+      case 0:
+        if (!formData.accountFirstName) newErrors.accountFirstName = "Prénom requis";
+        if (!formData.accountLastName) newErrors.accountLastName = "Nom requis";
+        if (!formData.accountEmail) newErrors.accountEmail = "Email requis";
+        else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.accountEmail)) {
+          newErrors.accountEmail = "Format d'email invalide";
+        }
+        if (!formData.accountPassword) newErrors.accountPassword = "Mot de passe requis";
+        else if (formData.accountPassword.length < 8) {
+          newErrors.accountPassword = "Le mot de passe doit contenir au moins 8 caractères";
+        }
+        if (!formData.accountPasswordConfirm) newErrors.accountPasswordConfirm = "Confirmation du mot de passe requise";
+        else if (formData.accountPassword !== formData.accountPasswordConfirm) {
+          newErrors.accountPasswordConfirm = "Les mots de passe ne correspondent pas";
+        }
+        break;
+
       case 1:
         if (!formData.siret) newErrors.siret = "SIRET requis";
         if (siretVerification.status !== 'valid') newErrors.siret = "SIRET invalide";
-        if (!formData.firstName) newErrors.firstName = "Prénom requis";
-        if (!formData.lastName) newErrors.lastName = "Nom requis";
-        if (!formData.email) newErrors.email = "Email requis";
-        if (!formData.phone) newErrors.phone = "Téléphone requis";
         break;
       
       case 2:
@@ -453,7 +527,20 @@ export default function ProfessionalRegistrationForm() {
         break;
       
       case 4:
-        if (formData.photos.length === 0) newErrors.photos = "Au moins une photo requise";
+        // Validation des moyens de paiement (optionnel)
+        break;
+      
+      case 5:
+        if (formData.tags.length < 3) newErrors.tags = "Sélectionnez au moins 3 tags de recherche";
+        break;
+      
+      case 6:
+        // Validation de l'abonnement (obligatoire)
+        if (!formData.subscriptionPlan) newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
+        break;
+      
+      case 7:
+        // Validation des réseaux sociaux (optionnel)
         break;
     }
 
@@ -463,12 +550,12 @@ export default function ProfessionalRegistrationForm() {
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(6, prev + 1) as FormStep);
+      setCurrentStep(prev => Math.min(8, prev + 1) as FormStep);
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(1, prev - 1) as FormStep);
+    setCurrentStep(prev => Math.max(0, prev - 1) as FormStep);
   };
 
   const handleSubmit = async () => {
@@ -521,9 +608,31 @@ export default function ProfessionalRegistrationForm() {
         throw new Error(result.error || 'Erreur lors de l\'inscription');
       }
       
-      // Redirection vers page de confirmation
-      alert(result.message);
-      router.push(`/etablissements/${result.slug}`);
+      // Connexion automatique si demandée
+      if (result.autoLogin && result.user) {
+        try {
+          const signInResult = await signIn('credentials', {
+            email: result.user.email,
+            password: formData.accountPassword,
+            redirect: false,
+          });
+
+          if (signInResult?.ok) {
+            // Redirection vers le dashboard
+            router.push('/dashboard');
+          } else {
+            // Fallback vers la page d'établissement
+            router.push(`/etablissements/${result.establishment.slug}`);
+          }
+        } catch (error) {
+          console.error('Erreur connexion automatique:', error);
+          // Fallback vers la page d'établissement
+          router.push(`/etablissements/${result.establishment.slug}`);
+        }
+      } else {
+        // Redirection classique
+        router.push(`/etablissements/${result.establishment.slug}`);
+      }
       
     } catch (error) {
       console.error('Erreur:', error);
@@ -544,6 +653,120 @@ export default function ProfessionalRegistrationForm() {
  */
 const renderStep = () => {
   switch (currentStep) {
+    // === Étape 0 : Création de compte ===
+    case 0:
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Création de votre compte
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Créez votre compte professionnel pour gérer votre établissement
+            </p>
+          </div>
+          
+          {/* Prénom et Nom */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Prénom *
+              </label>
+              <input
+                type="text"
+                value={formData.accountFirstName}
+                onChange={(e) => handleInputChange('accountFirstName', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Votre prénom"
+              />
+              {errors.accountFirstName && (
+                <p className="text-red-500 text-sm mt-1">{errors.accountFirstName}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Nom *
+              </label>
+              <input
+                type="text"
+                value={formData.accountLastName}
+                onChange={(e) => handleInputChange('accountLastName', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                placeholder="Votre nom"
+              />
+              {errors.accountLastName && (
+                <p className="text-red-500 text-sm mt-1">{errors.accountLastName}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Email professionnel *
+            </label>
+            <input
+              type="email"
+              value={formData.accountEmail}
+              onChange={(e) => handleInputChange('accountEmail', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="votre.email@exemple.com"
+            />
+            {errors.accountEmail && (
+              <p className="text-red-500 text-sm mt-1">{errors.accountEmail}</p>
+            )}
+          </div>
+
+          {/* Téléphone */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Téléphone (optionnel)
+            </label>
+            <input
+              type="tel"
+              value={formData.accountPhone || ''}
+              onChange={(e) => handleInputChange('accountPhone', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="06 12 34 56 78"
+            />
+          </div>
+
+          {/* Mot de passe */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Mot de passe *
+            </label>
+            <input
+              type="password"
+              value={formData.accountPassword}
+              onChange={(e) => handleInputChange('accountPassword', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Minimum 8 caractères"
+            />
+            {errors.accountPassword && (
+              <p className="text-red-500 text-sm mt-1">{errors.accountPassword}</p>
+            )}
+          </div>
+
+          {/* Confirmation mot de passe */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Confirmer le mot de passe *
+            </label>
+            <input
+              type="password"
+              value={formData.accountPasswordConfirm}
+              onChange={(e) => handleInputChange('accountPasswordConfirm', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="Répétez votre mot de passe"
+            />
+            {errors.accountPasswordConfirm && (
+              <p className="text-red-500 text-sm mt-1">{errors.accountPasswordConfirm}</p>
+            )}
+          </div>
+        </div>
+      );
+
     // === Étape 1 : Informations professionnelles et vérification SIRET ===
     case 1:
       return (
@@ -591,60 +814,32 @@ const renderStep = () => {
             {errors.siret && <p className="text-red-500 text-sm mt-1">{errors.siret}</p>}
           </div>
 
-          {/* Champs du responsable */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Prénom *</label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.firstName ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
+          {/* Informations du responsable (pré-remplies depuis l'étape 0) */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="text-lg font-medium text-gray-900 mb-3">
+              Responsable de l'établissement
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Prénom :</span>
+                <span className="ml-2 text-gray-900">{formData.accountFirstName}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Nom :</span>
+                <span className="ml-2 text-gray-900">{formData.accountLastName}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Email :</span>
+                <span className="ml-2 text-gray-900">{formData.accountEmail}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Téléphone :</span>
+                <span className="ml-2 text-gray-900">{formData.accountPhone || 'Non renseigné'}</span>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Nom *</label>
-              <input
-                type="text"
-                value={formData.lastName}
-                onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.lastName ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Email professionnel *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Téléphone *</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                  errors.phone ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Ces informations ont été saisies lors de la création de votre compte.
+            </p>
           </div>
         </div>
       );
@@ -720,22 +915,36 @@ const renderStep = () => {
               Sélectionnez ce que votre établissement propose réellement
             </p>
           </div>
-          {/* Interface temporaire simplifiée pour Services */}
-          <div className="space-y-4">
-            <label className="block text-sm font-medium mb-4">Services de base</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {['WiFi gratuit', 'Parking', 'Accessible PMR', 'Terrasse', 'Bar/Boissons', 'Climatisation'].map((service) => (
-                <label key={service} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.services.includes(service)}
-                    onChange={() => handleArrayToggle('services', service)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm">{service}</span>
-                </label>
-              ))}
+          {/* Services universels organisés par catégories */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Services & Équipements</h3>
+              <span className="text-sm text-gray-500">
+                {formData.services.length} service{formData.services.length > 1 ? 's' : ''} sélectionné{formData.services.length > 1 ? 's' : ''}
+              </span>
             </div>
+            
+            {Object.entries(UNIVERSAL_SERVICES).map(([key, category]) => (
+              <div key={key} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">{category.icon}</span>
+                  <h4 className="font-medium text-gray-900">{category.title}</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {category.services.map((service: string) => (
+                    <label key={service} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input
+                        type="checkbox"
+                        checked={formData.services.includes(service)}
+                        onChange={() => handleArrayToggle('services', service)}
+                        className="rounded text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{service}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Interface temporaire simplifiée pour Ambiances */}
@@ -758,61 +967,77 @@ const renderStep = () => {
             </div>
           </div>
 
-          {/* Liste de services */}
-          {/* Commenté temporairement pour corriger l'erreur selectedCategory */}
-          {false && selectedCategory &&
-            <div>
-              <label className="block text-sm font-medium mb-4">Quels services proposez-vous ? *</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedCategory.services.map((service) => (
-                  <label key={service} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.services.includes(service)}
-                      onChange={() => handleArrayToggle('services', service)}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{service}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.services && <p className="text-red-500 text-sm mt-1">{errors.services}</p>}
-            </div>
-          }
-          {/* Liste d’ambiances */}
-          {/* Commenté temporairement pour corriger l'erreur selectedCategory */}
-          {false && selectedCategory &&
-            <div>
-              <label className="block text-sm font-medium mb-4">
-                Quelle ambiance décrit le mieux votre établissement ? *
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {selectedCategory.ambiance.map((amb) => (
-                  <label key={amb} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.ambiance.includes(amb)}
-                      onChange={() => handleArrayToggle('ambiance', amb)}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{amb}</span>
-                  </label>
-                ))}
-              </div>
-              {errors.ambiance && <p className="text-red-500 text-sm mt-1">{errors.ambiance}</p>}
-            </div>
-          }
+
         </div>
       );
     }
-    // === Etape 4 : Abonnement & photos ===
+
+    // === Etape 4 : Moyens de paiement ===
     case 4:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Photos & abonnement</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Moyens de paiement
+            </h2>
             <p className="text-gray-600 mt-2">
-              Ajoutez une belle photo (ou plusieurs si plan premium) de votre établissement
+              Sélectionnez les moyens de paiement acceptés dans votre établissement
+            </p>
+          </div>
+          
+          {/* Moyens de paiement */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Moyens de paiement acceptés</h3>
+              <span className="text-sm text-gray-500">
+                {formData.paymentMethods.length} moyen{formData.paymentMethods.length > 1 ? 's' : ''} sélectionné{formData.paymentMethods.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center mb-3">
+                <span className="text-xl mr-2">💳</span>
+                <h4 className="font-medium text-gray-900">MOYENS DE PAIEMENT</h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {UNIVERSAL_SERVICES.paiement.services.map((method: string) => (
+                  <label key={method} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                    <input
+                      type="checkbox"
+                      checked={formData.paymentMethods.includes(method)}
+                      onChange={() => handleArrayToggle('paymentMethods', method)}
+                      className="rounded text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{method}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+    // === Etape 5 : Tags & Mots-clés ===
+    case 5:
+      return (
+        <div className="space-y-6">
+          <TagsSelector
+            selectedTags={formData.tags}
+            onTagsChange={handleTagsChange}
+            suggestedTags={getSuggestedTags(formData.activities)}
+            error={errors.tags}
+          />
+        </div>
+      );
+
+    // === Etape 6 : Sélection de l'abonnement ===
+    case 6:
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">Choisissez votre plan</h2>
+            <p className="text-gray-600 mt-2">
+              Sélectionnez le plan qui correspond le mieux à vos besoins
             </p>
           </div>
           {/* Sélection du plan */}
@@ -848,60 +1073,20 @@ const renderStep = () => {
               </div>
             ))}
           </div>
-          {/* Upload des photos */}
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Photos ({formData.photos.length}/{formData.subscriptionPlan === 'premium' ? 10 : 1})
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Icons.Camera />
-              <div className="space-y-2 mt-4">
-                <p className="text-sm text-gray-600">
-                  Glissez vos photos ici ou cliquez pour sélectionner
-                </p>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={(e) => e.target.files && handlePhotoUpload(e.target.files)}
-                  className="hidden"
-                  id="photo-upload"
-                />
-                <label
-                  htmlFor="photo-upload"
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700"
-                >
-                  <Icons.Upload />
-                  <span className="ml-2">Sélectionner des photos</span>
-                </label>
-              </div>
-            </div>
-            {/* Aperçu */}
-            {formData.photos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={URL.createObjectURL(photo)}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => removePhoto(index)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            {errors.photos && <p className="text-red-500 text-sm mt-1">{errors.photos}</p>}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note :</strong> Vous pourrez ajouter vos photos après l'inscription depuis votre espace professionnel.
+              {formData.subscriptionPlan === 'premium' 
+                ? ' Avec le plan Premium, vous pourrez ajouter jusqu\'à 10 photos.'
+                : ' Avec le plan Gratuit, vous pourrez ajouter 1 photo.'
+              }
+            </p>
           </div>
         </div>
       );
-    // === Etape 5 : Réseaux sociaux ===
-    case 5:
+
+    // === Etape 7 : Réseaux sociaux ===
+    case 7:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -943,11 +1128,59 @@ const renderStep = () => {
               placeholder="https://www.facebook.com/votre-page"
             />
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">TikTok</label>
+            <input
+              type="url"
+              value={formData.tiktok || ''}
+              onChange={(e) => handleInputChange('tiktok', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="https://www.tiktok.com/@votrepseudo"
+            />
+          </div>
+
+          {/* Section Prix */}
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Fourchette de prix</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Indiquez votre fourchette de prix pour aider vos clients à mieux vous connaître
+            </p>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Prix minimum (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.priceMin || ''}
+                  onChange={(e) => handleInputChange('priceMin', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="15"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Prix maximum (€)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={formData.priceMax || ''}
+                  onChange={(e) => handleInputChange('priceMax', e.target.value ? parseFloat(e.target.value) : undefined)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="45"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Exemple : 15-45€ pour un restaurant, 5-12€ pour un bar
+            </p>
+          </div>
         </div>
       );
 
-    // === Etape 6 : Récapitulatif final ===
-    case 6:
+    // === Etape 8 : Récapitulatif final ===
+    case 8:
       return (
         <div className="space-y-6">
           <SummaryStep 
@@ -959,14 +1192,17 @@ const renderStep = () => {
               hours: formData.hours,
               services: formData.services,
               ambiance: formData.ambiance,
-              photos: formData.photos,
+              paymentMethods: formData.paymentMethods,
+              tags: formData.tags,
+              photos: [], // Les photos sont maintenant ajoutées sur la page pro
               phone: formData.phone,
               email: formData.email,
               website: formData.website,
               instagram: formData.instagram,
               facebook: formData.facebook,
+              tiktok: formData.tiktok,
             }}
-            onEdit={(step) => setCurrentStep(step)}
+            onEdit={(step) => setCurrentStep(step as FormStep)}
           />
           {/* Conditions d'utilisation */}
           <div className="text-sm text-gray-600">
@@ -997,7 +1233,7 @@ const renderStep = () => {
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          {[1, 2, 3, 4, 5, 6].map((step) => (
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((step) => (
             <div
               key={step}
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -1006,14 +1242,14 @@ const renderStep = () => {
                   : 'bg-gray-200 text-gray-600'
               }`}
             >
-              {step}
+              {step + 1}
             </div>
           ))}
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / 6) * 100}%` }}
+            style={{ width: `${(currentStep / 8) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -1031,7 +1267,7 @@ const renderStep = () => {
             Précédent
           </button>
 
-          {currentStep < 5 ? (
+          {currentStep < 6 ? (
             <button
               type="button"
               onClick={nextStep}
@@ -1039,7 +1275,7 @@ const renderStep = () => {
             >
               Suivant
             </button>
-          ) : currentStep === 5 ? (
+          ) : currentStep === 6 ? (
             <button
               type="button"
               onClick={nextStep}

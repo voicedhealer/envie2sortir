@@ -12,17 +12,15 @@ export async function GET(
     const establishment = await prisma.establishment.findUnique({
       where: { id },
       include: {
-        professionalOwner: {
+        owner: {
           select: {
-            siret: true,
-            companyName: true,
             firstName: true,
             lastName: true,
             email: true,
             phone: true,
-            legalStatus: true,
           },
         },
+        tags: true,
       },
     });
 
@@ -67,7 +65,7 @@ export async function PUT(
     // Vérifier que l'établissement existe et est en attente
     const establishment = await prisma.establishment.findUnique({
       where: { id },
-      include: { professionalOwner: true },
+      include: { owner: true },
     });
 
     if (!establishment) {

@@ -53,16 +53,45 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const envie = searchParams.get('envie');
     const ville = searchParams.get('ville');
-    const rayon = parseInt(searchParams.get('rayon') || '5');
-    const lat = parseFloat(searchParams.get('lat') || '0');
-    const lng = parseFloat(searchParams.get('lng') || '0');
+    const rayon = parseInt(searchParams.get('rayon') || '5'); // Rayon par défaut de 5km
+    let lat = parseFloat(searchParams.get('lat') || '0');
+    let lng = parseFloat(searchParams.get('lng') || '0');
+
+    console.log(`🔍 RECHERCHE DÉMARRÉE - Envie: "${envie}", Ville: "${ville}", Rayon: ${rayon}km, Coords: (${lat}, ${lng})`);
 
     if (!envie) {
       return NextResponse.json({ error: "Paramètre 'envie' requis" }, { status: 400 });
     }
 
+    // Si pas de coordonnées mais une ville spécifiée, géocoder la ville
+    if ((lat === 0 || lng === 0) && ville && ville !== "Autour de moi") {
+      try {
+        console.log(`🌍 Géocodage de la ville: ${ville}`);
+        const geocodeResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ville + ', France')}&limit=1`);
+        const geocodeData = await geocodeResponse.json();
+        
+        if (geocodeData && geocodeData.length > 0) {
+          lat = parseFloat(geocodeData[0].lat);
+          lng = parseFloat(geocodeData[0].lon);
+          console.log(`📍 Coordonnées trouvées pour ${ville}: (${lat}, ${lng})`);
+        } else {
+          console.warn(`⚠️ Impossible de géocoder la ville: ${ville}`);
+        }
+      } catch (geocodeError) {
+        console.error('Erreur géocodage:', geocodeError);
+      }
+    }
+
+    // Si toujours pas de coordonnées, utiliser Dijon par défaut
+    if (lat === 0 || lng === 0) {
+      lat = 47.322;
+      lng = 5.041;
+      console.log(`📍 Utilisation des coordonnées par défaut (Dijon): (${lat}, ${lng})`);
+    }
+
     // Extraire les mots-clés de l'envie
     const keywords = extractKeywords(envie);
+    console.log(`📝 Mots-clés extraits: [${keywords.join(', ')}]`);
     
     if (keywords.length === 0) {
       return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
@@ -85,6 +114,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log(`🏢 ${establishments.length} établissements actifs chargés avec coordonnées`);
+
     // 3. Appliquer le filtrage géographique D'ABORD
     const establishmentsInRadius = establishments.filter(est => {
       if (lat && lng && est.latitude && est.longitude) {
@@ -94,6 +125,8 @@ export async function GET(request: NextRequest) {
       // Si pas de coordonnées de recherche, inclure tous les établissements
       return true;
     });
+
+    console.log(`📍 ${establishmentsInRadius.length} établissements dans le rayon de ${rayon}km`);
 
     // 4. Calculer le score pour chaque établissement dans le rayon
     const scoredEstablishments = establishmentsInRadius.map(establishment => {
@@ -108,25 +141,38 @@ export async function GET(request: NextRequest) {
       
       // Score basé sur les tags
       establishment.tags.forEach(tag => {
-        const tagLower = tag.tag.toLowerCase();
+        const tagNormalized = tag.tag
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
         keywords.forEach(keyword => {
-          if (tagLower.includes(keyword) || keyword.includes(tagLower)) {
-            thematicScore += tag.poids * 10; // Poids du tag * 10
+          if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
+            const tagScore = tag.poids * 10; // Poids du tag * 10
+            thematicScore += tagScore;
             matchedTags.push(tag.tag);
+            console.log(`  🏷️  Tag "${tag.tag}" (poids: ${tag.poids}) correspond à "${keyword}" → +${tagScore} points`);
           }
         });
       });
 
       // Score basé sur le nom et la description
-      const nameLower = establishment.name.toLowerCase();
-      const descriptionLower = (establishment.description || '').toLowerCase();
+      const nameNormalized = establishment.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      const descriptionNormalized = (establishment.description || '')
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       
       keywords.forEach(keyword => {
-        if (nameLower.includes(keyword)) {
+        if (nameNormalized.includes(keyword)) {
           thematicScore += 20; // Nom contient le mot-clé
+          console.log(`  📛 Nom "${establishment.name}" contient "${keyword}" → +20 points`);
         }
-        if (descriptionLower.includes(keyword)) {
+        if (descriptionNormalized.includes(keyword)) {
           thematicScore += 10; // Description contient le mot-clé
+          console.log(`  📄 Description contient "${keyword}" → +10 points`);
         }
       });
 
@@ -134,10 +180,14 @@ export async function GET(request: NextRequest) {
       if (establishment.activities && Array.isArray(establishment.activities)) {
         establishment.activities.forEach((activity: any) => {
           if (typeof activity === 'string') {
-            const activityLower = activity.toLowerCase();
+            const activityNormalized = activity
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "");
             keywords.forEach(keyword => {
-              if (activityLower.includes(keyword) || keyword.includes(activityLower)) {
+              if (activityNormalized.includes(keyword) || keyword.includes(activityNormalized)) {
                 thematicScore += 25; // Activité correspondante (score élevé)
+                console.log(`  🎯 Activité "${activity}" correspond à "${keyword}" → +25 points`);
               }
             });
           }
@@ -148,12 +198,20 @@ export async function GET(request: NextRequest) {
       const isOpen = isOpenNow(establishment.horairesOuverture);
       if (isOpen && thematicScore > 0) {
         thematicScore += 15; // Bonus si ouvert ET pertinent
+        console.log(`  🕐 Établissement ouvert → +15 points`);
       }
 
       // Score final = score thématique + bonus de proximité
       let finalScore = thematicScore;
+      let proximityBonus = 0;
       if (thematicScore > 0 && lat && lng && establishment.latitude && establishment.longitude) {
-        finalScore += Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
+        proximityBonus = Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
+        finalScore += proximityBonus;
+        console.log(`  📍 Bonus proximité (${distance.toFixed(2)}km) → +${proximityBonus.toFixed(1)} points`);
+      }
+
+      if (thematicScore > 0) {
+        console.log(`  ✅ ${establishment.name}: Score thématique=${thematicScore}, Final=${finalScore.toFixed(1)}, Distance=${distance.toFixed(2)}km, Tags=[${matchedTags.join(', ')}]`);
       }
 
       return {
@@ -179,6 +237,12 @@ export async function GET(request: NextRequest) {
         return a.distance - b.distance;
       })
       .slice(0, 15); // Limiter à 15 résultats
+
+    console.log(`🎯 ${filteredEstablishments.length} établissements pertinents trouvés après filtrage thématique`);
+    console.log(`📊 Résultats finaux:`);
+    filteredEstablishments.forEach((est, index) => {
+      console.log(`  ${index + 1}. ${est.name} - Score: ${est.score.toFixed(1)} (thématique: ${est.thematicScore}, distance: ${est.distance}km)`);
+    });
 
     return NextResponse.json({
       success: true,

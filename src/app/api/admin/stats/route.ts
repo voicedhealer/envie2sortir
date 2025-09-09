@@ -19,9 +19,10 @@ export async function GET() {
       take: 5,
       orderBy: { createdAt: "desc" },
       include: {
-        professionalOwner: {
+        owner: {
           select: {
-            companyName: true,
+            firstName: true,
+            lastName: true,
           },
         },
       },

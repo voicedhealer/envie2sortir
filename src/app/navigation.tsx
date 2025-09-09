@@ -13,7 +13,7 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="sticky top-0 z-50 bg-white border-b border-black/10">
+    <nav className="sticky top-0 z-50 bg-white/50 backdrop-blur-md border-b border-white/20 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex-shrink-0">
@@ -46,10 +46,10 @@ export default function Navigation() {
               </Link>
             ))}
 
-            <Link href="#inscription" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
+            <Link href="/auth" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
               S'inscrire
             </Link>
-            <Link href="#connexion" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
+            <Link href="/auth" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
               <Image 
                 src="/connexion_user.svg" 
                 alt="Connexion" 

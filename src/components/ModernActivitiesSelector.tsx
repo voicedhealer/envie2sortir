@@ -2,10 +2,12 @@
  * COMPOSANT SELECT MODERNE POUR ACTIVITÉS MULTIPLES
  * Permet de sélectionner plusieurs activités pour un établissement
  * Utilise React-Select avec groupes, recherche et style moderne
+ * Source unique : category-tags-mapping.ts
  */
 
 import Select from 'react-select';
 import { useState } from 'react';
+import { getGroupedActivities, getActivityInfo, type ActivityInfo } from '@/lib/category-tags-mapping';
 
 // Types TypeScript
 type ActivityOption = {
@@ -20,201 +22,37 @@ type GroupedOption = {
   options: ActivityOption[];
 };
 
-// Configuration complète des activités groupées
-const ACTIVITY_GROUPS = {
-  "🍹 Bars & Boissons": {
-    bar_ambiance: {
-      label: "Bar d'ambiance / Lounge",
-      services: ["Cocktails maison", "Apéros", "Terrasse", "Musique douce", "Sofas"],
-      ambiance: ["Chic", "Élégant", "Romantique", "After-work"]
-    },
-    pub_traditionnel: {
-      label: "Pub traditionnel",
-      services: ["Bières pression", "Fish & chips", "Écrans sport", "Ambiance conviviale"],
-      ambiance: ["Décontractée", "Entre potes", "Sportive", "Anglaise"]
-    },
-    brasserie_artisanale: {
-      label: "Brasserie artisanale",
-      services: ["Bières craft", "Dégustation", "Visite brasserie", "Produits locaux"],
-      ambiance: ["Artisanale", "Locale", "Découverte", "Authentique"]
-    },
-    bar_cocktails: {
-      label: "Bar à cocktails spécialisé",
-      services: ["Cocktails signature", "Mixologie", "Happy Hour", "Bartender expert"],
-      ambiance: ["Sophistiqué", "Créatif", "Festive", "Trendy"]
-    },
-    bar_vins: {
-      label: "Bar à vins / Cave à vin",
-      services: ["Dégustation vins", "Accords mets-vins", "Cave sélectionnée", "Conseil sommelier"],
-      ambiance: ["Œnologique", "Raffinée", "Culturelle", "Conviviale"]
-    },
-    bar_sports: {
-      label: "Bar sportif",
-      services: ["Écrans géants", "Retransmission match", "Bière pression", "Ambiance supporters"],
-      ambiance: ["Sportive", "Conviviale", "Animée", "Passion"]
-    },
-    rooftop_bar: {
-      label: "Bar rooftop / Terrasse",
-      services: ["Vue panoramique", "Terrasse", "Coucher soleil", "Cocktails premium"],
-      ambiance: ["Panoramique", "Romantique", "Exclusive", "Instagram"]
-    },
-    bar_karaoke: {
-      label: "Bar karaoké",
-      services: ["Karaoké", "Cabines privées", "Playlist variée", "Ambiance festive"],
-      ambiance: ["Amusante", "Décontractée", "Festive", "Entre amis"]
-    },
-    bar_bières: {
-        label: "Bar bières",
-        services: ["Bières pression","Bières Belge", "Tapas/Planches", "Happy Hour", "Terrasse"],
-        ambiance: ["Amusante", "Décontractée", "Festive", "Entre amis","DJ","Musique live","Écrans sport"]
-      }
-  },
 
-  "🍽️ Restaurants": {
-    restaurant_gastronomique: {
-      label: "Restaurant gastronomique",
-      services: ["Menu dégustation", "Chef étoilé", "Service premium", "Vins d'exception"],
-      ambiance: ["Gastronomique", "Raffinée", "Étoilée", "Exceptionnelle"]
-    },
-    restaurant_traditionnel: {
-      label: "Restaurant traditionnel français",
-      services: ["Cuisine traditionnelle", "Produits terroir", "Plats régionaux", "Ambiance authentique"],
-      ambiance: ["Traditionnelle", "Authentique", "Terroir", "Familiale"]
-    },
-    restaurant_familial: {
-      label: "Restaurant familial",
-      services: ["Menu enfant", "Chaises hautes", "Animations", "Prix abordables"],
-      ambiance: ["Familiale", "Conviviale", "Décontractée", "Générations"]
-    },
-    bistrot: {
-      label: "Bistrot de quartier",
-      services: ["Plat du jour", "Ardoise", "Prix doux", "Ambiance locale"],
-      ambiance: ["Bistrot", "Quartier", "Authentique", "Simplicité"]
-    }
-  },
-
-  "🌍 Cuisines du monde": {
-    restaurant_italien: {
-      label: "Restaurant italien",
-      services: ["Pâtes fraîches", "Pizza au feu de bois", "Antipasti", "Vins italiens"],
-      ambiance: ["Italienne", "Conviviale", "Famiglia", "Méditerranéenne"]
-    },
-    restaurant_asiatique: {
-      label: "Restaurant asiatique",
-      services: ["Sushi frais", "Wok", "Dim sum", "Thé premium"],
-      ambiance: ["Zen", "Exotique", "Moderne", "Épurée"]
-    },
-    restaurant_oriental: {
-      label: "Restaurant oriental",
-      services: ["Couscous", "Tajines", "Thé à la menthe", "Pâtisseries orientales"],
-      ambiance: ["Orientale", "Chaleureuse", "Épices", "Conviviale"]
-    }
-  },
-
-  "🥙 Fast Food & Street Food": {
-    kebab: {
-      label: "Kebab",
-      services: ["Viande grillée", "Sandwich", "Livraison", "Prix accessible"],
-      ambiance: ["Rapide", "Décontractée", "Entre potes", "Pratique"]
-    },
-    tacos_mexicain: {
-      label: "Tacos mexicains",
-      services: ["Tacos authentiques", "Guacamole", "Sauces piquantes", "À emporter"],
-      ambiance: ["Mexicaine", "Épicée", "Street food", "Décontractée"]
-    },
-    burger: {
-      label: "Burger house",
-      services: ["Burgers maison", "Frites artisanales", "Milkshakes", "Ingrédients frais"],
-      ambiance: ["Américaine", "Gourmande", "Moderne", "Trendy"]
-    },
-    pizzeria: {
-      label: "Pizzeria",
-      services: ["Pizza au feu de bois", "Pâte maison", "Livraison", "À emporter"],
-      ambiance: ["Italienne", "Conviviale", "Rapide", "Familiale"]
-    }
-  },
-
-  "🎉 Sorties nocturnes": {
-    discotheque: {
-      label: "Discothèque classique",
-      services: ["Piste de danse", "DJ", "Bar", "Vestiaire"],
-      ambiance: ["Festive", "Dansante", "Nocturne", "Énergique"]
-    },
-    club_techno: {
-      label: "Club techno/électro",
-      services: ["Sound system", "DJ internationaux", "Lights show", "After"],
-      ambiance: ["Underground", "Électro", "Intense", "Rave"]
-    },
-    boite_nuit_mainstream: {
-      label: "Boîte de nuit grand public",
-      services: ["Hits du moment", "Ambiance jeune", "Cocktails", "Soirées thématiques"],
-      ambiance: ["Mainstream", "Jeune", "Commerciale", "Accessible"]
-    }
-  },
-
-  "🎯 Sports & Activités": {
-    bowling: {
-      label: "Bowling",
-      services: ["Pistes de bowling", "Location chaussures", "Snack", "Anniversaires"],
-      ambiance: ["Amusante", "Familiale", "Compétition", "Décontractée"]
-    },
-    billard_americain: {
-      label: "Billard américain",
-      services: ["Tables de billard", "Location queues", "Snack", "Ambiance détendue"],
-      ambiance: ["Détendue", "Conviviale", "Technique", "Entre amis"]
-    },
-    billard_francais: {
-      label: "Billard français",
-      services: ["Tables de carambole", "Location queues", "Snack", "Ambiance traditionnelle"],
-      ambiance: ["Traditionnelle", "Technique", "Calme", "Concentration"]
-    },
-    escape_game_horreur: {
-      label: "Escape game horreur",
-      services: ["Salles thématiques", "Frissons garantis", "Team building", "Réservation"],
-      ambiance: ["Horreur", "Adrénaline", "Immersive", "Challenge"]
-    },
-    futsal: {
-      label: "Futsal",
-      services: ["Terrains couverts", "Location équipement", "Matchs", "Tournois"],
-      ambiance: ["Sportive", "Compétitive", "Équipe", "Technique"]
-    },
-    karting: {
-      label: "Karting",
-      services: ["Pistes de karting", "Location casques", "Chronométrage", "Compétitions"],
-      ambiance: ["Adrénaline", "Compétitive", "Sportive", "Excitante"]
-    },
-    laser_game: {
-      label: "Laser game",
-      services: ["Arènes de jeu", "Équipements laser", "Équipes", "Scores"],
-      ambiance: ["Stratégique", "Compétitive", "Amusante", "Équipe"]
-    },
-    vr_experience: {
-      label: "Expérience VR",
-      services: ["Casques VR", "Jeux immersifs", "Simulateurs", "Réservation"],
-      ambiance: ["Futuriste", "Immersive", "Technologique", "Innovante"]
-    }
-  },
-
-  "❓ Autres": {
-    autre: {
-      label: "Autre activité",
-      services: ["À définir", "Spécialité unique", "Original", "Insolite"],
-      ambiance: ["Originale", "Unique", "Surprenante", "Créative"]
-    }
-  }
-};
-
-// Fonction pour convertir la config en format React-Select
+// Fonction pour convertir la config en format React-Select (utilise le mapping)
 const createGroupedOptions = (): GroupedOption[] => {
-  return Object.entries(ACTIVITY_GROUPS).map(([groupLabel, activities]) => ({
-    label: groupLabel,
-    options: Object.entries(activities).map(([value, config]) => ({
-      value,
-      label: config.label,
-      services: config.services,
-      ambiance: config.ambiance
-    }))
-  }));
+  const groupedActivities = getGroupedActivities();
+  
+  return Object.entries(groupedActivities).map(([groupLabel, activityKeys]) => {
+    const options: ActivityOption[] = activityKeys.map(activityKey => {
+      const activityInfo = getActivityInfo(activityKey);
+      if (!activityInfo) {
+        console.warn(`Activité non trouvée: ${activityKey}`);
+        return {
+          value: activityKey,
+          label: activityKey,
+          services: [],
+          ambiance: []
+        };
+      }
+      
+      return {
+        value: activityKey,
+        label: activityInfo.label,
+        services: activityInfo.services,
+        ambiance: activityInfo.ambiance
+      };
+    });
+    
+    return {
+      label: groupLabel,
+      options
+    };
+  });
 };
 
 // Styles personnalisés pour un look moderne

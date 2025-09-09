@@ -1,9 +1,7 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import MapComponent from "../../carte/map-component";
+import EstablishmentGrid from "@/components/EstablishmentGrid";
 
 interface SearchResult {
   id: string;
@@ -28,62 +26,54 @@ interface SearchQuery {
   coordinates?: { lat: number; lng: number };
 }
 
-export default function EnvieSearchResults() {
-  const searchParams = useSearchParams();
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [query, setQuery] = useState<SearchQuery | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+async function getSearchResults(searchParams: { [key: string]: string | string[] | undefined }) {
+  try {
+    const envie = searchParams.envie as string;
+    const ville = searchParams.ville as string;
+    const rayon = parseInt(searchParams.rayon as string) || 5;
+    const lat = searchParams.lat ? parseFloat(searchParams.lat as string) : undefined;
+    const lng = searchParams.lng ? parseFloat(searchParams.lng as string) : undefined;
 
-  useEffect(() => {
-    const fetchResults = async () => {
-      try {
-        setLoading(true);
-        const params = new URLSearchParams(searchParams);
-        const response = await fetch(`/api/recherche/envie?${params.toString()}`);
-        
-        if (!response.ok) {
-          throw new Error('Erreur lors de la recherche');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          setResults(data.results);
-          setQuery(data.query);
-        } else {
-          setError(data.error || 'Erreur inconnue');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erreur inconnue');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (searchParams.toString()) {
-      fetchResults();
+    if (!envie) {
+      return { success: false, error: 'Aucune envie spécifiée' };
     }
-  }, [searchParams]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Recherche en cours...</p>
-        </div>
-      </div>
-    );
+    // Appeler l'API de recherche
+    const params = new URLSearchParams();
+    params.set('envie', envie);
+    if (ville) params.set('ville', ville);
+    params.set('rayon', rayon.toString());
+    if (lat) params.set('lat', lat.toString());
+    if (lng) params.set('lng', lng.toString());
+
+    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/recherche/envie?${params.toString()}`);
+    
+    if (!response.ok) {
+      return { success: false, error: 'Erreur lors de la recherche' };
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Erreur lors de la recherche:', error);
+    return { success: false, error: 'Erreur serveur' };
   }
+}
 
-  if (error) {
+export default async function EnvieSearchResults({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const data = await getSearchResults(params);
+
+  if (!data.success) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur de recherche</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-600 mb-4">{data.error}</p>
           <Link 
             href="/" 
             className="inline-block px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
@@ -94,6 +84,8 @@ export default function EnvieSearchResults() {
       </div>
     );
   }
+
+  const { results, query } = data;
 
   return (
     <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -127,7 +119,7 @@ export default function EnvieSearchResults() {
             )}
           </div>
           <Link 
-            href={`/recherche/envie?envie=${encodeURIComponent(query?.envie || '')}&rayon=${query?.rayon || 5}&ville=${encodeURIComponent(query?.ville || '')}${query?.coordinates ? `&lat=${query.coordinates.lat}&lng=${query.coordinates.lng}` : ''}`}
+            href="/"
             className="text-sm text-orange-600 hover:text-orange-700 underline"
           >
             Modifier la recherche
@@ -158,87 +150,14 @@ export default function EnvieSearchResults() {
       {/* Layout grille + carte */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Grille de résultats */}
-        <div className="lg:col-span-2 space-y-4">
-          {results.map((establishment, index) => (
-            <div key={establishment.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="flex">
-                {/* Image */}
-                <div className="w-32 h-32 flex-shrink-0">
-                  {establishment.primaryImage ? (
-                    <img 
-                      src={establishment.primaryImage} 
-                      alt={establishment.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                      <span className="text-gray-400 text-2xl">🏢</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Contenu */}
-                <div className="flex-1 p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-1">
-                        {establishment.name}
-                      </h3>
-                      <p className="text-gray-600 text-sm mb-2">{establishment.address}</p>
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          {establishment.category}
-                        </span>
-                        <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                          Score: {Math.round(establishment.score)}
-                        </span>
-                        {establishment.distance > 0 && (
-                          <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                            {establishment.distance} km
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Statut ouvert/fermé */}
-                    <div className="flex flex-col items-end gap-2">
-                      <div className={`w-4 h-4 rounded-full ${establishment.isOpen ? 'bg-green-500' : 'bg-red-500'}`} 
-                           title={establishment.isOpen ? 'Ouvert' : 'Fermé'} />
-                      <span className="text-xs text-gray-500">
-                        {establishment.isOpen ? 'Ouvert' : 'Fermé'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Tags correspondants */}
-                  {establishment.matchedTags.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-600 mb-2">Correspond à votre envie :</p>
-                      <div className="flex flex-wrap gap-2">
-                        {establishment.matchedTags.map((tag, tagIndex) => (
-                          <span 
-                            key={tagIndex}
-                            className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full"
-                          >
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Lien vers détails */}
-                  <Link 
-                    href={`/etablissements/${establishment.slug}`}
-                    className="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium"
-                  >
-                    Voir les détails
-                    <span className="ml-1">→</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="lg:col-span-2">
+          <EstablishmentGrid 
+            establishments={results as any}
+            searchCenter={query?.coordinates}
+            from="envie"
+            title={query?.envie ? `Résultats pour "${query.envie}"` : "Résultats de recherche"}
+            subtitle={query?.ville ? `à ${query.ville}` : undefined}
+          />
         </div>
 
         {/* Carte */}

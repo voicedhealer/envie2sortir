@@ -11,8 +11,9 @@ interface DashboardStats {
     name: string;
     category: string;
     createdAt: string;
-    professionalOwner: {
-      companyName: string;
+    owner: {
+      firstName: string;
+      lastName: string;
     };
   }>;
 }
@@ -139,8 +140,7 @@ export default function AdminDashboard() {
                       {establishment.name}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {establishment.professionalOwner.companyName} •{" "}
-                      {establishment.category}
+                      {establishment.owner.firstName} {establishment.owner.lastName}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Inscrit le{" "}

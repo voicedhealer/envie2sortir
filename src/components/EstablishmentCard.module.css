@@ -1,0 +1,151 @@
+/* Styles personnalisés pour EstablishmentCard */
+
+.overlayEvent {
+  background: rgba(127, 0, 254, 0.6);
+  backdrop-filter: blur(2px);
+  border-radius: 12px 12px 0px 0px;
+  padding: 16px 20px;
+  text-align: center;
+  min-height: 80px;
+  width: 95%;
+  margin: 0 auto;
+}
+
+.overlayEventMobile {
+  padding: 12px 16px;
+  min-height: 60px;
+  width: 90%;
+}
+
+.premiumBorder {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/*.premiumBorder::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #fb923c, #f97316, #ec4899, #be185d, #fb923c);
+  background-size: 400% 400%;
+  border-radius: 14px;
+  z-index: -1;
+  animation: premiumGradient 4s ease-in-out infinite;
+}*/
+
+@keyframes premiumGradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 25% 50%;
+  }
+  50% {
+    background-position: 50% 50%;
+  }
+  75% {
+    background-position: 75% 50%;
+  }
+}
+
+.eventBadge {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Boutons d'interaction */
+.interactionButtons {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.interactionButton {
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.interactionButton:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: scale(1.1);
+}
+
+.interactionButton:active {
+  transform: scale(0.95);
+}
+
+.eventTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.3;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.eventDate {
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  font-weight: 500;
+}
+
+/* Badge tendance */
+.tendanceBadge {
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+  transition: all 0.2s ease;
+}
+
+.tendanceBadge:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .overlayEvent {
+    padding: 12px 16px;
+    min-height: 60px;
+    width: 90%;
+  }
+  
+  .eventTitle {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+  
+  .interactionButtons {
+    top: 10px;
+    right: 8px;
+    gap: 8px;
+  }
+  
+  .interactionButton {
+    padding: 4px;
+  }
+  
+  /* Badge catégorie mobile - ajustement pour l'overlay */
+  .categoryBadge {
+    bottom: 16px !important;
+  }
+  
+  .categoryBadgeWithEvent {
+    bottom: 60px !important;
+  }
+  
+  /* Badge tendance mobile */
+  .tendanceBadge {
+    padding: 4px 8px !important;
+    font-size: 0.75rem !important;
+  }
+}
