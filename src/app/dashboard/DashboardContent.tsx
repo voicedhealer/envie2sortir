@@ -4,6 +4,7 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Instagram, Facebook, Globe } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 
@@ -291,9 +292,7 @@ export default function DashboardContent({ user, establishment }: DashboardConte
                   rel="noopener noreferrer"
                   className="flex items-center text-blue-600 hover:text-blue-800"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
+                  <Globe className="w-5 h-5 mr-2" />
                   Site web
                 </a>
               )}
@@ -305,9 +304,7 @@ export default function DashboardContent({ user, establishment }: DashboardConte
                   rel="noopener noreferrer"
                   className="flex items-center text-pink-600 hover:text-pink-800"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 6.62 5.367 11.987 11.988 11.987 6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297C4.198 14.895 3.708 13.744 3.708 12.447s.49-2.448 1.297-3.323c.875-.807 2.026-1.297 3.323-1.297s2.448.49 3.323 1.297c.807.875 1.297 2.026 1.297 3.323s-.49 2.448-1.297 3.323c-.875.807-2.026 1.297-3.323 1.297zm7.83-9.297H6.721c-.807 0-1.297.49-1.297 1.297v9.297c0 .807.49 1.297 1.297 1.297h9.297c.807 0 1.297-.49 1.297-1.297V9.297c0-.807-.49-1.297-1.297-1.297z"/>
-                  </svg>
+                  <Instagram className="w-5 h-5 mr-2" />
                   Instagram
                 </a>
               )}
@@ -319,9 +316,7 @@ export default function DashboardContent({ user, establishment }: DashboardConte
                   rel="noopener noreferrer"
                   className="flex items-center text-blue-600 hover:text-blue-800"
                 >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
+                  <Facebook className="w-5 h-5 mr-2" />
                   Facebook
                 </a>
               )}
@@ -343,7 +338,7 @@ export default function DashboardContent({ user, establishment }: DashboardConte
             <div className="space-y-3">
               {establishment.events.slice(0, 3).map((event: any) => (
                 <div key={event.id} className="border-l-4 border-orange-500 pl-4">
-                  <h4 className="font-medium text-gray-900">{event.name}</h4>
+                  <h4 className="font-medium text-gray-900">{event.title}</h4>
                   <p className="text-sm text-gray-600">
                     {new Date(event.startDate).toLocaleDateString('fr-FR')}
                   </p>

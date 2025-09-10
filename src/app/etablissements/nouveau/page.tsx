@@ -1,7 +1,79 @@
 import EstablishmentForm from "../establishment-form";
 import Image from 'next/image';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { prisma } from "@/lib/prisma";
+import { redirect } from "next/navigation";
 
-export default function NewEstablishmentPage() {
+export default async function NewEstablishmentPage() {
+  // Vérifier si l'utilisateur est connecté
+  const session = await getServerSession(authOptions);
+  
+  if (session?.user?.id) {
+    console.log('🔍 Debug - Session user:', {
+      id: session.user.id,
+      establishmentId: session.user.establishmentId,
+      role: session.user.role
+    });
+    
+    // Vérifier si l'utilisateur a déjà un établissement
+    // D'abord par establishmentId dans la session, puis par ownerId
+    let existingEstablishment = null;
+    
+    if (session.user.establishmentId) {
+      console.log('🔍 Debug - Recherche par establishmentId:', session.user.establishmentId);
+      existingEstablishment = await prisma.establishment.findUnique({
+        where: { id: session.user.establishmentId }
+      });
+      console.log('🔍 Debug - Résultat recherche par ID:', existingEstablishment);
+    }
+    
+    if (!existingEstablishment) {
+      console.log('🔍 Debug - Recherche par ownerId:', session.user.id);
+      existingEstablishment = await prisma.establishment.findFirst({
+        where: {
+          ownerId: session.user.id
+        }
+      });
+      console.log('🔍 Debug - Résultat recherche par ownerId:', existingEstablishment);
+    }
+    
+    console.log('🔍 Debug - Établissement trouvé:', existingEstablishment);
+
+    if (existingEstablishment) {
+      // Afficher un message d'avertissement au lieu de rediriger
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Accès non autorisé
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Vous avez déjà un établissement enregistré sur notre plateforme. 
+              Un seul établissement par compte professionnel est autorisé.
+            </p>
+            <div className="space-y-3">
+              <a 
+                href="/dashboard" 
+                className="block w-full px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
+              >
+                Accéder à mon dashboard
+              </a>
+              <a 
+                href="/" 
+                className="block w-full px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Retour à l'accueil
+              </a>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
   return (
     <main className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50">
       {/* Header avec navigation */}

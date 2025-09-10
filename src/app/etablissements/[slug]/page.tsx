@@ -38,6 +38,16 @@ export default async function EstablishmentPage({
     notFound();
   }
 
+  // Parser les données JSON des horaires d'ouverture
+  if (establishment.horairesOuverture && typeof establishment.horairesOuverture === 'string') {
+    try {
+      establishment.horairesOuverture = JSON.parse(establishment.horairesOuverture);
+    } catch (error) {
+      console.error('Erreur lors du parsing des horaires d\'ouverture:', error);
+      establishment.horairesOuverture = null;
+    }
+  }
+
   // Déterminer la page de retour basée sur le referer ou les paramètres
   const getBackUrl = () => {
     // Vérifier si referer est une URL valide

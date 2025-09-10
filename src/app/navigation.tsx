@@ -7,15 +7,44 @@ import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { User, LogOut, Settings, Heart } from "lucide-react";
 
+// Composant Link personnalisé pour éviter les problèmes d'hydratation
+const LinkComponent = ({ href, className, children, ...props }: any) => {
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
+  if (!isClient) {
+    return (
+      <div className={className} {...props}>
+        {children}
+      </div>
+    );
+  }
+  
+  return (
+    <Link href={href} className={className} {...props}>
+      {children}
+    </Link>
+  );
+};
+
 export default function Navigation() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Debug logs
-  console.log('🔍 Navigation - Status:', status);
-  console.log('🔍 Navigation - Session:', session);
+  // Debug logs (désactivés pour éviter les problèmes d'hydratation)
+  // console.log('🔍 Navigation - Status:', status);
+  // console.log('🔍 Navigation - Session:', session);
+
+  // Gérer l'hydratation pour éviter les erreurs SSR
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Fermer le menu quand on clique ailleurs
   useEffect(() => {
@@ -41,14 +70,14 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex-shrink-0">
-            <Link href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
+            <LinkComponent href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
               <Image src="/logo.svg" alt="Envie2Sortir" width={135} height={150} priority />
-            </Link>
+            </LinkComponent>
           </div>
           
           <div className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
-              <Link
+              <LinkComponent
                 key={item.href}
                 href={item.href}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -67,10 +96,10 @@ export default function Navigation() {
                   />
                 )}
                 {item.label}
-              </Link>
+              </LinkComponent>
             ))}
 
-            {status === 'loading' ? (
+            {!isHydrated || status === 'loading' ? (
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
                 <span className="text-sm text-gray-500">Chargement...</span>
@@ -93,43 +122,43 @@ export default function Navigation() {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                     {session.user.role === 'user' && (
                       <>
-                        <Link
+                        <LinkComponent
                           href="/mon-compte"
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           onClick={() => setShowUserMenu(false)}
                         >
                           <User className="w-4 h-4 mr-3" />
                           Mon compte
-                        </Link>
-                        <Link
+                        </LinkComponent>
+                        <LinkComponent
                           href="/mon-compte"
                           className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                           onClick={() => setShowUserMenu(false)}
                         >
                           <Heart className="w-4 h-4 mr-3" />
                           Mes favoris
-                        </Link>
+                        </LinkComponent>
                       </>
                     )}
                     {session.user.role === 'pro' && (
-                      <Link
+                      <LinkComponent
                         href="/dashboard"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setShowUserMenu(false)}
                       >
                         <Settings className="w-4 h-4 mr-3" />
                         Dashboard Pro
-                      </Link>
+                      </LinkComponent>
                     )}
                     {session.user.role === 'admin' && (
-                      <Link
+                      <LinkComponent
                         href="/admin"
                         className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                         onClick={() => setShowUserMenu(false)}
                       >
                         <Settings className="w-4 h-4 mr-3" />
                         Admin
-                      </Link>
+                      </LinkComponent>
                     )}
                     <button
                       onClick={() => {
@@ -146,10 +175,10 @@ export default function Navigation() {
               </div>
             ) : (
               <>
-                <Link href="/auth" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
+                <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
                   S'inscrire
-                </Link>
-                <Link href="/auth" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
+                </LinkComponent>
+                <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
                   <Image 
                     src="/connexion_user.svg" 
                     alt="Connexion" 
@@ -157,7 +186,7 @@ export default function Navigation() {
                     height={20} 
                     className="w-7 h-7"
                   />
-                </Link>
+                </LinkComponent>
               </>
             )}
           </div>

@@ -23,6 +23,8 @@ export default function EnvieSearchBar() {
   const typeRef = useRef<HTMLSpanElement>(null);
   /** Référence pour l'input de sélection de ville */
   const cityInputRef = useRef<HTMLInputElement>(null);
+  /** Référence pour le dropdown de villes */
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // === ÉTAT LOCAL ===
   /** État indiquant si l'utilisateur est en train de taper */
@@ -30,7 +32,7 @@ export default function EnvieSearchBar() {
   /** Valeur saisie dans le champ "envie" */
   const [inputValue, setInputValue] = useState("");
   /** Ville sélectionnée ou saisie */
-  const [cityValue, setCityValue] = useState("Dijon");
+  const [cityValue, setCityValue] = useState("");
   /** État d'affichage du dropdown de localisation */
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   /** Coordonnées GPS de l'utilisateur */
@@ -221,8 +223,15 @@ export default function EnvieSearchBar() {
    * @param {string} city - Nom de la ville sélectionnée
    */
   const selectCity = (city: string) => {
-    setCityValue(city);
+    console.log('🏙️ Sélection de la ville:', city);
+    
+    // Fermer immédiatement le dropdown
     setShowLocationDropdown(false);
+    
+    // Mettre à jour la valeur immédiatement
+    setCityValue(city);
+    
+    // Focus sur l'input immédiatement
     cityInputRef.current?.focus();
   };
 
@@ -260,19 +269,7 @@ export default function EnvieSearchBar() {
   };
 
   // === GESTION DES CLICS EXTÉRIEURS ===
-  /**
-   * Ferme le dropdown de localisation lors d'un clic à l'extérieur
-   */
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (cityInputRef.current && !cityInputRef.current.contains(event.target as Node)) {
-        setShowLocationDropdown(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // Supprimé temporairement pour éviter les conflits
 
   // === RENDU DU COMPOSANT ===
   return (
@@ -332,6 +329,12 @@ export default function EnvieSearchBar() {
               value={cityValue}
               onChange={handleCityInputChange}
               onFocus={handleCityInputFocus}
+              onBlur={() => {
+                // Fermer le dropdown après un délai pour permettre la sélection
+                setTimeout(() => {
+                  setShowLocationDropdown(false);
+                }, 200);
+              }}
               className="w-full px-4 py-3 h-12 outline-none text-gray-900 bg-transparent border-b-2 border-gray-200 focus:border-orange-500 transition-colors text-l"
               placeholder="Dijon"
             />
@@ -339,14 +342,22 @@ export default function EnvieSearchBar() {
             {/* === DROPDOWN DE GÉOLOCALISATION === */}
             {/* Menu déroulant pour sélection ville/géolocalisation */}
             {showLocationDropdown && (
-              <div className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-10 max-h-80 overflow-hidden">
+              <div 
+                ref={dropdownRef}
+                className="absolute top-full left-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-80 overflow-hidden w-full min-w-[300px]"
+              >
                 <div className="py-2 overflow-y-auto max-h-80">
                   
                   {/* Option "Autour de moi" avec géolocalisation */}
                   <button
                     type="button"
-                    onClick={getCurrentLocation}
-                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3"
+                    onClick={(e) => {
+                      console.log('🖱️ Clic sur "Autour de moi"');
+                      e.preventDefault();
+                      e.stopPropagation();
+                      getCurrentLocation();
+                    }}
+                    className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 cursor-pointer"
                   >
                     <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center">✈️</span>
                     <span className="font-medium">Autour de moi</span>
@@ -358,8 +369,13 @@ export default function EnvieSearchBar() {
                     <button
                       type="button"
                       key={city}
-                      onClick={() => selectCity(city)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3"
+                      onClick={(e) => {
+                        console.log('🖱️ Clic sur la ville:', city);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        selectCity(city);
+                      }}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 cursor-pointer"
                     >
                       <span className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
                         <span className="text-gray-600">📍</span>

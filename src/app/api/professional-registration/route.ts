@@ -63,6 +63,7 @@ export async function POST(request: Request) {
       activities: JSON.parse(formData.get('activities') as string || '[]'),
       services: JSON.parse(formData.get('services') as string || '[]'),
       ambiance: JSON.parse(formData.get('ambiance') as string || '[]'),
+      paymentMethods: JSON.parse(formData.get('paymentMethods') as string || '[]'), // <- Nouveau
       tags: JSON.parse(formData.get('tags') as string || '[]'),
       hours: JSON.parse(formData.get('hours') as string || '{}'),
       website: formData.get('website') as string || '',
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
       tiktok: formData.get('tiktok') as string || '',
       priceMin: formData.get('priceMin') ? parseFloat(formData.get('priceMin') as string) : null,
       priceMax: formData.get('priceMax') ? parseFloat(formData.get('priceMax') as string) : null,
+      informationsPratiques: JSON.parse(formData.get('informationsPratiques') as string || '[]'),
     };
 
     // Générer un slug unique
@@ -128,6 +130,7 @@ export async function POST(request: Request) {
           activities: establishmentData.activities, // Activités multiples (JSON)
           services: establishmentData.services, // Services (JSON)
           ambiance: establishmentData.ambiance, // Ambiance (JSON)
+          paymentMethods: establishmentData.paymentMethods, // Moyens de paiement (JSON)
           horairesOuverture: establishmentData.hours, // Horaires d'ouverture (JSON)
           website: establishmentData.website,
           instagram: establishmentData.instagram,
@@ -135,6 +138,7 @@ export async function POST(request: Request) {
           tiktok: establishmentData.tiktok,
           priceMin: establishmentData.priceMin,
           priceMax: establishmentData.priceMax,
+          informationsPratiques: establishmentData.informationsPratiques,
           ownerId: user.id, // Lien vers l'utilisateur
           status: 'pending', // En attente de validation
           subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement

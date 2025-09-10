@@ -6,7 +6,7 @@
  */
 
 import Select from 'react-select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getGroupedActivities, getActivityInfo, type ActivityInfo } from '@/lib/category-tags-mapping';
 
 // Types TypeScript
@@ -151,6 +151,7 @@ export const ModernActivitiesSelector = ({
   error?: string;
 }) => {
   const [selectedOptions, setSelectedOptions] = useState<ActivityOption[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
   const groupedOptions = createGroupedOptions();
 
   // Trouve les options correspondantes aux valeurs
@@ -184,12 +185,31 @@ export const ModernActivitiesSelector = ({
     </div>
   );
 
+  // Gestion de l'hydratation
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
   // Initialiser les options sélectionnées
-  useState(() => {
+  useEffect(() => {
     if (value && value.length > 0) {
       setSelectedOptions(findOptionsByValues(value));
     }
-  });
+  }, [value]);
+
+  // Afficher un placeholder pendant l'hydratation
+  if (!isHydrated) {
+    return (
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">
+          Activités proposées *
+        </label>
+        <div className="h-11 bg-gray-100 rounded-lg flex items-center px-3 text-gray-500">
+          Chargement...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -216,6 +236,7 @@ export const ModernActivitiesSelector = ({
         classNamePrefix="react-select"
         menuPlacement="auto"
         maxMenuHeight={400}
+        instanceId="activities-selector"
       />
       
       {error && (

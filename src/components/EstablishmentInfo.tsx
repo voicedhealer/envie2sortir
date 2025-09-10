@@ -15,7 +15,8 @@ import {
   Accessibility,
   ExternalLink,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Info
 } from 'lucide-react';
 
 // Icône TikTok
@@ -47,12 +48,14 @@ interface EstablishmentInfoProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    paymentMethods?: string[];
     horairesOuverture?: HoursData;
     prixMoyen?: number;
     capaciteMax?: number;
     accessibilite?: boolean;
     parking?: boolean;
     terrasse?: boolean;
+    informationsPratiques?: string[];
   };
 }
 
@@ -139,17 +142,60 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   };
 
   const getCurrentStatus = (hours: HoursData) => {
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    const currentDay = now.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+    
+    // Trouver le prochain créneau d'ouverture
+    const findNextOpening = () => {
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
+      // Chercher dans les 7 prochains jours
+      for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+        const checkDay = (currentDay + dayOffset) % 7;
+        const dayKey = dayNames[checkDay] as keyof typeof hours;
+        const dayHours = hours[dayKey];
+        
+        if (dayHours && dayHours.isOpen && dayHours.slots.length > 0) {
+          for (const slot of dayHours.slots) {
+            const [openHour, openMin] = slot.open.split(':').map(Number);
+            const openTime = openHour * 60 + openMin;
+            
+            // Si c'est aujourd'hui, vérifier que l'heure n'est pas passée
+            if (dayOffset === 0 && currentTime >= openTime) {
+              continue;
+            }
+            
+            // Formater l'heure de réouverture
+            const openTimeFormatted = slot.open;
+            const dayName = dayOffset === 0 ? 'aujourd\'hui' : 
+                           dayOffset === 1 ? 'demain' : 
+                           dayNames[checkDay].charAt(0).toUpperCase() + dayNames[checkDay].slice(1);
+            
+            return { time: openTimeFormatted, day: dayName };
+          }
+        }
+      }
+      return null;
+    };
+
     const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     const todayKey = today as keyof typeof hours;
     const todayHours = hours[todayKey];
     
     if (!todayHours || !todayHours.isOpen) {
+      const nextOpening = findNextOpening();
+      if (nextOpening) {
+        return { 
+          isOpen: false, 
+          text: `Fermé - Réouvre ${nextOpening.day} à ${nextOpening.time}`, 
+          color: 'text-red-500' 
+        };
+      }
       return { isOpen: false, text: 'Fermé aujourd\'hui', color: 'text-red-500' };
     }
 
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-    
+    // Vérifier si on est dans un créneau d'ouverture aujourd'hui
     for (const slot of todayHours.slots) {
       const [openHour, openMin] = slot.open.split(':').map(Number);
       const [closeHour, closeMin] = slot.close.split(':').map(Number);
@@ -164,6 +210,30 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       if (currentTime >= openTime && currentTime <= closeTime) {
         return { isOpen: true, text: 'Ouvert', color: 'text-green-500' };
       }
+    }
+    
+    // Si on est fermé aujourd'hui, chercher s'il y a un autre créneau plus tard dans la journée
+    for (const slot of todayHours.slots) {
+      const [openHour, openMin] = slot.open.split(':').map(Number);
+      const openTime = openHour * 60 + openMin;
+      
+      if (currentTime < openTime) {
+        return { 
+          isOpen: false, 
+          text: `Fermé - Réouvre aujourd'hui à ${slot.open}`, 
+          color: 'text-red-500' 
+        };
+      }
+    }
+    
+    // Si pas de créneau plus tard aujourd'hui, chercher le prochain jour
+    const nextOpening = findNextOpening();
+    if (nextOpening) {
+      return { 
+        isOpen: false, 
+        text: `Fermé - Réouvre ${nextOpening.day} à ${nextOpening.time}`, 
+        color: 'text-red-500' 
+      };
     }
     
     return { isOpen: false, text: 'Fermé', color: 'text-red-500' };
@@ -190,9 +260,18 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
               <div>
                 <h3 className="font-semibold text-gray-900">Horaires d'ouverture</h3>
                 {currentStatus && (
-                  <p className={`text-sm ${currentStatus.color} font-medium`}>
-                    {currentStatus.text}
-                  </p>
+                  <div className={`text-sm ${currentStatus.color} font-medium`}>
+                    {currentStatus.text.includes('Réouvre') ? (
+                      <div>
+                        <div>Fermé</div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          {currentStatus.text.replace('Fermé - ', '')}
+                        </div>
+                      </div>
+                    ) : (
+                      currentStatus.text
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -228,7 +307,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
             <div>
               <p className="font-medium text-gray-900">{establishment.address}</p>
-              {establishment.city && (
+              {establishment.city && !establishment.address.includes(establishment.city) && (
                 <p className="text-gray-600">{establishment.city}</p>
               )}
             </div>
@@ -330,7 +409,10 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       {/* Informations pratiques */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900">Informations pratiques</h3>
+          <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+            <Info className="w-5 h-5 text-orange-500" />
+            <span>Informations pratiques</span>
+          </h3>
         </div>
         
         <div className="p-6">
@@ -385,8 +467,68 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
               </div>
             )}
           </div>
+
+          {/* Nouvelles informations pratiques */}
+          {establishment.informationsPratiques && establishment.informationsPratiques.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <h4 className="text-sm font-medium text-gray-900 mb-4">Autres informations</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {establishment.informationsPratiques.map((info: string, index: number) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
+                    <span className="text-sm text-gray-700">{info}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Section Moyens de paiement */}
+      {(() => {
+        let paymentMethods = establishment.paymentMethods;
+        if (typeof paymentMethods === 'string') {
+          try {
+            paymentMethods = JSON.parse(paymentMethods);
+          } catch (error) {
+            console.error('Erreur lors du parsing des moyens de paiement:', error);
+            paymentMethods = [];
+          }
+        }
+        return paymentMethods && Array.isArray(paymentMethods) && paymentMethods.length > 0;
+      })() && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+              <Euro className="w-5 h-5 text-orange-500" />
+              <span>Moyens de paiement</span>
+            </h3>
+          </div>
+          
+          <div className="p-6">
+            <ul className="list-none space-y-1">
+              {(() => {
+                let paymentMethods = establishment.paymentMethods;
+                if (typeof paymentMethods === 'string') {
+                  try {
+                    paymentMethods = JSON.parse(paymentMethods);
+                  } catch (error) {
+                    console.error('Erreur lors du parsing des moyens de paiement:', error);
+                    paymentMethods = [];
+                  }
+                }
+                return paymentMethods && Array.isArray(paymentMethods) ? paymentMethods : [];
+              })().map((method: string, index: number) => (
+                <li key={index} className="flex items-center text-gray-700">
+                  <span className="h-2 w-2 rounded-full bg-amber-500 mr-2 flex-shrink-0"></span>
+                  {method}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

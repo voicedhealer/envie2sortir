@@ -42,9 +42,24 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   };
 
   const activities = parseJsonField(establishment.activities);
-  const services = parseJsonField(establishment.services);
+  const allServices = parseJsonField(establishment.services);
   const ambiance = parseJsonField(establishment.ambiance);
   const tags = establishment.tags || [];
+
+  // Filtrer les moyens de paiement des services
+  const paymentMethods = [
+    'Espèces',
+    'Carte bancaire', 
+    'Carte de crédit',
+    'Chèque',
+    'Paiement mobile (Apple Pay, Google Pay)',
+    'Virement bancaire',
+    'PayPal',
+    'Ticket restaurant',
+    'Chèques vacances'
+  ];
+  
+  const services = allServices.filter(service => !paymentMethods.includes(service));
 
   const getTagColor = (typeTag: string) => {
     switch (typeTag) {

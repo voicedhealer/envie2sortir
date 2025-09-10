@@ -85,6 +85,7 @@ model Establishment {
   motsClesRecherche  String?
   services           Json?
   ambiance           Json?
+  paymentMethods     Json?
   horairesOuverture  Json?
   prixMoyen          Float?
   capaciteMax        Int?
@@ -104,6 +105,7 @@ model Establishment {
   imageUrl           String?
   priceMax           Float?
   priceMin           Float?
+  informationsPratiques Json?
   owner              User                @relation(fields: [ownerId], references: [id])
   tags               EtablissementTag[]
   events             Event[]

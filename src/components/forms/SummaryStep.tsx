@@ -41,6 +41,7 @@ export interface EstablishmentFormData {
   website?: string;
   instagram?: string;
   facebook?: string;
+  tiktok?: string;
 }
 
 // Props du composant

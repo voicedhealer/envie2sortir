@@ -33,6 +33,8 @@ interface UpdateEstablishmentData {
   slug?: string;
   description?: string;
   address?: string;
+  city?: string;
+  postalCode?: string;
   latitude?: number;
   longitude?: number;
   phone?: string;
@@ -42,9 +44,15 @@ interface UpdateEstablishmentData {
   facebook?: string;
   tiktok?: string;
   imageUrl?: string;
-  category?: string;
+  activities?: string[] | string;
   services?: string[] | string;
   ambiance?: string[] | string;
+  paymentMethods?: string[] | string;
+  horairesOuverture?: any;
+  priceMin?: number;
+  priceMax?: number;
+  informationsPratiques?: string[];
+  subscription?: 'STANDARD' | 'PREMIUM';
   status?: 'active' | 'pending' | 'suspended';
   hours?: {
     monday?: { open: string; close: string; isOpen: boolean };
@@ -126,27 +134,26 @@ export async function PUT(
     // TODO: Réactiver l'authentification une fois le problème résolu
     // const user = await requireEstablishment(request);
     
-    // Version temporaire pour les tests - utiliser l'utilisateur Antoine
+    // Version temporaire pour les tests - utiliser l'utilisateur Chantal
     const user = {
-      id: 'cmf3ubgtk00038z6rt0l403fs',
-      email: 'antoine.buffet@gmail.com',
+      id: 'cmfdzl3de00008zjnyenx8vui',
+      email: 'libertystyl@gmail.com',
       role: 'pro',
-      establishmentId: 'cmf3ubgtu00058z6rfy0ht7n7'
+      establishmentId: 'cmfdzl3do00028zjn4maatzuj'
     };
     
     const body: UpdateEstablishmentData = await request.json();
     
     // Validation des champs requis (seulement si on met à jour les infos principales)
-    const isUpdatingMainInfo = body.name || body.address || body.category;
-    if (isUpdatingMainInfo && (!body.name || !body.address || !body.category)) {
+    const isUpdatingMainInfo = body.name || body.address;
+    if (isUpdatingMainInfo && (!body.name || !body.address)) {
       return NextResponse.json(
         { 
           error: "Validation échouée",
-          details: "Nom, adresse et catégorie sont requis pour la mise à jour des informations principales",
+          details: "Nom et adresse sont requis pour la mise à jour des informations principales",
           missing_fields: {
             name: !body.name,
-            address: !body.address,
-            category: !body.category
+            address: !body.address
           }
         },
         { status: 400 }
@@ -237,6 +244,8 @@ export async function PUT(
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.address !== undefined) updateData.address = body.address;
+    if (body.city !== undefined) updateData.city = body.city;
+    if (body.postalCode !== undefined) updateData.postalCode = body.postalCode;
     if (body.phone !== undefined) updateData.phone = body.phone;
     if (body.email !== undefined) updateData.email = body.email;
     if (body.website !== undefined) updateData.website = body.website;
@@ -244,12 +253,22 @@ export async function PUT(
     if (body.facebook !== undefined) updateData.facebook = body.facebook;
     if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
-    if (body.category !== undefined) updateData.category = body.category;
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.priceMin !== undefined) updateData.priceMin = body.priceMin;
+    if (body.priceMax !== undefined) updateData.priceMax = body.priceMax;
+    if (body.informationsPratiques !== undefined) updateData.informationsPratiques = body.informationsPratiques;
+    if (body.subscription !== undefined) updateData.subscription = body.subscription;
 
     // Ajouter les coordonnées GPS si fournies
     if (body.latitude !== undefined) updateData.latitude = body.latitude;
     if (body.longitude !== undefined) updateData.longitude = body.longitude;
+
+    // Gérer les activités (array ou JSON string)
+    if (body.activities) {
+      updateData.activities = Array.isArray(body.activities) 
+        ? JSON.stringify(body.activities)
+        : body.activities;
+    }
 
     // Gérer les services et ambiance (array ou JSON string)
     if (body.services) {
@@ -263,8 +282,17 @@ export async function PUT(
         : body.ambiance;
     }
 
+    // Gérer les moyens de paiement (array ou JSON string)
+    if (body.paymentMethods) {
+      updateData.paymentMethods = Array.isArray(body.paymentMethods) 
+        ? JSON.stringify(body.paymentMethods)
+        : body.paymentMethods;
+    }
+
     // Gérer les horaires d'ouverture
-    if (body.hours) {
+    if (body.horairesOuverture) {
+      updateData.horairesOuverture = JSON.stringify(body.horairesOuverture);
+    } else if (body.hours) {
       updateData.horairesOuverture = JSON.stringify(body.hours);
     }
 
@@ -303,15 +331,24 @@ export async function PUT(
       return establishment;
     });
 
-    // Parser les services et ambiance pour la réponse
+    // Parser tous les champs JSON pour la réponse
     const response = {
       ...updated,
+      activities: typeof updated.activities === 'string' 
+        ? JSON.parse(updated.activities) 
+        : updated.activities,
       services: typeof updated.services === 'string' 
         ? JSON.parse(updated.services) 
         : updated.services,
       ambiance: typeof updated.ambiance === 'string'
         ? JSON.parse(updated.ambiance)
         : updated.ambiance,
+      paymentMethods: typeof updated.paymentMethods === 'string'
+        ? JSON.parse(updated.paymentMethods)
+        : updated.paymentMethods,
+      horairesOuverture: typeof updated.horairesOuverture === 'string'
+        ? JSON.parse(updated.horairesOuverture)
+        : updated.horairesOuverture,
     };
 
     return NextResponse.json({

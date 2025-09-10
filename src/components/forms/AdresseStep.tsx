@@ -16,6 +16,7 @@ interface AdresseStepProps {
   value: AddressData;
   onChange: (address: AddressData) => void;
   error?: string;
+  disableAutoGeocode?: boolean; // Nouveau prop pour désactiver le géocodage automatique
 }
 
 // Type pour les suggestions d'autocomplete
@@ -33,7 +34,7 @@ interface Suggestion {
   };
 }
 
-export default function AdresseStep({ value, onChange, error }: AdresseStepProps) {
+export default function AdresseStep({ value, onChange, error, disableAutoGeocode = false }: AdresseStepProps) {
   // États locaux
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
@@ -137,8 +138,8 @@ export default function AdresseStep({ value, onChange, error }: AdresseStepProps
       setGeocodeError(null);
     }
 
-    // Géocodage automatique si tous les champs sont remplis
-    if (field === 'street' || field === 'postalCode' || field === 'city') {
+    // Géocodage automatique si tous les champs sont remplis ET si le géocodage automatique n'est pas désactivé
+    if (!disableAutoGeocode && (field === 'street' || field === 'postalCode' || field === 'city')) {
       const { street, postalCode, city } = newAddress;
       if (street && street.trim() && postalCode && postalCode.trim() && city && city.trim()) {
         geocodeAddress(street, postalCode, city);

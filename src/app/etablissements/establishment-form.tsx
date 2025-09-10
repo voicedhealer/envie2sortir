@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { ModernActivitiesSelector } from "@/components/ModernActivitiesSelector"; 
 import OpeningHoursInput, { HoursData } from '@/components/forms/OpeningHoursInput';
 import SummaryStep, { EstablishmentFormData } from '@/components/forms/SummaryStep';
@@ -88,12 +88,54 @@ type ProfessionalData = {
   facebook?: string;
   tiktok?: string;
   
+  // Contact
+  phone?: string;
+  email?: string;
+  
   // Prix
   priceMin?: number;
   priceMax?: number;
   
+  // Informations pratiques
+  informationsPratiques: string[];
+  
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
+};
+
+// Type pour un établissement existant (pour le mode édition)
+type ExistingEstablishment = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  address: string;
+  city: string | null;
+  postalCode: string | null;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  tiktok: string | null;
+  activities: string[] | null;
+  services: string[] | null;
+  ambiance: string[] | null;
+  paymentMethods: string[] | null;
+  tags: string[] | null;
+  horairesOuverture: any;
+  prixMoyen: number | null;
+  capaciteMax: number | null;
+  accessibilite: boolean;
+  parking: boolean;
+  terrasse: boolean;
+  priceMin: number | null;
+  priceMax: number | null;
+  informationsPratiques: string[] | null;
+  subscription: string;
 };
 
 type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -339,20 +381,6 @@ const UNIVERSAL_SERVICES = {
       "Groupes scolaires"
     ]
   },
-  paiement: {
-    title: "MOYENS DE PAIEMENT",
-    icon: "💳",
-    services: [
-      "Espèces",
-      "Carte bancaire",
-      "Paiement mobile (Apple Pay, Google Pay)",
-      "Chèque",
-      "Virement",
-      "Tickets restaurant",
-      "Chèques vacances ANCV",
-      "Crypto-monnaies"
-    ]
-  },
   autres: {
     title: "AUTRES",
     icon: "🛍️",
@@ -366,42 +394,118 @@ const UNIVERSAL_SERVICES = {
   }
 };
 
+// Informations pratiques disponibles (évite les doublons avec services)
+const INFORMATIONS_PRATIQUES = [
+  "Parking à proximité gratuit",
+  "Rampe handicapé accessible", 
+  "Toilettes adaptées PMR",
+  "Ascenseur disponible",
+  "Climatisation",
+  "Chauffage",
+  "WiFi gratuit",
+  "Espace fumeurs",
+  "Espace non-fumeurs",
+  "Animaux acceptés",
+  "Poussettes acceptées",
+  "Réservation recommandée",
+  "Réservation obligatoire",
+  "Tenue correcte exigée",
+  "Carte bancaire acceptée",
+  "Espèces uniquement",
+  "Chèques acceptés",
+  "Ticket restaurant accepté",
+  "Chèques vacances acceptés"
+];
 
-export default function ProfessionalRegistrationForm() {
+interface EstablishmentFormProps {
+  establishment?: ExistingEstablishment;
+  isEditMode?: boolean;
+}
+
+export default function ProfessionalRegistrationForm({ establishment, isEditMode = false }: EstablishmentFormProps) {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<FormStep>(0);
-  const [formData, setFormData] = useState<ProfessionalData>({
-    // Données de compte (étape 0)
-    accountEmail: "",
-    accountPassword: "",
-    accountPasswordConfirm: "",
-    accountFirstName: "",
-    accountLastName: "",
-    accountPhone: "",
+  const { data: session, status } = useSession();
+  const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 2 : 0); // Commencer à l'étape 2 en mode édition (Informations de l'établissement)
+  const [formData, setFormData] = useState<ProfessionalData>(() => {
+    // Pré-remplir avec les données existantes si en mode édition
+    if (isEditMode && establishment) {
+      return {
+        // Données de compte (étape 0) - non modifiables en mode édition
+        accountEmail: "",
+        accountPassword: "",
+        accountPasswordConfirm: "",
+        accountFirstName: "",
+        accountLastName: "",
+        accountPhone: "",
+        
+        // Données légales/administratives - non modifiables en mode édition
+        siret: "",
+        companyName: "",
+        legalStatus: "",
+        
+        // Données de l'établissement - pré-remplies
+        establishmentName: establishment.name || "",
+        description: establishment.description || "",
+        address: {
+          street: establishment.address || "",
+          postalCode: establishment.postalCode || "",
+          city: establishment.city || "",
+          latitude: establishment.latitude || undefined,
+          longitude: establishment.longitude || undefined
+        },
+        activities: establishment.activities || [],
+        services: establishment.services || [],
+        ambiance: establishment.ambiance || [],
+        paymentMethods: establishment.paymentMethods || [],
+        tags: establishment.tags || [],
+        photos: [],
+        hours: establishment.horairesOuverture || {},
+        website: establishment.website || "",
+        instagram: establishment.instagram || "",
+        facebook: establishment.facebook || "",
+        tiktok: establishment.tiktok || "",
+        priceMin: establishment.priceMin || undefined,
+        priceMax: establishment.priceMax || undefined,
+        informationsPratiques: establishment.informationsPratiques || [],
+        subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free'
+      };
+    }
     
-    // Données légales/administratives
-    siret: "",
-    companyName: "",
-    legalStatus: "",
-    establishmentName: "",
-    description: "",
-    address: {
-      street: "",
-      postalCode: "",
-      city: "",
-      latitude: undefined,
-      longitude: undefined
-    },
-    activities: [],
-    services: [],
-    ambiance: [],
-    paymentMethods: [],
-    tags: [],
-    photos: [],
-    hours: {},
-    priceMin: undefined,
-    priceMax: undefined,
-    subscriptionPlan: "free"
+    // Valeurs par défaut pour la création
+    return {
+      // Données de compte (étape 0)
+      accountEmail: "",
+      accountPassword: "",
+      accountPasswordConfirm: "",
+      accountFirstName: "",
+      accountLastName: "",
+      accountPhone: "",
+      
+      // Données légales/administratives
+      siret: "",
+      companyName: "",
+      legalStatus: "",
+      establishmentName: "",
+      description: "",
+      address: {
+        street: "",
+        postalCode: "",
+        city: "",
+        latitude: undefined,
+        longitude: undefined
+      },
+      activities: [],
+      services: [],
+      ambiance: [],
+      paymentMethods: [],
+      tags: [],
+      photos: [],
+      hours: {},
+      priceMin: undefined,
+      priceMax: undefined,
+      informationsPratiques: [],
+      subscriptionPlan: "free"
+    };
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -411,7 +515,29 @@ export default function ProfessionalRegistrationForm() {
     data?: any;
   }>({ status: 'idle' });
 
+  // Vérification si l'utilisateur a déjà un établissement
+  useEffect(() => {
+    const checkExistingEstablishment = async () => {
+      if (session?.user?.id) {
+        try {
+          const response = await fetch('/api/professional/establishments');
+          if (response.ok) {
+            const data = await response.json();
+            if (data.establishment) {
+              // L'utilisateur a déjà un établissement, rediriger vers le dashboard
+              router.push('/dashboard?tab=overview');
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de la vérification de l\'établissement:', error);
+        }
+      }
+    };
 
+    if (status === 'authenticated') {
+      checkExistingEstablishment();
+    }
+  }, [session, status, router]);
 
   // Vérification SIRET en temps réel
   const verifySiret = async (siret: string) => {
@@ -476,7 +602,7 @@ export default function ProfessionalRegistrationForm() {
     setFormData(prev => ({ ...prev, tags }));
   };
 
-  const handleArrayToggle = (field: 'services' | 'ambiance', value: string) => {
+  const handleArrayToggle = (field: 'services' | 'ambiance' | 'paymentMethods' | 'informationsPratiques', value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].includes(value)
@@ -489,6 +615,11 @@ export default function ProfessionalRegistrationForm() {
 
   const validateStep = (step: FormStep): boolean => {
     const newErrors: Record<string, string> = {};
+
+    // En mode édition, ignorer les étapes 0 et 1 (création de compte et vérification SIRET)
+    if (isEditMode && (step === 0 || step === 1)) {
+      return true;
+    }
 
     switch (step) {
       case 0:
@@ -531,7 +662,10 @@ export default function ProfessionalRegistrationForm() {
         break;
       
       case 5:
-        if (formData.tags.length < 3) newErrors.tags = "Sélectionnez au moins 3 tags de recherche";
+        // En mode édition, les tags sont optionnels
+        if (!isEditMode && formData.tags.length < 3) {
+          newErrors.tags = "Sélectionnez au moins 3 tags de recherche";
+        }
         break;
       
       case 6:
@@ -564,79 +698,124 @@ export default function ProfessionalRegistrationForm() {
     setIsSubmitting(true);
     
     try {
-      const formDataToSend = new FormData();
-      
-      // Ajouter toutes les données
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'photos') {
-          if (Array.isArray(value)) {
-            (value as File[]).forEach((photo, index) => {
-              formDataToSend.append(`photo_${index}`, photo);
-            });
-          }
-        } else if (key === 'hours') {
-          // Traitement spécial pour le champ hours (objet complexe)
-          formDataToSend.append(key, JSON.stringify(value));
-        } else if (key === 'address') {
-          // Traitement spécial pour l'adresse : construction de l'adresse complète
-          const addressData = value as AddressData;
-          const fullAddress = `${addressData.street}, ${addressData.postalCode} ${addressData.city}`;
-          formDataToSend.append('address', fullAddress);
-          
-          // Ajout des coordonnées séparément
-          if (addressData.latitude !== undefined) {
-            formDataToSend.append('latitude', addressData.latitude.toString());
-          }
-          if (addressData.longitude !== undefined) {
-            formDataToSend.append('longitude', addressData.longitude.toString());
-          }
-        } else if (Array.isArray(value)) {
-          formDataToSend.append(key, JSON.stringify(value));
-        } else if (value !== undefined && value !== null) {
-          formDataToSend.append(key, value.toString());
-        }
-      });
-      
-      const response = await fetch('/api/professional-registration', {
-        method: 'POST',
-        body: formDataToSend,
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Erreur lors de l\'inscription');
-      }
-      
-      // Connexion automatique si demandée
-      if (result.autoLogin && result.user) {
-        try {
-          const signInResult = await signIn('credentials', {
-            email: result.user.email,
-            password: formData.accountPassword,
-            redirect: false,
-          });
+      if (isEditMode && establishment) {
+        // Mode édition - utiliser l'API de mise à jour
+        const updateData = {
+          name: formData.establishmentName,
+          description: formData.description,
+          address: formData.address.street,
+          city: formData.address.city,
+          postalCode: formData.address.postalCode,
+          latitude: formData.address.latitude,
+          longitude: formData.address.longitude,
+          activities: formData.activities,
+          services: formData.services,
+          ambiance: formData.ambiance,
+          paymentMethods: formData.paymentMethods,
+          horairesOuverture: formData.hours,
+          website: formData.website,
+          instagram: formData.instagram,
+          facebook: formData.facebook,
+          tiktok: formData.tiktok,
+          priceMin: formData.priceMin,
+          priceMax: formData.priceMax,
+          informationsPratiques: formData.informationsPratiques,
+          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD'
+        };
 
-          if (signInResult?.ok) {
-            // Redirection vers le dashboard
-            router.push('/dashboard');
-          } else {
+        const response = await fetch(`/api/etablissements/${establishment.slug}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Erreur lors de la modification');
+        }
+
+        // Redirection vers le dashboard après modification
+        router.push('/dashboard?tab=overview');
+        
+      } else {
+        // Mode création - utiliser l'API d'inscription
+        const formDataToSend = new FormData();
+        
+        // Ajouter toutes les données
+        Object.entries(formData).forEach(([key, value]) => {
+          if (key === 'photos') {
+            if (Array.isArray(value)) {
+              (value as File[]).forEach((photo, index) => {
+                formDataToSend.append(`photo_${index}`, photo);
+              });
+            }
+          } else if (key === 'hours') {
+            // Traitement spécial pour le champ hours (objet complexe)
+            formDataToSend.append(key, JSON.stringify(value));
+          } else if (key === 'address') {
+            // Traitement spécial pour l'adresse : construction de l'adresse complète
+            const addressData = value as AddressData;
+            const fullAddress = `${addressData.street}, ${addressData.postalCode} ${addressData.city}`;
+            formDataToSend.append('address', fullAddress);
+            
+            // Ajout des coordonnées séparément
+            if (addressData.latitude !== undefined) {
+              formDataToSend.append('latitude', addressData.latitude.toString());
+            }
+            if (addressData.longitude !== undefined) {
+              formDataToSend.append('longitude', addressData.longitude.toString());
+            }
+          } else if (Array.isArray(value)) {
+            formDataToSend.append(key, JSON.stringify(value));
+          } else if (value !== undefined && value !== null) {
+            formDataToSend.append(key, value.toString());
+          }
+        });
+        
+        const response = await fetch('/api/professional-registration', {
+          method: 'POST',
+          body: formDataToSend,
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Erreur lors de l\'inscription');
+        }
+        
+        // Connexion automatique si demandée
+        if (result.autoLogin && result.user) {
+          try {
+            const signInResult = await signIn('credentials', {
+              email: result.user.email,
+              password: formData.accountPassword,
+              redirect: false,
+            });
+
+            if (signInResult?.ok) {
+              // Redirection vers le dashboard
+              router.push('/dashboard');
+            } else {
+              // Fallback vers la page d'établissement
+              router.push(`/etablissements/${result.establishment.slug}`);
+            }
+          } catch (error) {
+            console.error('Erreur connexion automatique:', error);
             // Fallback vers la page d'établissement
             router.push(`/etablissements/${result.establishment.slug}`);
           }
-        } catch (error) {
-          console.error('Erreur connexion automatique:', error);
-          // Fallback vers la page d'établissement
+        } else {
+          // Redirection classique
           router.push(`/etablissements/${result.establishment.slug}`);
         }
-      } else {
-        // Redirection classique
-        router.push(`/etablissements/${result.establishment.slug}`);
       }
       
     } catch (error) {
       console.error('Erreur:', error);
-      alert(error instanceof Error ? error.message : 'Erreur lors de l\'inscription');
+      alert(error instanceof Error ? error.message : `Erreur lors de ${isEditMode ? 'la modification' : 'l\'inscription'}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -885,6 +1064,7 @@ const renderStep = () => {
             value={formData.address}
             onChange={(address) => handleInputChange('address', address)}
             error={errors.address}
+            disableAutoGeocode={isEditMode}
           />
           
           {/* Horaires d'ouverture */}
@@ -967,6 +1147,31 @@ const renderStep = () => {
             </div>
           </div>
 
+          {/* Informations pratiques */}
+          <div className="border-t pt-6 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Informations pratiques</h3>
+              <span className="text-sm text-gray-500">
+                {formData.informationsPratiques.length} information{formData.informationsPratiques.length > 1 ? 's' : ''} sélectionnée{formData.informationsPratiques.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Sélectionnez les informations pratiques importantes pour vos clients
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {INFORMATIONS_PRATIQUES.map((info: string) => (
+                <label key={info} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                  <input
+                    type="checkbox"
+                    checked={formData.informationsPratiques.includes(info)}
+                    onChange={() => handleArrayToggle('informationsPratiques', info)}
+                    className="rounded text-orange-600 focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">{info}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
         </div>
       );
@@ -1000,7 +1205,16 @@ const renderStep = () => {
                 <h4 className="font-medium text-gray-900">MOYENS DE PAIEMENT</h4>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {UNIVERSAL_SERVICES.paiement.services.map((method: string) => (
+                {[
+                  "Espèces",
+                  "Carte bancaire", 
+                  "Paiement mobile (Apple Pay, Google Pay)",
+                  "Chèque",
+                  "Virement",
+                  "Tickets restaurant",
+                  "Chèques vacances ANCV",
+                  "Crypto-monnaies"
+                ].map((method: string) => (
                   <label key={method} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
                     <input
                       type="checkbox"
@@ -1195,8 +1409,8 @@ const renderStep = () => {
               paymentMethods: formData.paymentMethods,
               tags: formData.tags,
               photos: [], // Les photos sont maintenant ajoutées sur la page pro
-              phone: formData.phone,
-              email: formData.email,
+              phone: formData.phone || '',
+              email: formData.email || '',
               website: formData.website,
               instagram: formData.instagram,
               facebook: formData.facebook,
@@ -1261,7 +1475,7 @@ const renderStep = () => {
           <button
             type="button"
             onClick={prevStep}
-            disabled={currentStep === 1}
+            disabled={isEditMode ? currentStep === 2 : currentStep === 1}
             className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Précédent
@@ -1290,7 +1504,10 @@ const renderStep = () => {
               disabled={isSubmitting}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Inscription en cours...' : 'Finaliser l\'inscription'}
+              {isSubmitting 
+                ? (isEditMode ? 'Modification en cours...' : 'Inscription en cours...') 
+                : (isEditMode ? 'Sauvegarder les modifications' : 'Finaliser l\'inscription')
+              }
             </button>
           )}
         </div>

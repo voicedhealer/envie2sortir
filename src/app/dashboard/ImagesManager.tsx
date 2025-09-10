@@ -45,8 +45,8 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   // Fonction pour charger les images
   const loadImages = async () => {
     try {
-      console.log('🔄 Chargement des images pour:', establishmentSlug);
-      const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+      console.log('🔄 Chargement des images pour l\'établissement:', establishmentId);
+      const response = await fetch(`/api/etablissements/images`, {
         credentials: 'include' // Inclure les cookies de session
       });
       if (response.ok) {
@@ -89,7 +89,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   // Charger les images existantes depuis la base de données
   useEffect(() => {
     loadImages();
-  }, [establishmentSlug]);
+  }, [establishmentId]);
 
   // Effet pour recharger les images quand establishmentData change
   useEffect(() => {
@@ -210,7 +210,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       const loadImages = async () => {
         try {
           console.log('🔄 Rechargement immédiat des images depuis l\'API...');
-          const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+          const response = await fetch(`/api/etablissements/images`, {
             credentials: 'include'
           });
           if (response.ok) {
@@ -240,7 +240,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
   const updatePrimaryImage = async (imageUrl: string) => {
     try {
-      const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+      const response = await fetch(`/api/etablissements/images`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -311,7 +311,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       setTimeout(() => {
         const loadImages = async () => {
           try {
-            const response = await fetch(`/api/etablissements/${establishmentSlug}/images`, {
+            const response = await fetch(`/api/etablissements/images`, {
               credentials: 'include'
             });
             if (response.ok) {

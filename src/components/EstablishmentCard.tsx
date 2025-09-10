@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import styles from './EstablishmentCard.module.css';
+import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
 
 interface EstablishmentCardProps {
   establishment: {
@@ -61,7 +62,7 @@ export default function EstablishmentCard({
   const [isShared, setIsShared] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
-  const [isEventInProgress, setIsEventInProgress] = useState(false);
+  const [isEventCurrentlyInProgress, setIsEventCurrentlyInProgress] = useState(false);
 
   // Utiliser l'image principale du modèle ou fallback sur l'ancien système
   const primaryImage = establishment.imageUrl || 
@@ -98,10 +99,9 @@ export default function EstablishmentCard({
           const data = await response.json();
           const now = new Date();
           
-          // Trouver le prochain événement (startDate >= maintenant)
+          // Trouver les événements en cours et futurs avec gestion du fuseau horaire
           const upcomingEvents = data.events?.filter((event: any) => {
-            const eventDate = new Date(event.startDate);
-            return eventDate >= now;
+            return isEventInProgress(event.startDate, event.endDate) || isEventUpcoming(event.startDate);
           }) || [];
           
           if (upcomingEvents.length > 0) {
@@ -110,14 +110,11 @@ export default function EstablishmentCard({
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
             )[0];
             
-            const eventStart = new Date(nextEvent.startDate);
-            const eventEnd = new Date(nextEvent.endDate || nextEvent.startDate);
-            
-            // Vérifier si l'événement est en cours
-            const inProgress = now >= eventStart && now <= eventEnd;
+            // Vérifier si l'événement est en cours avec gestion du fuseau horaire
+            const inProgress = isEventInProgress(nextEvent.startDate, nextEvent.endDate);
             
             setUpcomingEvent(nextEvent);
-            setIsEventInProgress(inProgress);
+            setIsEventCurrentlyInProgress(inProgress);
           }
         }
       } catch (error) {
@@ -335,16 +332,16 @@ export default function EstablishmentCard({
                 {/* Première ligne : Badge + Titre */}
                 <div className="flex items-start gap-3">
                   <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${styles.eventBadge} ${
-                    isEventInProgress 
+                    isEventCurrentlyInProgress 
                       ? 'bg-green-500 text-white' 
                       : 'bg-yellow-400 text-black'
                   }`}>
                     <Calendar className="w-3 h-3" />
-                    {isEventInProgress ? 'En cours' : 'À venir'}
+                    {isEventCurrentlyInProgress ? 'En cours' : 'À venir'}
                   </div>
                   
                   <h4 className={`font-bold text-lg leading-tight flex-1 ${styles.eventTitle} ${
-                    isEventInProgress ? 'text-green-400' : 'text-yellow-400'
+                    isEventCurrentlyInProgress ? 'text-green-400' : 'text-yellow-400'
                   }`}>
                     {upcomingEvent.title}
                   </h4>
