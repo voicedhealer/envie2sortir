@@ -33,16 +33,32 @@ function isOpenNow(horairesOuverture: any): boolean {
   
   try {
     const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
-    const currentTime = now.getHours() * 60 + now.getMinutes(); // Minutes depuis minuit
+    const today = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const todayKey = today as keyof typeof horairesOuverture;
+    const todayHours = horairesOuverture[todayKey];
     
-    const horaires = horairesOuverture[dayOfWeek];
-    if (!horaires || !horaires.ouvert) return false;
+    if (!todayHours || !todayHours.isOpen) return false;
     
-    const ouverture = horaires.ouverture || 0; // Minutes depuis minuit
-    const fermeture = horaires.fermeture || 1440; // Minutes depuis minuit (24h)
+    const currentTime = now.getHours() * 60 + now.getMinutes();
     
-    return currentTime >= ouverture && currentTime <= fermeture;
+    // Vérifier si on est dans un créneau d'ouverture
+    for (const slot of todayHours.slots) {
+      const [openHour, openMin] = slot.open.split(':').map(Number);
+      const [closeHour, closeMin] = slot.close.split(':').map(Number);
+      const openTime = openHour * 60 + openMin;
+      let closeTime = closeHour * 60 + closeMin;
+      
+      // Gérer les horaires qui passent minuit (ex: 19:00-02:00)
+      if (closeTime < openTime) {
+        closeTime += 24 * 60; // Ajouter 24h si la fermeture est le lendemain
+      }
+      
+      if (currentTime >= openTime && currentTime <= closeTime) {
+        return true;
+      }
+    }
+    
+    return false;
   } catch {
     return true; // En cas d'erreur, considéré comme ouvert
   }
@@ -265,8 +281,12 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Erreur recherche par envie:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: "Erreur lors de la recherche" },
+      { 
+        error: "Erreur lors de la recherche",
+        details: error instanceof Error ? error.message : 'Erreur inconnue'
+      },
       { status: 500 }
     );
   }
