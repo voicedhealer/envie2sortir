@@ -31,6 +31,9 @@ export interface EnrichmentData {
   
   // Intégration TheFork
   theForkLink?: string;
+  
+  // Lien Uber Eats
+  uberEatsLink?: string;
 }
 
 export class EstablishmentEnrichment {

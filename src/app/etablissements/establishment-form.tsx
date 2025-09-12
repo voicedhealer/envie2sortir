@@ -145,6 +145,7 @@ type ProfessionalData = {
   googleRating?: number;
   googleReviewCount?: number;
   theForkLink?: string;
+  uberEatsLink?: string;
   specialties?: string[];
   atmosphere?: string[];
   accessibility?: string[];
@@ -580,7 +581,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     googleBusinessUrl: '',
     googleRating: 0,
     googleReviewCount: 0,
-    theForkLink: ''
+    theForkLink: '',
+    uberEatsLink: ''
   });
   const [siretVerification, setSiretVerification] = useState<{
     status: 'idle' | 'loading' | 'valid' | 'invalid';
@@ -685,6 +687,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       informationsPratiques: enrichmentData.practicalInfo || prev.informationsPratiques,
       envieTags: enrichmentData.envieTags || prev.envieTags,
       theForkLink: enrichmentData.theForkLink || prev.theForkLink,
+      uberEatsLink: enrichmentData.uberEatsLink || prev.uberEatsLink,
       enriched: true
     }));
     
@@ -692,7 +695,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     
     // Passer à l'étape suivante
     setCurrentStep(3);
-    console.log('Passage à l\'étape 3 après enrichissement');
+    console.log('Passage à l\'étape suivante (Informations établissement) après enrichissement');
   };
   const handleTagsChange = (tags: string[]) => {
     setFormData(prev => ({ ...prev, tags }));
@@ -1141,7 +1144,7 @@ const renderStep = () => {
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">
-              Informations sur l’établissement
+              Informations sur l'établissement
             </h2>
             <p className="text-gray-600 mt-2">
               Décrivez votre établissement pour que les clients le trouvent facilement
