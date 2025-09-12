@@ -73,6 +73,7 @@ export async function POST(request: Request) {
       priceMin: formData.get('priceMin') ? parseFloat(formData.get('priceMin') as string) : null,
       priceMax: formData.get('priceMax') ? parseFloat(formData.get('priceMax') as string) : null,
       informationsPratiques: JSON.parse(formData.get('informationsPratiques') as string || '[]'),
+      envieTags: JSON.parse(formData.get('envieTags') as string || '[]'),
     };
 
     // Générer un slug unique
@@ -139,6 +140,7 @@ export async function POST(request: Request) {
           priceMin: establishmentData.priceMin,
           priceMax: establishmentData.priceMax,
           informationsPratiques: establishmentData.informationsPratiques,
+          theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
           ownerId: user.id, // Lien vers l'utilisateur
           status: 'pending', // En attente de validation
           subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement
@@ -167,6 +169,17 @@ export async function POST(request: Request) {
           tag: tagId.toLowerCase(),
           typeTag: 'manuel',
           poids: 10 // Poids élevé pour les tags manuels
+        });
+      }
+      
+      // Tags "envie de" personnalisés (poids très élevé car très spécifiques)
+      for (const envieTag of establishmentData.envieTags) {
+        console.log(`  💭 Tag "envie de" ajouté: "${envieTag}"`);
+        allTagsData.push({
+          etablissementId: establishment.id,
+          tag: envieTag.toLowerCase(),
+          typeTag: 'envie',
+          poids: 15 // Poids très élevé pour les tags "envie de"
         });
       }
       

@@ -106,6 +106,21 @@ model Establishment {
   priceMax           Float?
   priceMin           Float?
   informationsPratiques Json?
+  
+  // Nouveaux champs pour l'enrichissement automatique
+  googlePlaceId      String?             // ID Google Places pour l'enrichissement
+  googleBusinessUrl  String?             // URL Google My Business
+  enriched           Boolean             @default(false) // Indique si l'établissement a été enrichi
+  enrichmentData     Json?               // Données d'enrichissement complètes
+  envieTags          Json?               // Tags "envie" générés automatiquement
+  priceLevel         Int?                // Niveau de prix (1-4) de Google
+  googleRating       Float?              // Note Google
+  googleReviewCount  Int?                // Nombre d'avis Google
+  theForkLink        String?             // Lien TheFork pour réservations
+  specialties        Json?               // Spécialités extraites des avis
+  atmosphere         Json?               // Ambiance détectée
+  accessibility      Json?               // Informations d'accessibilité
+  
   owner              User                @relation(fields: [ownerId], references: [id])
   tags               EtablissementTag[]
   events             Event[]

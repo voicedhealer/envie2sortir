@@ -48,6 +48,7 @@ interface EstablishmentInfoProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    theForkLink?: string;
     paymentMethods?: string[];
     horairesOuverture?: HoursData;
     prixMoyen?: number;
@@ -340,6 +341,24 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           )}
 
           {/* Site web */}
+
+          {/* Lien TheFork */}
+          {establishment.theForkLink && (
+            <div className="flex items-center space-x-3">
+              <div className="w-5 h-5 bg-yellow-500 rounded flex items-center justify-center">
+                <span className="text-white text-xs font-bold">🍴</span>
+              </div>
+              <a 
+                href={establishment.theForkLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-yellow-600 hover:text-yellow-700 font-medium transition-colors flex items-center space-x-1"
+              >
+                <span>Réserver sur TheFork</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
           {establishment.website && (
             <div className="flex items-center space-x-3">
               <Globe className="w-5 h-5 text-gray-400" />

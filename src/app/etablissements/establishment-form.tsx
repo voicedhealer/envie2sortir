@@ -9,6 +9,44 @@ import OpeningHoursInput, { HoursData } from '@/components/forms/OpeningHoursInp
 import SummaryStep, { EstablishmentFormData } from '@/components/forms/SummaryStep';
 import AdresseStep, { AddressData } from '@/components/forms/AdresseStep';
 import TagsSelector from '@/components/forms/TagsSelector';
+import EnrichmentStep from '@/components/forms/EnrichmentStep';
+import { EnrichmentData } from '@/lib/enrichment-system';
+
+// Fonction pour parser l'adresse Google en format formulaire
+function parseAddressFromGoogle(googleAddress: string): AddressData {
+  console.log('🏠 Parsing adresse Google:', googleAddress);
+  
+  // Format typique: "44 Rue Monge, 21000 Dijon, France"
+  const parts = googleAddress.split(',').map(part => part.trim());
+  
+  let street = '';
+  let postalCode = '';
+  let city = '';
+  
+  if (parts.length >= 3) {
+    // Premier élément = rue
+    street = parts[0];
+    
+    // Deuxième élément = code postal + ville
+    const cityPart = parts[1];
+    const postalMatch = cityPart.match(/(\d{5})\s+(.+)/);
+    if (postalMatch) {
+      postalCode = postalMatch[1];
+      city = postalMatch[2];
+    } else {
+      city = cityPart;
+    }
+  } else if (parts.length === 2) {
+    street = parts[0];
+    city = parts[1];
+  } else {
+    street = googleAddress;
+  }
+  
+  const result = { street, postalCode, city };
+  console.log('✅ Adresse parsée:', result);
+  return result;
+}
 
 // Fonction pour obtenir les suggestions basées sur les activités
 function getSuggestedTags(activities: string[]): string[] {
@@ -99,6 +137,18 @@ type ProfessionalData = {
   // Informations pratiques
   informationsPratiques: string[];
   
+  // Enrichissement automatique
+  googleBusinessUrl?: string;
+  enriched?: boolean;
+  envieTags?: string[];
+  priceLevel?: number;
+  googleRating?: number;
+  googleReviewCount?: number;
+  theForkLink?: string;
+  specialties?: string[];
+  atmosphere?: string[];
+  accessibility?: string[];
+  
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
 };
@@ -138,7 +188,7 @@ type ExistingEstablishment = {
   subscription: string;
 };
 
-type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
 // Icônes simples en SVG
 const Icons = {
@@ -510,6 +560,28 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+    const [enrichmentData, setEnrichmentData] = useState<EnrichmentData>({
+    name: '',
+    establishmentType: '',
+    priceLevel: 0,
+    rating: 0,
+    address: '',
+    phone: '',
+    website: '',
+    description: '',
+    openingHours: [],
+    hours: {},
+    practicalInfo: [],
+    envieTags: [],
+    specialties: [],
+    atmosphere: [],
+    accessibility: [],
+    googlePlaceId: '',
+    googleBusinessUrl: '',
+    googleRating: 0,
+    googleReviewCount: 0,
+    theForkLink: ''
+  });
   const [siretVerification, setSiretVerification] = useState<{
     status: 'idle' | 'loading' | 'valid' | 'invalid';
     data?: any;
@@ -598,6 +670,30 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     }
   };
 
+  const handleEnrichmentComplete = (enrichmentData: EnrichmentData) => {
+    console.log('Données d\'enrichissement reçues:', enrichmentData);
+    
+    // Mettre à jour les données du formulaire avec les données enrichies
+    setFormData(prev => ({
+      ...prev,
+      establishmentName: enrichmentData.name || prev.establishmentName,
+      description: enrichmentData.description || prev.description,
+      phone: enrichmentData.phone || prev.phone,
+      website: enrichmentData.website || prev.website,
+      address: enrichmentData.address ? parseAddressFromGoogle(enrichmentData.address) : prev.address,
+      hours: enrichmentData.hours || prev.hours,
+      informationsPratiques: enrichmentData.practicalInfo || prev.informationsPratiques,
+      envieTags: enrichmentData.envieTags || prev.envieTags,
+      theForkLink: enrichmentData.theForkLink || prev.theForkLink,
+      enriched: true
+    }));
+    
+    console.log('Données du formulaire mises à jour avec l\'enrichissement');
+    
+    // Passer à l'étape suivante
+    setCurrentStep(3);
+    console.log('Passage à l\'étape 3 après enrichissement');
+  };
   const handleTagsChange = (tags: string[]) => {
     setFormData(prev => ({ ...prev, tags }));
   };
@@ -645,6 +741,10 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         break;
       
       case 2:
+        // L'étape d'enrichissement est optionnelle, pas de validation requise
+        break;
+      
+      case 3:
         if (!formData.establishmentName) newErrors.establishmentName = "Nom requis";
         if (!formData.address.street || !formData.address.postalCode || !formData.address.city) {
           newErrors.address = "Adresse complète requise (rue, code postal et ville)";
@@ -652,28 +752,28 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         if (formData.activities.length === 0) newErrors.activities = "Sélectionnez au moins une activité";
         break;
       
-      case 3:
+      case 4:
         if (formData.services.length === 0) newErrors.services = "Sélectionnez au moins un service";
         if (formData.ambiance.length === 0) newErrors.ambiance = "Sélectionnez au moins une ambiance";
         break;
       
-      case 4:
+      case 5:
         // Validation des moyens de paiement (optionnel)
         break;
       
-      case 5:
+      case 6:
         // En mode édition, les tags sont optionnels
         if (!isEditMode && formData.tags.length < 3) {
           newErrors.tags = "Sélectionnez au moins 3 tags de recherche";
         }
         break;
       
-      case 6:
+      case 7:
         // Validation de l'abonnement (obligatoire)
         if (!formData.subscriptionPlan) newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
         break;
       
-      case 7:
+      case 8:
         // Validation des réseaux sociaux (optionnel)
         break;
     }
@@ -684,7 +784,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(8, prev + 1) as FormStep);
+      setCurrentStep(prev => Math.min(10, prev + 1) as FormStep);
     }
   };
 
@@ -1022,8 +1122,21 @@ const renderStep = () => {
           </div>
         </div>
       );
-    // === Etape 2 : Informations établissement ===
+        // === Étape 2 : Enrichissement automatique ===
     case 2:
+      return (
+        <EnrichmentStep
+          onEnrichmentComplete={handleEnrichmentComplete}
+          onSkip={() => {
+            console.log('Enrichissement ignoré par l\'utilisateur');
+            setCurrentStep(3);
+          }}
+          isVisible={true}
+        />
+      );
+
+    // === Étape 3 : Informations sur l'établissement ===
+    case 3:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1082,8 +1195,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Etape 3 : Services & Ambiances ===
-    case 3: {
+    // === Étape 4 : Services & Ambiances ===
+    case 4: {
       const ambianceList = GENERIC_AMBIANCES;
       return (
         <div className="space-y-6">
@@ -1177,8 +1290,8 @@ const renderStep = () => {
       );
     }
 
-    // === Etape 4 : Moyens de paiement ===
-    case 4:
+    // === Étape 5 : Moyens de paiement ===
+    case 5:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1231,8 +1344,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Etape 5 : Tags & Mots-clés ===
-    case 5:
+    // === Étape 6 : Tags & Mots-clés ===
+    case 6:
       return (
         <div className="space-y-6">
           <TagsSelector
@@ -1244,8 +1357,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Etape 6 : Sélection de l'abonnement ===
-    case 6:
+    // === Étape 7 : Sélection de l'abonnement ===
+    case 7:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1299,8 +1412,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Etape 7 : Réseaux sociaux ===
-    case 7:
+    // === Étape 8 : Réseaux sociaux ===
+    case 8:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1393,8 +1506,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Etape 8 : Récapitulatif final ===
-    case 8:
+    // === Étape 9 : Récapitulatif final ===
+    case 9:
       return (
         <div className="space-y-6">
           <SummaryStep 
@@ -1447,7 +1560,7 @@ const renderStep = () => {
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((step) => (
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((step) => (
             <div
               key={step}
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
@@ -1463,7 +1576,7 @@ const renderStep = () => {
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / 8) * 100}%` }}
+            style={{ width: `${(currentStep / 9) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -1481,7 +1594,7 @@ const renderStep = () => {
             Précédent
           </button>
 
-          {currentStep < 6 ? (
+          {currentStep < 7 ? (
             <button
               type="button"
               onClick={nextStep}
@@ -1489,7 +1602,7 @@ const renderStep = () => {
             >
               Suivant
             </button>
-          ) : currentStep === 6 ? (
+          ) : currentStep === 7 ? (
             <button
               type="button"
               onClick={nextStep}
