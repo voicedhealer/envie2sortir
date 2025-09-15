@@ -11,6 +11,7 @@ interface EstablishmentSectionsProps {
     activities?: any;
     services?: any;
     ambiance?: any;
+    informationsPratiques?: string[];
     instagram?: string;
     facebook?: string;
     tiktok?: string;
@@ -59,7 +60,24 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     'Chèques vacances'
   ];
   
-  const services = allServices.filter(service => !paymentMethods.includes(service));
+  // Filtrer les commodités des informations pratiques (supprimer les redondances et évidences)
+  const commodites = establishment.informationsPratiques ? 
+    establishment.informationsPratiques.filter((info: string) => {
+      const infoLower = info.toLowerCase();
+      return !infoLower.includes('espace non-fumeurs') &&
+             !infoLower.includes('réservation recommandée') &&
+             !infoLower.includes('toilettes adaptées pmr') &&
+             !infoLower.includes('non-fumeurs') &&
+             !infoLower.includes('réservation') &&
+             !infoLower.includes('pmr') &&
+             !infoLower.includes('handicap') &&
+             !infoLower.includes('nourriture') &&
+             !infoLower.includes('repas sur place') &&
+             !infoLower.includes('repas') &&
+             !infoLower.includes('chauffage'); // Garder seulement les commodités utiles
+    }) : [];
+  
+  const services = [...allServices.filter((service: string) => !paymentMethods.includes(service)), ...commodites];
 
   const getTagColor = (typeTag: string) => {
     switch (typeTag) {

@@ -108,8 +108,6 @@ type ProfessionalData = {
   services: string[];
   ambiance: string[];
   
-  // Moyens de paiement
-  paymentMethods: string[];
   
   // Tags de recherche
   tags: string[];
@@ -150,6 +148,58 @@ type ProfessionalData = {
   atmosphere?: string[];
   accessibility?: string[];
   
+  // === NOUVELLES SECTIONS DÉTAILLÉES ===
+  accessibilityInfo?: {
+    wheelchairAccessibleEntrance?: boolean;
+    wheelchairAccessibleParking?: boolean;
+    wheelchairAccessibleRestroom?: boolean;
+    wheelchairAccessibleSeating?: boolean;
+  };
+  servicesAvailable?: {
+    delivery?: boolean;
+    takeout?: boolean;
+    dineIn?: boolean;
+    curbsidePickup?: boolean;
+    reservations?: boolean;
+  };
+  diningServices?: {
+    breakfast?: boolean;
+    brunch?: boolean;
+    lunch?: boolean;
+    dinner?: boolean;
+    dessert?: boolean;
+    lateNightFood?: boolean;
+  };
+  offerings?: {
+    beer?: boolean;
+    wine?: boolean;
+    cocktails?: boolean;
+    coffee?: boolean;
+    vegetarianFood?: boolean;
+    happyHourFood?: boolean;
+  };
+  paymentMethods?: {
+    creditCards?: boolean;
+    debitCards?: boolean;
+    nfc?: boolean;
+    cashOnly?: boolean;
+  };
+  atmosphereFeatures?: {
+    goodForChildren?: boolean;
+    goodForGroups?: boolean;
+    goodForWatchingSports?: boolean;
+    liveMusic?: boolean;
+    outdoorSeating?: boolean;
+  };
+  generalServices?: {
+    wifi?: boolean;
+    restroom?: boolean;
+    parking?: boolean;
+    valetParking?: boolean;
+    paidParking?: boolean;
+    freeParking?: boolean;
+  };
+  
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
 };
@@ -175,7 +225,6 @@ type ExistingEstablishment = {
   activities: string[] | null;
   services: string[] | null;
   ambiance: string[] | null;
-  paymentMethods: string[] | null;
   tags: string[] | null;
   horairesOuverture: any;
   prixMoyen: number | null;
@@ -507,7 +556,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         activities: establishment.activities || [],
         services: establishment.services || [],
         ambiance: establishment.ambiance || [],
-        paymentMethods: establishment.paymentMethods || [],
+        paymentMethods: undefined, // Sera défini par l'enrichissement
         tags: establishment.tags || [],
         photos: [],
         hours: establishment.horairesOuverture || {},
@@ -548,7 +597,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       activities: [],
       services: [],
       ambiance: [],
-      paymentMethods: [],
+      paymentMethods: undefined,
       tags: [],
       photos: [],
       hours: {},
@@ -582,7 +631,14 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     googleRating: 0,
     googleReviewCount: 0,
     theForkLink: '',
-    uberEatsLink: ''
+    uberEatsLink: '',
+    accessibilityInfo: {},
+    servicesAvailable: {},
+    diningServices: {},
+    offerings: {},
+    paymentMethods: {},
+    atmosphereFeatures: {},
+    generalServices: {}
   });
   const [siretVerification, setSiretVerification] = useState<{
     status: 'idle' | 'loading' | 'valid' | 'invalid';
@@ -673,7 +729,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
   };
 
   const handleEnrichmentComplete = (enrichmentData: EnrichmentData) => {
-    console.log('Données d\'enrichissement reçues:', enrichmentData);
+    console.log('🎯 Données d\'enrichissement reçues:', enrichmentData);
+    console.log('🕐 Horaires dans les données d\'enrichissement:', enrichmentData.hours);
     
     // Mettre à jour les données du formulaire avec les données enrichies
     setFormData(prev => ({
@@ -688,10 +745,21 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       envieTags: enrichmentData.envieTags || prev.envieTags,
       theForkLink: enrichmentData.theForkLink || prev.theForkLink,
       uberEatsLink: enrichmentData.uberEatsLink || prev.uberEatsLink,
+      
+      // === MAPPING DES NOUVELLES SECTIONS DÉTAILLÉES ===
+      accessibilityInfo: enrichmentData.accessibilityInfo || prev.accessibilityInfo,
+      servicesAvailable: enrichmentData.servicesAvailable || prev.servicesAvailable,
+      diningServices: enrichmentData.diningServices || prev.diningServices,
+      offerings: enrichmentData.offerings || prev.offerings,
+      paymentMethods: enrichmentData.paymentMethods || prev.paymentMethods,
+      atmosphereFeatures: enrichmentData.atmosphereFeatures || prev.atmosphereFeatures,
+      generalServices: enrichmentData.generalServices || prev.generalServices,
+      
       enriched: true
     }));
     
-    console.log('Données du formulaire mises à jour avec l\'enrichissement');
+    console.log('✅ Données du formulaire mises à jour avec l\'enrichissement (y compris sections détaillées)');
+    console.log('🕐 Horaires appliqués au formulaire:', enrichmentData.hours);
     
     // Passer à l'étape suivante
     setCurrentStep(3);
@@ -701,7 +769,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     setFormData(prev => ({ ...prev, tags }));
   };
 
-  const handleArrayToggle = (field: 'services' | 'ambiance' | 'paymentMethods' | 'informationsPratiques', value: string) => {
+  const handleArrayToggle = (field: 'services' | 'ambiance' | 'informationsPratiques', value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].includes(value)
@@ -1195,6 +1263,69 @@ const renderStep = () => {
             onChange={(value) => handleInputChange('activities', value)}
             error={errors.activities}
           />
+          
+          {/* Sections enrichies (si disponibles) */}
+          {formData.enriched && (
+            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center mb-4">
+                <span className="text-green-600 text-xl mr-2">✅</span>
+                <h3 className="text-lg font-semibold text-green-800">
+                  Informations enrichies automatiquement
+                </h3>
+              </div>
+              <p className="text-green-700 text-sm mb-4">
+                Ces informations ont été récupérées automatiquement depuis Google Places. 
+                Vous pouvez les modifier si nécessaire.
+              </p>
+              
+              {/* Affichage des sections enrichies */}
+              <div className="space-y-4">
+                {/* Informations pratiques */}
+                {formData.informationsPratiques && formData.informationsPratiques.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">📋 Informations pratiques</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.informationsPratiques.map((info, index) => (
+                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                          {info}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Tags Envie */}
+                {formData.envieTags && formData.envieTags.length > 0 && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">🏷️ Tags de recherche générés</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.envieTags.map((tag, index) => (
+                        <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Liens externes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {formData.theForkLink && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-1">🍴 TheFork</h4>
+                      <p className="text-xs text-gray-600 truncate">{formData.theForkLink}</p>
+                    </div>
+                  )}
+                  {formData.uberEatsLink && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 mb-1">🚚 Uber Eats</h4>
+                      <p className="text-xs text-gray-600 truncate">{formData.uberEatsLink}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
 
@@ -1306,44 +1437,48 @@ const renderStep = () => {
             </p>
           </div>
           
-          {/* Moyens de paiement */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Moyens de paiement acceptés</h3>
-              <span className="text-sm text-gray-500">
-                {formData.paymentMethods.length} moyen{formData.paymentMethods.length > 1 ? 's' : ''} sélectionné{formData.paymentMethods.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <span className="text-xl mr-2">💳</span>
-                <h4 className="font-medium text-gray-900">MOYENS DE PAIEMENT</h4>
+          {/* Moyens de paiement - Gérés par l'enrichissement automatique */}
+          {formData.enriched && formData.paymentMethods && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Moyens de paiement acceptés</h3>
+                <span className="text-sm text-gray-500">Détectés automatiquement</span>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {[
-                  "Espèces",
-                  "Carte bancaire", 
-                  "Paiement mobile (Apple Pay, Google Pay)",
-                  "Chèque",
-                  "Virement",
-                  "Tickets restaurant",
-                  "Chèques vacances ANCV",
-                  "Crypto-monnaies"
-                ].map((method: string) => (
-                  <label key={method} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                    <input
-                      type="checkbox"
-                      checked={formData.paymentMethods.includes(method)}
-                      onChange={() => handleArrayToggle('paymentMethods', method)}
-                      className="rounded text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm text-gray-700">{method}</span>
-                  </label>
-                ))}
+              
+              <div className="border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">💳</span>
+                  <h4 className="font-medium text-gray-900">MOYENS DE PAIEMENT</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {formData.paymentMethods.creditCards && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Cartes bancaires</span>
+                    </div>
+                  )}
+                  {formData.paymentMethods.debitCards && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Cartes de débit</span>
+                    </div>
+                  )}
+                  {formData.paymentMethods.nfc && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Paiement mobile NFC</span>
+                    </div>
+                  )}
+                  {formData.paymentMethods.cashOnly && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Espèces uniquement</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       );
 
@@ -1522,7 +1657,7 @@ const renderStep = () => {
               hours: formData.hours,
               services: formData.services,
               ambiance: formData.ambiance,
-              paymentMethods: formData.paymentMethods,
+              paymentMethods: [], // Géré par l'enrichissement automatique
               tags: formData.tags,
               photos: [], // Les photos sont maintenant ajoutées sur la page pro
               phone: formData.phone || '',

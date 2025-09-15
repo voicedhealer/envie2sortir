@@ -299,7 +299,9 @@ export default function DashboardContent({ user, establishment }: DashboardConte
               
               {establishment.instagram && (
                 <a
-                  href={`https://instagram.com/${establishment.instagram}`}
+                  href={establishment.instagram.startsWith('http') 
+                    ? establishment.instagram 
+                    : `https://instagram.com/${establishment.instagram}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center text-pink-600 hover:text-pink-800"
@@ -311,7 +313,9 @@ export default function DashboardContent({ user, establishment }: DashboardConte
               
               {establishment.facebook && (
                 <a
-                  href={`https://facebook.com/${establishment.facebook}`}
+                  href={establishment.facebook.startsWith('http') 
+                    ? establishment.facebook 
+                    : `https://facebook.com/${establishment.facebook}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center text-blue-600 hover:text-blue-800"

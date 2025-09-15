@@ -117,6 +117,7 @@ model Establishment {
   googleRating       Float?              // Note Google
   googleReviewCount  Int?                // Nombre d'avis Google
   theForkLink        String?             // Lien TheFork pour réservations
+  uberEatsLink       String?             // Lien Uber Eats
   specialties        Json?               // Spécialités extraites des avis
   atmosphere         Json?               // Ambiance détectée
   accessibility      Json?               // Informations d'accessibilité

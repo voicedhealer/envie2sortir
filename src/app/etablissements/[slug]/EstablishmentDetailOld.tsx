@@ -534,7 +534,9 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
                   <div className="flex items-center space-x-3">
                     <Instagram className="w-5 h-5 text-gray-500" />
                     <a
-                      href={`https://instagram.com/${establishment.instagram}`}
+                      href={establishment.instagram.startsWith('http') 
+                        ? establishment.instagram 
+                        : `https://instagram.com/${establishment.instagram}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"
@@ -548,7 +550,9 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
                   <div className="flex items-center space-x-3">
                     <Facebook className="w-5 h-5 text-gray-500" />
                     <a
-                      href={`https://facebook.com/${establishment.facebook}`}
+                      href={establishment.facebook.startsWith('http') 
+                        ? establishment.facebook 
+                        : `https://facebook.com/${establishment.facebook}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline"

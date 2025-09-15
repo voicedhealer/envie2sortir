@@ -10,9 +10,7 @@ import {
   Facebook, 
   Clock, 
   Euro, 
-  Users, 
-  Car, 
-  Accessibility,
+  CreditCard,
   ExternalLink,
   ChevronDown,
   ChevronUp,
@@ -49,13 +47,9 @@ interface EstablishmentInfoProps {
     facebook?: string;
     tiktok?: string;
     theForkLink?: string;
+    uberEatsLink?: string;
     paymentMethods?: string[];
     horairesOuverture?: HoursData;
-    prixMoyen?: number;
-    capaciteMax?: number;
-    accessibilite?: boolean;
-    parking?: boolean;
-    terrasse?: boolean;
     informationsPratiques?: string[];
   };
 }
@@ -293,6 +287,51 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         </div>
       )}
 
+      {/* Section Moyens de paiement */}
+      {(() => {
+        let paymentMethods = establishment.paymentMethods;
+        if (typeof paymentMethods === 'string') {
+          try {
+            paymentMethods = JSON.parse(paymentMethods);
+          } catch (error) {
+            console.error('Erreur lors du parsing des moyens de paiement:', error);
+            paymentMethods = [];
+          }
+        }
+        return paymentMethods && Array.isArray(paymentMethods) && paymentMethods.length > 0;
+      })() && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
+              <CreditCard className="w-5 h-5 text-orange-500" />
+              <span>Moyens de paiement</span>
+            </h3>
+          </div>
+          
+          <div className="px-6 pb-6 pt-4">
+            <ul className="list-none space-y-1">
+              {(() => {
+                let paymentMethods = establishment.paymentMethods;
+                if (typeof paymentMethods === 'string') {
+                  try {
+                    paymentMethods = JSON.parse(paymentMethods);
+                  } catch (error) {
+                    console.error('Erreur lors du parsing des moyens de paiement:', error);
+                    paymentMethods = [];
+                  }
+                }
+                return paymentMethods && Array.isArray(paymentMethods) ? paymentMethods : [];
+              })().map((method: string, index: number) => (
+                <li key={index} className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
+                  <span className="text-sm text-gray-700">{method}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {/* Contact et localisation */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-100">
@@ -302,7 +341,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           </h3>
         </div>
         
-        <div className="p-6 space-y-4">
+        <div className="px-6 pb-6 pt-4 space-y-4">
           {/* Adresse */}
           <div className="flex items-start space-x-3">
             <MapPin className="w-5 h-5 text-gray-400 mt-0.5" />
@@ -345,16 +384,34 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           {/* Lien TheFork */}
           {establishment.theForkLink && (
             <div className="flex items-center space-x-3">
-              <div className="w-5 h-5 bg-yellow-500 rounded flex items-center justify-center">
+              <div className="w-5 h-5 bg-white-500 rounded flex items-center justify-center">
                 <span className="text-white text-xs font-bold">🍴</span>
               </div>
               <a 
                 href={establishment.theForkLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-yellow-600 hover:text-yellow-700 font-medium transition-colors flex items-center space-x-1"
+                className="text-green-600 hover:text-green-700 font-medium transition-colors flex items-center space-x-1"
               >
                 <span>Réserver sur TheFork</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
+
+          {/* Lien Uber Eats */}
+          {establishment.uberEatsLink && (
+            <div className="flex items-center space-x-3">
+              <div className="w-5 h-5 bg-white rounded flex items-center justify-center">
+                <span className="text-white text-xs font-bold">🚗</span>
+              </div>
+              <a 
+                href={establishment.uberEatsLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 font-medium transition-colors flex items-center space-x-1"
+              >
+                <span>Commander sur Uber Eats</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -435,119 +492,32 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         </div>
         
         <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {establishment.prixMoyen && (
-              <div className="flex items-center space-x-3">
-                <Euro className="w-5 h-5 text-green-500" />
-                <div>
-                  <p className="font-medium text-gray-900">Prix moyen</p>
-                  <p className="text-gray-600">{establishment.prixMoyen}€ par personne</p>
-                </div>
-              </div>
-            )}
-            
-            {establishment.capaciteMax && (
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-500" />
-                <div>
-                  <p className="font-medium text-gray-900">Capacité</p>
-                  <p className="text-gray-600">Jusqu'à {establishment.capaciteMax} personnes</p>
-                </div>
-              </div>
-            )}
-            
-            {establishment.parking && (
-              <div className="flex items-center space-x-3">
-                <Car className="w-5 h-5 text-gray-500" />
-                <div>
-                  <p className="font-medium text-gray-900">Parking</p>
-                  <p className="text-gray-600">Parking disponible</p>
-                </div>
-              </div>
-            )}
-            
-            {establishment.terrasse && (
-              <div className="flex items-center space-x-3">
-                <div className="w-5 h-5 text-green-500">🌿</div>
-                <div>
-                  <p className="font-medium text-gray-900">Terrasse</p>
-                  <p className="text-gray-600">Terrasse extérieure</p>
-                </div>
-              </div>
-            )}
-            
-            {establishment.accessibilite && (
-              <div className="flex items-center space-x-3">
-                <Accessibility className="w-5 h-5 text-purple-500" />
-                <div>
-                  <p className="font-medium text-gray-900">Accessibilité</p>
-                  <p className="text-gray-600">Accessible aux personnes à mobilité réduite</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Nouvelles informations pratiques */}
+          {/* Informations pratiques récupérées de Google */}
           {establishment.informationsPratiques && establishment.informationsPratiques.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <h4 className="text-sm font-medium text-gray-900 mb-4">Autres informations</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {establishment.informationsPratiques.map((info: string, index: number) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {establishment.informationsPratiques
+                .filter((info: string) => {
+                  // Garder seulement les informations pratiques spécifiques
+                  const infoLower = info.toLowerCase();
+                  return infoLower.includes('espace non-fumeurs') ||
+                         infoLower.includes('réservation recommandée') ||
+                         infoLower.includes('toilettes adaptées pmr') ||
+                         infoLower.includes('non-fumeurs') ||
+                         infoLower.includes('réservation') ||
+                         infoLower.includes('pmr') ||
+                         infoLower.includes('handicap');
+                })
+                .map((info: string, index: number) => (
                   <div key={index} className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0"></div>
                     <span className="text-sm text-gray-700">{info}</span>
                   </div>
                 ))}
-              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Section Moyens de paiement */}
-      {(() => {
-        let paymentMethods = establishment.paymentMethods;
-        if (typeof paymentMethods === 'string') {
-          try {
-            paymentMethods = JSON.parse(paymentMethods);
-          } catch (error) {
-            console.error('Erreur lors du parsing des moyens de paiement:', error);
-            paymentMethods = [];
-          }
-        }
-        return paymentMethods && Array.isArray(paymentMethods) && paymentMethods.length > 0;
-      })() && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900 flex items-center space-x-2">
-              <Euro className="w-5 h-5 text-orange-500" />
-              <span>Moyens de paiement</span>
-            </h3>
-          </div>
-          
-          <div className="p-6">
-            <ul className="list-none space-y-1">
-              {(() => {
-                let paymentMethods = establishment.paymentMethods;
-                if (typeof paymentMethods === 'string') {
-                  try {
-                    paymentMethods = JSON.parse(paymentMethods);
-                  } catch (error) {
-                    console.error('Erreur lors du parsing des moyens de paiement:', error);
-                    paymentMethods = [];
-                  }
-                }
-                return paymentMethods && Array.isArray(paymentMethods) ? paymentMethods : [];
-              })().map((method: string, index: number) => (
-                <li key={index} className="flex items-center text-gray-700">
-                  <span className="h-2 w-2 rounded-full bg-amber-500 mr-2 flex-shrink-0"></span>
-                  {method}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

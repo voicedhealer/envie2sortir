@@ -63,17 +63,57 @@ export async function POST(request: Request) {
       activities: JSON.parse(formData.get('activities') as string || '[]'),
       services: JSON.parse(formData.get('services') as string || '[]'),
       ambiance: JSON.parse(formData.get('ambiance') as string || '[]'),
-      paymentMethods: JSON.parse(formData.get('paymentMethods') as string || '[]'), // <- Nouveau
+      paymentMethods: (() => {
+        const paymentMethodsData = formData.get('paymentMethods');
+        console.log('🔍 paymentMethodsData type:', typeof paymentMethodsData);
+        console.log('🔍 paymentMethodsData value:', paymentMethodsData);
+        
+        if (typeof paymentMethodsData === 'string') {
+          // Vérifier si c'est "[object Object]" (erreur côté client)
+          if (paymentMethodsData === '[object Object]') {
+            console.warn('⚠️ Reçu "[object Object]" - problème côté client');
+            return [];
+          }
+          try {
+            return JSON.parse(paymentMethodsData);
+          } catch (e) {
+            console.error('❌ Erreur JSON.parse paymentMethods:', e);
+            console.error('❌ Valeur reçue:', paymentMethodsData);
+            return [];
+          }
+        } else if (paymentMethodsData && typeof paymentMethodsData === 'object') {
+          return paymentMethodsData;
+        }
+        return [];
+      })(),
       tags: JSON.parse(formData.get('tags') as string || '[]'),
-      hours: JSON.parse(formData.get('hours') as string || '{}'),
+      hours: (() => {
+        const hoursData = formData.get('hours');
+        if (typeof hoursData === 'string') {
+          return JSON.parse(hoursData);
+        } else if (hoursData && typeof hoursData === 'object') {
+          return hoursData;
+        }
+        return {};
+      })(),
       website: formData.get('website') as string || '',
       instagram: formData.get('instagram') as string || '',
       facebook: formData.get('facebook') as string || '',
       tiktok: formData.get('tiktok') as string || '',
       priceMin: formData.get('priceMin') ? parseFloat(formData.get('priceMin') as string) : null,
       priceMax: formData.get('priceMax') ? parseFloat(formData.get('priceMax') as string) : null,
-      informationsPratiques: JSON.parse(formData.get('informationsPratiques') as string || '[]'),
+      informationsPratiques: (() => {
+        const infosData = formData.get('informationsPratiques');
+        if (typeof infosData === 'string') {
+          return JSON.parse(infosData);
+        } else if (infosData && typeof infosData === 'object') {
+          return infosData;
+        }
+        return {};
+      })(),
       envieTags: JSON.parse(formData.get('envieTags') as string || '[]'),
+      theForkLink: formData.get('theForkLink') as string || '',
+      uberEatsLink: formData.get('uberEatsLink') as string || '',
     };
 
     // Générer un slug unique
@@ -141,6 +181,7 @@ export async function POST(request: Request) {
           priceMax: establishmentData.priceMax,
           informationsPratiques: establishmentData.informationsPratiques,
           theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
+          uberEatsLink: establishmentData.uberEatsLink, // Lien Uber Eats
           ownerId: user.id, // Lien vers l'utilisateur
           status: 'pending', // En attente de validation
           subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement

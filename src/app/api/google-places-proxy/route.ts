@@ -4,9 +4,17 @@ export async function POST(request: NextRequest) {
   try {
     const { placeId, fields, apiKey, placeName } = await request.json();
 
-    if (!placeId || !fields || !apiKey) {
+    if (!placeId || !apiKey) {
       return NextResponse.json(
-        { error: 'Paramètres manquants: placeId, fields, apiKey requis' },
+        { error: 'Paramètres manquants: placeId, apiKey requis' },
+        { status: 400 }
+      );
+    }
+    
+    // Si placeId contient des coordonnées, fields est optionnel
+    if (!fields && !placeId.includes(',')) {
+      return NextResponse.json(
+        { error: 'Paramètre fields requis pour les Place IDs' },
         { status: 400 }
       );
     }
@@ -21,11 +29,13 @@ export async function POST(request: NextRequest) {
       
       if (placeName) {
         // Si on a un nom, utiliser l'API Text Search
+        // Note: Text Search ne supporte pas le paramètre fields, on récupère tout
         const query = encodeURIComponent(placeName);
-        googleApiUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&location=${lat},${lng}&radius=100&fields=${fields}&key=${apiKey}`;
+        googleApiUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${query}&location=${lat},${lng}&radius=100&key=${apiKey}`;
       } else {
         // Sinon utiliser l'API Nearby Search
-        googleApiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=50&fields=${fields}&key=${apiKey}`;
+        // Note: Nearby Search ne supporte pas le paramètre fields, on récupère tout
+        googleApiUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lng}&radius=50&key=${apiKey}`;
       }
     } else {
       // C'est un Place ID, utiliser l'API Details
@@ -57,7 +67,9 @@ export async function POST(request: NextRequest) {
         console.log('🔍 Place ID trouvé, appel API Details pour plus d\'infos:', firstResult.place_id);
         
         // Faire un appel Place Details pour obtenir toutes les informations
-        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${firstResult.place_id}&fields=${fields}&key=${apiKey}`;
+        // Utiliser des fields par défaut si non fournis (notamment pour les horaires)
+        const fieldsToUse = fields || 'place_id,name,rating,user_ratings_total,types,price_level,vicinity,formatted_address,geometry,photos,opening_hours,website,formatted_phone_number';
+        const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${firstResult.place_id}&fields=${fieldsToUse}&key=${apiKey}`;
         
         try {
           const detailsResponse = await fetch(detailsUrl);
@@ -65,6 +77,7 @@ export async function POST(request: NextRequest) {
           
           if (detailsData.status === 'OK') {
             console.log('✅ Données détaillées récupérées');
+            console.log('🕐 Opening hours dans détails:', JSON.stringify(detailsData.result?.opening_hours, null, 2));
             return NextResponse.json(detailsData);
           }
         } catch (e) {

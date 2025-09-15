@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
+import EnrichmentSections from '@/components/EnrichmentSections';
 
 interface EnrichmentStepProps {
   onEnrichmentComplete: (data: EnrichmentData) => void;
@@ -364,6 +365,14 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                   </div>
                 )}
               </div>
+
+            {/* Sections détaillées d'enrichissement */}
+            <div className="mt-6">
+              <EnrichmentSections 
+                enrichmentData={enrichmentData} 
+                readOnly={true} 
+              />
+            </div>
 
             {/* Actions */}
             <div className="mt-4 flex flex-wrap gap-2">

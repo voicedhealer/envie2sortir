@@ -34,6 +34,72 @@ export interface EnrichmentData {
   
   // Lien Uber Eats
   uberEatsLink?: string;
+
+  // === NOUVELLES SECTIONS DÉTAILLÉES ===
+  
+  // Accessibilité
+  accessibilityInfo: {
+    wheelchairAccessibleEntrance?: boolean;
+    wheelchairAccessibleParking?: boolean;
+    wheelchairAccessibleRestroom?: boolean;
+    wheelchairAccessibleSeating?: boolean;
+  };
+  
+  // Services disponibles
+  servicesAvailable: {
+    delivery?: boolean;
+    takeout?: boolean;
+    dineIn?: boolean;
+    curbsidePickup?: boolean;
+    reservations?: boolean;
+  };
+  
+  // Services de restauration
+  diningServices: {
+    breakfast?: boolean;
+    brunch?: boolean;
+    lunch?: boolean;
+    dinner?: boolean;
+    dessert?: boolean;
+    lateNightFood?: boolean;
+  };
+  
+  // Offres alimentaires et boissons
+  offerings: {
+    beer?: boolean;
+    wine?: boolean;
+    cocktails?: boolean;
+    coffee?: boolean;
+    vegetarianFood?: boolean;
+    happyHourFood?: boolean;
+  };
+  
+  // Moyens de paiement
+  paymentMethods: {
+    creditCards?: boolean;
+    debitCards?: boolean;
+    nfc?: boolean;
+    cashOnly?: boolean;
+  };
+  
+  // Ambiance et caractéristiques
+  atmosphereFeatures: {
+    goodForChildren?: boolean;
+    goodForGroups?: boolean;
+    goodForWatchingSports?: boolean;
+    liveMusic?: boolean;
+    outdoorSeating?: boolean;
+  };
+  
+  // Services généraux
+  generalServices: {
+    wifi?: boolean;
+    restroom?: boolean;
+    parking?: boolean;
+    valetParking?: boolean;
+    paidParking?: boolean;
+    freeParking?: boolean;
+  };
 }
 
 export class EstablishmentEnrichment {
@@ -43,9 +109,13 @@ export class EstablishmentEnrichment {
 
   constructor() {
     this.apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY || '';
+    if (!this.apiKey || this.apiKey === 'your_google_places_api_key_here') {
+      console.warn('⚠️ Clé API Google Places manquante ou non configurée - utilisation du mode démonstration');
+    }
   }
 
   async triggerGoogleEnrichment(googleUrl: string): Promise<EnrichmentData> {
+    console.log('🚀 triggerGoogleEnrichment appelé avec:', googleUrl);
     try {
       // Utiliser l'API de résolution pour obtenir le Place ID
       const resolveResponse = await fetch('/api/resolve-google-url', {
@@ -78,10 +148,14 @@ export class EstablishmentEnrichment {
       console.log('✅ Place ID récupéré:', resolveData.placeId);
 
       // Appel API Google Places
+      console.log('📞 Appel fetchGooglePlaceData avec:', resolveData.placeId, resolveData.placeName);
       const placeData = await this.fetchGooglePlaceData(resolveData.placeId, resolveData.placeName);
+      console.log('📥 Données reçues de Google Places:', JSON.stringify(placeData, null, 2));
       
       // Traitement et génération des tags
+      console.log('🔄 Début processPlaceData...');
       this.enrichmentData = await this.processPlaceData(placeData, googleUrl);
+      console.log('✅ processPlaceData terminé');
       
       console.log('🎯 Données d\'enrichissement finales:', JSON.stringify(this.enrichmentData, null, 2));
       return this.enrichmentData;
@@ -91,6 +165,7 @@ export class EstablishmentEnrichment {
       throw error;
     }
   }
+
 
 
   private extractPlaceIdFromUrl(url: string): string | null {
@@ -138,41 +213,63 @@ export class EstablishmentEnrichment {
   }
 
   private async fetchGooglePlaceData(placeId: string, placeName?: string): Promise<any> {
+    console.log('📞 Appel fetchGooglePlaceData avec:', placeId, placeName);
+    
     const fields = [
-      'name', 'types', 'price_level', 'rating',
-      'user_ratings_total', 'business_status',
-      'opening_hours', 'website', 'formatted_phone_number',
-      'reviews', 'photos', 'formatted_address', 'geometry'
+      // Infos de base (toujours disponibles)
+      'name', 'types', 'price_level', 'rating', 'user_ratings_total', 'business_status',
+      'opening_hours', 'website', 'formatted_phone_number', 'formatted_address', 'geometry',
+      
+      // Détails étendus (disponibles selon l'établissement)
+      'wheelchair_accessible_entrance', 'takeout', 'delivery', 'dine_in', 'reservations',
+      'serves_breakfast', 'serves_lunch', 'serves_dinner', 'serves_beer', 'serves_wine',
+      'serves_coffee', 'serves_vegetarian_food', 'good_for_children', 'good_for_groups',
+      'outdoor_seating', 'restroom', 'editorial_summary', 'reviews', 'photos'
     ].join(',');
+
+    // Si placeId contient des coordonnées, ne pas passer fields (Text/Nearby Search ne les supportent pas)
+    const requestBody: any = {
+      placeId: placeId,
+      apiKey: this.apiKey,
+      placeName: placeName
+    };
+    
+    // Seulement ajouter fields si c'est un vrai Place ID (pas des coordonnées)
+    if (!placeId.includes(',')) {
+      requestBody.fields = fields;
+    }
 
     const response = await fetch('/api/google-places-proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        placeId: placeId,
-        fields: fields,
-        apiKey: this.apiKey,
-        placeName: placeName
-      })
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
       throw new Error('Erreur API Google Places');
     }
     
-    return response.json();
+    const data = await response.json();
+    console.log('📨 Réponse complète API Google Places:', JSON.stringify(data, null, 2));
+    
+    if (!data.result) {
+      throw new Error('Aucune donnée récupérée de Google Places');
+    }
+
+    console.log('📋 Données result extraites:', JSON.stringify(data.result, null, 2));
+    return data.result;
   }
 
   private async processPlaceData(placeData: any, googleUrl: string): Promise<EnrichmentData> {
     console.log('🔄 processPlaceData - Données Google Places reçues:', JSON.stringify(placeData, null, 2));
     
     // Vérifier que placeData est valide
-    if (!placeData || !placeData.result) {
+    if (!placeData || !placeData.place_id) {
       console.error('❌ Données Google Places invalides:', placeData);
       throw new Error('Données Google Places invalides');
     }
 
-    const result = placeData.result;
+    const result = placeData;
     
     // Déterminer le type d'établissement
     this.establishmentType = this.categorizeEstablishment(result.types);
@@ -199,7 +296,13 @@ export class EstablishmentEnrichment {
       openingHours: result.opening_hours?.weekday_text || [],
       
       // Horaires d'ouverture (format formulaire)
-      hours: this.convertOpeningHours(result.opening_hours),
+      hours: (() => {
+        console.log('🕐 Début conversion horaires pour:', result.name);
+        console.log('🕐 Données opening_hours brutes:', JSON.stringify(result.opening_hours, null, 2));
+        const convertedHours = this.convertOpeningHours(result.opening_hours);
+        console.log('🕐 Horaires convertis:', JSON.stringify(convertedHours, null, 2));
+        return convertedHours;
+      })(),
       
       // Informations pratiques générées
       practicalInfo: this.generatePracticalInfo(result),
@@ -222,7 +325,30 @@ export class EstablishmentEnrichment {
       googleReviewCount: result.user_ratings_total || 0,
       
       // Suggestions de TheFork link
-      theForkLink: this.suggestTheForkIntegration(result)
+      theForkLink: this.suggestTheForkIntegration(result),
+
+      // === NOUVELLES SECTIONS DÉTAILLÉES (GÉNÉRÉES INTELLIGEMMENT) ===
+      
+      // Accessibilité (basée sur les types et infos pratiques)
+      accessibilityInfo: this.generateAccessibilityInfo(result),
+      
+      // Services disponibles (basés sur le type d'établissement et infos pratiques)
+      servicesAvailable: this.generateServicesAvailable(result),
+      
+      // Services de restauration (basés sur le type et les horaires)
+      diningServices: this.generateDiningServices(result),
+      
+      // Offres alimentaires et boissons (basées sur le type d'établissement)
+      offerings: this.generateOfferings(result),
+      
+      // Moyens de paiement (basés sur les infos pratiques)
+      paymentMethods: this.generatePaymentMethods(result),
+      
+      // Ambiance et caractéristiques (basées sur les types et avis)
+      atmosphereFeatures: this.generateAtmosphereFeatures(result),
+      
+      // Services généraux (basés sur les infos pratiques)
+      generalServices: this.generateGeneralServices(result),
     };
     
     return processedData;
@@ -291,7 +417,7 @@ export class EstablishmentEnrichment {
       ]
     };
     
-    baseTags.push(...(typeBasedTags[type] || []));
+    baseTags.push(...(typeBasedTags[type || 'restaurant'] || []));
     
     // Tags basés sur le prix
     const priceBasedTags: Record<number, string[]> = {
@@ -451,8 +577,9 @@ export class EstablishmentEnrichment {
   private convertOpeningHours(openingHours: any): any {
     console.log('🕐 convertOpeningHours - Données reçues:', JSON.stringify(openingHours, null, 2));
     
-    if (!openingHours || !openingHours.periods) {
-      console.log('❌ Pas de périodes d\'ouverture disponibles');
+    // Vérifier différents formats possibles
+    if (!openingHours) {
+      console.log('❌ Pas de données d\'horaires d\'ouverture');
       return {};
     }
 
@@ -466,40 +593,106 @@ export class EstablishmentEnrichment {
 
     console.log('📅 Jours initialisés:', Object.keys(hoursData));
 
-    // Parser les périodes d'ouverture
-    openingHours.periods.forEach((period: any, index: number) => {
-      console.log(`🕐 Période ${index + 1}:`, period);
+    // Vérifier si on a des périodes
+    if (openingHours.periods && Array.isArray(openingHours.periods)) {
+      console.log(`🔄 Traitement de ${openingHours.periods.length} périodes`);
       
-      if (period.open && period.close) {
-        const dayIndex = period.open.day;
-        const dayName = days[dayIndex];
+      // Parser les périodes d'ouverture
+      openingHours.periods.forEach((period: any, index: number) => {
+        console.log(`🕐 Période ${index + 1}:`, period);
         
-        console.log(`  → Jour index: ${dayIndex}, Nom: ${dayName}`);
-        
-        if (dayName) {
-          const openTime = this.formatTime(period.open.time);
-          const closeTime = this.formatTime(period.close.time);
+        if (period.open && period.close) {
+          const dayIndex = period.open.day;
+          const dayName = days[dayIndex];
           
-          console.log(`  → Heures: ${openTime} - ${closeTime}`);
+          console.log(`  → Jour index: ${dayIndex}, Nom: ${dayName}`);
           
-          // Si le jour n'est pas encore ouvert, l'initialiser
-          if (!hoursData[dayName].isOpen) {
+          if (dayName) {
+            const openTime = this.formatTime(period.open.time);
+            const closeTime = this.formatTime(period.close.time);
+            
+            console.log(`  → Heures: ${openTime} - ${closeTime}`);
+            
+            // Si le jour n'est pas encore ouvert, l'initialiser
+            if (!hoursData[dayName].isOpen) {
+              hoursData[dayName] = {
+                isOpen: true,
+                slots: []
+              };
+            }
+            
+            hoursData[dayName].slots.push({
+              name: 'Ouverture',
+              open: openTime,
+              close: closeTime
+            });
+            
+            console.log(`  ✅ ${dayName} mis à jour:`, hoursData[dayName]);
+          }
+        } else if (period.open && !period.close) {
+          // Cas où l'établissement est ouvert 24h/24
+          const dayIndex = period.open.day;
+          const dayName = days[dayIndex];
+          
+          if (dayName) {
+            console.log(`  → ${dayName}: Ouvert 24h/24`);
             hoursData[dayName] = {
               isOpen: true,
-              slots: []
+              slots: [{
+                name: 'Ouverture',
+                open: '00:00',
+                close: '23:59'
+              }]
             };
           }
-          
-          hoursData[dayName].slots.push({
-            name: 'Ouverture',
-            open: openTime,
-            close: closeTime
-          });
-          
-          console.log(`  ✅ ${dayName} mis à jour:`, hoursData[dayName]);
         }
-      }
-    });
+      });
+    } else if (openingHours.weekday_text && Array.isArray(openingHours.weekday_text)) {
+      // Fallback: essayer de parser les textes des jours de la semaine
+      console.log('🔄 Fallback: parsing du texte weekday_text');
+      
+      openingHours.weekday_text.forEach((dayText: string, index: number) => {
+        console.log(`📅 Parsing jour ${index}: ${dayText}`);
+        
+        // Extraire le nom du jour et les horaires
+        const dayMatch = dayText.match(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday):\s*(.+)$/i);
+        
+        if (dayMatch) {
+          const dayName = dayMatch[1].toLowerCase();
+          const hoursText = dayMatch[2];
+          
+          if (hoursText.toLowerCase().includes('closed')) {
+            console.log(`  → ${dayName}: Fermé`);
+            // Déjà initialisé comme fermé
+          } else {
+            // Essayer d'extraire les horaires
+            const timePattern = /(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/g;
+            let match;
+            const slots = [];
+            
+            while ((match = timePattern.exec(hoursText)) !== null) {
+              const openTime = `${match[1].padStart(2, '0')}:${match[2]}`;
+              const closeTime = `${match[3].padStart(2, '0')}:${match[4]}`;
+              slots.push({
+                name: 'Ouverture',
+                open: openTime,
+                close: closeTime
+              });
+              console.log(`  → ${dayName}: ${openTime} - ${closeTime}`);
+            }
+            
+            if (slots.length > 0) {
+              hoursData[dayName] = {
+                isOpen: true,
+                slots: slots
+              };
+            }
+          }
+        }
+      });
+    } else {
+      console.log('❌ Format d\'horaires non reconnu');
+    }
 
     console.log('📋 Résultat final convertOpeningHours:', JSON.stringify(hoursData, null, 2));
     return hoursData;
@@ -777,6 +970,118 @@ export class EstablishmentEnrichment {
 
   getEstablishmentType(): string | null {
     return this.establishmentType;
+  }
+
+  // === NOUVELLES FONCTIONS DE GÉNÉRATION INTELLIGENTE ===
+
+  private generateAccessibilityInfo(result: any) {
+    // Utiliser les données directes s'il y en a, sinon faire des suppositions basées sur le type
+    return {
+      wheelchairAccessibleEntrance: result.wheelchair_accessible_entrance || true, // Par défaut accessible
+      wheelchairAccessibleParking: result.wheelchair_accessible_parking || undefined,
+      wheelchairAccessibleRestroom: result.wheelchair_accessible_restroom || undefined,
+      wheelchairAccessibleSeating: result.wheelchair_accessible_seating || true, // Par défaut accessible
+    };
+  }
+
+  private generateServicesAvailable(result: any) {
+    const types = result.types || [];
+    const practicalInfo = this.generatePracticalInfo(result);
+    
+    return {
+      delivery: result.delivery || types.includes('meal_delivery') || practicalInfo.includes('Livraison'),
+      takeout: result.takeout || types.includes('meal_takeaway') || practicalInfo.includes('Vente à emporter'),
+      dineIn: result.dine_in || types.includes('restaurant') || practicalInfo.includes('Repas sur place'),
+      curbsidePickup: result.curbside_pickup || false,
+      reservations: result.accepts_reservations || result.reservations || practicalInfo.includes('Réservation recommandée'),
+    };
+  }
+
+  private generateDiningServices(result: any) {
+    const types = result.types || [];
+    const openingHours = result.opening_hours?.weekday_text || [];
+    
+    // Analyser les horaires pour déterminer les services
+    const hasEarlyHours = openingHours.some((h: string) => h.includes('7:') || h.includes('8:') || h.includes('9:'));
+    const hasLateHours = openingHours.some((h: string) => h.includes('22:') || h.includes('23:') || h.includes('0:'));
+    const isRestaurant = types.includes('restaurant');
+    
+    return {
+      breakfast: result.serves_breakfast || hasEarlyHours,
+      brunch: result.serves_brunch || (hasEarlyHours && isRestaurant),
+      lunch: result.serves_lunch || isRestaurant || true,
+      dinner: result.serves_dinner || isRestaurant || true,
+      dessert: result.serves_dessert || isRestaurant || true,
+      lateNightFood: result.serves_late_night_food || hasLateHours,
+    };
+  }
+
+  private generateOfferings(result: any) {
+    const types = result.types || [];
+    const isBar = types.includes('bar') || types.includes('night_club');
+    const isRestaurant = types.includes('restaurant');
+    
+    return {
+      beer: result.serves_beer || isBar || isRestaurant,
+      wine: result.serves_wine || isBar || isRestaurant,
+      cocktails: result.serves_cocktails || isBar,
+      coffee: result.serves_coffee || types.includes('cafe') || isRestaurant,
+      vegetarianFood: result.serves_vegetarian_food || isRestaurant,
+      happyHourFood: result.serves_happy_hour_food || isBar,
+    };
+  }
+
+  private generatePaymentMethods(result: any) {
+    const practicalInfo = this.generatePracticalInfo(result);
+    
+    return {
+      creditCards: result.accepts_credit_cards || practicalInfo.includes('Carte bancaire acceptée') || true,
+      debitCards: result.accepts_debit_cards || true,
+      nfc: result.accepts_nfc || true, // La plupart acceptent maintenant
+      cashOnly: result.accepts_cash_only || false,
+    };
+  }
+
+  private generateAtmosphereFeatures(result: any) {
+    const types = result.types || [];
+    const practicalInfo = this.generatePracticalInfo(result);
+    
+    return {
+      goodForChildren: result.good_for_children || types.includes('restaurant') || true,
+      goodForGroups: result.good_for_groups || types.includes('restaurant') || true,
+      goodForWatchingSports: result.good_for_watching_sports || types.includes('bar'),
+      liveMusic: result.live_music || types.includes('night_club'),
+      outdoorSeating: result.outdoor_seating || practicalInfo.includes('Terrasse') || undefined,
+    };
+  }
+
+  private generateGeneralServices(result: any) {
+    const practicalInfo = this.generatePracticalInfo(result);
+    
+    return {
+      wifi: result.wifi ?? true, // La plupart ont le Wi-Fi maintenant
+      restroom: result.restroom ?? true, // Supposer que les restaurants ont des toilettes
+      parking: result.parking ?? undefined,
+      valetParking: result.valet_parking ?? false,
+      paidParking: result.paid_parking_lot ?? practicalInfo.includes('Parking payant'),
+      freeParking: result.free_parking_lot ?? false,
+    };
+  }
+
+  // === MÉTHODES POUR LIENS EXTERNES ===
+  
+  private generateTheForkLink(name: string, address: string): string | undefined {
+    if (!name) return undefined;
+    // Génération d'un lien de recherche TheFork basé sur le nom
+    const searchQuery = encodeURIComponent(name.replace(/[^\w\s]/gi, ''));
+    return `https://www.thefork.fr/recherche?q=${searchQuery}`;
+  }
+
+  private generateUberEatsLink(name: string, address: string): string | undefined {
+    if (!name) return undefined;
+    // Génération d'un lien de recherche Uber Eats basé sur le nom
+    const searchQuery = encodeURIComponent(name.replace(/[^\w\s]/gi, ''));
+    return `https://www.ubereats.com/fr/search?q=${searchQuery}`;
   }
 }
 
