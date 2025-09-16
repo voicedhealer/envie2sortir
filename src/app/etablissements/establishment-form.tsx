@@ -11,6 +11,7 @@ import AdresseStep, { AddressData } from '@/components/forms/AdresseStep';
 import TagsSelector from '@/components/forms/TagsSelector';
 import EnrichmentStep from '@/components/forms/EnrichmentStep';
 import { EnrichmentData } from '@/lib/enrichment-system';
+import OrganizedServicesAmbianceManager from '@/components/OrganizedServicesAmbianceManager';
 
 // Fonction pour parser l'adresse Google en format formulaire
 function parseAddressFromGoogle(googleAddress: string): AddressData {
@@ -81,6 +82,66 @@ function getSuggestedTags(activities: string[]): string[] {
   
   // Supprimer les doublons et retourner les 15 premiers
   return [...new Set(suggestions)].slice(0, 15);
+}
+
+// Fonctions de conversion des tableaux en objets pour compatibilité avec ProfessionalData
+function convertAccessibilityArrayToObject(accessibilityArray: string[] = []): any {
+  return {
+    wheelchairAccessibleEntrance: accessibilityArray.includes('Entrée accessible en fauteuil roulant'),
+    wheelchairAccessibleParking: accessibilityArray.includes('Parking accessible en fauteuil roulant'),
+    wheelchairAccessibleRestroom: accessibilityArray.includes('Toilettes accessibles en fauteuil roulant'),
+    wheelchairAccessibleSeating: accessibilityArray.includes('Places assises accessibles en fauteuil roulant')
+  };
+}
+
+function convertServicesAvailableArrayToObject(servicesArray: string[] = []): any {
+  return {
+    delivery: servicesArray.includes('Livraison'),
+    takeout: servicesArray.includes('Vente à emporter'),
+    dineIn: servicesArray.includes('Repas sur place')
+  };
+}
+
+function convertDiningServicesArrayToObject(diningArray: string[] = []): any {
+  return {
+    lunch: diningArray.includes('Déjeuner'),
+    dinner: diningArray.includes('Dîner'),
+    catering: diningArray.includes('Traiteur'),
+    desserts: diningArray.includes('Desserts'),
+    tableService: diningArray.includes('Service à table')
+  };
+}
+
+function convertOfferingsArrayToObject(offeringsArray: string[] = []): any {
+  return {
+    alcohol: offeringsArray.includes('Alcools'),
+    beer: offeringsArray.includes('Bière'),
+    coffee: offeringsArray.includes('Cafés'),
+    cocktails: offeringsArray.includes('Cocktails et apéritifs'),
+    vegetarian: offeringsArray.includes('Convient aux végétariens'),
+    healthyOptions: offeringsArray.includes('Produits sains'),
+    spirits: offeringsArray.includes('Spiritueux'),
+    wine: offeringsArray.includes('Vin')
+  };
+}
+
+function convertAtmosphereArrayToObject(atmosphereArray: string[] = []): any {
+  return {
+    casual: atmosphereArray.includes('Ambiance décontractée'),
+    cozy: atmosphereArray.includes('Cadre agréable'),
+    quiet: atmosphereArray.includes('Calme'),
+    romantic: atmosphereArray.includes('Romantique'),
+    festive: atmosphereArray.includes('Festif')
+  };
+}
+
+function convertGeneralServicesArrayToObject(servicesArray: string[] = []): any {
+  return {
+    wifi: servicesArray.includes('WiFi'),
+    airConditioning: servicesArray.includes('Climatisation'),
+    restrooms: servicesArray.includes('Toilettes'),
+    parking: servicesArray.includes('Parking')
+  };
 }
 
 // Types
@@ -407,115 +468,8 @@ const getActivitiesServicesAndAmbiance = (activities: string[]) => {
 };
 
 // Listes génériques de secours pour Services & Ambiances (fallback)
-const GENERIC_AMBIANCES = [
-  "Familial",
-  "Entre amis", 
-  "Romantique",
-  "Décontracté",
-  "Festif"
-];
+// Les services et ambiances sont maintenant générés dynamiquement depuis Google Places
 
-// Liste universelle de services organisée par catégories
-const UNIVERSAL_SERVICES = {
-  restauration: {
-    title: "RESTAURATION & BAR",
-    icon: "🍽️",
-    services: [
-      "Bar/Boissons",
-      "Snack",
-      "Restaurant complet",
-      "Terrasse",
-      "Service traiteur"
-    ]
-  },
-  confort: {
-    title: "CONFORT & COMMODITÉS",
-    icon: "🛋️",
-    services: [
-      "WiFi gratuit",
-      "Parking gratuit",
-      "Vestiaires",
-      "Casiers",
-      "Climatisation",
-      "Accessible PMR",
-      "Toilettes adaptées",
-      "Espace fumeurs"
-    ]
-  },
-  divertissement: {
-    title: "JEUX & DIVERTISSEMENT ANNEXES",
-    icon: "🎮",
-    services: [
-      "Billard",
-      "Babyfoot",
-      "Jeux d'arcade",
-      "Pétanque",
-      "Fléchettes",
-      "Jeux de cartes/société",
-      "TV grand écran",
-      "Karaoké",
-      "Piste de danse"
-    ]
-  },
-  familial: {
-    title: "SERVICES FAMILIAUX",
-    icon: "👨‍👩‍👧‍👦",
-    services: [
-      "Menu enfant",
-      "Chaises hautes",
-      "Table à langer",
-      "Espace bébé",
-      "Animations enfants",
-      "Anniversaires",
-      "Garderie"
-    ]
-  },
-  evenementiel: {
-    title: "ÉVÉNEMENTIEL & GROUPES",
-    icon: "🎉",
-    services: [
-      "Privatisation possible",
-      "Séminaires",
-      "Team building",
-      "Réceptions",
-      "Groupes scolaires"
-    ]
-  },
-  autres: {
-    title: "AUTRES",
-    icon: "🛍️",
-    services: [
-      "Boutique souvenirs",
-      "Location équipements",
-      "Cours/stages",
-      "Réservation en ligne",
-      "Animaux acceptés"
-    ]
-  }
-};
-
-// Informations pratiques disponibles (évite les doublons avec services)
-const INFORMATIONS_PRATIQUES = [
-  "Parking à proximité gratuit",
-  "Rampe handicapé accessible", 
-  "Toilettes adaptées PMR",
-  "Ascenseur disponible",
-  "Climatisation",
-  "Chauffage",
-  "WiFi gratuit",
-  "Espace fumeurs",
-  "Espace non-fumeurs",
-  "Animaux acceptés",
-  "Poussettes acceptées",
-  "Réservation recommandée",
-  "Réservation obligatoire",
-  "Tenue correcte exigée",
-  "Carte bancaire acceptée",
-  "Espèces uniquement",
-  "Chèques acceptés",
-  "Ticket restaurant accepté",
-  "Chèques vacances acceptés"
-];
 
 interface EstablishmentFormProps {
   establishment?: ExistingEstablishment;
@@ -625,20 +579,25 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     envieTags: [],
     specialties: [],
     atmosphere: [],
-    accessibility: [],
     googlePlaceId: '',
     googleBusinessUrl: '',
     googleRating: 0,
     googleReviewCount: 0,
     theForkLink: '',
     uberEatsLink: '',
-    accessibilityInfo: {},
-    servicesAvailable: {},
-    diningServices: {},
-    offerings: {},
-    paymentMethods: {},
-    atmosphereFeatures: {},
-    generalServices: {}
+    accessibilityInfo: [],
+    servicesAvailableInfo: [],
+    pointsForts: [],
+    populairePour: [],
+    offres: [],
+    servicesRestauration: [],
+    servicesInfo: [],
+    ambianceInfo: [],
+    clientele: [],
+    planning: [],
+    paiements: [],
+    enfants: [],
+    parking: []
   });
   const [siretVerification, setSiretVerification] = useState<{
     status: 'idle' | 'loading' | 'valid' | 'invalid';
@@ -668,6 +627,49 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       checkExistingEstablishment();
     }
   }, [session, status, router]);
+
+  // Charger les données existantes en mode édition
+  useEffect(() => {
+    if (isEditMode && establishment) {
+      console.log('🔄 Chargement des données existantes en mode édition:', establishment);
+      
+      // Charger les données Google Places existantes
+      if (establishment.services) {
+        try {
+          const services = typeof establishment.services === 'string' 
+            ? JSON.parse(establishment.services) 
+            : establishment.services;
+          setFormData(prev => ({ ...prev, services: Array.isArray(services) ? services : [] }));
+        } catch (error) {
+          console.error('Erreur parsing services:', error);
+        }
+      }
+      
+      if (establishment.ambiance) {
+        try {
+          const ambiance = typeof establishment.ambiance === 'string' 
+            ? JSON.parse(establishment.ambiance) 
+            : establishment.ambiance;
+          setFormData(prev => ({ ...prev, ambiance: Array.isArray(ambiance) ? ambiance : [] }));
+        } catch (error) {
+          console.error('Erreur parsing ambiance:', error);
+        }
+      }
+      
+      if (establishment.informationsPratiques) {
+        try {
+          const informationsPratiques = typeof establishment.informationsPratiques === 'string' 
+            ? JSON.parse(establishment.informationsPratiques) 
+            : establishment.informationsPratiques;
+          setFormData(prev => ({ ...prev, informationsPratiques: Array.isArray(informationsPratiques) ? informationsPratiques : [] }));
+        } catch (error) {
+          console.error('Erreur parsing informationsPratiques:', error);
+        }
+      }
+      
+      console.log('✅ Données Google Places chargées en mode édition');
+    }
+  }, [isEditMode, establishment]);
 
   // Vérification SIRET en temps réel
   const verifySiret = async (siret: string) => {
@@ -728,9 +730,53 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     }
   };
 
+  // Fonction pour convertir un tableau de moyens de paiement en objet
+  const convertPaymentMethodsArrayToObject = (paymentMethodsArray: string[]) => {
+    const paymentMethodsObj: any = {};
+    
+    paymentMethodsArray.forEach(method => {
+      const methodLower = method.toLowerCase();
+      
+      // Cartes bancaires
+      if (methodLower.includes('carte') && (methodLower.includes('crédit') || methodLower.includes('credit'))) {
+        paymentMethodsObj.creditCards = true;
+      }
+      if (methodLower.includes('carte') && methodLower.includes('débit')) {
+        paymentMethodsObj.debitCards = true;
+      }
+      
+      // Paiements mobiles
+      if (methodLower.includes('nfc') || methodLower.includes('mobile')) {
+        paymentMethodsObj.nfc = true;
+      }
+      
+      // Espèces
+      if (methodLower.includes('espèces') || methodLower.includes('cash')) {
+        paymentMethodsObj.cashOnly = true;
+      }
+      
+      // Titres restaurant
+      if (methodLower.includes('titre') || methodLower.includes('restaurant')) {
+        paymentMethodsObj.restaurantVouchers = true;
+      }
+      
+      // Pluxee
+      if (methodLower.includes('pluxee')) {
+        paymentMethodsObj.pluxee = true;
+      }
+      
+      // Pour les autres moyens non reconnus, on les ajoute comme propriétés booléennes
+      if (!paymentMethodsObj.creditCards && !paymentMethodsObj.debitCards && 
+          !paymentMethodsObj.nfc && !paymentMethodsObj.cashOnly && 
+          !paymentMethodsObj.restaurantVouchers && !paymentMethodsObj.pluxee) {
+        paymentMethodsObj[methodLower.replace(/\s+/g, '')] = true;
+      }
+    });
+    
+    return paymentMethodsObj;
+  };
+
   const handleEnrichmentComplete = (enrichmentData: EnrichmentData) => {
-    console.log('🎯 Données d\'enrichissement reçues:', enrichmentData);
-    console.log('🕐 Horaires dans les données d\'enrichissement:', enrichmentData.hours);
     
     // Mettre à jour les données du formulaire avec les données enrichies
     setFormData(prev => ({
@@ -739,31 +785,35 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       description: enrichmentData.description || prev.description,
       phone: enrichmentData.phone || prev.phone,
       website: enrichmentData.website || prev.website,
+      
+      // === CORRECTION : Mapping correct des données Google Places ===
+      services: enrichmentData.servicesArray || [],
+      ambiance: enrichmentData.ambianceArray || [],
+      activities: enrichmentData.activities || [],
+      paymentMethods: enrichmentData.paymentMethodsArray ? 
+        convertPaymentMethodsArrayToObject(enrichmentData.paymentMethodsArray) : 
+        prev.paymentMethods,
+      informationsPratiques: enrichmentData.informationsPratiques || prev.informationsPratiques,
       address: enrichmentData.address ? parseAddressFromGoogle(enrichmentData.address) : prev.address,
       hours: enrichmentData.hours || prev.hours,
-      informationsPratiques: enrichmentData.practicalInfo || prev.informationsPratiques,
       envieTags: enrichmentData.envieTags || prev.envieTags,
       theForkLink: enrichmentData.theForkLink || prev.theForkLink,
       uberEatsLink: enrichmentData.uberEatsLink || prev.uberEatsLink,
       
       // === MAPPING DES NOUVELLES SECTIONS DÉTAILLÉES ===
-      accessibilityInfo: enrichmentData.accessibilityInfo || prev.accessibilityInfo,
-      servicesAvailable: enrichmentData.servicesAvailable || prev.servicesAvailable,
-      diningServices: enrichmentData.diningServices || prev.diningServices,
-      offerings: enrichmentData.offerings || prev.offerings,
-      paymentMethods: enrichmentData.paymentMethods || prev.paymentMethods,
-      atmosphereFeatures: enrichmentData.atmosphereFeatures || prev.atmosphereFeatures,
-      generalServices: enrichmentData.generalServices || prev.generalServices,
+      accessibilityInfo: convertAccessibilityArrayToObject(enrichmentData.accessibilityInfo) || prev.accessibilityInfo,
+      servicesAvailable: convertServicesAvailableArrayToObject(enrichmentData.servicesAvailableInfo) || prev.servicesAvailable,
+      diningServices: convertDiningServicesArrayToObject(enrichmentData.servicesRestauration) || prev.diningServices,
+      offerings: convertOfferingsArrayToObject(enrichmentData.offres) || prev.offerings,
+      atmosphereFeatures: convertAtmosphereArrayToObject(enrichmentData.ambianceInfo) || prev.atmosphereFeatures,
+      generalServices: convertGeneralServicesArrayToObject(enrichmentData.servicesInfo) || prev.generalServices,
       
       enriched: true
     }));
     
-    console.log('✅ Données du formulaire mises à jour avec l\'enrichissement (y compris sections détaillées)');
-    console.log('🕐 Horaires appliqués au formulaire:', enrichmentData.hours);
     
-    // Passer à l'étape suivante
-    setCurrentStep(3);
-    console.log('Passage à l\'étape suivante (Informations établissement) après enrichissement');
+    // Passer à l'étape suivante (Services & Ambiance)
+    setCurrentStep(4);
   };
   const handleTagsChange = (tags: string[]) => {
     setFormData(prev => ({ ...prev, tags }));
@@ -824,8 +874,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         break;
       
       case 4:
-        if (formData.services.length === 0) newErrors.services = "Sélectionnez au moins un service";
-        if (formData.ambiance.length === 0) newErrors.ambiance = "Sélectionnez au moins une ambiance";
+        // Validation plus permissive pour l'étape 4
+        // Les services et ambiance peuvent être vides si l'utilisateur n'a pas encore enrichi
         break;
       
       case 5:
@@ -1196,14 +1246,28 @@ const renderStep = () => {
         // === Étape 2 : Enrichissement automatique ===
     case 2:
       return (
-        <EnrichmentStep
-          onEnrichmentComplete={handleEnrichmentComplete}
-          onSkip={() => {
-            console.log('Enrichissement ignoré par l\'utilisateur');
-            setCurrentStep(3);
-          }}
-          isVisible={true}
-        />
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">
+              {isEditMode ? 'Réenrichissement avec Google Places' : 'Enrichissement automatique'}
+            </h2>
+            <p className="text-gray-600 mt-2">
+              {isEditMode 
+                ? 'Vous pouvez refaire l\'enrichissement pour mettre à jour les informations de votre établissement'
+                : 'Récupérez automatiquement les informations de votre établissement depuis Google Places'
+              }
+            </p>
+          </div>
+          
+          <EnrichmentStep
+            onEnrichmentComplete={handleEnrichmentComplete}
+            onSkip={() => {
+              console.log('Enrichissement ignoré par l\'utilisateur');
+              setCurrentStep(4);
+            }}
+            isVisible={true}
+          />
+        </div>
       );
 
     // === Étape 3 : Informations sur l'établissement ===
@@ -1264,74 +1328,12 @@ const renderStep = () => {
             error={errors.activities}
           />
           
-          {/* Sections enrichies (si disponibles) */}
-          {formData.enriched && (
-            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center mb-4">
-                <span className="text-green-600 text-xl mr-2">✅</span>
-                <h3 className="text-lg font-semibold text-green-800">
-                  Informations enrichies automatiquement
-                </h3>
-              </div>
-              <p className="text-green-700 text-sm mb-4">
-                Ces informations ont été récupérées automatiquement depuis Google Places. 
-                Vous pouvez les modifier si nécessaire.
-              </p>
-              
-              {/* Affichage des sections enrichies */}
-              <div className="space-y-4">
-                {/* Informations pratiques */}
-                {formData.informationsPratiques && formData.informationsPratiques.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">📋 Informations pratiques</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.informationsPratiques.map((info, index) => (
-                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                          {info}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Tags Envie */}
-                {formData.envieTags && formData.envieTags.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">🏷️ Tags de recherche générés</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {formData.envieTags.map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Liens externes */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {formData.theForkLink && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-1">🍴 TheFork</h4>
-                      <p className="text-xs text-gray-600 truncate">{formData.theForkLink}</p>
-                    </div>
-                  )}
-                  {formData.uberEatsLink && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 mb-1">🚚 Uber Eats</h4>
-                      <p className="text-xs text-gray-600 truncate">{formData.uberEatsLink}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       );
 
-    // === Étape 4 : Services & Ambiances ===
-    case 4: {
-      const ambianceList = GENERIC_AMBIANCES;
+    // === Étape 4 : Services & Ambiances Dynamiques ===
+         case 4:
+      
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1339,90 +1341,23 @@ const renderStep = () => {
               Services et ambiance
             </h2>
             <p className="text-gray-600 mt-2">
-              Sélectionnez ce que votre établissement propose réellement
+              {isEditMode 
+                ? 'Gérez les services et l\'ambiance de votre établissement'
+                : 'Personnalisez les services et l\'ambiance détectés automatiquement'
+              }
             </p>
           </div>
-          {/* Services universels organisés par catégories */}
-          <div className="space-y-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Services & Équipements</h3>
-              <span className="text-sm text-gray-500">
-                {formData.services.length} service{formData.services.length > 1 ? 's' : ''} sélectionné{formData.services.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            
-            {Object.entries(UNIVERSAL_SERVICES).map(([key, category]) => (
-              <div key={key} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center mb-3">
-                  <span className="text-xl mr-2">{category.icon}</span>
-                  <h4 className="font-medium text-gray-900">{category.title}</h4>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {category.services.map((service: string) => (
-                    <label key={service} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                      <input
-                        type="checkbox"
-                        checked={formData.services.includes(service)}
-                        onChange={() => handleArrayToggle('services', service)}
-                        className="rounded text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{service}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
 
-          {/* Interface temporaire simplifiée pour Ambiances */}
-          <div className="border-t pt-6 space-y-4">
-            <label className="block text-sm font-medium mb-4">
-              Quelle ambiance décrit le mieux votre établissement ?
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {ambianceList.map((amb: string) => (
-                <label key={amb} className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.ambiance.includes(amb)}
-                    onChange={() => handleArrayToggle('ambiance', amb)}
-                    className="rounded text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm">{amb}</span>
-                </label>
-              ))}
-            </div>
-          </div>
 
-          {/* Informations pratiques */}
-          <div className="border-t pt-6 space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Informations pratiques</h3>
-              <span className="text-sm text-gray-500">
-                {formData.informationsPratiques.length} information{formData.informationsPratiques.length > 1 ? 's' : ''} sélectionnée{formData.informationsPratiques.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">
-              Sélectionnez les informations pratiques importantes pour vos clients
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {INFORMATIONS_PRATIQUES.map((info: string) => (
-                <label key={info} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
-                  <input
-                    type="checkbox"
-                    checked={formData.informationsPratiques.includes(info)}
-                    onChange={() => handleArrayToggle('informationsPratiques', info)}
-                    className="rounded text-orange-600 focus:ring-orange-500"
-                  />
-                  <span className="text-sm text-gray-700">{info}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
+          <OrganizedServicesAmbianceManager
+            services={formData.services || []}
+            ambiance={formData.ambiance || []}
+            onServicesChange={(services) => handleInputChange('services', services)}
+            onAmbianceChange={(ambiance) => handleInputChange('ambiance', ambiance)}
+            isEditMode={isEditMode}
+          />
         </div>
       );
-    }
 
     // === Étape 5 : Moyens de paiement ===
     case 5:
@@ -1473,6 +1408,18 @@ const renderStep = () => {
                     <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
                       <span className="text-green-600">✓</span>
                       <span className="text-sm text-gray-700">Espèces uniquement</span>
+                    </div>
+                  )}
+                  {formData.paymentMethods.restaurantVouchers && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Titres restaurant</span>
+                    </div>
+                  )}
+                  {formData.paymentMethods.pluxee && (
+                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
+                      <span className="text-green-600">✓</span>
+                      <span className="text-sm text-gray-700">Pluxee</span>
                     </div>
                   )}
                 </div>
@@ -1697,24 +1644,28 @@ const renderStep = () => {
     <div className="max-w-4xl mx-auto p-6">
       {/* Progress bar */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-2">
-          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((step) => (
-            <div
-              key={step}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                step <= currentStep
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-600'
-              }`}
-            >
-              {step + 1}
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-2 overflow-x-auto">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((stepNumber) => {
+            const stepIndex = stepNumber - 1; // Convertir 1-8 en 0-7
+            const isActive = stepNumber === currentStep; // stepNumber (1-8) = currentStep (1-8)
+            return (
+              <div
+                key={stepNumber}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors duration-200 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-600'
+                }`}
+              >
+                {stepNumber}
+              </div>
+            );
+          })}
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
           <div
             className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / 9) * 100}%` }}
+            style={{ width: `${(currentStep / 8) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -1726,13 +1677,13 @@ const renderStep = () => {
           <button
             type="button"
             onClick={prevStep}
-            disabled={isEditMode ? currentStep === 2 : currentStep === 1}
+            disabled={isEditMode ? currentStep === 2 : currentStep === 0}
             className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Précédent
           </button>
 
-          {currentStep < 7 ? (
+          {currentStep < (isEditMode ? 9 : 7) ? (
             <button
               type="button"
               onClick={nextStep}
@@ -1740,7 +1691,7 @@ const renderStep = () => {
             >
               Suivant
             </button>
-          ) : currentStep === 7 ? (
+          ) : currentStep === (isEditMode ? 9 : 7) ? (
             <button
               type="button"
               onClick={nextStep}

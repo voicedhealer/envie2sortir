@@ -48,6 +48,30 @@ export default async function EstablishmentPage({
     }
   }
 
+  // Parser les données JSON Google Places avec gestion d'erreurs robuste
+  const parseGooglePlacesData = (data: any, fieldName: string) => {
+    if (!data) return null;
+    
+    if (typeof data === 'string') {
+      try {
+        return JSON.parse(data);
+      } catch (error) {
+        console.warn(`⚠️ Erreur parsing ${fieldName}:`, error);
+        console.warn(`⚠️ Valeur reçue:`, data);
+        return null;
+      }
+    }
+    
+    return data;
+  };
+
+  // Parser toutes les données Google Places
+  establishment.services = parseGooglePlacesData(establishment.services, 'services');
+  establishment.ambiance = parseGooglePlacesData(establishment.ambiance, 'ambiance');
+  establishment.paymentMethods = parseGooglePlacesData(establishment.paymentMethods, 'paymentMethods');
+  establishment.informationsPratiques = parseGooglePlacesData(establishment.informationsPratiques, 'informationsPratiques');
+  establishment.activities = parseGooglePlacesData(establishment.activities, 'activities');
+
   // Déterminer la page de retour basée sur le referer ou les paramètres
   const getBackUrl = () => {
     // Vérifier si referer est une URL valide

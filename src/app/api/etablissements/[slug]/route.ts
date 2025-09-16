@@ -131,16 +131,14 @@ export async function PUT(
     const { slug } = await params;
     
     // Vérifier l'authentification et les permissions
-    // TODO: Réactiver l'authentification une fois le problème résolu
-    // const user = await requireEstablishment(request);
+    const user = await requireEstablishment(request);
     
-    // Version temporaire pour les tests - utiliser l'utilisateur Chantal
-    const user = {
-      id: 'cmfdzl3de00008zjnyenx8vui',
-      email: 'libertystyl@gmail.com',
-      role: 'pro',
-      establishmentId: 'cmfdzl3do00028zjn4maatzuj'
-    };
+    console.log('🔍 Debug permissions:', {
+      userId: user.id,
+      userEmail: user.email,
+      userRole: user.role,
+      userEstablishmentId: user.establishmentId
+    });
     
     const body: UpdateEstablishmentData = await request.json();
     
@@ -185,6 +183,14 @@ export async function PUT(
         { status: 404 }
       );
     }
+    
+    console.log('🔍 Debug establishment:', {
+      establishmentId: existing.id,
+      establishmentName: existing.name,
+      establishmentOwnerId: existing.ownerId,
+      ownerEmail: existing.owner?.email,
+      ownerName: existing.owner?.firstName + ' ' + existing.owner?.lastName
+    });
 
     // Vérifier que l'utilisateur est le propriétaire de l'établissement
     console.log('🔍 Debug permissions:', {
@@ -422,7 +428,7 @@ export async function DELETE(
     }
 
     // Vérifier que l'utilisateur est le propriétaire de l'établissement
-    if (existing.ownerId !== user.establishmentId) {
+    if (existing.ownerId !== user.id) {
       return NextResponse.json(
         { error: "Accès refusé - Seul le propriétaire peut supprimer cet établissement" },
         { status: 403 }

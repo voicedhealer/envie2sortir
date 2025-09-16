@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth-config";
 import { getToken } from "next-auth/jwt";
+import { prisma } from "@/lib/prisma";
 
 /**
  * Utilitaires d'authentification pour NextAuth
@@ -43,9 +44,22 @@ export async function requireProfessional(request?: NextRequest) {
 
 export async function requireEstablishment(request?: NextRequest) {
   const user = await requireProfessional(request);
-  if (!user.establishmentId) {
-    throw new Error("Aucun établissement associé à ce compte");
+  
+  // Si l'utilisateur n'a pas d'establishmentId dans la session,
+  // vérifier s'il est propriétaire d'un établissement
+  if (!user.establishmentId || user.establishmentId === '') {
+    const establishment = await prisma.establishment.findFirst({
+      where: { ownerId: user.id }
+    });
+    
+    if (!establishment) {
+      throw new Error("Aucun établissement associé à ce compte");
+    }
+    
+    // Mettre à jour l'utilisateur avec l'establishmentId trouvé
+    user.establishmentId = establishment.id;
   }
+  
   return user;
 }
 

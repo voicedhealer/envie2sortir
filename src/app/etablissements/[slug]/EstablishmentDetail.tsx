@@ -41,9 +41,13 @@ interface Establishment {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  theForkLink?: string;
+  uberEatsLink?: string;
   activities?: any;
   services?: any;
   ambiance?: any;
+  paymentMethods?: any;
+  informationsPratiques?: any;
   horairesOuverture?: HoursData;
   prixMoyen?: number;
   capaciteMax?: number;

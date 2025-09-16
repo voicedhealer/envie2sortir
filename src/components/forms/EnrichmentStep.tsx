@@ -17,9 +17,6 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
   const [isLoading, setIsLoading] = useState(false);
   const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showCustomization, setShowCustomization] = useState(false);
-  const [customTags, setCustomTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
   const [theForkValid, setTheForkValid] = useState<boolean | null>(null);
   const [uberEatsValid, setUberEatsValid] = useState<boolean | null>(null);
 
@@ -31,9 +28,6 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
       setUberEatsUrl('');
       setEnrichmentData(null);
       setError(null);
-      setShowCustomization(false);
-      setCustomTags([]);
-      setNewTag('');
       setTheForkValid(null);
       setUberEatsValid(null);
     }
@@ -50,8 +44,14 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
     
       try {
       const data = await enrichmentSystem.triggerGoogleEnrichment(googleUrl);
-        setEnrichmentData(data);
-      setCustomTags([...data.envieTags]); // Initialiser avec les tags générés
+        
+        // Stocker les données enrichies pour affichage
+        const finalData = {
+          ...data,
+          theForkLink: theForkUrl.trim() || data.theForkLink,
+          uberEatsLink: uberEatsUrl.trim() || undefined
+        };
+        setEnrichmentData(finalData);
       } catch (err) {
         console.error('Erreur enrichissement:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de l\'enrichissement');
@@ -60,32 +60,6 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
     }
   };
 
-  const handleAcceptEnrichment = () => {
-    console.log('Validation de l\'enrichissement avec les données:', enrichmentData);
-    
-    if (enrichmentData) {
-      const finalData = {
-        ...enrichmentData,
-        envieTags: customTags,
-        theForkLink: theForkUrl.trim() || enrichmentData.theForkLink,
-        uberEatsLink: uberEatsUrl.trim() || undefined
-      };
-      console.log('Données finales transmises:', finalData);
-      onEnrichmentComplete(finalData);
-    } else {
-      console.error('Aucune donnée d\'enrichissement disponible');
-    }
-  };
-
-  const handleCustomizeEnrichment = () => {
-    console.log('🎨 handleCustomizeEnrichment appelé');
-    setShowCustomization(true);
-    console.log('✅ showCustomization défini à true');
-  };
-
-  const handleSkipEnrichment = () => {
-    onSkip();
-  };
 
   // Validation URL TheFork
   const validateTheForkUrl = async (url: string) => {
@@ -133,25 +107,6 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
     }
   };
 
-  const addCustomTag = () => {
-    if (newTag.trim() && !customTags.includes(newTag.trim())) {
-      const formattedTag = newTag.trim().toLowerCase().startsWith('envie de') 
-        ? newTag.trim() 
-        : `Envie de ${newTag.trim().toLowerCase()}`;
-        setCustomTags([...customTags, formattedTag]);
-      setNewTag('');
-    }
-  };
-
-  const removeTag = (index: number) => {
-    setCustomTags(customTags.filter((_, i) => i !== index));
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      addCustomTag();
-    }
-  };
 
   if (!isVisible) return null;
 
@@ -305,209 +260,64 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
       )}
 
         {/* État de succès */}
-        {enrichmentData && !showCustomization && (
+        {enrichmentData && (
           <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-green-800 mb-3">
-              🎯 Informations détectées automatiquement :
-          </h3>
-          
-            <div className="space-y-4">
-          {/* Informations de base */}
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">📋 Informations de base</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                <p><strong>Nom:</strong> {enrichmentData.name}</p>
-                <p><strong>Type:</strong> {enrichmentData.establishmentType}</p>
-                <p><strong>Gamme de prix:</strong> {'€'.repeat(enrichmentData.priceLevel)}</p>
-                  <p><strong>Note:</strong> {enrichmentData.googleRating}/5 ({enrichmentData.googleReviewCount} avis)</p>
-                  {enrichmentData.phone && <p><strong>Téléphone:</strong> {enrichmentData.phone}</p>}
-                {enrichmentData.website && <p><strong>Site web:</strong> {enrichmentData.website}</p>}
-                </div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-green-800">
+                ✅ Informations récupérées avec succès !
+              </h3>
+              <span className="text-sm text-green-600">
+                {enrichmentData.name}
+              </span>
             </div>
             
-              {/* Tags "envie" générés */}
-              <div className="bg-white p-3 rounded border">
-                <h4 className="font-medium text-gray-900 mb-2">
-                  🏷️ Tags "envie" générés ({enrichmentData.envieTags.length})
-                </h4>
-              <div className="flex flex-wrap gap-2">
-                {enrichmentData.envieTags.map((tag, index) => (
-                    <span key={index} className="px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
-                      {tag}
-                    </span>
-                  ))}
-            </div>
-          </div>
-
-          {/* Spécialités détectées */}
-          {enrichmentData.specialties.length > 0 && (
-                <div className="bg-white p-3 rounded border">
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    🍽️ Spécialités détectées ({enrichmentData.specialties.length})
-                  </h4>
-              <div className="flex flex-wrap gap-2">
-                {enrichmentData.specialties.map((specialty, index) => (
-                      <span key={index} className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                    {specialty}
-                  </span>
-                ))}
+            {/* Informations de base compactes */}
+            <div className="bg-white p-3 rounded border mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                <p><strong>Type:</strong> {enrichmentData.establishmentType}</p>
+                <p><strong>Prix:</strong> {'€'.repeat(enrichmentData.priceLevel)}</p>
+                <p><strong>Note:</strong> {enrichmentData.googleRating}/5</p>
+                <p><strong>Tags:</strong> {enrichmentData.envieTags.length}</p>
               </div>
             </div>
-          )}
 
-              {/* Suggestion TheFork */}
-              {enrichmentData.establishmentType === 'restaurant' && (
-                <div className="bg-white p-3 rounded border border-yellow-200">
-                  <h4 className="font-medium text-gray-900 mb-2">🍴 Intégration TheFork suggérée</h4>
-                  <p className="text-sm text-gray-600">
-                    💡 Ajoutez votre lien TheFork pour permettre les réservations directes !
-                  </p>
-                  </div>
-                )}
+            {/* Section collapsible pour les détails */}
+            <details className="bg-white rounded border">
+              <summary className="p-3 cursor-pointer hover:bg-gray-50 font-medium text-gray-900">
+                📋 Voir toutes les informations détaillées ({enrichmentData.envieTags.length} tags générés)
+              </summary>
+              <div className="p-4 border-t">
+                <EnrichmentSections 
+                  enrichmentData={enrichmentData} 
+                  readOnly={true} 
+                />
               </div>
+            </details>
 
-            {/* Sections détaillées d'enrichissement */}
-            <div className="mt-6">
-              <EnrichmentSections 
-                enrichmentData={enrichmentData} 
-                readOnly={true} 
-              />
-            </div>
-
-            {/* Actions */}
-            <div className="mt-4 flex flex-wrap gap-2">
+            {/* Message informatif */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800 mb-3">
+                💡 <strong>Les informations ont été récupérées !</strong> Vérifiez les détails ci-dessus, puis cliquez sur "Continuer" pour les intégrer.
+              </p>
+              
+              {/* Bouton pour continuer */}
               <button
                 type="button"
-                onClick={handleAcceptEnrichment}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                onClick={() => {
+                  if (enrichmentData) {
+                    onEnrichmentComplete(enrichmentData);
+                  }
+                }}
+                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               >
-                ✅ Valider ces informations
-              </button>
-              <button
-                type="button"
-                onClick={handleCustomizeEnrichment}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                ✏️ Personnaliser avant validation
-              </button>
-              <button
-                type="button"
-                onClick={handleSkipEnrichment}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-              >
-                ❌ Saisir manuellement
+                ✅ Continuer avec ces informations
               </button>
             </div>
           </div>
         )}
 
-        {/* Section de personnalisation */}
-        {showCustomization && enrichmentData && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-800 mb-3">
-              🏷️ Personnalisez vos tags "envie"
-            </h3>
-            
-            {/* Tags générés (éditables) */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-900 mb-2">Tags générés automatiquement :</h4>
-              <div className="flex flex-wrap gap-2">
-                {customTags.map((tag, index) => (
-                  <div key={index} className="flex items-center bg-white px-2 py-1 rounded border">
-                    <span className="text-sm">{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeTag(index)}
-                      className="ml-1 text-red-500 hover:text-red-700"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* Ajout de tags personnalisés */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-900 mb-2">➕ Ajoutez vos propres tags :</h4>
-              <div className="flex gap-2">
-              <input
-                type="text"
-                  value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Ex: Envie de manger en terrasse"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                  type="button"
-                  onClick={addCustomTag}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Ajouter
-              </button>
-                </div>
-              </div>
-
-            {/* Tags populaires suggérés */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-900 mb-2">💡 Tags populaires pour votre secteur :</h4>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  'Envie de terrasse',
-                  'Envie de romantique',
-                  'Envie de familial',
-                  'Envie de groupe',
-                  'Envie de décontracté',
-                  'Envie de festif'
-                ].map((suggestedTag, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => {
-                      if (!customTags.includes(suggestedTag)) {
-                        setCustomTags([...customTags, suggestedTag]);
-                      }
-                    }}
-                    className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"
-                  >
-                    + {suggestedTag}
-                  </button>
-                ))}
-            </div>
-          </div>
-
-            {/* Actions de personnalisation */}
-            <div className="flex gap-2">
-            <button
-                type="button"
-              onClick={handleAcceptEnrichment}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            >
-                ✅ Valider avec ces tags
-            </button>
-            <button
-                type="button"
-                onClick={() => setShowCustomization(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600"
-              >
-                ← Retour
-            </button>
-          </div>
-        </div>
-      )}
       </div>
 
-      {/* Bouton pour ignorer l'enrichissement */}
-        <div className="text-center">
-          <button
-          type="button"
-          onClick={handleSkipEnrichment}
-          className="text-gray-500 hover:text-gray-700 underline"
-          >
-          Ignorer l'enrichissement et saisir manuellement
-          </button>
-        </div>
     </div>
   );
 }

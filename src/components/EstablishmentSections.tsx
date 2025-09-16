@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText } from 'lucide-react';
+import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
 
 interface EstablishmentSectionsProps {
@@ -11,7 +11,8 @@ interface EstablishmentSectionsProps {
     activities?: any;
     services?: any;
     ambiance?: any;
-    informationsPratiques?: string[];
+    paymentMethods?: any;
+    informationsPratiques?: any;
     instagram?: string;
     facebook?: string;
     tiktok?: string;
@@ -30,21 +31,45 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     setExpandedSection(expandedSection === section ? null : section);
   };
 
-  const parseJsonField = (field: any) => {
+  // Fonction robuste pour parser les données Google Places
+  const parseGooglePlacesField = (field: any, fieldName: string) => {
     if (!field) return [];
+    
     if (typeof field === 'string') {
       try {
-        return JSON.parse(field);
-      } catch {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.warn(`⚠️ Erreur parsing ${fieldName}:`, error);
+        console.warn(`⚠️ Valeur reçue:`, field);
         return [];
       }
     }
-    return Array.isArray(field) ? field : [];
+    
+    if (Array.isArray(field)) {
+      return field;
+    }
+    
+    // Si c'est un objet, essayer d'extraire les données utiles
+    if (typeof field === 'object') {
+      // Pour les services Google Places, chercher les clés communes
+      const commonKeys = ['service', 'services', 'amenity', 'amenities', 'feature', 'features'];
+      for (const key of commonKeys) {
+        if (field[key] && Array.isArray(field[key])) {
+          return field[key];
+        }
+      }
+      
+      // Si pas de clé commune, retourner les valeurs de l'objet
+      return Object.values(field).filter(value => typeof value === 'string');
+    }
+    
+    return [];
   };
 
-  const activities = parseJsonField(establishment.activities);
-  const allServices = parseJsonField(establishment.services);
-  const ambiance = parseJsonField(establishment.ambiance);
+  const activities = parseGooglePlacesField(establishment.activities, 'activities');
+  const allServices = parseGooglePlacesField(establishment.services, 'services');
+  const ambiance = parseGooglePlacesField(establishment.ambiance, 'ambiance');
   const tags = establishment.tags || [];
 
   // Filtrer les moyens de paiement des services
@@ -60,24 +85,107 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     'Chèques vacances'
   ];
   
-  // Filtrer les commodités des informations pratiques (supprimer les redondances et évidences)
-  const commodites = establishment.informationsPratiques ? 
-    establishment.informationsPratiques.filter((info: string) => {
-      const infoLower = info.toLowerCase();
-      return !infoLower.includes('espace non-fumeurs') &&
-             !infoLower.includes('réservation recommandée') &&
-             !infoLower.includes('toilettes adaptées pmr') &&
-             !infoLower.includes('non-fumeurs') &&
-             !infoLower.includes('réservation') &&
-             !infoLower.includes('pmr') &&
-             !infoLower.includes('handicap') &&
-             !infoLower.includes('nourriture') &&
-             !infoLower.includes('repas sur place') &&
-             !infoLower.includes('repas') &&
-             !infoLower.includes('chauffage'); // Garder seulement les commodités utiles
-    }) : [];
+  // Traiter les informations pratiques Google Places
+  const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
-  const services = [...allServices.filter((service: string) => !paymentMethods.includes(service)), ...commodites];
+  // Logique de catégorisation intelligente des données Google Places
+  const categorizeGooglePlacesData = () => {
+    const categories = {
+      // Services de restauration
+      servicesRestauration: [] as string[],
+      // Services généraux
+      servicesGeneraux: [] as string[],
+      // Ambiance et spécialités
+      ambianceSpecialites: [] as string[],
+      // Informations pratiques (Planning, Paiements, Enfants, Parking)
+      informationsPratiques: [] as string[],
+      // Clientèle cible
+      clientele: [] as string[],
+      // Commodités et équipements
+      commodites: [] as string[],
+      // Activités et événements
+      activites: [] as string[]
+    };
+
+    // Set pour éviter les doublons
+    const seenItems = new Set<string>();
+
+    // Catégoriser les services
+    allServices.forEach((service: string) => {
+      if (seenItems.has(service)) return; // Éviter les doublons
+      seenItems.add(service);
+      
+      const serviceLower = service.toLowerCase();
+      
+      // Services de restauration
+      if (serviceLower.includes('déjeuner') || serviceLower.includes('dîner') || 
+          serviceLower.includes('dessert') || serviceLower.includes('traiteur') ||
+          serviceLower.includes('service à table') || serviceLower.includes('repas')) {
+        categories.servicesRestauration.push(service);
+      }
+      // Services généraux
+      else if (serviceLower.includes('toilettes') || serviceLower.includes('wifi') ||
+               serviceLower.includes('climatisation') || serviceLower.includes('chauffage') ||
+               serviceLower.includes('parking') || serviceLower.includes('terrasse')) {
+        categories.servicesGeneraux.push(service);
+      }
+      // Commodités
+      else {
+        categories.commodites.push(service);
+      }
+    });
+
+    // Catégoriser l'ambiance
+    ambiance.forEach((item: string) => {
+      if (seenItems.has(item)) return; // Éviter les doublons
+      seenItems.add(item);
+      
+      const itemLower = item.toLowerCase();
+      
+      if (itemLower.includes('convient aux enfants') || itemLower.includes('convient aux groupes') ||
+          itemLower.includes('étudiants') || itemLower.includes('touristes')) {
+        categories.clientele.push(item);
+      } else {
+        categories.ambianceSpecialites.push(item);
+      }
+    });
+
+    // Catégoriser les informations pratiques
+    informationsPratiques.forEach((info: string) => {
+      if (seenItems.has(info)) return; // Éviter les doublons
+      seenItems.add(info);
+      
+      const infoLower = info.toLowerCase();
+      
+      // Informations pratiques spécifiques
+      if (infoLower.includes('espace non-fumeurs') || infoLower.includes('réservation recommandée') ||
+          infoLower.includes('toilettes adaptées pmr') || infoLower.includes('non-fumeurs') ||
+          infoLower.includes('réservation') || infoLower.includes('pmr') ||
+          infoLower.includes('handicap')) {
+        categories.informationsPratiques.push(info);
+      }
+      // Services généraux
+      else if (infoLower.includes('wifi') || infoLower.includes('climatisation') ||
+               infoLower.includes('chauffage') || infoLower.includes('parking')) {
+        categories.servicesGeneraux.push(info);
+      }
+      // Commodités
+      else {
+        categories.commodites.push(info);
+      }
+    });
+
+    // Catégoriser les activités
+    activities.forEach((activity: string) => {
+      if (seenItems.has(activity)) return; // Éviter les doublons
+      seenItems.add(activity);
+      categories.activites.push(activity);
+    });
+
+    return categories;
+  };
+
+  const categorizedData = categorizeGooglePlacesData();
 
   const getTagColor = (typeTag: string) => {
     switch (typeTag) {
@@ -123,7 +231,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       )}
 
       {/* Activités proposées */}
-      {activities.length > 0 && (
+      {categorizedData.activites.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             onClick={() => toggleSection('activities')}
@@ -144,7 +252,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
             <div className="px-6 pb-4 border-t border-gray-100">
               <div className="pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {activities.map((activity: string, index: number) => (
+                  {categorizedData.activites.map((activity: string, index: number) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                       <span className="text-gray-700 capitalize">
@@ -159,29 +267,29 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
         </div>
       )}
 
-      {/* Services & Commodités */}
-      {services.length > 0 && (
+      {/* Services généraux */}
+      {categorizedData.servicesGeneraux.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
-            onClick={() => toggleSection('services')}
+            onClick={() => toggleSection('services-generaux')}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center space-x-3">
               <Wrench className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Services & Commodités</h3>
+              <h3 className="font-semibold text-gray-900">Services généraux</h3>
             </div>
-            {expandedSection === 'services' ? (
+            {expandedSection === 'services-generaux' ? (
               <ChevronUp className="w-5 h-5 text-gray-400" />
             ) : (
               <ChevronDown className="w-5 h-5 text-gray-400" />
             )}
           </button>
           
-          {expandedSection === 'services' && (
+          {expandedSection === 'services-generaux' && (
             <div className="px-6 pb-4 border-t border-gray-100">
               <div className="pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {services.map((service: string, index: number) => (
+                  {categorizedData.servicesGeneraux.map((service: string, index: number) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       <span className="text-gray-700">{service}</span>
@@ -195,7 +303,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       )}
 
       {/* Ambiance & Spécialités */}
-      {ambiance.length > 0 && (
+      {categorizedData.ambianceSpecialites.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             onClick={() => toggleSection('ambiance')}
@@ -216,12 +324,153 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
             <div className="px-6 pb-4 border-t border-gray-100">
               <div className="pt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ambiance.map((item: string, index: number) => (
+                  {categorizedData.ambianceSpecialites.map((item: string, index: number) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                       <span className="text-gray-700 capitalize">
                         {item.replace(/_/g, ' ')}
                       </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Commodités */}
+      {categorizedData.commodites.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => toggleSection('commodites')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Wrench className="w-5 h-5 text-orange-500" />
+              <h3 className="font-semibold text-gray-900">Commodités</h3>
+            </div>
+            {expandedSection === 'commodites' ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          
+          {expandedSection === 'commodites' && (
+            <div className="px-6 pb-4 border-t border-gray-100">
+              <div className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {categorizedData.commodites.map((commodite: string, index: number) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span className="text-gray-700">{commodite}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {/* Services de restauration */}
+      {categorizedData.servicesRestauration.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => toggleSection('services-restauration')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Utensils className="w-5 h-5 text-orange-500" />
+              <h3 className="font-semibold text-gray-900">Services de restauration</h3>
+            </div>
+            {expandedSection === 'services-restauration' ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          
+          {expandedSection === 'services-restauration' && (
+            <div className="px-6 pb-4 border-t border-gray-100">
+              <div className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {categorizedData.servicesRestauration.map((service: string, index: number) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-gray-700">{service}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Informations pratiques */}
+      {categorizedData.informationsPratiques.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => toggleSection('informations-pratiques')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Clock className="w-5 h-5 text-orange-500" />
+              <h3 className="font-semibold text-gray-900">Informations pratiques</h3>
+            </div>
+            {expandedSection === 'informations-pratiques' ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          
+          {expandedSection === 'informations-pratiques' && (
+            <div className="px-6 pb-4 border-t border-gray-100">
+              <div className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {categorizedData.informationsPratiques.map((info: string, index: number) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-gray-700">{info}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Clientèle */}
+      {categorizedData.clientele.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            onClick={() => toggleSection('clientele')}
+            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center space-x-3">
+              <Users className="w-5 h-5 text-orange-500" />
+              <h3 className="font-semibold text-gray-900">Clientèle</h3>
+            </div>
+            {expandedSection === 'clientele' ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+          
+          {expandedSection === 'clientele' && (
+            <div className="px-6 pb-4 border-t border-gray-100">
+              <div className="pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {categorizedData.clientele.map((client: string, index: number) => (
+                    <div key={index} className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                      <span className="text-gray-700">{client}</span>
                     </div>
                   ))}
                 </div>
