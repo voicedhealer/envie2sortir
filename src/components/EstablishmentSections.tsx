@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby } from 'lucide-react';
+import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
 
 interface EstablishmentSectionsProps {
@@ -238,7 +238,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center space-x-3">
-              <Utensils className="w-5 h-5 text-orange-500" />
+              <Lightbulb className="w-5 h-5 text-orange-500" />
               <h3 className="font-semibold text-gray-900">Activités proposées</h3>
             </div>
             {expandedSection === 'activities' ? (
@@ -401,41 +401,6 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
                     <div key={index} className="flex items-center space-x-2">
                       <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
                       <span className="text-gray-700">{service}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Informations pratiques */}
-      {categorizedData.informationsPratiques.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <button
-            onClick={() => toggleSection('informations-pratiques')}
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Clock className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Informations pratiques</h3>
-            </div>
-            {expandedSection === 'informations-pratiques' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          
-          {expandedSection === 'informations-pratiques' && (
-            <div className="px-6 pb-4 border-t border-gray-100">
-              <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categorizedData.informationsPratiques.map((info: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span className="text-gray-700">{info}</span>
                     </div>
                   ))}
                 </div>
