@@ -143,6 +143,17 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const services = parseGooglePlacesField(establishment.services, 'services');
   const ambiance = parseGooglePlacesField(establishment.ambiance, 'ambiance');
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
+  
+  // Extraire les moyens de paiement des services et informations pratiques
+  const allData = [...services, ...informationsPratiques];
+  const moyensPaiement = allData.filter(item => {
+    const itemLower = item.toLowerCase();
+    return itemLower.includes('carte') || itemLower.includes('paiement') ||
+           itemLower.includes('nfc') || itemLower.includes('pluxee') ||
+           itemLower.includes('titre restaurant') || itemLower.includes('titres restaurant') ||
+           itemLower.includes('espèces') || itemLower.includes('chèque') || 
+           itemLower.includes('paypal');
+  });
 
   return (
     <div className="space-y-6">
@@ -326,6 +337,27 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Moyens de paiement */}
+      {moyensPaiement.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <CreditCard className="w-5 h-5 text-orange-500 mr-2" />
+            Moyens de paiement
+          </h3>
+          
+          <div className="flex flex-wrap gap-2">
+            {moyensPaiement.map((paiement, index) => (
+              <span 
+                key={index}
+                className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+              >
+                {paiement}
+              </span>
+            ))}
           </div>
         </div>
       )}

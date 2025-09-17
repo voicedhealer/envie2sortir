@@ -71,19 +71,6 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   const allServices = parseGooglePlacesField(establishment.services, 'services');
   const ambiance = parseGooglePlacesField(establishment.ambiance, 'ambiance');
   const tags = establishment.tags || [];
-
-  // Filtrer les moyens de paiement des services
-  const paymentMethods = [
-    'Espèces',
-    'Carte bancaire', 
-    'Carte de crédit',
-    'Chèque',
-    'Paiement mobile (Apple Pay, Google Pay)',
-    'Virement bancaire',
-    'PayPal',
-    'Ticket restaurant',
-    'Chèques vacances'
-  ];
   
   // Traiter les informations pratiques Google Places
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
@@ -129,6 +116,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
                serviceLower.includes('parking') || serviceLower.includes('terrasse')) {
         categories.servicesGeneraux.push(service);
       }
+
       // Commodités
       else {
         categories.commodites.push(service);
@@ -169,6 +157,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
                infoLower.includes('chauffage') || infoLower.includes('parking')) {
         categories.servicesGeneraux.push(info);
       }
+
       // Commodités
       else {
         categories.commodites.push(info);
@@ -373,7 +362,6 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
           )}
         </div>
       )}
-
 
       {/* Services de restauration */}
       {categorizedData.servicesRestauration.length > 0 && (
