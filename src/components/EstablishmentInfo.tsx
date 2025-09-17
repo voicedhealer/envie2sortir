@@ -155,58 +155,6 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
 
   return (
     <div className="space-y-6">
-      {/* Informations de contact */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <MapPin className="w-5 h-5 text-orange-500 mr-2" />
-          Informations de contact
-        </h3>
-        
-        <div className="space-y-3">
-          {establishment.address && (
-            <div className="flex items-start space-x-3">
-              <MapPin className="w-4 h-4 text-gray-400 mt-1" />
-              <div>
-                <p className="text-gray-900 font-medium">Adresse</p>
-                <p className="text-gray-600">{establishment.address}</p>
-                {establishment.city && (
-                  <p className="text-gray-600">{establishment.city}</p>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {establishment.phone && (
-            <div className="flex items-center space-x-3">
-              <Phone className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-gray-900 font-medium">Téléphone</p>
-                <a href={`tel:${establishment.phone}`} className="text-orange-500 hover:text-orange-600">
-                  {establishment.phone}
-                </a>
-              </div>
-            </div>
-          )}
-          
-          {establishment.website && (
-            <div className="flex items-center space-x-3">
-              <Globe className="w-4 h-4 text-gray-400" />
-              <div>
-                <p className="text-gray-900 font-medium">Site web</p>
-                <a 
-                  href={establishment.website} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-orange-500 hover:text-orange-600"
-                >
-                  {establishment.website}
-                </a>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Horaires d'ouverture */}
       {establishment.horairesOuverture && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -293,6 +241,57 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         </div>
       )}
 
+      {/* Informations de contact */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <MapPin className="w-5 h-5 text-orange-500 mr-2" />
+          Informations de contact
+        </h3>
+        
+        <div className="space-y-3">
+          {establishment.address && (
+            <div className="flex items-start space-x-3">
+              <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+              <div>
+                <p className="text-gray-900 font-medium">Adresse</p>
+                <p className="text-gray-600">{establishment.address}</p>
+                {establishment.city && (
+                  <p className="text-gray-600">{establishment.city}</p>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {establishment.phone && (
+            <div className="flex items-center space-x-3">
+              <Phone className="w-4 h-4 text-gray-400" />
+              <div>
+                <p className="text-gray-900 font-medium">Téléphone</p>
+                <a href={`tel:${establishment.phone}`} className="text-orange-500 hover:text-orange-600">
+                  {establishment.phone}
+                </a>
+              </div>
+            </div>
+          )}
+          
+          {establishment.website && (
+            <div className="flex items-center space-x-3">
+              <Globe className="w-4 h-4 text-gray-400" />
+              <div>
+                <p className="text-gray-900 font-medium">Site web</p>
+                <a 
+                  href={establishment.website} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:text-orange-600"
+                >
+                  {establishment.website}
+                </a>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Informations pratiques */}
       {informationsPratiques.length > 0 && (
