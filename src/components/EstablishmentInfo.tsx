@@ -116,16 +116,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             const openTime = openHour * 100 + openMin;
             
             if (currentTime < openTime) {
-              const dayLabels: { [key: string]: string } = {
-                monday: 'lundi',
-                tuesday: 'mardi',
-                wednesday: 'mercredi',
-                thursday: 'jeudi',
-                friday: 'vendredi',
-                saturday: 'samedi',
-                sunday: 'dimanche'
-              };
-              return `Réouverture ${dayLabels[dayKey]} à ${slot.open}`;
+              return `Réouverture aujourd'hui à ${slot.open}`;
             }
           }
         } else {
@@ -293,6 +284,52 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         </div>
       </div>
 
+      {/* Liens externes */}
+      {(establishment.theForkLink || establishment.uberEatsLink) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Utensils className="w-5 h-5 text-orange-500 mr-2" />
+            Réservations et commandes
+          </h3>
+          
+          <div className="space-y-3">
+            {establishment.theForkLink && (
+              <div className="flex items-center space-x-3">
+                <Utensils className="w-4 h-4 text-green-400" />
+                <div>
+                  <p className="text-gray-900 font-medium">TheFork</p>
+                  <a 
+                    href={establishment.theForkLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-green-600 hover:text-green-800"
+                  >
+                    Réserver une table
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {establishment.uberEatsLink && (
+              <div className="flex items-center space-x-3">
+                <Car className="w-4 h-4 text-blue-400" />
+                <div>
+                  <p className="text-gray-900 font-medium">Uber Eats</p>
+                  <a 
+                    href={establishment.uberEatsLink} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800"
+                  >
+                    Commander en livraison
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Informations pratiques */}
       {informationsPratiques.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -310,51 +347,6 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 {info}
               </span>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Liens externes */}
-      {(establishment.theForkLink || establishment.uberEatsLink) && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Réservations et commandes
-          </h3>
-          
-          <div className="space-y-3">
-            {establishment.theForkLink && (
-              <div className="flex items-center space-x-3">
-                <Utensils className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-gray-900 font-medium">TheFork</p>
-                  <a 
-                    href={establishment.theForkLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-orange-500 hover:text-orange-600"
-                  >
-                    Réserver une table
-                  </a>
-                </div>
-              </div>
-            )}
-            
-            {establishment.uberEatsLink && (
-              <div className="flex items-center space-x-3">
-                <Car className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-gray-900 font-medium">Uber Eats</p>
-                  <a 
-                    href={establishment.uberEatsLink} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-orange-500 hover:text-orange-600"
-                  >
-                    Commander en livraison
-                  </a>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
