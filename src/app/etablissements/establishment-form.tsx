@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { ModernActivitiesSelector } from "@/components/ModernActivitiesSelector"; 
@@ -12,6 +12,7 @@ import TagsSelector from '@/components/forms/TagsSelector';
 import EnrichmentStep from '@/components/forms/EnrichmentStep';
 import { EnrichmentData } from '@/lib/enrichment-system';
 import OrganizedServicesAmbianceManager from '@/components/OrganizedServicesAmbianceManager';
+import EnvieTagsInput from '@/components/forms/EnvieTagsInput';
 
 // Fonction pour parser l'adresse Google en format formulaire
 function parseAddressFromGoogle(googleAddress: string): AddressData {
@@ -263,6 +264,13 @@ type ProfessionalData = {
   
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
+  
+  // === DONNÉES HYBRIDES ===
+  hybridAccessibilityDetails?: any;
+  hybridDetailedServices?: any;
+  hybridClienteleInfo?: any;
+  hybridDetailedPayments?: any;
+  hybridChildrenServices?: any;
 };
 
 // Type pour un établissement existant (pour le mode édition)
@@ -299,7 +307,7 @@ type ExistingEstablishment = {
   subscription: string;
 };
 
-type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+type FormStep = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 // Icônes simples en SVG
 const Icons = {
@@ -564,6 +572,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [envieGeneratedTags, setEnvieGeneratedTags] = useState<string[]>([]);
     const [enrichmentData, setEnrichmentData] = useState<EnrichmentData>({
     name: '',
     establishmentType: '',
@@ -777,6 +786,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
   };
 
   const handleEnrichmentComplete = (enrichmentData: EnrichmentData) => {
+    console.log('🎯 handleEnrichmentComplete appelé avec:', enrichmentData);
     
     // Mettre à jour les données du formulaire avec les données enrichies
     setFormData(prev => ({
@@ -794,7 +804,11 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         convertPaymentMethodsArrayToObject(enrichmentData.paymentMethodsArray) : 
         prev.paymentMethods,
       informationsPratiques: enrichmentData.informationsPratiques || prev.informationsPratiques,
-      address: enrichmentData.address ? parseAddressFromGoogle(enrichmentData.address) : prev.address,
+      address: enrichmentData.address ? {
+        ...parseAddressFromGoogle(enrichmentData.address),
+        latitude: enrichmentData.latitude,
+        longitude: enrichmentData.longitude
+      } : prev.address,
       hours: enrichmentData.hours || prev.hours,
       envieTags: enrichmentData.envieTags || prev.envieTags,
       theForkLink: enrichmentData.theForkLink || prev.theForkLink,
@@ -808,15 +822,36 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       atmosphereFeatures: convertAtmosphereArrayToObject(enrichmentData.ambianceInfo) || prev.atmosphereFeatures,
       generalServices: convertGeneralServicesArrayToObject(enrichmentData.servicesInfo) || prev.generalServices,
       
+      // === INTÉGRATION DES DONNÉES HYBRIDES ===
+      // Stocker les données hybrides dans formData pour les transmettre à l'étape 4
+      hybridAccessibilityDetails: enrichmentData.accessibilityDetails,
+      hybridDetailedServices: enrichmentData.detailedServices,
+      hybridClienteleInfo: enrichmentData.clienteleInfo,
+      hybridDetailedPayments: enrichmentData.detailedPayments,
+      hybridChildrenServices: enrichmentData.childrenServices,
+      
       enriched: true
     }));
     
+    // Stocker les données d'enrichissement pour les réutiliser
+    setEnrichmentData(enrichmentData);
     
-    // Passer à l'étape suivante (Services & Ambiance)
-    setCurrentStep(4);
+    console.log('✅ Données d\'enrichissement intégrées, passage à l\'étape 3');
+    // Passer à l'étape 3 (Informations sur l'établissement)
+    setCurrentStep(3);
   };
   const handleTagsChange = (tags: string[]) => {
-    setFormData(prev => ({ ...prev, tags }));
+    // Combiner les tags manuels avec les tags générés par les envies
+    const allTags = [...new Set([...tags, ...envieGeneratedTags])]; // Éviter les doublons
+    setFormData(prev => ({ ...prev, tags: allTags }));
+  };
+
+  const handleEnvieTagsGenerated = (generatedTags: string[]) => {
+    setEnvieGeneratedTags(generatedTags);
+    // Mettre à jour immédiatement les tags du formulaire
+    const currentManualTags = formData.tags.filter(tag => !envieGeneratedTags.includes(tag));
+    const allTags = [...new Set([...currentManualTags, ...generatedTags])];
+    setFormData(prev => ({ ...prev, tags: allTags }));
   };
 
   const handleArrayToggle = (field: 'services' | 'ambiance' | 'informationsPratiques', value: string) => {
@@ -879,23 +914,23 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         break;
       
       case 5:
-        // Validation des moyens de paiement (optionnel)
-        break;
-      
-      case 6:
         // En mode édition, les tags sont optionnels
         if (!isEditMode && formData.tags.length < 3) {
           newErrors.tags = "Sélectionnez au moins 3 tags de recherche";
         }
         break;
       
-      case 7:
+      case 6:
         // Validation de l'abonnement (obligatoire)
         if (!formData.subscriptionPlan) newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
         break;
       
+      case 7:
+        // Réseaux sociaux (optionnel)
+        break;
+      
       case 8:
-        // Validation des réseaux sociaux (optionnel)
+        // Récapitulatif final (pas de validation supplémentaire)
         break;
     }
 
@@ -905,7 +940,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(10, prev + 1) as FormStep);
+      setCurrentStep(prev => Math.min(8, prev + 1) as FormStep);
     }
   };
 
@@ -941,7 +976,13 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           priceMin: formData.priceMin,
           priceMax: formData.priceMax,
           informationsPratiques: formData.informationsPratiques,
-          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD'
+          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD',
+          // === DONNÉES HYBRIDES ===
+          accessibilityDetails: formData.hybridAccessibilityDetails,
+          detailedServices: formData.hybridDetailedServices,
+          clienteleInfo: formData.hybridClienteleInfo,
+          detailedPayments: formData.hybridDetailedPayments,
+          childrenServices: formData.hybridChildrenServices
         };
 
         const response = await fetch(`/api/etablissements/${establishment.slug}`, {
@@ -989,6 +1030,9 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             if (addressData.longitude !== undefined) {
               formDataToSend.append('longitude', addressData.longitude.toString());
             }
+          } else if (key.startsWith('hybrid') && typeof value === 'object' && value !== null) {
+            // Traitement spécial pour les données hybrides (objets JSON)
+            formDataToSend.append(key, JSON.stringify(value));
           } else if (Array.isArray(value)) {
             formDataToSend.append(key, JSON.stringify(value));
           } else if (value !== undefined && value !== null) {
@@ -1263,9 +1307,10 @@ const renderStep = () => {
             onEnrichmentComplete={handleEnrichmentComplete}
             onSkip={() => {
               console.log('Enrichissement ignoré par l\'utilisateur');
-              setCurrentStep(4);
+              setCurrentStep(3);
             }}
             isVisible={true}
+            onEnrichmentDataChange={handleEnrichmentDataChange}
           />
         </div>
       );
@@ -1348,6 +1393,61 @@ const renderStep = () => {
             </p>
           </div>
 
+          {/* Affichage des données hybrides si elles existent */}
+          {(formData.hybridAccessibilityDetails || formData.hybridDetailedServices || 
+            formData.hybridClienteleInfo || formData.hybridDetailedPayments || 
+            formData.hybridChildrenServices) && (
+            <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <h3 className="text-lg font-semibold text-orange-800 mb-4 flex items-center">
+                🌟 Informations détaillées récupérées
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                {formData.hybridAccessibilityDetails && (
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-medium text-gray-900 mb-2">♿ Accessibilité détaillée</h4>
+                    <p className="text-gray-600">
+                      {Object.keys(formData.hybridAccessibilityDetails).length} éléments configurés
+                    </p>
+                  </div>
+                )}
+                {formData.hybridDetailedServices && (
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-medium text-gray-900 mb-2">🏪 Services détaillés</h4>
+                    <p className="text-gray-600">
+                      {Object.keys(formData.hybridDetailedServices).length} services configurés
+                    </p>
+                  </div>
+                )}
+                {formData.hybridClienteleInfo && (
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-medium text-gray-900 mb-2">👥 Clientèle et inclusivité</h4>
+                    <p className="text-gray-600">
+                      {Object.keys(formData.hybridClienteleInfo).length} informations configurées
+                    </p>
+                  </div>
+                )}
+                {formData.hybridDetailedPayments && (
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-medium text-gray-900 mb-2">💳 Moyens de paiement détaillés</h4>
+                    <p className="text-gray-600">
+                      {Object.keys(formData.hybridDetailedPayments).length} moyens configurés
+                    </p>
+                  </div>
+                )}
+                {formData.hybridChildrenServices && (
+                  <div className="bg-white p-3 rounded border">
+                    <h4 className="font-medium text-gray-900 mb-2">👶 Services enfants</h4>
+                    <p className="text-gray-600">
+                      {Object.keys(formData.hybridChildrenServices).length} services configurés
+                    </p>
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-orange-700 mt-3">
+                💡 Ces informations détaillées ont été récupérées lors de l'enrichissement et seront intégrées à votre établissement.
+              </p>
+            </div>
+          )}
 
           <OrganizedServicesAmbianceManager
             services={formData.services || []}
@@ -1359,80 +1459,26 @@ const renderStep = () => {
         </div>
       );
 
-    // === Étape 5 : Moyens de paiement ===
+    // === Étape 5 : Tags & Mots-clés ===
     case 5:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">
-              Moyens de paiement
+              Comment les clients vous trouvent-ils ?
             </h2>
             <p className="text-gray-600 mt-2">
-              Sélectionnez les moyens de paiement acceptés dans votre établissement
+              Décrivez vos envies et choisissez les mots-clés qui décrivent le mieux votre établissement
             </p>
           </div>
-          
-          {/* Moyens de paiement - Gérés par l'enrichissement automatique */}
-          {formData.enriched && formData.paymentMethods && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Moyens de paiement acceptés</h3>
-                <span className="text-sm text-gray-500">Détectés automatiquement</span>
-              </div>
-              
-              <div className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center mb-3">
-                  <span className="text-xl mr-2">💳</span>
-                  <h4 className="font-medium text-gray-900">MOYENS DE PAIEMENT</h4>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {formData.paymentMethods.creditCards && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Cartes bancaires</span>
-                    </div>
-                  )}
-                  {formData.paymentMethods.debitCards && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Cartes de débit</span>
-                    </div>
-                  )}
-                  {formData.paymentMethods.nfc && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Paiement mobile NFC</span>
-                    </div>
-                  )}
-                  {formData.paymentMethods.cashOnly && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Espèces uniquement</span>
-                    </div>
-                  )}
-                  {formData.paymentMethods.restaurantVouchers && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Titres restaurant</span>
-                    </div>
-                  )}
-                  {formData.paymentMethods.pluxee && (
-                    <div className="flex items-center space-x-2 p-2 rounded bg-green-50">
-                      <span className="text-green-600">✓</span>
-                      <span className="text-sm text-gray-700">Pluxee</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
 
-    // === Étape 6 : Tags & Mots-clés ===
-    case 6:
-      return (
-        <div className="space-y-6">
+          {/* Section "Envie de..." pour générer des tags automatiquement */}
+          <EnvieTagsInput
+            onEnvieTagsGenerated={handleEnvieTagsGenerated}
+            existingTags={formData.tags}
+          />
+
+          {/* Sélecteur de tags traditionnel */}
           <TagsSelector
             selectedTags={formData.tags}
             onTagsChange={handleTagsChange}
@@ -1442,8 +1488,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Étape 7 : Sélection de l'abonnement ===
-    case 7:
+    // === Étape 6 : Sélection de l'abonnement ===
+    case 6:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1497,8 +1543,9 @@ const renderStep = () => {
         </div>
       );
 
-    // === Étape 8 : Réseaux sociaux ===
-    case 8:
+    // === Étape 7 : Réseaux sociaux (mode création et édition) ===
+    case 7:
+      // Réseaux sociaux (mode création et édition)
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -1591,8 +1638,8 @@ const renderStep = () => {
         </div>
       );
 
-    // === Étape 9 : Récapitulatif final ===
-    case 9:
+    // === Étape 8 : Récapitulatif final ===
+    case 8:
       return (
         <div className="space-y-6">
           <SummaryStep 
@@ -1616,43 +1663,86 @@ const renderStep = () => {
             }}
             onEdit={(step) => setCurrentStep(step as FormStep)}
           />
-          {/* Conditions d'utilisation */}
-          <div className="text-sm text-gray-600">
-            <label className="flex items-start space-x-2">
-              <input type="checkbox" className="mt-1 rounded text-blue-600 focus:ring-blue-500" required />
-              <span>
-                J'accepte les{' '}
-                <a href="/conditions" className="text-blue-600 underline">
-                  conditions générales d'utilisation
-                </a>
-                {' '}et la{' '}
-                <a href="/politique-confidentialite" className="text-blue-600 underline">
-                  politique de confidentialité
-                </a>
-              </span>
-            </label>
-          </div>
+          {/* Conditions d'utilisation (seulement en mode création) */}
+          {!isEditMode && (
+            <div className="text-sm text-gray-600">
+              <label className="flex items-start space-x-2">
+                <input type="checkbox" className="mt-1 rounded text-blue-600 focus:ring-blue-500" required />
+                <span>
+                  J'accepte les{' '}
+                  <a href="/conditions" className="text-blue-600 underline">
+                    conditions générales d'utilisation
+                  </a>
+                  {' '}et la{' '}
+                  <a href="/politique-confidentialite" className="text-blue-600 underline">
+                    politique de confidentialité
+                  </a>
+                </span>
+              </label>
+            </div>
+          )}
         </div>
       );
     // Sécurité fallback si étape inconnue
     default:
       return <div>Erreur technique : étape inconnue.</div>;
   }
-};
+  };
+
+  // Fonction stable pour éviter les boucles infinies dans useEffect
+  const handleEnrichmentDataChange = useCallback((data: EnrichmentData | null) => {
+    console.log('🔄 Données d\'enrichissement mises à jour dans le parent:', data);
+    setEnrichmentData(data || {
+      name: '',
+      establishmentType: '',
+      priceLevel: 0,
+      rating: 0,
+      address: '',
+      phone: '',
+      website: '',
+      description: '',
+      openingHours: [],
+      hours: {},
+      practicalInfo: [],
+      envieTags: [],
+      specialties: [],
+      atmosphere: [],
+      googlePlaceId: '',
+      googleBusinessUrl: '',
+      googleRating: 0,
+      googleReviewCount: 0,
+      theForkLink: '',
+      uberEatsLink: '',
+      accessibilityInfo: [],
+      servicesAvailableInfo: [],
+      pointsForts: [],
+      populairePour: [],
+      offres: [],
+      servicesRestauration: [],
+      servicesInfo: [],
+      ambianceInfo: [],
+      clientele: [],
+      planning: [],
+      paiements: [],
+      enfants: [],
+      parking: []
+    });
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2 overflow-x-auto">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((stepNumber) => {
-            const stepIndex = stepNumber - 1; // Convertir 1-8 en 0-7
-            const isActive = stepNumber === currentStep; // stepNumber (1-8) = currentStep (1-8)
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((stepNumber) => {
+            const stepIndex = stepNumber - 1; // Convertir 1-9 en 0-8
+            const isActive = stepNumber === currentStep; // Étape actuelle
+            const isCompleted = stepNumber < currentStep; // Étapes complétées
             return (
               <div
                 key={stepNumber}
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors duration-200 ${
-                  isActive
+                  isActive || isCompleted
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600'
                 }`}
@@ -1683,21 +1773,30 @@ const renderStep = () => {
             Précédent
           </button>
 
-          {currentStep < (isEditMode ? 9 : 7) ? (
+          {currentStep < 8 ? (
             <button
               type="button"
-              onClick={nextStep}
+              onClick={() => {
+                // Si on est à l'étape 2 (enrichissement) et qu'on a des données enrichies,
+                // les transmettre avant de passer à l'étape suivante
+                if (currentStep === 2 && enrichmentData && enrichmentData.name) {
+                  console.log('🔄 Transmission des données d\'enrichissement via bouton Suivant');
+                  handleEnrichmentComplete(enrichmentData);
+                } else {
+                  nextStep();
+                }
+              }}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               Suivant
             </button>
-          ) : currentStep === (isEditMode ? 9 : 7) ? (
+          ) : currentStep === 8 ? (
             <button
               type="button"
-              onClick={nextStep}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              onClick={handleSubmit}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
             >
-              Voir le récapitulatif
+{isEditMode ? "Sauvegarder les modifications" : "Créer l'établissement"}
             </button>
           ) : (
             <button

@@ -4,6 +4,169 @@ import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
+// Fonction utilitaire pour nettoyer l'affichage d'une URL
+const cleanUrlForDisplay = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    // Retourner seulement le hostname (domaine) sans www si présent
+    return urlObj.hostname.startsWith('www.') ? urlObj.hostname : urlObj.hostname;
+  } catch (error) {
+    // Si l'URL n'est pas valide, retourner l'URL originale
+    return url;
+  }
+};
+
+// Fonction générique pour parser les données hybrides JSON
+const parseHybridData = (jsonField: any): any => {
+  if (!jsonField) return null;
+  
+  if (typeof jsonField === 'string') {
+    try {
+      return JSON.parse(jsonField);
+    } catch {
+      return null;
+    }
+  }
+  
+  if (typeof jsonField === 'object') {
+    return jsonField;
+  }
+  
+  return null;
+};
+
+// Fonction pour extraire les éléments d'accessibilité des données hybrides
+const getAccessibilityItems = (accessibilityDetails: any): string[] => {
+  const items: string[] = [];
+  
+  if (!accessibilityDetails) return items;
+  
+  // Parcourir les données d'accessibilité et créer des libellés lisibles
+  Object.entries(accessibilityDetails).forEach(([key, value]) => {
+    if (value === true || value === 'true') {
+      switch (key) {
+        case 'wheelchairAccessibleEntrance':
+          items.push('Entrée accessible en fauteuil roulant');
+          break;
+        case 'wheelchairAccessibleRestroom':
+          items.push('Toilettes accessibles en fauteuil roulant');
+          break;
+        case 'wheelchairAccessibleSeating':
+          items.push('Places assises accessibles');
+          break;
+        case 'wheelchairAccessibleParking':
+          items.push('Parking accessible');
+          break;
+        case 'hearingLoop':
+          items.push('Boucle magnétique');
+          break;
+        case 'brailleMenu':
+          items.push('Menu en braille');
+          break;
+        case 'signLanguage':
+          items.push('Langue des signes');
+          break;
+        default:
+          // Pour les autres clés, créer un libellé générique
+          if (typeof key === 'string') {
+            items.push(key.replace(/([A-Z])/g, ' $1').toLowerCase());
+          }
+      }
+    }
+  });
+  
+  return items;
+};
+
+// Fonction pour extraire les moyens de paiement des données hybrides
+const getPaymentMethods = (detailedPayments: any): string[] => {
+  const methods: string[] = [];
+  
+  if (!detailedPayments) return methods;
+  
+  Object.entries(detailedPayments).forEach(([key, value]) => {
+    if (value === true || value === 'true') {
+      switch (key) {
+        case 'creditCards':
+          methods.push('Cartes de crédit');
+          break;
+        case 'debitCards':
+          methods.push('Cartes de débit');
+          break;
+        case 'cash':
+          methods.push('Espèces');
+          break;
+        case 'mobilePayments':
+          methods.push('Paiements mobiles NFC');
+          break;
+        case 'contactlessPayments':
+          methods.push('Paiements sans contact');
+          break;
+        case 'mealVouchers':
+          methods.push('Titres restaurant');
+          break;
+        case 'pluxee':
+          methods.push('Pluxee');
+          break;
+        case 'checks':
+          methods.push('Chèques');
+          break;
+        default:
+          // Pour les autres clés, créer un libellé générique
+          if (typeof key === 'string') {
+            methods.push(key.replace(/([A-Z])/g, ' $1').toLowerCase());
+          }
+      }
+    }
+  });
+  
+  return methods;
+};
+
+// Fonction pour extraire les services détaillés des données hybrides
+const getDetailedServices = (detailedServices: any): string[] => {
+  const services: string[] = [];
+  
+  if (!detailedServices) return services;
+  
+  Object.entries(detailedServices).forEach(([key, value]) => {
+    if (value === true || value === 'true') {
+      switch (key) {
+        case 'genderNeutralRestrooms':
+          services.push('Toilettes non genrées');
+          break;
+        case 'pool':
+          services.push('Piscine');
+          break;
+        case 'spa':
+          services.push('Spa');
+          break;
+        case 'gym':
+          services.push('Salle de sport');
+          break;
+        case 'wifi':
+          services.push('Wi-Fi gratuit');
+          break;
+        case 'parking':
+          services.push('Parking');
+          break;
+        case 'valet':
+          services.push('Service voiturier');
+          break;
+        case 'petFriendly':
+          services.push('Animaux acceptés');
+          break;
+        default:
+          if (typeof key === 'string') {
+            services.push(key.replace(/([A-Z])/g, ' $1').toLowerCase());
+          }
+      }
+    }
+  });
+  
+  return services;
+};
+
 interface EstablishmentInfoProps {
   establishment: Establishment;
 }
@@ -30,6 +193,18 @@ function parseGooglePlacesField(field: any, fieldName: string): string[] {
 
 export default function EstablishmentInfo({ establishment }: EstablishmentInfoProps) {
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
+  
+  // Parser les données hybrides
+  const hybridAccessibility = parseHybridData(establishment.accessibilityDetails);
+  const hybridPayments = parseHybridData(establishment.detailedPayments);
+  const hybridServices = parseHybridData(establishment.detailedServices);
+  const hybridClientele = parseHybridData(establishment.clienteleInfo);
+  const hybridChildren = parseHybridData(establishment.childrenServices);
+  
+  // Extraire les éléments utilisables
+  const accessibilityItems = getAccessibilityItems(hybridAccessibility);
+  const paymentMethods = getPaymentMethods(hybridPayments);
+  const detailedServices = getDetailedServices(hybridServices);
   
   // Fonction pour obtenir le jour actuel
   const getCurrentDay = () => {
@@ -146,7 +321,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   
   // Extraire les moyens de paiement des services et informations pratiques
   const allData = [...services, ...informationsPratiques];
-  const moyensPaiement = allData.filter(item => {
+  const traditionalPayments = allData.filter(item => {
     const itemLower = item.toLowerCase();
     return itemLower.includes('carte') || itemLower.includes('paiement') ||
            itemLower.includes('nfc') || itemLower.includes('pluxee') ||
@@ -154,6 +329,9 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
            itemLower.includes('espèces') || itemLower.includes('chèque') || 
            itemLower.includes('paypal');
   });
+
+  // Combiner les moyens de paiement traditionnels et hybrides
+  const moyensPaiement = [...traditionalPayments, ...paymentMethods];
 
   return (
     <div className="space-y-6">
@@ -287,7 +465,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                   rel="noopener noreferrer"
                   className="text-orange-500 hover:text-orange-600"
                 >
-                  {establishment.website}
+                  {cleanUrlForDisplay(establishment.website)}
                 </a>
               </div>
             </div>

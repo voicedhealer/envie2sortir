@@ -120,7 +120,14 @@ model Establishment {
   uberEatsLink       String?             // Lien Uber Eats
   specialties        Json?               // Spécialités extraites des avis
   atmosphere         Json?               // Ambiance détectée
-  accessibility      Json?               // Informations d'accessibilité
+  accessibility      Json?               // Informations d'accessibilité (base)
+  
+  // Champs pour l'approche hybride - données complémentaires manuelles
+  accessibilityDetails Json?             // Accessibilité détaillée (toilettes, boucle magnétique, parking)
+  detailedServices   Json?               // Services détaillés (toilettes non genrées, piscine, etc.)
+  clienteleInfo      Json?               // Informations clientèle (LGBTQ+ friendly, etc.)
+  detailedPayments   Json?               // Moyens de paiement détaillés
+  childrenServices   Json?               // Services enfants
   
   owner              User                @relation(fields: [ownerId], references: [id])
   tags               EtablissementTag[]

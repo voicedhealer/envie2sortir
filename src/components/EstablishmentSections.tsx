@@ -16,6 +16,12 @@ interface EstablishmentSectionsProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    // Champs hybrides
+    accessibilityDetails?: any;
+    detailedServices?: any;
+    clienteleInfo?: any;
+    detailedPayments?: any;
+    childrenServices?: any;
     tags?: Array<{
       tag: string;
       typeTag: string;
@@ -30,6 +36,75 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
   };
+
+  // Fonction générique pour parser les données hybrides JSON
+  const parseHybridData = (jsonField: any): any => {
+    if (!jsonField) return null;
+    
+    if (typeof jsonField === 'string') {
+      try {
+        return JSON.parse(jsonField);
+      } catch {
+        return null;
+      }
+    }
+    
+    if (typeof jsonField === 'object') {
+      return jsonField;
+    }
+    
+    return null;
+  };
+
+  // Fonction pour extraire les éléments d'accessibilité des données hybrides
+  const getAccessibilityItems = (accessibilityDetails: any): string[] => {
+    const items: string[] = [];
+    
+    if (!accessibilityDetails) return items;
+    
+    Object.entries(accessibilityDetails).forEach(([key, value]) => {
+      if (value === true || value === 'true') {
+        switch (key) {
+          case 'wheelchairAccessibleEntrance':
+            items.push('Entrée accessible en fauteuil roulant');
+            break;
+          case 'wheelchairAccessibleRestroom':
+            items.push('Toilettes accessibles en fauteuil roulant');
+            break;
+          case 'wheelchairAccessibleSeating':
+            items.push('Places assises accessibles');
+            break;
+          case 'wheelchairAccessibleParking':
+            items.push('Parking accessible');
+            break;
+          case 'hearingLoop':
+            items.push('Boucle magnétique');
+            break;
+          case 'brailleMenu':
+            items.push('Menu en braille');
+            break;
+          case 'signLanguage':
+            items.push('Langue des signes');
+            break;
+          default:
+            if (typeof key === 'string') {
+              items.push(key.replace(/([A-Z])/g, ' $1').toLowerCase());
+            }
+        }
+      }
+    });
+    
+    return items;
+  };
+
+  // Parser les données hybrides
+  const hybridAccessibility = parseHybridData(establishment.accessibilityDetails);
+  const hybridServices = parseHybridData(establishment.detailedServices);
+  const hybridClientele = parseHybridData(establishment.clienteleInfo);
+  const hybridChildren = parseHybridData(establishment.childrenServices);
+  
+  // Extraire les éléments utilisables
+  const accessibilityItems = getAccessibilityItems(hybridAccessibility);
 
   // Fonction robuste pour parser les données Google Places
   const parseGooglePlacesField = (field: any, fieldName: string) => {
@@ -169,6 +244,13 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       if (seenItems.has(activity)) return; // Éviter les doublons
       seenItems.add(activity);
       categories.activites.push(activity);
+    });
+
+    // Intégrer les données hybrides d'accessibilité dans les commodités
+    accessibilityItems.forEach((item: string) => {
+      if (seenItems.has(item)) return; // Éviter les doublons
+      seenItems.add(item);
+      categories.commodites.push(item);
     });
 
     return categories;

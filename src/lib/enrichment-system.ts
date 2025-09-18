@@ -10,9 +10,11 @@ export interface EnrichmentData {
   website?: string;
   phone?: string;
   address?: string;
+  latitude?: number;
+  longitude?: number;
   description?: string;
   openingHours?: string[];
-  hours?: any; // Format HoursData pour le formulaire
+  hours?: Record<string, any>; // Format HoursData pour le formulaire
   practicalInfo?: string[]; // Informations pratiques générées
   
   // Tags d'envie générés
@@ -40,6 +42,23 @@ export interface EnrichmentData {
   
   // Lien Uber Eats
   uberEatsLink?: string;
+
+  // === DONNÉES HYBRIDES (API + MANUEL) ===
+  
+  // Accessibilité détaillée (complémentaire)
+  accessibilityDetails?: any; // JSON des détails d'accessibilité
+  
+  // Services détaillés (complémentaire)
+  detailedServices?: any; // JSON des services détaillés
+  
+  // Informations clientèle (complémentaire)
+  clienteleInfo?: any; // JSON des informations clientèle
+  
+  // Moyens de paiement détaillés (complémentaire)
+  detailedPayments?: any; // JSON des moyens de paiement détaillés
+  
+  // Services enfants (complémentaire)
+  childrenServices?: any; // JSON des services enfants
 
   // === SECTIONS DIRECTES DEPUIS GOOGLE PLACES ===
   
@@ -107,17 +126,11 @@ export class EstablishmentEnrichment {
         body: JSON.stringify({ url: googleUrl })
       });
       
+      
       if (!resolveResponse.ok) {
-        let errorMessage = 'Erreur inconnue';
-        try {
-          const errorData = await resolveResponse.json();
-          errorMessage = errorData.error || errorData.message || 'Erreur inconnue';
-        } catch (e) {
-          const errorText = await resolveResponse.text();
-          errorMessage = errorText || 'Erreur inconnue';
-        }
-        console.error('Erreur résolution URL:', errorMessage);
-        throw new Error(`Erreur de résolution d'URL: ${errorMessage}`);
+        const errorText = await resolveResponse.text();
+        console.error("Erreur résolution URL:", errorText);
+        throw new Error(`Erreur de résolution d'URL: ${errorText}`);
       }
       
       const resolveData = await resolveResponse.json();
@@ -193,7 +206,7 @@ export class EstablishmentEnrichment {
     return null;
   }
 
-  private async fetchGooglePlaceData(placeId: string, placeName?: string): Promise<any> {
+  private async fetchGooglePlaceData(placeId: string, placeName?: string): Promise<Record<string, any>> {
     console.log('📞 Appel fetchGooglePlaceData avec:', placeId, placeName);
     
     const fields = [
@@ -205,7 +218,11 @@ export class EstablishmentEnrichment {
       'wheelchair_accessible_entrance', 'takeout', 'delivery', 'dine_in', 'reservations',
       'serves_breakfast', 'serves_lunch', 'serves_dinner', 'serves_beer', 'serves_wine',
       'serves_coffee', 'serves_vegetarian_food', 'good_for_children', 'good_for_groups',
-      'outdoor_seating', 'restroom', 'editorial_summary', 'reviews', 'photos'
+      'outdoor_seating', 'restroom', 'editorial_summary', 'reviews', 'photos',
+      
+      // Champs supplémentaires pour plus d'informations
+      'current_opening_hours', 'utc_offset', 'place_id', 'vicinity', 'address_components',
+      'adr_address', 'formatted_address', 'international_phone_number', 'plus_code'
     ].join(',');
 
     // Si placeId contient des coordonnées, ne pas passer fields (Text/Nearby Search ne les supportent pas)
@@ -241,7 +258,7 @@ export class EstablishmentEnrichment {
     return data.result;
   }
 
-  private async processPlaceData(placeData: any, googleUrl: string): Promise<EnrichmentData> {
+  private async processPlaceData(placeData: Record<string, any>, googleUrl: string): Promise<EnrichmentData> {
     console.log('🔄 processPlaceData - Données Google Places reçues:', JSON.stringify(placeData, null, 2));
     
     // Vérifier que placeData est valide
@@ -272,6 +289,10 @@ export class EstablishmentEnrichment {
       
       // Adresse complète
       address: result.formatted_address || result.vicinity,
+      
+      // Coordonnées GPS (depuis Google Places geometry)
+      latitude: result.geometry?.location?.lat,
+      longitude: result.geometry?.location?.lng,
       
       // Horaires d'ouverture (format Google Places)
       openingHours: result.opening_hours?.weekday_text || [],
@@ -723,99 +744,12 @@ export class EstablishmentEnrichment {
     return time || '00:00';
   }
 
+    
   private generatePracticalInfo(placeData: any): string[] {
     const practicalInfo: string[] = [];
     const types = placeData.types || [];
     const reviews = placeData.reviews || [];
     const rating = placeData.rating || 0;
-    
-    // === INFORMATIONS DIRECTES DE GOOGLE PLACES ===
-    // Analyser les types Google Places pour extraire des services
-    const googleServiceTypes = {
-      // Services de restauration
-      'meal_takeaway': 'Vente à emporter',
-      'meal_delivery': 'Livraison',
-      'restaurant': 'Repas sur place',
-      'cafe': 'Café',
-      'bakery': 'Boulangerie',
-      'food': 'Nourriture',
-      
-      // Services et équipements
-      'lodging': 'Hébergement',
-      'gas_station': 'Station-service',
-      'parking': 'Parking',
-      'atm': 'Distributeur automatique',
-      'bank': 'Banque',
-      'pharmacy': 'Pharmacie',
-      'hospital': 'Hôpital',
-      'police': 'Police',
-      'post_office': 'Bureau de poste',
-      
-      // Divertissement
-      'amusement_park': 'Parc d\'attractions',
-      'aquarium': 'Aquarium',
-      'art_gallery': 'Galerie d\'art',
-      'bowling_alley': 'Bowling',
-      'casino': 'Casino',
-      'movie_theater': 'Cinéma',
-      'museum': 'Musée',
-      'night_club': 'Boîte de nuit',
-      'park': 'Parc',
-      'zoo': 'Zoo',
-      
-      // Shopping
-      'shopping_mall': 'Centre commercial',
-      'store': 'Magasin',
-      'clothing_store': 'Magasin de vêtements',
-      'electronics_store': 'Magasin d\'électronique',
-      'furniture_store': 'Magasin de meubles',
-      'jewelry_store': 'Bijouterie',
-      'shoe_store': 'Magasin de chaussures',
-      'book_store': 'Librairie',
-      'grocery_or_supermarket': 'Supermarché',
-      
-      // Services professionnels
-      'beauty_salon': 'Salon de beauté',
-      'hair_care': 'Coiffeur',
-      'spa': 'Spa',
-      'gym': 'Salle de sport',
-      'physiotherapist': 'Kinésithérapeute',
-      'dentist': 'Dentiste',
-      'doctor': 'Médecin',
-      'veterinary_care': 'Vétérinaire',
-      'lawyer': 'Avocat',
-      'accounting': 'Comptable',
-      'insurance_agency': 'Agence d\'assurance',
-      'real_estate_agency': 'Agence immobilière',
-      'travel_agency': 'Agence de voyage',
-      
-      // Transport
-      'subway_station': 'Station de métro',
-      'train_station': 'Gare',
-      'bus_station': 'Gare routière',
-      'airport': 'Aéroport',
-      'car_rental': 'Location de voiture',
-      'taxi_stand': 'Station de taxi',
-      
-      // Éducation
-      'school': 'École',
-      'university': 'Université',
-      'library': 'Bibliothèque',
-      
-      // Religion
-      'church': 'Église',
-      'mosque': 'Mosquée',
-      'synagogue': 'Synagogue',
-      'hindu_temple': 'Temple hindou',
-      'buddhist_temple': 'Temple bouddhiste'
-    };
-    
-    // Ajouter les services détectés via les types Google
-    Object.entries(googleServiceTypes).forEach(([googleType, serviceName]) => {
-      if (types.includes(googleType)) {
-        practicalInfo.push(serviceName);
-      }
-    });
     
     // === SERVICES DE BASE ===
     // Analyser les types d'établissement pour déduire les services
@@ -994,25 +928,45 @@ export class EstablishmentEnrichment {
     
     const accessibility: string[] = [];
     
+    // Debug: Vérifier les propriétés disponibles
+    console.log('♿ Propriétés disponibles dans result:', Object.keys(result));
+    console.log('♿ wheelchair_accessible_entrance:', result.wheelchair_accessible_entrance);
+    console.log('♿ reviews:', result.reviews?.length || 0, 'avis');
+    
     // Extraire directement depuis les données Google Places
     if (result.wheelchair_accessible_entrance === true) {
       accessibility.push('Entrée accessible en fauteuil roulant');
+      console.log('♿ Ajouté: Entrée accessible en fauteuil roulant');
     }
     
-    // Chercher dans les avis et informations pratiques
+    // Chercher dans les avis pour des informations d'accessibilité
     const reviews = result.reviews || [];
     const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
+    console.log('♿ Texte des avis (200 premiers caractères):', reviewText.substring(0, 200));
     
     if (reviewText.includes('accessible') || reviewText.includes('fauteuil') || reviewText.includes('pmr')) {
       accessibility.push('Places assises accessibles en fauteuil roulant');
+      console.log('♿ Ajouté: Places assises accessibles en fauteuil roulant');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter les informations d'accessibilité
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
-      accessibility.push('Entrée accessible en fauteuil roulant');
-      accessibility.push('Places assises accessibles en fauteuil roulant');
+    // Logique dynamique basée sur les données Google Places
+    // Analyser les avis pour détecter des informations d'accessibilité supplémentaires
+    if (reviewText.includes('toilettes accessibles') || reviewText.includes('accessible toilets')) {
+      accessibility.push('Toilettes accessibles en fauteuil roulant');
+      console.log('♿ Ajouté: Toilettes accessibles en fauteuil roulant');
     }
     
+    if (reviewText.includes('boucle magnétique') || reviewText.includes('hearing loop')) {
+      accessibility.push('Boucle magnétique');
+      console.log('♿ Ajouté: Boucle magnétique');
+    }
+    
+    if (reviewText.includes('parking accessible') || reviewText.includes('accessible parking')) {
+      accessibility.push('Parking accessible en fauteuil roulant');
+      console.log('♿ Ajouté: Parking accessible en fauteuil roulant');
+    }
+    
+    console.log('♿ Résultat final accessibility:', accessibility);
     return accessibility;
   }
 
@@ -1021,18 +975,53 @@ export class EstablishmentEnrichment {
     
     const services: string[] = [];
     const types = result.types || [];
+    const reviews = result.reviews || [];
+    const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
+    
+    // Debug: Vérifier les types et avis
+    console.log('🔍 Types disponibles:', types);
+    console.log('🔍 Nombre d\'avis:', reviews.length);
+    console.log('🔍 Texte des avis (200 premiers caractères):', reviewText.substring(0, 200));
     
     // Services directement depuis les types Google Places
-    if (types.includes('meal_delivery')) services.push('Livraison');
-    if (types.includes('meal_takeaway')) services.push('Vente à emporter');
-    if (types.includes('restaurant')) services.push('Repas sur place');
+    if (types.includes('meal_delivery')) {
+      services.push('Livraison');
+      console.log('🔍 Ajouté: Livraison (meal_delivery)');
+    }
+    if (types.includes('meal_takeaway')) {
+      services.push('Vente à emporter');
+      console.log('🔍 Ajouté: Vente à emporter (meal_takeaway)');
+    }
+    if (types.includes('restaurant')) {
+      services.push('Repas sur place');
+      console.log('🔍 Ajouté: Repas sur place (restaurant)');
+    }
     
     // Ajouter des services basés sur le type d'établissement
     if (types.includes('restaurant') || types.includes('food')) {
-      if (!services.includes('Livraison')) services.push('Livraison');
-      if (!services.includes('Vente à emporter')) services.push('Vente à emporter');
+      if (!services.includes('Livraison')) {
+        services.push('Livraison');
+        console.log('🔍 Ajouté: Livraison (basé sur restaurant/food)');
+      }
+      if (!services.includes('Vente à emporter')) {
+        services.push('Vente à emporter');
+        console.log('🔍 Ajouté: Vente à emporter (basé sur restaurant/food)');
+      }
     }
     
+    // Logique dynamique basée sur les données Google Places
+    // Analyser les avis pour détecter des services supplémentaires
+    if (reviewText.includes('toilettes non genrées') || reviewText.includes('gender neutral')) {
+      services.push('Toilettes non genrées');
+      console.log('🔍 Ajouté: Toilettes non genrées (détecté dans avis)');
+    }
+    
+    if (reviewText.includes('piscine') || reviewText.includes('pool')) {
+      services.push('Piscine');
+      console.log('🔍 Ajouté: Piscine (détecté dans avis)');
+    }
+    
+    console.log('🔍 Résultat final services:', services);
     return services;
   }
 
@@ -1040,37 +1029,53 @@ export class EstablishmentEnrichment {
     console.log('⭐ extractPointsFortsFromGoogle - Données reçues:', JSON.stringify(result, null, 2));
     
     const pointsForts: string[] = [];
-    const reviews = result.reviews || [];
     const types = result.types || [];
     
-    // Analyser les avis pour détecter les points forts
-    const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
+    console.log('⭐ Types d\'établissement:', types);
+    console.log('⭐ Services disponibles:', {
+      wheelchair_accessible_entrance: result.wheelchair_accessible_entrance,
+      takeout: result.takeout,
+      delivery: result.delivery,
+      dine_in: result.dine_in,
+      serves_lunch: result.serves_lunch,
+      serves_dinner: result.serves_dinner,
+      serves_beer: result.serves_beer,
+      serves_wine: result.serves_wine,
+      serves_vegetarian_food: result.serves_vegetarian_food
+    });
     
-    if (reviewText.includes('excellent café') || reviewText.includes('great coffee')) {
-      pointsForts.push('Excellent café');
+    // Points forts basés sur les services Google Places
+    if (result.wheelchair_accessible_entrance === true) {
+      pointsForts.push('Accessible aux personnes à mobilité réduite');
     }
     
-    if (reviewText.includes('grand choix de thés') || reviewText.includes('variety of teas')) {
-      pointsForts.push('Grand choix de thés');
+    if (result.takeout === true) {
+      pointsForts.push('Vente à emporter disponible');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter les points forts
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
-      pointsForts.push('Excellent café');
-      pointsForts.push('Grand choix de thés');
-    } else {
-      // Points forts basés sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('cafe')) {
-        if (!pointsForts.includes('Excellent café')) pointsForts.push('Excellent café');
-      }
-      
-      if (types.includes('restaurant')) {
-        pointsForts.push('Cuisine de qualité');
-      }
-      
-      if (types.includes('bar')) {
-        pointsForts.push('Ambiance conviviale');
-      }
+    if (result.delivery === true) {
+      pointsForts.push('Livraison disponible');
+    }
+    
+    if (result.serves_vegetarian_food === true) {
+      pointsForts.push('Options végétariennes');
+    }
+    
+    if (result.serves_beer === true || result.serves_wine === true) {
+      pointsForts.push('Boissons alcoolisées');
+    }
+    
+    // Points forts basés sur le type d'établissement
+    if (types.includes('cafe')) {
+      if (!pointsForts.includes('Excellent café')) pointsForts.push('Excellent café');
+    }
+    
+    if (types.includes('restaurant')) {
+      pointsForts.push('Cuisine de qualité');
+    }
+    
+    if (types.includes('bar')) {
+      pointsForts.push('Ambiance conviviale');
     }
     
     return pointsForts;
@@ -1080,41 +1085,48 @@ export class EstablishmentEnrichment {
     console.log('👥 extractPopulairePourFromGoogle - Données reçues:', JSON.stringify(result, null, 2));
     
     const populairePour: string[] = [];
-    const reviews = result.reviews || [];
     const types = result.types || [];
-    const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
     
-    if (reviewText.includes('déjeuner') || reviewText.includes('lunch')) {
+    console.log('👥 Types d\'établissement:', types);
+    console.log('👥 Services de restauration:', {
+      serves_lunch: result.serves_lunch,
+      serves_dinner: result.serves_dinner,
+      dine_in: result.dine_in
+    });
+    
+    // Populaire pour basé sur les services Google Places
+    if (result.serves_lunch === true) {
       populairePour.push('Déjeuner');
     }
     
-    if (reviewText.includes('dîner') || reviewText.includes('dinner')) {
+    if (result.serves_dinner === true) {
       populairePour.push('Dîner');
     }
     
-    if (reviewText.includes('solo') || reviewText.includes('seul')) {
-      populairePour.push('Dîner en solo');
+    if (result.dine_in === true) {
+      populairePour.push('Repas sur place');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter les informations populaires
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
+    if (result.takeout === true) {
+      populairePour.push('Vente à emporter');
+    }
+    
+    if (result.delivery === true) {
+      populairePour.push('Livraison');
+    }
+    
+    // Populaire pour basé sur le type d'établissement
+    if (types.includes('restaurant')) {
       if (!populairePour.includes('Déjeuner')) populairePour.push('Déjeuner');
       if (!populairePour.includes('Dîner')) populairePour.push('Dîner');
-      if (!populairePour.includes('Dîner en solo')) populairePour.push('Dîner en solo');
-    } else {
-      // Populaire pour basé sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant')) {
-        if (!populairePour.includes('Déjeuner')) populairePour.push('Déjeuner');
-        if (!populairePour.includes('Dîner')) populairePour.push('Dîner');
-      }
-      
-      if (types.includes('cafe')) {
-        populairePour.push('Petit-déjeuner');
-      }
-      
-      if (types.includes('bar')) {
-        populairePour.push('Apéritif');
-      }
+    }
+    
+    if (types.includes('cafe')) {
+      populairePour.push('Petit-déjeuner');
+    }
+    
+    if (types.includes('bar')) {
+      populairePour.push('Apéritif');
     }
     
     return populairePour;
@@ -1165,34 +1177,21 @@ export class EstablishmentEnrichment {
       offres.push('Vin');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter toutes les offres
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
+    // Offres par défaut basées sur le type d'établissement
+    if (types.includes('restaurant')) {
+      if (!offres.includes('Convient aux végétariens')) offres.push('Convient aux végétariens');
+      if (!offres.includes('Produits sains')) offres.push('Produits sains');
+    }
+    
+    if (types.includes('bar')) {
       if (!offres.includes('Alcools')) offres.push('Alcools');
       if (!offres.includes('Bière')) offres.push('Bière');
-      if (!offres.includes('Cafés')) offres.push('Cafés');
-      if (!offres.includes('Cocktails et apéritifs')) offres.push('Cocktails et apéritifs');
-      if (!offres.includes('Convient aux végétariens')) offres.push('Convient aux végétariens');
-      if (!offres.includes('Petites portions à partager')) offres.push('Petites portions à partager');
-      if (!offres.includes('Produits sains')) offres.push('Produits sains');
-      if (!offres.includes('Spiritueux')) offres.push('Spiritueux');
       if (!offres.includes('Vin')) offres.push('Vin');
-    } else {
-      // Offres par défaut basées sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant')) {
-        if (!offres.includes('Convient aux végétariens')) offres.push('Convient aux végétariens');
-        if (!offres.includes('Produits sains')) offres.push('Produits sains');
-      }
-      
-      if (types.includes('bar')) {
-        if (!offres.includes('Alcools')) offres.push('Alcools');
-        if (!offres.includes('Bière')) offres.push('Bière');
-        if (!offres.includes('Vin')) offres.push('Vin');
-        if (!offres.includes('Cocktails et apéritifs')) offres.push('Cocktails et apéritifs');
-      }
-      
-      if (types.includes('cafe')) {
-        if (!offres.includes('Cafés')) offres.push('Cafés');
-      }
+      if (!offres.includes('Cocktails et apéritifs')) offres.push('Cocktails et apéritifs');
+    }
+    
+    if (types.includes('cafe')) {
+      if (!offres.includes('Cafés')) offres.push('Cafés');
     }
     
     return offres;
@@ -1226,24 +1225,15 @@ export class EstablishmentEnrichment {
       services.push('Service à table');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter tous les services de restauration
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
+    // Services par défaut basés sur le type d'établissement
+    if (types.includes('restaurant')) {
       if (!services.includes('Déjeuner')) services.push('Déjeuner');
       if (!services.includes('Dîner')) services.push('Dîner');
-      if (!services.includes('Traiteur')) services.push('Traiteur');
       if (!services.includes('Desserts')) services.push('Desserts');
-      if (!services.includes('Service à table')) services.push('Service à table');
-    } else {
-      // Services par défaut basés sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant')) {
-        if (!services.includes('Déjeuner')) services.push('Déjeuner');
-        if (!services.includes('Dîner')) services.push('Dîner');
-        if (!services.includes('Desserts')) services.push('Desserts');
-      }
-      
-      if (types.includes('cafe')) {
-        services.push('Petit-déjeuner');
-      }
+    }
+    
+    if (types.includes('cafe')) {
+      services.push('Petit-déjeuner');
     }
     
     return services;
@@ -1285,27 +1275,20 @@ export class EstablishmentEnrichment {
       ambiance.push('Calme');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter l'ambiance
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
-      if (!ambiance.includes('Ambiance décontractée')) ambiance.push('Ambiance décontractée');
-      if (!ambiance.includes('Cadre agréable')) ambiance.push('Cadre agréable');
-      if (!ambiance.includes('Calme')) ambiance.push('Calme');
-    } else {
-      // Ambiance par défaut basée sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant')) {
-        ambiance.push('Ambiance décontractée');
-        ambiance.push('Cadre agréable');
-      }
-      
-      if (types.includes('cafe')) {
-        ambiance.push('Calme');
-        ambiance.push('Cosy');
-      }
-      
-      if (types.includes('bar')) {
-        ambiance.push('Convivial');
-        ambiance.push('Festif');
-      }
+    // Ambiance par défaut basée sur le type d'établissement
+    if (types.includes('restaurant')) {
+      ambiance.push('Ambiance décontractée');
+      ambiance.push('Cadre agréable');
+    }
+    
+    if (types.includes('cafe')) {
+      ambiance.push('Calme');
+      ambiance.push('Cosy');
+    }
+    
+    if (types.includes('bar')) {
+      ambiance.push('Convivial');
+      ambiance.push('Festif');
     }
     
     return ambiance;
@@ -1331,22 +1314,25 @@ export class EstablishmentEnrichment {
       clientele.push('Touristes');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter la clientèle
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
-      if (!clientele.includes('Étudiants')) clientele.push('Étudiants');
-      if (!clientele.includes('Groupes')) clientele.push('Groupes');
-      if (!clientele.includes('Touristes')) clientele.push('Touristes');
-    } else {
-      // Clientèle par défaut basée sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant') || types.includes('cafe')) {
-        clientele.push('Groupes');
-        clientele.push('Familles');
-      }
-      
-      if (types.includes('bar')) {
-        clientele.push('Groupes');
-        clientele.push('Jeunes');
-      }
+    // Logique dynamique basée sur les données Google Places
+    // Analyser les avis pour détecter des informations de clientèle supplémentaires
+    if (reviewText.includes('lgbtq') || reviewText.includes('lgbt') || reviewText.includes('gay friendly')) {
+      clientele.push('LGBTQ+ friendly');
+    }
+    
+    if (reviewText.includes('safe place') || reviewText.includes('transgender') || reviewText.includes('trans')) {
+      clientele.push('Safe place pour les transgenres');
+    }
+    
+    // Clientèle par défaut basée sur le type d'établissement
+    if (types.includes('restaurant') || types.includes('cafe')) {
+      clientele.push('Groupes');
+      clientele.push('Familles');
+    }
+    
+    if (types.includes('bar')) {
+      clientele.push('Groupes');
+      clientele.push('Jeunes');
     }
     
     return clientele;
@@ -1393,21 +1379,12 @@ export class EstablishmentEnrichment {
       paiements.push('Titres restaurant');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter tous les paiements
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
+    // Paiements par défaut pour les établissements
+    if (types.includes('restaurant') || types.includes('bar') || types.includes('cafe')) {
       if (!paiements.includes('Cartes de crédit')) paiements.push('Cartes de crédit');
       if (!paiements.includes('Cartes de débit')) paiements.push('Cartes de débit');
       if (!paiements.includes('Paiements mobiles NFC')) paiements.push('Paiements mobiles NFC');
-      if (!paiements.includes('Pluxee')) paiements.push('Pluxee');
       if (!paiements.includes('Titres restaurant')) paiements.push('Titres restaurant');
-    } else {
-      // Paiements par défaut pour les établissements (seulement si pas Maharaja)
-      if (types.includes('restaurant') || types.includes('bar') || types.includes('cafe')) {
-        if (!paiements.includes('Cartes de crédit')) paiements.push('Cartes de crédit');
-        if (!paiements.includes('Cartes de débit')) paiements.push('Cartes de débit');
-        if (!paiements.includes('Paiements mobiles NFC')) paiements.push('Paiements mobiles NFC');
-        if (!paiements.includes('Titres restaurant')) paiements.push('Titres restaurant');
-      }
     }
     
     return paiements;
@@ -1429,15 +1406,15 @@ export class EstablishmentEnrichment {
       enfants.push('Menu enfant');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter les informations enfants
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
+    // Logique dynamique basée sur les données Google Places
+    // Analyser les avis pour détecter des informations enfants supplémentaires
+    if (reviewText.includes('activités enfants') || reviewText.includes('kids activities')) {
+      enfants.push('Activités adaptées aux enfants');
+    }
+    
+    // Enfants par défaut basé sur le type d'établissement
+    if (types.includes('restaurant') || types.includes('cafe')) {
       if (!enfants.includes('Convient aux enfants')) enfants.push('Convient aux enfants');
-      if (!enfants.includes('Menu enfant')) enfants.push('Menu enfant');
-    } else {
-      // Enfants par défaut basé sur le type d'établissement (seulement si pas Maharaja)
-      if (types.includes('restaurant') || types.includes('cafe')) {
-        if (!enfants.includes('Convient aux enfants')) enfants.push('Convient aux enfants');
-      }
     }
     
     return enfants;
@@ -1459,15 +1436,9 @@ export class EstablishmentEnrichment {
       parking.push('Parking payant');
     }
     
-    // Pour le Maharaja spécifiquement, ajouter les informations parking
-    if (result.name && result.name.toLowerCase().includes('maharaja')) {
-      if (!parking.includes('Parking couvert payant')) parking.push('Parking couvert payant');
+    // Parking par défaut pour les établissements
+    if (types.includes('restaurant') || types.includes('bar') || types.includes('cafe')) {
       if (!parking.includes('Parking payant')) parking.push('Parking payant');
-    } else {
-      // Parking par défaut pour les établissements (seulement si pas Maharaja)
-      if (types.includes('restaurant') || types.includes('bar') || types.includes('cafe')) {
-        if (!parking.includes('Parking payant')) parking.push('Parking payant');
-      }
     }
     
     return parking;

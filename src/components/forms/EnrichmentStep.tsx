@@ -3,14 +3,16 @@
 import { useState, useEffect } from 'react';
 import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
 import EnrichmentSections from '@/components/EnrichmentSections';
+import HybridEnrichmentForm, { HybridEnrichmentData } from './HybridEnrichmentForm';
 
 interface EnrichmentStepProps {
   onEnrichmentComplete: (data: EnrichmentData) => void;
   onSkip: () => void;
   isVisible: boolean;
+  onEnrichmentDataChange?: (data: EnrichmentData | null) => void;
 }
 
-export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible }: EnrichmentStepProps) {
+export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible, onEnrichmentDataChange }: EnrichmentStepProps) {
   const [googleUrl, setGoogleUrl] = useState('');
   const [theForkUrl, setTheForkUrl] = useState('');
   const [uberEatsUrl, setUberEatsUrl] = useState('');
@@ -19,6 +21,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
   const [error, setError] = useState<string | null>(null);
   const [theForkValid, setTheForkValid] = useState<boolean | null>(null);
   const [uberEatsValid, setUberEatsValid] = useState<boolean | null>(null);
+  const [hybridData, setHybridData] = useState<HybridEnrichmentData>({});
 
   // Réinitialiser l'état quand le composant devient visible
   useEffect(() => {
@@ -30,8 +33,13 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
       setError(null);
       setTheForkValid(null);
       setUberEatsValid(null);
+      
+      // Notifier le composant parent de la réinitialisation
+      if (onEnrichmentDataChange) {
+        onEnrichmentDataChange(null);
+      }
     }
-  }, [isVisible]);
+  }, [isVisible, onEnrichmentDataChange]);
 
   const handleGoogleEnrichment = async () => {
     if (!googleUrl.trim()) {
@@ -52,6 +60,11 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
           uberEatsLink: uberEatsUrl.trim() || undefined
         };
         setEnrichmentData(finalData);
+        
+        // Notifier le composant parent des nouvelles données
+        if (onEnrichmentDataChange) {
+          onEnrichmentDataChange(finalData);
+        }
       } catch (err) {
         console.error('Erreur enrichissement:', err);
       setError(err instanceof Error ? err.message : 'Erreur lors de l\'enrichissement');
@@ -113,9 +126,6 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">
-          ✨ Enrichissement automatique de votre profil
-        </h2>
         <p className="text-gray-600 mt-2">
           Gagnez du temps ! Ajoutez votre lien Google MAPS de votre établissement, pour pré-remplir automatiquement vos informations et optimiser votre visibilité.
         </p>
@@ -125,7 +135,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
         <div className="space-y-4">
           <div>
             <label htmlFor="google_business_url" className="block text-sm font-medium mb-2">
-              🔗 Lien Google My Business
+              🔗 Lien Google Maps de votre établissement
         </label>
         <input
           type="url"
@@ -143,7 +153,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
           {/* Champ TheFork */}
           <div>
             <label htmlFor="thefork_url" className="block text-sm font-medium mb-2">
-              🍴 Lien TheFork (optionnel)
+              🍴 Lien TheFork (recommandé)
             </label>
             <input
               type="url"
@@ -171,7 +181,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                 </span>
               )}
               {theForkValid === null && theForkUrl.trim() === '' && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-green-600">
                   Permet aux clients de réserver directement une table
                 </span>
               )}
@@ -181,7 +191,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
           {/* Champ Uber Eats */}
           <div>
             <label htmlFor="ubereats_url" className="block text-sm font-medium mb-2">
-              🚗 Lien Uber Eats (optionnel)
+              🚗 Lien Uber Eats (recommandé)
             </label>
             <input
               type="url"
@@ -209,7 +219,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                 </span>
               )}
               {uberEatsValid === null && uberEatsUrl.trim() === '' && (
-                <span className="text-xs text-gray-500">
+                <span className="text-xs text-blue-600">
                   Permet aux clients de commander en livraison
                 </span>
               )}
@@ -294,6 +304,15 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
               </div>
             </details>
 
+            {/* Formulaire hybride pour les informations complémentaires */}
+            <div className="mt-6">
+              <HybridEnrichmentForm
+                initialData={hybridData}
+                onChange={setHybridData}
+                title="Complétez avec vos informations spécifiques"
+              />
+            </div>
+
             {/* Message informatif */}
             <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800 mb-3">
@@ -305,7 +324,17 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                 type="button"
                 onClick={() => {
                   if (enrichmentData) {
-                    onEnrichmentComplete(enrichmentData);
+                    // Combiner les données d'enrichissement automatique et les données hybrides
+                    const combinedData = {
+                      ...enrichmentData,
+                      // Ajouter les données hybrides
+                      accessibilityDetails: hybridData.accessibilityDetails,
+                      detailedServices: hybridData.detailedServices,
+                      clienteleInfo: hybridData.clienteleInfo,
+                      detailedPayments: hybridData.detailedPayments,
+                      childrenServices: hybridData.childrenServices,
+                    };
+                    onEnrichmentComplete(combinedData);
                   }
                 }}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors"

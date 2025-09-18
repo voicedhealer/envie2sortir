@@ -67,18 +67,25 @@ export async function POST(request: NextRequest) {
         console.log('🔍 Place ID trouvé, appel API Details pour plus d\'infos:', firstResult.place_id);
         
         // Faire un appel Place Details pour obtenir toutes les informations
-        // Utiliser des fields par défaut si non fournis (notamment pour les horaires)
-        const fieldsToUse = fields || 'place_id,name,rating,user_ratings_total,types,price_level,vicinity,formatted_address,geometry,photos,opening_hours,website,formatted_phone_number';
+        // Utiliser des fields complets si non fournis (même liste que dans enrichment-system.ts)
+        const fieldsToUse = fields || 'name,types,price_level,rating,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code';
+        
+        console.log('🔍 Appel Place Details avec fields:', fieldsToUse);
         const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${firstResult.place_id}&fields=${fieldsToUse}&key=${apiKey}`;
         
         try {
           const detailsResponse = await fetch(detailsUrl);
           const detailsData = await detailsResponse.json();
           
+          console.log('📨 Réponse Place Details:', JSON.stringify(detailsData, null, 2));
+          
           if (detailsData.status === 'OK') {
             console.log('✅ Données détaillées récupérées');
             console.log('🕐 Opening hours dans détails:', JSON.stringify(detailsData.result?.opening_hours, null, 2));
+            console.log('♿ Accessibility dans détails:', detailsData.result?.wheelchair_accessible_entrance);
             return NextResponse.json(detailsData);
+          } else {
+            console.error('❌ Erreur Place Details:', detailsData.status, detailsData.error_message);
           }
         } catch (e) {
           console.error('❌ Erreur appel Details:', e);
@@ -86,6 +93,7 @@ export async function POST(request: NextRequest) {
       }
       
       // Fallback: retourner les données de base de Text Search
+      console.log('⚠️ Fallback: retour des données Text Search');
       return NextResponse.json({
         status: 'OK',
         result: {
@@ -96,10 +104,32 @@ export async function POST(request: NextRequest) {
           types: firstResult.types,
           price_level: firstResult.price_level,
           vicinity: firstResult.vicinity || firstResult.formatted_address,
-          geometry: firstResult.geometry,
-          photos: firstResult.photos
+          geometry: firstResult.geometry
         }
       });
+    }
+    
+    // Si c'est déjà un Place ID (pas de coordonnées), faire directement l'appel Details
+    if (!placeId.includes(',') && data.status === 'OK' && data.result) {
+      console.log('🔍 Place ID direct détecté, appel API Details:', placeId);
+      
+      const fieldsToUse = fields || 'name,types,price_level,rating,user_ratings_total,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code';
+      
+      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fieldsToUse}&key=${apiKey}`;
+      
+      try {
+        const detailsResponse = await fetch(detailsUrl);
+        const detailsData = await detailsResponse.json();
+        
+        console.log('📨 Réponse Place Details direct:', JSON.stringify(detailsData, null, 2));
+        
+        if (detailsData.status === 'OK') {
+          console.log('✅ Données détaillées récupérées (Place ID direct)');
+          return NextResponse.json(detailsData);
+        }
+      } catch (e) {
+        console.error('❌ Erreur appel Details direct:', e);
+      }
     }
 
     return NextResponse.json(data);
