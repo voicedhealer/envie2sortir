@@ -179,6 +179,14 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       
       const serviceLower = service.toLowerCase();
       
+      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      if (serviceLower.includes('carte') || serviceLower.includes('paiement') || 
+          serviceLower.includes('nfc') || serviceLower.includes('titre') ||
+          serviceLower.includes('crédit') || serviceLower.includes('débit') ||
+          serviceLower.includes('espèces') || serviceLower.includes('chèque')) {
+        return; // Ne pas ajouter aux commodités
+      }
+      
       // Services de restauration
       if (serviceLower.includes('déjeuner') || serviceLower.includes('dîner') || 
           serviceLower.includes('dessert') || serviceLower.includes('traiteur') ||
@@ -219,6 +227,14 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       seenItems.add(info);
       
       const infoLower = info.toLowerCase();
+      
+      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      if (infoLower.includes('carte') || infoLower.includes('paiement') || 
+          infoLower.includes('nfc') || infoLower.includes('titre') ||
+          infoLower.includes('crédit') || infoLower.includes('débit') ||
+          infoLower.includes('espèces') || infoLower.includes('chèque')) {
+        return; // Ne pas ajouter aux commodités
+      }
       
       // Informations pratiques spécifiques
       if (infoLower.includes('espace non-fumeurs') || infoLower.includes('réservation recommandée') ||
