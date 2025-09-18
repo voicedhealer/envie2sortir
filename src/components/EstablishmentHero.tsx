@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Star, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/fake-toast';
 import Image from 'next/image';
 
 interface EstablishmentHeroProps {

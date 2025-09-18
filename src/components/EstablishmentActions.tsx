@@ -3,7 +3,7 @@
 import { Phone, MapPin, MessageCircle, Star, Heart } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/fake-toast';
 
 interface EstablishmentActionsProps {
   establishment: {

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/fake-toast';
 import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
 
@@ -375,7 +375,7 @@ export default function EstablishmentCard({
               {establishment.name}
             </h3>
             {distance && (
-              <span className="ml-2 px-2 py-1 bg-red-500 text-white text-xs rounded-full whitespace-nowrap">
+              <span className="ml-2 px-2 py-1 bg-white text-red-500 text-xs rounded-full border border-red-500 whitespace-nowrap">
                 {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
               </span>
             )}

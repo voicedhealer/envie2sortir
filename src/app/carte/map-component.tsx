@@ -98,7 +98,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
               height: 16px; 
               border-radius: 50%; 
               border: 3px solid white; 
-              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              box-shadow: 0 2px 6px rgba(0,0,0,0.6);
               position: relative;
             ">
               <div style="
@@ -155,7 +155,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                 font-weight: bold;
                 text-align: center;
                 line-height: 1;
-              ">📍</div>
+              "></div>
             </div>
           `,
           iconSize: [24, 24],

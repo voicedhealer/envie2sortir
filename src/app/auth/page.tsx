@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { signIn as nextAuthSignIn, signUp as nextAuthSignUp } from 'next-auth/react';
-import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { signIn as nextAuthSignIn, signUp as nextAuthSignUp, getSession } from 'next-auth/react';
+import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
 import Image from 'next/image';
 
 export default function AuthPage() {
@@ -11,19 +11,24 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [formData, setFormData] = useState({
     firstName: '',
+    lastName: '',
     email: '',
     password: '',
     acceptTerms: false
   });
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       if (isLogin) {
@@ -36,7 +41,10 @@ export default function AuthPage() {
         if (result?.error) {
           setError('Email ou mot de passe incorrect');
         } else {
-          router.push('/');
+          // Forcer la synchronisation de la session
+          await getSession();
+          // Rediriger vers l'URL de callback ou la page d'accueil
+          router.push(decodeURIComponent(callbackUrl));
         }
       } else {
         if (!formData.acceptTerms) {
@@ -52,6 +60,7 @@ export default function AuthPage() {
           },
           body: JSON.stringify({
             firstName: formData.firstName,
+            lastName: formData.lastName,
             email: formData.email,
             password: formData.password,
             acceptTerms: formData.acceptTerms
@@ -73,8 +82,12 @@ export default function AuthPage() {
           console.log('🔐 Résultat connexion:', signInResult);
 
           if (signInResult?.ok) {
-            console.log('✅ Connexion réussie, redirection vers /');
-            router.push('/?welcome=true');
+            console.log('✅ Connexion réussie, redirection vers:', callbackUrl);
+            // Forcer la synchronisation de la session
+            await getSession();
+            // Pour les nouveaux comptes, ajouter le paramètre welcome si on va vers l'accueil
+            const redirectUrl = callbackUrl === '/' ? '/?welcome=true' : decodeURIComponent(callbackUrl);
+            router.push(redirectUrl);
           } else {
             console.log('❌ Échec connexion, redirection vers auth');
             setError('Compte créé mais connexion échouée. Veuillez vous connecter manuellement.');
@@ -91,17 +104,10 @@ export default function AuthPage() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
-  const handleSocialSignIn = async (provider: string) => {
+  const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const result = await nextAuthSignIn(provider, {
@@ -111,7 +117,10 @@ export default function AuthPage() {
       if (result?.error) {
         setError(`Erreur lors de la connexion avec ${provider}`);
       } else {
-        router.push('/');
+        // Forcer la synchronisation de la session
+        await getSession();
+        // Rediriger vers l'URL de callback ou la page d'accueil
+        router.push(decodeURIComponent(callbackUrl));
       }
     } catch (err: any) {
       setError(`Erreur lors de la connexion avec ${provider}`);
@@ -172,61 +181,82 @@ export default function AuthPage() {
           </div>
 
           {/* Formulaire */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Prénom (seulement pour l'inscription) */}
             {!isLogin && (
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-2">
                   Prénom
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
                     id="firstName"
-                    name="firstName"
                     type="text"
                     required={!isLogin}
                     value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="Votre prénom"
                   />
                 </div>
               </div>
             )}
 
+            {/* Nom de famille (seulement pour l'inscription) */}
+            {!isLogin && (
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de famille
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    id="lastName"
+                    type="text"
+                    required={!isLogin}
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="Votre nom de famille"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   id="email"
-                  name="email"
                   type="email"
                   required
                   value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="votre@email.com"
                 />
               </div>
             </div>
 
+            {/* Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Mot de passe
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   id="password"
-                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={formData.password}
-                  onChange={handleInputChange}
-                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors"
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                   placeholder="••••••••"
                 />
                 <button
@@ -234,59 +264,66 @@ export default function AuthPage() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
+            {/* Conditions d'utilisation (seulement pour l'inscription) */}
             {!isLogin && (
-              <div className="flex items-start">
+              <div className="flex items-start space-x-3">
                 <input
                   id="acceptTerms"
-                  name="acceptTerms"
                   type="checkbox"
                   checked={formData.acceptTerms}
-                  onChange={handleInputChange}
-                  className="mt-1 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
+                  onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
+                  className="mt-1 rounded text-orange-600 focus:ring-orange-500"
                 />
-                <label htmlFor="acceptTerms" className="ml-2 text-sm text-gray-600">
+                <label htmlFor="acceptTerms" className="text-sm text-gray-600">
                   J'accepte les{' '}
-                  <a href="/cgu" className="text-orange-600 hover:text-orange-700 underline">
-                    conditions d'utilisation
-                  </a>{' '}
-                  et la{' '}
-                  <a href="/privacy" className="text-orange-600 hover:text-orange-700 underline">
+                  <a href="/conditions" className="text-orange-600 hover:text-orange-500 underline">
+                    conditions générales d'utilisation
+                  </a>
+                  {' '}et la{' '}
+                  <a href="/politique-confidentialite" className="text-orange-600 hover:text-orange-500 underline">
                     politique de confidentialité
                   </a>
                 </label>
               </div>
             )}
 
-            {isLogin && (
-              <div className="flex items-center justify-between">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-600">Se souvenir de moi</span>
-                </label>
-                <a href="/forgot-password" className="text-sm text-orange-600 hover:text-orange-700">
-                  Mot de passe oublié ?
-                </a>
-              </div>
-            )}
-
+            {/* Messages d'erreur et de succès */}
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => setError('')}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
 
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
+                <span>{success}</span>
+                <button
+                  type="button"
+                  onClick={() => setSuccess('')}
+                  className="text-green-500 hover:text-green-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Bouton de soumission */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-pink-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-orange-500 to-pink-500 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -306,7 +343,7 @@ export default function AuthPage() {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Ou continuer avec</span>
+                <span className="px-2 bg-white text-gray-500">Ou</span>
               </div>
             </div>
 
@@ -315,7 +352,7 @@ export default function AuthPage() {
                 type="button"
                 onClick={() => handleSocialSignIn('google')}
                 disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -330,7 +367,7 @@ export default function AuthPage() {
                 type="button"
                 onClick={() => handleSocialSignIn('facebook')}
                 disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -340,75 +377,79 @@ export default function AuthPage() {
             </div>
           </div>
 
-          {/* Bouton Espace Professionnel */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Ou</span>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <a
-                href="/auth/login"
-                className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-5 h-5 mr-2 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                Accéder à l'espace professionnel
-              </a>
-            </div>
+          {/* Liens utiles */}
+          <div className="mt-6 text-center">
+            {isLogin ? (
+              <p className="text-sm text-gray-600">
+                Pas encore de compte ?{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(false)}
+                  className="text-orange-600 hover:text-orange-500 font-medium"
+                >
+                  Créer un compte
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Déjà un compte ?{' '}
+                <button
+                  type="button"
+                  onClick={() => setIsLogin(true)}
+                  className="text-orange-600 hover:text-orange-500 font-medium"
+                >
+                  Se connecter
+                </button>
+              </p>
+            )}
           </div>
         </div>
       </div>
 
       {/* Section droite - Illustration */}
-      <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center bg-gradient-to-br from-orange-100 to-pink-100 relative overflow-hidden">
-        <div className="text-center z-10">
-          <div className="mb-8">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg mb-4">
-              <Heart className="w-10 h-10 text-orange-500" />
+      <div className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center bg-gradient-to-br from-orange-100 to-pink-100">
+        <div className="max-w-md text-center">
+          <div className="space-y-8">
+            {/* Icônes illustratives */}
+            <div className="flex justify-center space-x-8">
+              <div className="bg-white rounded-full p-4 shadow-lg">
+                <Heart className="w-8 h-8 text-pink-500" />
+              </div>
+              <div className="bg-white rounded-full p-4 shadow-lg">
+                <MapPin className="w-8 h-8 text-orange-500" />
+              </div>
+              <div className="bg-white rounded-full p-4 shadow-lg">
+                <Star className="w-8 h-8 text-yellow-500" />
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              Découvrez vos prochaines sorties
-            </h2>
-            <p className="text-lg text-gray-600 max-w-md">
-              Trouvez les meilleurs bars, restaurants et activités près de chez vous
-            </p>
-          </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-center space-x-4">
-              <div className="flex items-center space-x-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                <MapPin className="w-4 h-4 text-orange-500" />
-                <span className="text-sm font-medium text-gray-700">Localisation</span>
-              </div>
-              <div className="flex items-center space-x-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                <Star className="w-4 h-4 text-yellow-500" />
-                <span className="text-sm font-medium text-gray-700">Avis vérifiés</span>
-              </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                Découvrez de nouveaux lieux
+              </h2>
+              <p className="text-lg text-gray-600 leading-relaxed">
+                Trouvez les meilleurs restaurants, bars et activités près de chez vous. 
+                Partagez vos découvertes et inspirez d'autres passionnés de sorties.
+              </p>
             </div>
-            <div className="flex items-center justify-center space-x-4">
-              <div className="flex items-center space-x-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                <Heart className="w-4 h-4 text-red-500" />
-                <span className="text-sm font-medium text-gray-700">Favoris</span>
+
+            {/* Statistiques */}
+            <div className="grid grid-cols-3 gap-4 pt-8">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-orange-600">500+</div>
+                <div className="text-sm text-gray-600">Établissements</div>
               </div>
-              <div className="flex items-center space-x-2 bg-white rounded-full px-4 py-2 shadow-sm">
-                <User className="w-4 h-4 text-blue-500" />
-                <span className="text-sm font-medium text-gray-700">Communauté</span>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-pink-600">10k+</div>
+                <div className="text-sm text-gray-600">Utilisateurs</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">50k+</div>
+                <div className="text-sm text-gray-600">Avis</div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Éléments décoratifs */}
-        <div className="absolute top-10 left-10 w-20 h-20 bg-orange-200 rounded-full opacity-20 animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-32 h-32 bg-pink-200 rounded-full opacity-20 animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-5 w-16 h-16 bg-yellow-200 rounded-full opacity-20 animate-pulse delay-500"></div>
       </div>
     </div>
   );

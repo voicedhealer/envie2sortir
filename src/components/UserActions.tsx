@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Heart, MessageSquare, Star } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast } from '@/lib/fake-toast';
 
 interface UserActionsProps {
   establishmentId: string;

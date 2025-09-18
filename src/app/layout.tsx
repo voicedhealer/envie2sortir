@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "./navigation";
 import AuthProvider from "./components/AuthProvider";
-import { Toaster } from "react-hot-toast";
+import FakeToaster from "@/components/FakeToaster";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,7 +26,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navigation />
           {children}
-          <Toaster position="top-right" />
+          <FakeToaster />
         </AuthProvider>
       </body>
     </html>

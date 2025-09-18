@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { signIn as nextAuthSignIn } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 
-export async function signUp(firstName: string, email: string, password: string) {
+export async function signUp(firstName: string, lastName: string, email: string, password: string) {
   try {
     // Vérifier si l'utilisateur existe déjà
     const existingUser = await prisma.user.findUnique({
@@ -24,6 +24,7 @@ export async function signUp(firstName: string, email: string, password: string)
       data: {
         email,
         firstName,
+        lastName,
         passwordHash,
         provider: 'local',
         role: 'user'
