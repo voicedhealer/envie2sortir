@@ -47,18 +47,13 @@ export default function UpcomingEventsSection({
         const data = await response.json();
         const allEvents = data.events || [];
         
-        // Séparer les événements en cours et à venir avec gestion du fuseau horaire
-        const currentEvents = allEvents
-          .filter((event: Event) => isEventInProgress(event.startDate, event.endDate))
-          .sort((a: Event, b: Event) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-
+        // 🔧 CORRECTION: Filtrer SEULEMENT les événements à venir (pas les événements passés ou en cours)
         const upcomingEvents = allEvents
           .filter((event: Event) => isEventUpcoming(event.startDate))
           .sort((a: Event, b: Event) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
           .slice(0, maxEvents);
 
-        // Combiner les événements en cours (priorité) + événements à venir
-        setEvents([...currentEvents, ...upcomingEvents]);
+        setEvents(upcomingEvents);
       } catch (err) {
         console.error('Erreur lors du chargement des événements:', err);
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
@@ -97,163 +92,82 @@ export default function UpcomingEventsSection({
     return null; // Ne pas afficher la section s'il n'y a pas d'événements
   }
 
-  console.log('Événements trouvés:', events.length, events);
-
-  // Séparer les événements en cours et à venir pour l'affichage
-  const currentEvents = events.filter((event) => isEventInProgress(event.startDate, event.endDate));
-  const upcomingEvents = events.filter((event) => isEventUpcoming(event.startDate));
+  console.log('Événements à venir trouvés:', events.length, events);
 
   return (
     <div className="space-y-6">
-      {/* Section Événements en cours */}
-      {currentEvents.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Événements en cours
-              </h2>
-              <p className="text-sm text-green-600 font-medium">
-                {currentEvents.length} événement{currentEvents.length > 1 ? 's' : ''} en cours
-              </p>
-            </div>
+      {/* Section Événements à venir - SEULEMENT les événements futurs */}
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
+          <div className="p-2 bg-amber-100 rounded-lg">
+            <Calendar className="w-6 h-6 text-amber-600" />
           </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Événements à venir
+            </h2>
+            <p className="text-sm text-gray-500">
+              {events.length} événement{events.length > 1 ? 's' : ''} programmé{events.length > 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
 
-          <div className="space-y-4">
-            {currentEvents.map((event) => (
-              <div key={event.id} className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Calendar className="w-5 h-5 text-green-600" />
+        <div className="space-y-4">
+          {events.map((event) => (
+            <div key={event.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Calendar className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
+                    <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
+                      À venir
+                    </span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                        En cours
+                  
+                  {event.description && (
+                    <p className="text-gray-700 mb-3 leading-relaxed">
+                      {event.description}
+                    </p>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-medium">
+                        Début: {formatEventDate(event.startDate)}
                       </span>
                     </div>
                     
-                    {event.description && (
-                      <p className="text-gray-700 mb-3 leading-relaxed">
-                        {event.description}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                    {event.endDate && (
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         <span className="font-medium">
-                          Début: {formatEventDate(event.startDate)}
+                          Fin: {formatEventDate(event.endDate)}
                         </span>
                       </div>
-                      
-                      {event.endDate && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span className="font-medium">
-                            Fin: {formatEventDate(event.endDate)}
-                          </span>
-                        </div>
-                      )}
-
-                      {event.price && (
-                        <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-semibold">
-                          {event.price}€
-                        </div>
-                      )}
-
-                      {event.maxCapacity && (
-                        <div className="text-gray-500">
-                          Capacité: {event.maxCapacity} places
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Section Événements à venir */}
-      {upcomingEvents.length > 0 && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-gray-100">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Événements à venir
-              </h2>
-              <p className="text-sm text-gray-500">
-                {upcomingEvents.length} événement{upcomingEvents.length > 1 ? 's' : ''} programmé{upcomingEvents.length > 1 ? 's' : ''}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg">
-                    <Calendar className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
-                      <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
-                        À venir
-                      </span>
-                    </div>
-                    
-                    {event.description && (
-                      <p className="text-gray-700 mb-3 leading-relaxed">
-                        {event.description}
-                      </p>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        <span className="font-medium">
-                          Début: {formatEventDate(event.startDate)}
-                        </span>
+                    {event.price && (
+                      <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
+                        {event.price}€
                       </div>
-                      
-                      {event.endDate && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span className="font-medium">
-                            Fin: {formatEventDate(event.endDate)}
-                          </span>
-                        </div>
-                      )}
+                    )}
 
-                      {event.price && (
-                        <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
-                          {event.price}€
-                        </div>
-                      )}
-
-                      {event.maxCapacity && (
-                        <div className="text-gray-500">
-                          Capacité: {event.maxCapacity} places
-                        </div>
-                      )}
-                    </div>
+                    {event.maxCapacity && (
+                      <div className="text-gray-500">
+                        Capacité: {event.maxCapacity} places
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Lien "Voir tous les événements" si plus d'événements */}
       {events.length >= maxEvents && (

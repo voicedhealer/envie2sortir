@@ -92,7 +92,7 @@ export default async function NewEstablishmentPage() {
       </div>
 
       {/* Contenu principal */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Section d'introduction */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
           <div className="text-center mb-8">

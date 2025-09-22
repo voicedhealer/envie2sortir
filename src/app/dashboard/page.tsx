@@ -8,11 +8,11 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect('/auth/login');
+    redirect('/auth');
   }
 
   if (session.user.role !== 'pro') {
-    redirect('/auth/login?error=AccessDenied');
+    redirect('/auth?error=AccessDenied');
   }
 
   if (!session.user.establishmentId || session.user.establishmentId === '') {
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
   });
 
   if (!establishment) {
-    redirect('/auth/login?error=EstablishmentNotFound');
+    redirect('/auth?error=EstablishmentNotFound');
   }
 
   return (

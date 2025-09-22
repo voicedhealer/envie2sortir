@@ -8,6 +8,179 @@ import { toast } from '@/lib/fake-toast';
 import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
 
+// Fonction pour déterminer la catégorie principale à partir des activités
+function getMainCategory(establishment: any): string {
+  if (!establishment.activities || !Array.isArray(establishment.activities)) {
+    return 'établissement';
+  }
+  
+  // Mapping des activités vers des labels courts français
+  const activityLabels: Record<string, string> = {
+    // VR & Jeux
+    'realite_virtuelle': 'VR',
+    'escape_game_horreur': 'Escape game',
+    'escape_game_aventure': 'Escape game',
+    'escape_game_familial': 'Escape game',
+    'escape_game_immersif': 'Escape game',
+    'laser_game': 'Laser game',
+    'paintball_exterieur': 'Paintball',
+    'paintball_interieur': 'Paintball',
+    'salle_jeux_arcade': 'Arcade',
+    'salle_jeux_moderne': 'Jeux',
+    'casino': 'Casino',
+    
+    // Sport & Loisirs
+    'bowling': 'Bowling',
+    'billard_americain': 'Billard',
+    'billard_francais': 'Billard',
+    'snooker': 'Snooker',
+    'ping_pong_bar': 'Ping-pong',
+    'squash': 'Squash',
+    'badminton': 'Badminton',
+    'tennis_table': 'Tennis de table',
+    'futsal': 'Futsal',
+    'football_5vs5': 'Foot 5v5',
+    'football_7vs7': 'Foot 7v7',
+    'tennis_exterieur': 'Tennis',
+    'padel': 'Padel',
+    'basketball': 'Basket',
+    'beach_volley': 'Beach volley',
+    
+    // Culture & Spectacle
+    'cinema_mainstream': 'Cinéma',
+    'cinema_art_essai': 'Cinéma art',
+    'cinema_imax': 'Cinéma IMAX',
+    'drive_in': 'Drive-in',
+    'theatre_classique': 'Théâtre',
+    'theatre_cafe': 'Théâtre café',
+    'spectacle_humour': 'Humour',
+    'concert_rock': 'Concert rock',
+    'concert_jazz': 'Concert jazz',
+    'concert_rap': 'Concert rap',
+    'concert_electronique': 'Concert électro',
+    'concert_classique': 'Concert classique',
+    'concert_variete': 'Concert variété',
+    
+    // Musées & Expositions
+    'musee_art': 'Musée art',
+    'musee_histoire': 'Musée histoire',
+    'musee_science': 'Musée science',
+    'musee_insolite': 'Musée insolite',
+    'galerie_art': 'Galerie',
+    'centre_exposition': 'Exposition',
+    'planetarium': 'Planétarium',
+    
+    // Nuit & Clubs
+    'discotheque': 'Discothèque',
+    'club_prive': 'Club privé',
+    'boite_nuit_mainstream': 'Boîte de nuit',
+    'club_techno': 'Club techno',
+    'club_hip_hop': 'Club hip-hop',
+    'club_latino': 'Club latino',
+    'dancing_retro': 'Dancing rétro',
+    'boite_estudiantine': 'Boîte étudiante',
+    
+    // Restauration
+    'restaurant_gastronomique': 'Restaurant gastronomique',
+    'restaurant_traditionnel': 'Restaurant traditionnel',
+    'restaurant_familial': 'Restaurant familial',
+    'bistrot': 'Bistrot',
+    'brasserie_restaurant': 'Brasserie',
+    'restaurant_rapide': 'Restaurant rapide',
+    'restaurant_italien': 'Restaurant italien',
+    'restaurant_asiatique': 'Restaurant asiatique',
+    'restaurant_oriental': 'Restaurant oriental',
+    'restaurant_mexicain': 'Restaurant mexicain',
+    'restaurant_indien': 'Restaurant indien',
+    'restaurant_veggie': 'Restaurant végétarien',
+    'creperie': 'Crêperie',
+    'pizzeria': 'Pizzeria',
+    'kebab': 'Kebab',
+    'tacos_mexicain': 'Tacos',
+    'burger': 'Burger',
+    'sandwich': 'Sandwich',
+    'fish_and_chips': 'Fish & chips',
+    'food_truck': 'Food truck',
+    'friterie': 'Friterie',
+    'poke_bowl': 'Poke bowl',
+    
+    // Bars & Boissons
+    'bar_ambiance': 'Bar ambiance',
+    'pub_traditionnel': 'Pub traditionnel',
+    'brasserie_artisanale': 'Brasserie artisanale',
+    'bar_cocktails': 'Bar cocktails',
+    'bar_vins': 'Bar à vins',
+    'bar_sports': 'Bar sportif',
+    'rooftop_bar': 'Bar rooftop',
+    'bar_karaoké': 'Bar karaoké',
+    'bar_jeux': 'Bar jeux',
+    'bar_bières': 'Bar bières',
+    
+    // Bien-être & Spa
+    'spa_detente': 'Spa détente',
+    'hammam_traditionnel': 'Hammam',
+    'sauna_finlandais': 'Sauna',
+    'spa_nordique': 'Spa nordique',
+    'centre_massage': 'Massage',
+    'institut_beaute': 'Institut beauté',
+    'salon_coiffure_premium': 'Salon coiffure',
+    'onglerie': 'Onglerie',
+    
+    // Aquatique
+    'piscine_couverte': 'Piscine',
+    'piscine_exterieure': 'Piscine extérieure',
+    'centre_aquatique': 'Centre aquatique',
+    'aqua_fitness': 'Aqua fitness',
+    
+    // Ateliers & Cours
+    'atelier_cuisine': 'Atelier cuisine',
+    'atelier_patisserie': 'Atelier pâtisserie',
+    'atelier_poterie': 'Atelier poterie',
+    'atelier_peinture': 'Atelier peinture',
+    'cours_danse': 'Cours danse',
+    'salle_musique': 'Salle musique',
+    
+    // Événements & Marchés
+    'marche_nocturne': 'Marché nocturne',
+    'marche_artisanal': 'Marché artisanal',
+    'marche_vintage': 'Marché vintage',
+    'festival_plein_air': 'Festival',
+    'foire_commerciale': 'Foire',
+    'salon_professionnel': 'Salon',
+    'parc_attraction': 'Parc attraction'
+  };
+  
+  // Prioriser certaines activités pour l'affichage
+  const priorityActivities = [
+    'realite_virtuelle',
+    'escape_game_horreur', 'escape_game_aventure', 'escape_game_familial', 'escape_game_immersif',
+    'laser_game',
+    'paintball_exterieur', 'paintball_interieur',
+    'bowling',
+    'billard_americain', 'billard_francais',
+    'cinema_mainstream', 'cinema_art_essai', 'cinema_imax',
+    'theatre_classique', 'theatre_cafe',
+    'discotheque', 'club_prive', 'boite_nuit_mainstream',
+    'restaurant_gastronomique', 'restaurant_traditionnel',
+    'bar_ambiance', 'pub_traditionnel', 'bar_cocktails'
+  ];
+  
+  // Chercher la première activité prioritaire
+  for (const activity of establishment.activities) {
+    if (priorityActivities.includes(activity)) {
+      return activityLabels[activity] || activity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+  }
+  
+  // Sinon, prendre la première activité avec son label
+  if (establishment.activities.length > 0) {
+    const firstActivity = establishment.activities[0];
+    return activityLabels[firstActivity] || firstActivity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
+  return 'Établissement';
+}
+
 interface EstablishmentCardProps {
   establishment: {
     id: string;
@@ -64,7 +237,7 @@ export default function EstablishmentCard({
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const [isEventCurrentlyInProgress, setIsEventCurrentlyInProgress] = useState(false);
 
-  // Utiliser l'image principale du modèle ou fallback sur l'ancien système
+  // Utiliser l'image principale du modèle
   const primaryImage = establishment.imageUrl || 
     (establishment.images?.find(img => img.isPrimary) || establishment.images?.[0])?.url;
 
@@ -252,7 +425,7 @@ export default function EstablishmentCard({
       href={`/etablissements/${establishment.slug}?from=${from}`}
       className="group block"
     >
-      <div className={`relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden establishment-card mb-6 ${
+      <div className={`relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden establishment-card mb-6 flex flex-col min-h-110 ${
         isHot ? 'ring-2 ring-orange-200 ring-opacity-50' : ''
       } ${
         isPremiumHighlighted ? `ring-2 ring-orange-400 ring-opacity-80 ${styles.premiumBorder}` : ''
@@ -321,7 +494,7 @@ export default function EstablishmentCard({
           {/* Badge catégorie (coin supérieur droit) - FOND NOIR SEMI-TRANSPARENT */}
           <div className="absolute top-2 right-2">
             <div className="px-2 py-1 bg-pink-600 bg-opacity-50 text-white text-xs rounded-full font-regular">
-              {establishment.category || 'bar'}
+              {getMainCategory(establishment)}
             </div>
           </div>
 
@@ -367,67 +540,73 @@ export default function EstablishmentCard({
         </div>
 
         {/* Corps de la card */}
-        <div className="p-4 space-y-3 pb-4">
+        <div className="p-4 flex flex-col flex-grow">
           
-          {/* 1ère ligne : Nom + Distance */}
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-gray-900 text-base line-clamp-1 flex-1">
-              {establishment.name}
-            </h3>
-            {distance && (
-              <span className="ml-2 px-2 py-1 bg-white text-red-500 text-xs rounded-full border border-red-500 whitespace-nowrap">
-                {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
-              </span>
+          {/* Contenu principal */}
+          <div className="flex-grow space-y-3">
+            {/* 1ère ligne : Nom + Distance */}
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900 text-base line-clamp-1 flex-1">
+                {establishment.name}
+              </h3>
+              {distance && (
+                <span className="ml-2 px-2 py-1 bg-white text-red-500 text-xs rounded-full border border-red-500 whitespace-nowrap">
+                  {distance < 1 ? `${Math.round(distance * 1000)}m` : `${distance.toFixed(1)}km`}
+                </span>
+              )}
+            </div>
+
+            {/* 2ème ligne : Note + Avis */}
+            <div className="flex items-center gap-1">
+              <Star className="w-4 h-4 text-yellow-400 fill-current" />
+              <span className="font-semibold text-gray-900 text-sm">4.2</span>
+              <span className="text-gray-500 text-xs">(24 avis)</span>
+            </div>
+
+            {/* 3ème ligne : Description courte */}
+            {establishment.description && (
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {truncateText(establishment.description, 80)}
+              </p>
+            )}
+
+            {/* 4ème ligne : Tags (max 2) */}
+            {establishment.matchedTags && establishment.matchedTags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {establishment.matchedTags.slice(0, 2).map((tag, index) => (
+                  <span 
+                    key={index}
+                    className="px-2 py-1 bg-orange-40 text-purple-700 text-xs rounded-full border border-orange-200"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* 2ème ligne : Note + Avis */}
-          <div className="flex items-center gap-1">
-            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-            <span className="font-semibold text-gray-900 text-sm">4.2</span>
-            <span className="text-gray-500 text-xs">(24 avis)</span>
-          </div>
+          {/* Contenu en bas (adresse et prix) */}
+          <div className="mt-auto pt-3 space-y-3">
+            {/* Adresse */}
+            <div className="flex items-center gap-1 text-gray-400 text-xs">
+              <MapPin className="w-3 h-3" />
+              <span>{formatAddress(establishment.address)}</span>
+            </div>
 
-          {/* 3ème ligne : Description courte */}
-          {establishment.description && (
-            <p className="text-gray-600 text-sm leading-relaxed">
-              {truncateText(establishment.description, 80)}
-            </p>
-          )}
-
-          {/* 4ème ligne : Tags (max 2) */}
-          {establishment.matchedTags && establishment.matchedTags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-4">
-              {establishment.matchedTags.slice(0, 2).map((tag, index) => (
-                <span 
-                  key={index}
-                  className="px-2 py-1 bg-orange-40 text-purple-700 text-xs rounded-full border border-orange-200"
-                >
-                  {tag}
+            {/* Prix (si disponible) */}
+            {(establishment.priceMin || establishment.priceMax) && (
+              <div className="flex justify-end">
+                <span className="px-2 py-1 bg-white-50 text-purple-500 text-xs rounded-full border border-orange-200">
+                  {establishment.priceMin && establishment.priceMax 
+                    ? `${establishment.priceMin}-${establishment.priceMax}€`
+                    : establishment.priceMin 
+                      ? `À partir de ${establishment.priceMin}€`
+                      : `Jusqu'à ${establishment.priceMax}€`
+                  }
                 </span>
-              ))}
-            </div>
-          )}
-
-          {/* 5ème ligne : Adresse */}
-          <div className="flex items-center gap-1 text-gray-400 text-xs mt-4">
-            <MapPin className="w-3 h-3" />
-            <span>{formatAddress(establishment.address)}</span>
+              </div>
+            )}
           </div>
-
-          {/* Prix (si disponible) */}
-          {(establishment.priceMin || establishment.priceMax) && (
-            <div className="flex justify-end mt-4">
-              <span className="px-2 py-1 bg-white-50 text-purple-500 text-xs rounded-full border border-orange-200">
-                {establishment.priceMin && establishment.priceMax 
-                  ? `${establishment.priceMin}-${establishment.priceMax}€`
-                  : establishment.priceMin 
-                    ? `À partir de ${establishment.priceMin}€`
-                    : `Jusqu'à ${establishment.priceMax}€`
-                }
-              </span>
-            </div>
-          )}
         </div>
       </div>
     </Link>

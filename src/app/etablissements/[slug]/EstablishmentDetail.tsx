@@ -267,6 +267,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
                   <MapComponent 
                     establishments={[establishment]} 
                     searchCenter={{ lat: establishment.latitude, lng: establishment.longitude }}
+                    context="establishment-detail"
                   />
                 </div>
               </div>

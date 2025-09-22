@@ -19,6 +19,7 @@ export default function AuthPage() {
     password: '',
     acceptTerms: false
   });
+  const [selectedRole, setSelectedRole] = useState<'user' | 'pro' | 'admin'>('user');
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,12 +40,29 @@ export default function AuthPage() {
         });
 
         if (result?.error) {
+          console.error('Erreur de connexion:', result.error);
           setError('Email ou mot de passe incorrect');
-        } else {
+        } else if (result?.ok) {
           // Forcer la synchronisation de la session
-          await getSession();
-          // Rediriger vers l'URL de callback ou la page d'accueil
-          router.push(decodeURIComponent(callbackUrl));
+          const session = await getSession();
+          console.log('🔐 Session après connexion:', session);
+          
+          // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
+          if (session?.user?.role !== selectedRole) {
+            setError(`Ce compte n'est pas un compte ${selectedRole === 'pro' ? 'professionnel' : selectedRole === 'admin' ? 'administrateur' : 'utilisateur'}. Veuillez sélectionner le bon type de compte.`);
+            return;
+          }
+          
+          // Rediriger selon le rôle de l'utilisateur (pas celui sélectionné)
+          let redirectUrl = callbackUrl;
+          if (session.user.role === 'pro') {
+            redirectUrl = '/dashboard';
+          } else if (session.user.role === 'admin') {
+            redirectUrl = '/admin';
+          }
+          router.push(decodeURIComponent(redirectUrl));
+        } else {
+          setError('Erreur de connexion inattendue');
         }
       } else {
         if (!formData.acceptTerms) {
@@ -110,19 +128,32 @@ export default function AuthPage() {
     setSuccess('');
 
     try {
+      console.log(`🔐 Tentative de connexion ${provider}...`);
+      
       const result = await nextAuthSignIn(provider, {
         redirect: false
       });
 
+      console.log(`🔐 Résultat connexion ${provider}:`, result);
+
       if (result?.error) {
-        setError(`Erreur lors de la connexion avec ${provider}`);
-      } else {
+        console.error(`❌ Erreur ${provider}:`, result.error);
+        if (result.error === 'Configuration') {
+          setError(`${provider} n'est pas configuré. Veuillez utiliser la connexion par email/mot de passe.`);
+        } else {
+          setError(`Erreur lors de la connexion avec ${provider}`);
+        }
+      } else if (result?.ok) {
+        console.log(`✅ Connexion ${provider} réussie`);
         // Forcer la synchronisation de la session
         await getSession();
         // Rediriger vers l'URL de callback ou la page d'accueil
         router.push(decodeURIComponent(callbackUrl));
+      } else {
+        setError(`Erreur inattendue lors de la connexion avec ${provider}`);
       }
     } catch (err: any) {
+      console.error(`❌ Exception ${provider}:`, err);
       setError(`Erreur lors de la connexion avec ${provider}`);
     } finally {
       setLoading(false);
@@ -179,6 +210,50 @@ export default function AuthPage() {
               Inscription
             </button>
           </div>
+
+          {/* Sélecteur de rôle (seulement pour la connexion) */}
+          {isLogin && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Type de compte
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('user')}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedRole === 'user'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Utilisateur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('pro')}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedRole === 'pro'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Professionnel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRole('admin')}
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    selectedRole === 'admin'
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  Admin
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Formulaire */}
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -375,7 +450,16 @@ export default function AuthPage() {
                 <span className="ml-2">Facebook</span>
               </button>
             </div>
+            
+            {/* Message d'information pour les providers sociaux */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-700 text-center">
+                <strong>Note :</strong> Les connexions Google et Facebook ne sont pas encore configurées. 
+                Utilisez la connexion par email/mot de passe pour le moment.
+              </p>
+            </div>
           </div>
+
 
           {/* Liens utiles */}
           <div className="mt-6 text-center">

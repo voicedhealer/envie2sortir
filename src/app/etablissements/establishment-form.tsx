@@ -949,8 +949,13 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(currentStep)) return;
+    console.log('🚀 handleSubmit appelé, étape courante:', currentStep);
+    if (!validateStep(currentStep)) {
+      console.log('❌ Validation échouée pour l\'étape:', currentStep);
+      return;
+    }
     
+    console.log('✅ Validation réussie, début de la soumission...');
     setIsSubmitting(true);
     
     try {
@@ -1007,6 +1012,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         const formDataToSend = new FormData();
         
         // Ajouter toutes les données
+        console.log('📤 Envoi des données du formulaire:', formData);
         Object.entries(formData).forEach(([key, value]) => {
           if (key === 'photos') {
             if (Array.isArray(value)) {
@@ -1040,6 +1046,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           }
         });
         
+        console.log('📤 FormData construit, envoi vers API...');
         const response = await fetch('/api/professional-registration', {
           method: 'POST',
           body: formDataToSend,

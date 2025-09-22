@@ -23,7 +23,11 @@ function extractKeywords(envie: string): string[] {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .split(/[\s,]+/)
-    .filter(word => word.length > 2 && !stopWords.includes(word))
+    .filter(word => {
+      const trimmed = word.trim();
+      // Accepter les mots de plus de 2 caractères OU les acronymes de 2 caractères (vr, ai, etc.)
+      return (trimmed.length > 2 || (trimmed.length === 2 && /^[a-z]{2}$/.test(trimmed))) && !stopWords.includes(trimmed);
+    })
     .map(word => word.trim());
 }
 

@@ -8,7 +8,7 @@ declare global {
 export const prisma: PrismaClient = global.prismaGlobal ?? new PrismaClient({
   datasources: {
     db: {
-      url: `file:${join(process.cwd(), 'prisma', 'dev.db')}`
+      url: 'file:/Users/vivien/envie2sortir/prisma/dev.db'
     }
   }
 });

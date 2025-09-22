@@ -76,7 +76,24 @@ export async function POST(request: NextRequest) {
         informationsPratiques: [
           ...(establishment.informationsPratiques || []),
           ...(enrichmentData.practicalInfo || [])
-        ].filter((item, index, arr) => arr.indexOf(item) === index) // Supprimer les doublons
+        ].filter((item, index, arr) => arr.indexOf(item) === index), // Supprimer les doublons
+        
+        // Enrichissement conditionnel : ne pas écraser les choix manuels existants
+        detailedPayments: establishment.detailedPayments && Object.keys(establishment.detailedPayments).length > 0 
+          ? establishment.detailedPayments  // Garder les choix manuels existants
+          : enrichmentData.detailedPayments, // Appliquer l'enrichissement seulement si vide
+        
+        detailedServices: establishment.detailedServices && Object.keys(establishment.detailedServices).length > 0 
+          ? establishment.detailedServices  // Garder les choix manuels existants
+          : enrichmentData.detailedServices, // Appliquer l'enrichissement seulement si vide
+        
+        accessibilityDetails: establishment.accessibilityDetails && Object.keys(establishment.accessibilityDetails).length > 0 
+          ? establishment.accessibilityDetails  // Garder les choix manuels existants
+          : enrichmentData.accessibilityDetails, // Appliquer l'enrichissement seulement si vide
+        
+        // Marquer comme enrichi avec la date
+        enrichmentApplied: true,
+        enrichmentDate: new Date()
       }
     });
 

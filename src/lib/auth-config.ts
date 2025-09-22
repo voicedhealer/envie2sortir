@@ -14,16 +14,25 @@ export const authOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Credentials manquantes');
           return null;
         }
 
         try {
+          console.log('🔐 Tentative de connexion pour:', credentials.email);
+          
           // Rechercher l'utilisateur par email
           const user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
 
-          if (!user || !user.passwordHash) {
+          if (!user) {
+            console.log('❌ Utilisateur non trouvé:', credentials.email);
+            return null;
+          }
+
+          if (!user.passwordHash) {
+            console.log('❌ Pas de mot de passe hashé pour:', credentials.email);
             return null;
           }
 
@@ -31,8 +40,11 @@ export const authOptions = {
           const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
           
           if (!isValidPassword) {
+            console.log('❌ Mot de passe incorrect pour:', credentials.email);
             return null;
           }
+
+          console.log('✅ Authentification réussie pour:', credentials.email);
 
           // Rechercher l'établissement de l'utilisateur (seulement pour les pros)
           let establishment = null;
@@ -50,22 +62,27 @@ export const authOptions = {
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             role: user.role,
-            establishmentId: establishment?.id || ''
+            establishmentId: establishment?.id || '',
+            favoriteCity: user.favoriteCity || ''
           };
         } catch (error) {
-          console.error('Erreur authentification:', error);
+          console.error('❌ Erreur authentification:', error);
           return null;
         }
       }
     }),
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    }),
-    FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID || '',
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || '',
-    })
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      })
+    ] : []),
+    ...(process.env.FACEBOOK_CLIENT_ID && process.env.FACEBOOK_CLIENT_SECRET ? [
+      FacebookProvider({
+        clientId: process.env.FACEBOOK_CLIENT_ID,
+        clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+      })
+    ] : [])
   ],
   callbacks: {
     async signIn({ user, account, profile }: { user: any; account: any; profile: any }) {
@@ -109,6 +126,7 @@ export const authOptions = {
           user.firstName = existingUser.firstName;
           user.lastName = existingUser.lastName;
           user.establishmentId = '';
+          user.favoriteCity = existingUser.favoriteCity || '';
 
           return true;
         } catch (error) {
@@ -127,6 +145,7 @@ export const authOptions = {
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.favoriteCity = user.favoriteCity;
         console.log('🔐 JWT Callback - Updated token with user data');
       } else if (token) {
         // Si pas d'utilisateur mais qu'on a un token, on peut essayer de récupérer les données mises à jour
@@ -146,6 +165,7 @@ export const authOptions = {
         session.user.role = token.role as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        session.user.favoriteCity = token.favoriteCity as string;
         
         // Corriger l'affichage du nom
         if (session.user.firstName && session.user.lastName) {
@@ -160,12 +180,13 @@ export const authOptions = {
     }
   },
   pages: {
-    signIn: '/auth/login',
+    signIn: '/auth',
     error: '/auth/error'
   },
   session: {
     strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60, // 30 jours
   },
-  secret: process.env.NEXTAUTH_SECRET || "your-secret-key"
+  secret: process.env.NEXTAUTH_SECRET || "your-secret-key",
+  debug: process.env.NODE_ENV === 'development'
 };

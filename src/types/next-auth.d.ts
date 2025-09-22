@@ -10,6 +10,7 @@ declare module "next-auth" {
       lastName: string
       role: string
       establishmentId: string
+      favoriteCity: string
     }
   }
 
@@ -21,6 +22,7 @@ declare module "next-auth" {
     lastName: string
     role: string
     establishmentId: string
+    favoriteCity: string
   }
 }
 
@@ -30,5 +32,6 @@ declare module "next-auth/jwt" {
     role: string
     firstName: string
     lastName: string
+    favoriteCity: string
   }
 }

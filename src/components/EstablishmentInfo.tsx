@@ -1,7 +1,7 @@
 "use client";
 
 import { Establishment } from '@prisma/client';
-import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music } from 'lucide-react';
 import { useState } from 'react';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
@@ -557,6 +557,69 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 {info}
               </span>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Réseaux sociaux */}
+      {(establishment.instagram || establishment.facebook || establishment.tiktok) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <Users className="w-5 h-5 text-orange-500 mr-2" />
+            Réseaux sociaux
+          </h3>
+          
+          <div className="space-y-3">
+            {establishment.instagram && (
+              <div className="flex items-center space-x-3">
+                <Instagram className="w-4 h-4 text-pink-500" />
+                <div>
+                  <p className="text-gray-900 font-medium">Instagram</p>
+                  <a 
+                    href={establishment.instagram} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-pink-600 hover:text-pink-700"
+                  >
+                    Suivre sur Instagram
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {establishment.facebook && (
+              <div className="flex items-center space-x-3">
+                <Facebook className="w-4 h-4 text-blue-600" />
+                <div>
+                  <p className="text-gray-900 font-medium">Facebook</p>
+                  <a 
+                    href={establishment.facebook} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    Suivre sur Facebook
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {establishment.tiktok && (
+              <div className="flex items-center space-x-3">
+                <Music className="w-4 h-4 text-black" />
+                <div>
+                  <p className="text-gray-900 font-medium">TikTok</p>
+                  <a 
+                    href={establishment.tiktok} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-gray-800 hover:text-black"
+                  >
+                    Suivre sur TikTok
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

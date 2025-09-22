@@ -37,13 +37,22 @@ export default function Navigation() {
   const [isHydrated, setIsHydrated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Debug logs (désactivés pour éviter les problèmes d'hydratation)
-  // console.log('🔍 Navigation - Status:', status);
-  // console.log('🔍 Navigation - Session:', session);
+  // Debug logs activés temporairement pour diagnostiquer le problème de session
+  console.log('🔍 Navigation - Status:', status);
+  console.log('🔍 Navigation - Session:', session);
+  console.log('🔍 Navigation - isHydrated:', isHydrated);
+  
+  // État de chargement plus robuste
+  const isLoading = !isHydrated || status === 'loading';
 
   // Gérer l'hydratation pour éviter les erreurs SSR
   useEffect(() => {
-    setIsHydrated(true);
+    // Attendre un tick pour que NextAuth ait le temps de s'initialiser
+    const timer = setTimeout(() => {
+      setIsHydrated(true);
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   // Fermer le menu quand on clique ailleurs
@@ -67,7 +76,7 @@ export default function Navigation() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white/50 backdrop-blur-md border-b border-white/20 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex-shrink-0">
             <LinkComponent href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
@@ -99,12 +108,22 @@ export default function Navigation() {
               </LinkComponent>
             ))}
 
-            {!isHydrated || status === 'loading' ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-500">Chargement...</span>
-              </div>
-            ) : session ? (
+            {(() => {
+              console.log('🔍 Navigation - Évaluation conditionnelle:');
+              console.log('  - isLoading:', isLoading);
+              console.log('  - session existe:', !!session);
+              
+              if (isLoading) {
+                console.log('🔍 Navigation - Affichage: Chargement...');
+                return (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-gray-500">Chargement...</span>
+                  </div>
+                );
+              } else if (session) {
+                console.log('🔍 Navigation - Affichage: Utilisateur connecté');
+                return (
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -173,22 +192,28 @@ export default function Navigation() {
                   </div>
                 )}
               </div>
-            ) : (
-              <>
-                <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
-                  S'inscrire
-                </LinkComponent>
-                <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
-                  <Image 
-                    src="/connexion_user.svg" 
-                    alt="Connexion" 
-                    width={20} 
-                    height={20} 
-                    className="w-7 h-7"
-                  />
-                </LinkComponent>
-              </>
-            )}
+                );
+              } else {
+                console.log('🔍 Navigation - Affichage: Non connecté');
+                return (
+                  <>
+                    <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium rounded-md btn-gradient">
+                      S'inscrire
+                    </LinkComponent>
+                    <LinkComponent href="/auth" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-black flex items-center gap-2">
+                      <Image 
+                        src="/connexion_user.svg" 
+                        alt="Connexion" 
+                        width={20} 
+                        height={20} 
+                        className="w-7 h-7"
+                      />
+                      Se connecter
+                    </LinkComponent>
+                  </>
+                );
+              }
+            })()}
           </div>
         </div>
       </div>

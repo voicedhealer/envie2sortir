@@ -1,4 +1,5 @@
 import EnvieSearchBar from "./sections/EnvieSearchBar";
+import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSection";
 
 export default function Home() {
   return (
@@ -21,61 +22,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Section "Nos meilleurs endroits pour..." */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Nos meilleurs endroits pour...</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Bar d'ambiance */}
-            <a href="/recherche/envie?envie=bar%20d%27ambiance&ville=Dijon&rayon=5" className="group block">
-              <div className="bg-gradient-to-br from-orange-100 to-pink-100 rounded-2xl p-6 h-full hover:shadow-lg transition-all duration-300 group-hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">🍻</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Bar d'ambiance</h3>
-                <p className="text-gray-600 text-sm">Découvrez les meilleurs bars et pubs de votre ville</p>
-                <div className="mt-4 text-sm text-gray-500">Déjà 47 établissements</div>
-              </div>
-            </a>
-
-            {/* Escape Game */}
-            <a href="/recherche/envie?envie=escape_game&ville=Lyon&rayon=10" className="group block">
-              <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl p-6 h-full hover:shadow-lg transition-all duration-300 group-hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">🧩</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Escape Game</h3>
-                <p className="text-gray-600 text-sm">Résolvez des énigmes en équipe dans des salles thématiques</p>
-                <div className="mt-4 text-sm text-gray-500">Déjà 12 établissements</div>
-              </div>
-            </a>
-
-            {/* Karting */}
-            <a href="/recherche/envie?envie=karting&ville=Paris&rayon=15" className="group block">
-              <div className="bg-gradient-to-br from-red-100 to-orange-100 rounded-2xl p-6 h-full hover:shadow-lg transition-all duration-300 group-hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-orange-500 rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">🏎️</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Karting</h3>
-                <p className="text-gray-600 text-sm">Adrénaline et compétition sur des circuits indoor</p>
-                <div className="mt-4 text-sm text-gray-500">Déjà 8 établissements</div>
-              </div>
-            </a>
-
-            {/* Bowling */}
-            <a href="/recherche/envie?envie=bowling&ville=Bordeaux&rayon=8" className="group block">
-              <div className="bg-gradient-to-br from-green-100 to-teal-100 rounded-2xl p-6 h-full hover:shadow-lg transition-all duration-300 group-hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-teal-500 rounded-xl flex items-center justify-center mb-4">
-                  <span className="text-2xl">🎳</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Bowling</h3>
-                <p className="text-gray-600 text-sm">Amusement en famille ou entre amis sur les pistes</p>
-                <div className="mt-4 text-sm text-gray-500">Déjà 15 établissements</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* Section dynamique des établissements */}
+      <DynamicEstablishmentsSection />
 
       {/* Section "Catégories visuelles" */}
       <section className="py-16 bg-gray-50">

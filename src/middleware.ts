@@ -9,17 +9,17 @@ export default withAuth(
     // Protection du dashboard
     if (pathname.startsWith('/dashboard')) {
       if (!token) {
-        return NextResponse.redirect(new URL('/auth/login', req.url));
+        return NextResponse.redirect(new URL('/auth', req.url));
       }
 
       // Vérifier que l'utilisateur est un professionnel
       if (token.role !== 'pro') {
-        return NextResponse.redirect(new URL('/auth/login?error=AccessDenied', req.url));
+        return NextResponse.redirect(new URL('/auth?error=AccessDenied', req.url));
       }
 
       // Vérifier qu'il a un établissement
       if (!token.establishmentId) {
-        return NextResponse.redirect(new URL('/auth/login?error=NoEstablishment', req.url));
+        return NextResponse.redirect(new URL('/auth?error=NoEstablishment', req.url));
       }
 
       // Protection des fonctionnalités Premium
@@ -31,7 +31,7 @@ export default withAuth(
     // Protection des pages admin
     if (pathname.startsWith('/admin')) {
       if (!token || token.role !== 'admin') {
-        return NextResponse.redirect(new URL('/auth/login?error=AccessDenied', req.url));
+        return NextResponse.redirect(new URL('/auth?error=AccessDenied', req.url));
       }
     }
 
@@ -50,7 +50,7 @@ export default withAuth(
           '/carte',
           '/etablissements',
           '/etablissements/nouveau',
-          '/auth/login',
+          '/auth',
           '/auth/error',
           '/api/auth',
           '/api/categories',
