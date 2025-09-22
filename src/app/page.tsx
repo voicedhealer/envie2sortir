@@ -1,5 +1,6 @@
 import EnvieSearchBar from "./sections/EnvieSearchBar";
 import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSection";
+import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
   return (
@@ -32,50 +33,62 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {/* Restaurant */}
             <a href="/recherche/envie?envie=restaurant&ville=Marseille&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">🍽️</span>
+              <div className="w-20 h-20 bg-blue-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">🍽️</span>
+                </div>
+                <div className="text-xs font-medium text-white">Restaurant</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Restaurant</div>
             </a>
 
             {/* Cinéma */}
             <a href="/recherche/envie?envie=cinema&ville=Lyon&rayon=15" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">🎬</span>
+              <div className="w-20 h-20 bg-yellow-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">🎬</span>
+                </div>
+                <div className="text-xs font-medium text-white">Cinéma</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Cinéma</div>
             </a>
 
             {/* Théâtre */}
             <a href="/recherche/envie?envie=theater&ville=Paris&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">🎭</span>
+              <div className="w-20 h-20 bg-green-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">🎭</span>
+                </div>
+                <div className="text-xs font-medium text-white">Théâtre</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Théâtre</div>
             </a>
 
             {/* Concert */}
             <a href="/recherche/envie?envie=concert&ville=Bordeaux&rayon=12" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">🎤</span>
+              <div className="w-20 h-20 bg-purple-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">🎵</span>
+                </div>
+                <div className="text-xs font-medium text-white">Concert</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Concert</div>
             </a>
 
             {/* Musée */}
             <a href="/recherche/envie?envie=museum&ville=Lille&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">🏛️</span>
+              <div className="w-20 h-20 bg-pink-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">🎨</span>
+                </div>
+                <div className="text-xs font-medium text-white">Musée</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Musée</div>
             </a>
 
             {/* Multi-activités */}
             <a href="/recherche/envie?envie=other&ville=Toulouse&rayon=15" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-3 group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <span className="text-3xl">✨</span>
+              <div className="w-20 h-20 bg-cyan-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <div className="text-xs font-medium text-white">activités +</div>
               </div>
-              <div className="text-sm font-medium text-gray-700">Multi-activités</div>
             </a>
           </div>
         </div>
@@ -91,8 +104,8 @@ export default function Home() {
               <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-3xl text-white font-bold">1</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Choisissez votre ville</h3>
-              <p className="text-gray-600">Sélectionnez votre localisation ou utilisez la géolocalisation pour découvrir ce qui se passe près de chez vous</p>
+              <h3 className="text-xl font-semibold mb-3">Décrivez votre envie</h3>
+              <p className="text-gray-600">Exprimez ce que vous avez envie de faire : "sortir boire un verre et danser", "manger du poulet tandoori", "de boire un morijito"...</p>
             </div>
 
             {/* Étape 2 */}
@@ -100,8 +113,8 @@ export default function Home() {
               <div className="w-20 h-20 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-3xl text-white font-bold">2</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Sélectionnez une activité</h3>
-              <p className="text-gray-600">Parcourez nos catégories ou laissez-vous surprendre par nos suggestions personnalisées</p>
+              <h3 className="text-xl font-semibold mb-3">Choisissez votre ville</h3>
+              <p className="text-gray-600">Sélectionnez votre localisation ou utilisez la géolocalisation pour découvrir ce qui se passe près de chez vous</p>
             </div>
 
             {/* Étape 3 */}
@@ -109,8 +122,8 @@ export default function Home() {
               <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-6">
                 <span className="text-3xl text-white font-bold">3</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3">Réservez et profitez</h3>
-              <p className="text-gray-600">Consultez les détails, les avis et réservez votre place en quelques clics</p>
+              <h3 className="text-xl font-semibold mb-3">Choisissez votre sortie</h3>
+              <p className="text-gray-600">Parcourez les résultats personnalisés et sélectionnez l'établissement qui vous correspond le mieux</p>
             </div>
           </div>
         </div>
@@ -151,7 +164,7 @@ export default function Home() {
                     <span key={i} className="text-lg">⭐</span>
                   ))}
                 </div>
-                <span className="ml-2 text-sm text-gray-500">5.0</span>
+                <span className="ml-2 text-sm text-gray-500">4.9</span>
               </div>
               <p className="text-gray-700 mb-4">"Parfait pour organiser des sorties entre amis ! La géolocalisation et les filtres par catégorie nous font gagner un temps fou."</p>
               <div className="flex items-center">
@@ -293,26 +306,36 @@ export default function Home() {
             {/* Logo et description */}
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center mr-3">
-                  <span className="text-white text-xl font-bold">E</span>
+                <div className="w-12 h-12 rounded-lg flex items-center justify-center mr-3">
+                  <img 
+                    src="/web-app-manifest-512x512.png" 
+                    alt="Envie2Sortir" 
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
                 </div>
-                <span className="text-xl font-bold text-white">Envie2Sortir</span>
+                <span className="text-xl font-bold text-white">Envie2Sortir.fr</span>
               </div>
               <p className="text-gray-400 mb-4 max-w-md">
                 La plateforme ultra-locale de tous les divertissements. Découvrez ce qui se passe près de chez vous.
               </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">Facebook</span>
-                  📘
+              <div className="space-y-3">
+                <a href="#" className="flex items-center space-x-3 text-gray-400 hover:text-blue-600 transition-colors group">
+                  <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center group-hover:bg-blue-700 transition-colors">
+                    <Facebook className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm">Suivre sur Facebook</span>
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">Instagram</span>
-                  📷
+                <a href="#" className="flex items-center space-x-3 text-gray-400 hover:text-pink-600 transition-colors group">
+                  <div className="w-6 h-6 bg-gradient-to-br from-pink-500 to-purple-600 rounded flex items-center justify-center group-hover:from-pink-600 group-hover:to-purple-700 transition-colors">
+                    <Instagram className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm">Suivre sur Instagram</span>
                 </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="sr-only">Twitter</span>
-                  🐦
+                <a href="#" className="flex items-center space-x-3 text-gray-400 hover:text-blue-400 transition-colors group">
+                  <div className="w-6 h-6 bg-blue-400 rounded flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                    <Twitter className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm">Suivre sur Twitter</span>
                 </a>
               </div>
             </div>
