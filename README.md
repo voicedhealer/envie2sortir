@@ -20,9 +20,11 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 - **Recherche par ville** avec suggestions automatiques
 - **Recherche par catégorie** liée à la base de données
 - **Géolocalisation** précise avec rayon de 5km
-- **Filtres dynamiques** basés sur le contenu réel
+- **Filtres intelligents** : Populaire, Désirés ++, Les - cher, Notre sélection, Nouveaux, Mieux notés
+- **Pagination infinie** avec système "Voir plus" (15 résultats par page)
 - **Page de résultats** avec grille de cartes + carte interactive
 - **Recherche "envie"** avec extraction de mots-clés intelligente
+- **Filtre "Notre sélection"** : Établissements premium uniquement
 
 ### 🗺️ Carte Interactive
 - **Intégration Leaflet.js** pour la cartographie
@@ -315,6 +317,7 @@ src/
 │   │   └── nouveau/           # Création établissement
 │   ├── mon-compte/            # Profil utilisateur
 │   ├── recherche/             # Page résultats recherche
+│   │   └── filtered/          # Page recherche filtrée
 │   ├── sections/              # Composants landing page
 │   ├── globals.css            # Styles globaux
 │   ├── layout.tsx             # Layout principal
@@ -328,6 +331,8 @@ src/
 │   ├── EstablishmentSections.tsx # Sections détail
 │   ├── UpcomingEventsSection.tsx # Événements à venir
 │   ├── MapComponent.tsx       # Carte interactive
+│   ├── SearchFilters.tsx      # Filtres de recherche
+│   ├── LoadMoreButton.tsx     # Bouton "Voir plus"
 │   └── ...
 ├── lib/
 │   ├── auth-config.ts         # Configuration NextAuth
@@ -359,7 +364,31 @@ src/
 
 ### Recherche
 - `GET /api/recherche/envie` - Recherche "envie" intelligente
+- `GET /api/recherche/filtered` - Recherche avec filtres et pagination
 - `GET /api/geocode` - Géocodage d'adresses
+
+#### Exemples d'utilisation API Recherche Filtrée
+```bash
+# Recherche "escape" à Paris avec filtre populaire
+GET /api/recherche/filtered?envie=escape&ville=Paris&filter=popular&page=1&limit=15
+
+# Recherche "vr" à Dijon avec filtre "Les - cher"
+GET /api/recherche/filtered?envie=vr&ville=Dijon&filter=cheap&page=1&limit=15
+
+# Filtre "Notre sélection" (établissements premium uniquement)
+GET /api/recherche/filtered?envie=restaurant&ville=Lyon&filter=premium&page=1&limit=15
+
+# Pagination - page 2
+GET /api/recherche/filtered?envie=bar&ville=Marseille&filter=popular&page=2&limit=15
+```
+
+#### Paramètres API
+- `envie` (requis) : Terme de recherche
+- `ville` : Ville de recherche (optionnel)
+- `filter` : Type de filtre (popular, wanted, cheap, premium, newest, rating)
+- `page` : Numéro de page (défaut: 1)
+- `limit` : Nombre de résultats par page (défaut: 15)
+- `lat`/`lng` : Coordonnées GPS (optionnel)
 
 ### Dashboard
 - `GET /api/dashboard/stats` - Statistiques dashboard
@@ -403,6 +432,29 @@ src/
 - [x] Largeur adaptative pour écrans larges
 - [x] Système de réglages de tailles
 - [x] Layout optimisé multi-écrans
+
+### ✅ Système de Filtres et Pagination
+- [x] 6 filtres intelligents avec icônes Lucide
+- [x] Pagination infinie "Voir plus" (15 résultats/page)
+- [x] Filtre "Notre sélection" (établissements premium)
+- [x] API de recherche filtrée avec tri dynamique
+- [x] Interface utilisateur intuitive et responsive
+- [x] Compatible avec géolocalisation existante
+
+#### 🎯 Filtres Disponibles
+1. **Populaire** - Tri par nombre de vues (`viewsCount`)
+2. **Désirés ++** - Tri par nombre de likes (`likesCount`)
+3. **Les - cher** - Tri par prix croissant (`priceMin`)
+4. **Notre sélection** - Établissements premium uniquement (`subscription = 'PREMIUM'`)
+5. **Nouveaux** - Tri par date de création (`createdAt`)
+6. **Mieux notés** - Tri par note moyenne (`avgRating`)
+
+#### 📄 Pagination Intelligente
+- **15 résultats par page** par défaut
+- **Bouton "Voir plus"** avec états de chargement
+- **Compteur dynamique** : "X affichés sur Y total"
+- **Chargement progressif** sans rechargement de page
+- **Compatible avec tous les filtres**
 
 ## 🎯 Fonctionnalités à Venir
 
