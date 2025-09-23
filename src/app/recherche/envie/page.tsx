@@ -1,91 +1,226 @@
-import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import MapComponent from "../../carte/map-component";
-import EstablishmentGrid from "@/components/EstablishmentGrid";
+'use client';
 
-interface SearchResult {
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import SearchFilters from '@/components/SearchFilters';
+import LoadMoreButton from '@/components/LoadMoreButton';
+import EstablishmentGrid from '@/components/EstablishmentGrid';
+import MapComponent from '../../carte/map-component';
+
+interface Establishment {
   id: string;
   name: string;
   slug: string;
+  description: string;
   address: string;
-  category: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  phone?: string;
+  email?: string;
+  website?: string;
+  instagram?: string;
+  facebook?: string;
+  activities: string[];
+  specialites?: string[];
+  motsClesRecherche?: string[];
+  services?: any;
+  ambiance?: any;
+  paymentMethods?: any;
+  horairesOuverture?: any;
+  prixMoyen?: number;
+  priceMin?: number;
+  priceMax?: number;
+  capaciteMax?: number;
+  accessibilite?: boolean;
+  parking?: boolean;
+  terrasse?: boolean;
+  status: string;
+  subscription: string;
+  ownerId: string;
+  viewsCount: number;
+  clicksCount: number;
+  avgRating?: number;
+  totalComments: number;
+  createdAt: string;
+  updatedAt: string;
+  tiktok?: string;
+  imageUrl?: string;
+  informationsPratiques?: any;
+  googlePlaceId?: string;
+  googleBusinessUrl?: string;
+  enriched: boolean;
+  enrichmentData?: any;
+  envieTags?: string[];
+  priceLevel?: number;
+  googleRating?: number;
+  googleReviewCount?: number;
+  theForkLink?: string;
+  uberEatsLink?: string;
+  specialties?: string[];
+  atmosphere?: string[];
+  accessibility?: string[];
+  accessibilityDetails?: any;
+  detailedServices?: any;
+  clienteleInfo?: any;
+  detailedPayments?: any;
+  childrenServices?: any;
   score: number;
+  thematicScore: number;
   distance: number;
   isOpen: boolean;
   matchedTags: string[];
-  primaryImage: string | null;
-  latitude?: number;
-  longitude?: number;
+  primaryImage?: string;
+  images: any[];
+  events: any[];
 }
 
-interface SearchQuery {
-  envie: string;
-  ville?: string;
-  rayon: number;
-  keywords: string[];
-  coordinates?: { lat: number; lng: number };
+interface SearchResponse {
+  success: boolean;
+  results: Establishment[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalResults: number;
+    hasMore: boolean;
+    limit: number;
+  };
+  filter: string;
+  query: {
+    envie: string;
+    ville: string;
+    rayon: number;
+    keywords: string[];
+    coordinates: { lat: number; lng: number } | null;
+  };
 }
 
-async function getSearchResults(searchParams: { [key: string]: string | string[] | undefined }) {
-  try {
-    const envie = searchParams.envie as string;
-    const ville = searchParams.ville as string;
-    const rayon = parseInt(searchParams.rayon as string) || 5;
-    const lat = searchParams.lat ? parseFloat(searchParams.lat as string) : undefined;
-    const lng = searchParams.lng ? parseFloat(searchParams.lng as string) : undefined;
+export default function EnvieSearchResults() {
+  const searchParams = useSearchParams();
+  const [establishments, setEstablishments] = useState<Establishment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('popular');
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalResults: 0,
+    hasMore: false,
+    limit: 15
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [query, setQuery] = useState<any>(null);
 
-    if (!envie) {
-      return { success: false, error: 'Aucune envie spécifiée' };
+  const envie = searchParams.get('envie') || '';
+  const ville = searchParams.get('ville') || '';
+  const lat = searchParams.get('lat') || '';
+  const lng = searchParams.get('lng') || '';
+  const rayon = searchParams.get('rayon') || '5';
+
+  // Charger les résultats initiaux
+  useEffect(() => {
+    if (envie) {
+      loadResults(envie, ville, lat, lng, activeFilter, 1, true);
     }
+  }, [envie, ville, lat, lng]);
 
-    // Appeler l'API de recherche
-    const params = new URLSearchParams();
-    params.set('envie', envie);
-    if (ville) params.set('ville', ville);
-    params.set('rayon', rayon.toString());
-    if (lat) params.set('lat', lat.toString());
-    if (lng) params.set('lng', lng.toString());
-
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3001'}/api/recherche/envie?${params.toString()}`);
-    
-    if (!response.ok) {
-      return { success: false, error: 'Erreur lors de la recherche' };
+  // Charger plus de résultats
+  const loadMore = () => {
+    if (!loadingMore && pagination.hasMore) {
+      loadResults(envie, ville, lat, lng, activeFilter, pagination.currentPage + 1, false);
     }
+  };
 
-    return await response.json();
-  } catch (error) {
-    console.error('Erreur lors de la recherche:', error);
-    return { success: false, error: 'Erreur serveur' };
-  }
-}
+  // Changer de filtre
+  const handleFilterChange = (filter: string) => {
+    setActiveFilter(filter);
+    loadResults(envie, ville, lat, lng, filter, 1, true);
+  };
 
-export default async function EnvieSearchResults({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const params = await searchParams;
-  const data = await getSearchResults(params);
+  // Fonction pour charger les résultats
+  const loadResults = async (
+    envie: string, 
+    ville: string, 
+    lat: string, 
+    lng: string, 
+    filter: string, 
+    page: number, 
+    reset: boolean
+  ) => {
+    try {
+      if (reset) {
+        setLoading(true);
+        setError(null);
+      } else {
+        setLoadingMore(true);
+      }
 
-  if (!data.success) {
+      const params = new URLSearchParams({
+        envie,
+        ville,
+        filter,
+        page: page.toString(),
+        limit: '15',
+        rayon
+      });
+
+      if (lat && lng) {
+        params.append('lat', lat);
+        params.append('lng', lng);
+      }
+
+      const response = await fetch(`/api/recherche/filtered?${params}`);
+      const data: SearchResponse = await response.json();
+
+      if (data.success) {
+        if (reset) {
+          setEstablishments(data.results);
+          setQuery(data.query);
+        } else {
+          setEstablishments(prev => [...prev, ...data.results]);
+        }
+        setPagination(data.pagination);
+      } else {
+        setError(data.error || 'Erreur lors de la recherche');
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement:', err);
+      setError('Erreur de connexion');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Erreur de recherche</h1>
-          <p className="text-gray-600 mb-4">{data.error}</p>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur de recherche</h1>
+          <p className="text-gray-600 mb-6">{error}</p>
           <Link 
             href="/" 
-            className="inline-block px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
             Retour à l'accueil
           </Link>
         </div>
-      </div>
+      </main>
     );
   }
-
-  const { results, query } = data;
 
   return (
     <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -126,7 +261,7 @@ export default async function EnvieSearchResults({
           </Link>
         </div>
 
-        {results.length === 0 ? (
+        {establishments.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-400 text-6xl mb-4">🔍</div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Aucun résultat trouvé</h2>
@@ -142,28 +277,43 @@ export default async function EnvieSearchResults({
           </div>
         ) : (
           <p className="text-gray-600">
-            {results.length} établissement{results.length > 1 ? 's' : ''} trouvé{results.length > 1 ? 's' : ''}
+            {pagination.totalResults} établissement{pagination.totalResults > 1 ? 's' : ''} trouvé{pagination.totalResults > 1 ? 's' : ''}
           </p>
         )}
       </div>
+
+      {/* Filtres */}
+      <SearchFilters 
+        activeFilter={activeFilter} 
+        onFilterChange={handleFilterChange} 
+      />
 
       {/* Layout grille + carte */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Grille de résultats */}
         <div className="lg:col-span-2">
           <EstablishmentGrid 
-            establishments={results as any}
+            establishments={establishments as any}
             searchCenter={query?.coordinates}
             from="envie"
             title={query?.envie ? `Résultats pour "${query.envie}"` : "Résultats de recherche"}
             subtitle={query?.ville ? `à ${query.ville}` : undefined}
+          />
+          
+          {/* Bouton Voir plus */}
+          <LoadMoreButton
+            onLoadMore={loadMore}
+            loading={loadingMore}
+            hasMore={pagination.hasMore}
+            currentCount={establishments.length}
+            totalCount={pagination.totalResults}
           />
         </div>
 
         {/* Carte */}
         <div className="lg:col-span-1 lg:sticky lg:top-24 h-[600px] border rounded-xl overflow-hidden">
           <MapComponent 
-            establishments={results as any} 
+            establishments={establishments as any} 
             searchCenter={query?.coordinates}
             searchRadius={query?.rayon}
           />

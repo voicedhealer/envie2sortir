@@ -14,5 +14,5 @@ export default async function SearchResults({
   if (lat) params.append('lat', lat);
   if (lng) params.append('lng', lng);
 
-  redirect(`/recherche/filtered?${params.toString()}`);
+  redirect(`/recherche/envie?${params.toString()}`);
 }

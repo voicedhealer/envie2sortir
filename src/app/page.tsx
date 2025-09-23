@@ -32,7 +32,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-center mb-12">Catégories visuelles</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {/* Restaurant */}
-            <a href="/recherche/filtered?envie=restaurant&ville=Marseille&rayon=10" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=restaurant&ville=Marseille&rayon=10" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-blue-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">🍽️</span>
@@ -42,7 +42,7 @@ export default function Home() {
             </a>
 
             {/* Cinéma */}
-            <a href="/recherche/filtered?envie=cinema&ville=Lyon&rayon=15" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=cinema&ville=Lyon&rayon=15" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-yellow-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">🎬</span>
@@ -52,7 +52,7 @@ export default function Home() {
             </a>
 
             {/* Théâtre */}
-            <a href="/recherche/filtered?envie=theater&ville=Paris&rayon=10" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=theater&ville=Paris&rayon=10" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-green-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">🎭</span>
@@ -62,7 +62,7 @@ export default function Home() {
             </a>
 
             {/* Concert */}
-            <a href="/recherche/filtered?envie=concert&ville=Bordeaux&rayon=12" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=concert&ville=Bordeaux&rayon=12" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-purple-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">🎵</span>
@@ -72,7 +72,7 @@ export default function Home() {
             </a>
 
             {/* Musée */}
-            <a href="/recherche/filtered?envie=museum&ville=Lille&rayon=10" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=museum&ville=Lille&rayon=10" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-pink-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">🎨</span>
@@ -82,7 +82,7 @@ export default function Home() {
             </a>
 
             {/* Multi-activités */}
-            <a href="/recherche/filtered?envie=other&ville=Toulouse&rayon=15" className="text-center group cursor-pointer">
+            <a href="/recherche/envie?envie=other&ville=Toulouse&rayon=15" className="text-center group cursor-pointer">
               <div className="w-20 h-20 bg-cyan-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
                   <span className="text-2xl">👥</span>
