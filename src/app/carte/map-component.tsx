@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 
 // Types pour les établissements
@@ -33,6 +33,12 @@ declare global {
 
 export default function MapComponent({ establishments, searchCenter, searchRadius, context = 'homepage' }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null); // Référence pour la carte
+
+  // Optimisation : éviter les re-renders inutiles
+  const memoizedEstablishments = useMemo(() => establishments, [establishments.length, establishments.map(e => e.id).join(',')]);
+  const memoizedSearchCenter = useMemo(() => searchCenter, [searchCenter?.lat, searchCenter?.lng]);
+  const memoizedSearchRadius = useMemo(() => searchRadius, [searchRadius]);
 
   // 🎛️ RÉGLAGES FACILES -
   const POPUP_CONFIG = {
@@ -84,18 +90,25 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
     const initMap = () => {
       if (!mapRef.current || !window.L) return;
 
+      // Nettoyer l'ancienne carte si elle existe
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+
       const popupSize = getPopupSize();
 
       // Centre par défaut : Dijon
       const defaultCenter = [47.322, 5.041];
       const defaultRadius = 5; // km
 
-      const centerLat = searchCenter?.lat || defaultCenter[0];
-      const centerLng = searchCenter?.lng || defaultCenter[1];
-      const radius = searchRadius || defaultRadius;
+      const centerLat = memoizedSearchCenter?.lat || defaultCenter[0];
+      const centerLng = memoizedSearchCenter?.lng || defaultCenter[1];
+      const radius = memoizedSearchRadius || defaultRadius;
 
       // Créer la carte
       const map = window.L.map(mapRef.current).setView([centerLat, centerLng], 13);
+      mapInstanceRef.current = map; // Stocker la référence
 
       // Ajouter les tuiles
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -103,18 +116,22 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       }).addTo(map);
 
       // Filtrer les établissements avec coordonnées
-      const establishmentsWithCoords = establishments.filter(e => e.latitude && e.longitude);
+      const establishmentsWithCoords = memoizedEstablishments.filter(e => e.latitude && e.longitude);
       
-      console.log(`${establishmentsWithCoords.length} résultats trouvés - Ajustement de la vue pour inclure le cercle de 5km avec padding 15%`);
+      console.log(`${establishmentsWithCoords.length} résultats trouvés - Ajustement de la vue pour inclure le cercle de ${radius}km avec padding 15%`);
 
       // Ajouter le cercle de recherche si on a un centre et un rayon
-      if (searchCenter && searchRadius) {
-        window.L.circle([centerLat, centerLng], {
+      if (memoizedSearchCenter && memoizedSearchRadius) {
+        console.log(`🗺️ Création du cercle: Centre [${centerLat}, ${centerLng}], Rayon: ${radius}km (${radius * 1000}m)`);
+        const circle = window.L.circle([centerLat, centerLng], {
           color: '#ff751f',
           fillColor: '#ff751f',
           fillOpacity: 0.1,
           radius: radius * 1000 // convertir en mètres
         }).addTo(map);
+        console.log(`✅ Cercle créé et ajouté à la carte`);
+      } else {
+        console.log(`❌ Pas de cercle: searchCenter=${JSON.stringify(memoizedSearchCenter)}, searchRadius=${memoizedSearchRadius}`);
       }
         // Ajouter un petit point central pour montrer le centre de recherche
         const centerIcon = window.L.divIcon({
@@ -182,7 +199,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       // Cette approche garantit que tous les résultats dans le rayon sont visibles
       
       // Calculer les bounds du cercle de recherche
-      const radiusInDegrees = defaultRadius / 111; // Approximation : 1 degré ≈ 111 km
+      const radiusInDegrees = radius / 111; // Approximation : 1 degré ≈ 111 km (utiliser le rayon réel)
       const circleBounds = window.L.latLngBounds([
         [centerLat - radiusInDegrees, centerLng - radiusInDegrees],
         [centerLat + radiusInDegrees, centerLng + radiusInDegrees]
@@ -201,10 +218,14 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
 
     loadLeaflet();
 
+    // Fonction de nettoyage
     return () => {
-      // Nettoyage si nécessaire
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
-  }, [establishments, searchCenter, searchRadius, context]);
+  }, [memoizedEstablishments, memoizedSearchCenter, memoizedSearchRadius, context]);
 
   return <div ref={mapRef} className="w-full h-full" />;
 }

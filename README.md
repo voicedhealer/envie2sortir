@@ -87,6 +87,126 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 - **Enrichissement** : Google Places API
 - **Déploiement** : Prêt pour Vercel/Netlify
 
+## 🏗️ Architecture du Système
+
+```mermaid
+graph TB
+    %% Frontend Layer
+    subgraph "Frontend (Next.js 15 + React 19)"
+        UI[Interface Utilisateur]
+        Pages[Pages Next.js]
+        Components[Composants React]
+        Auth[NextAuth.js]
+        Maps[React Leaflet]
+    end
+
+    %% Backend Layer
+    subgraph "Backend (Next.js API Routes)"
+        API[API Routes]
+        AuthAPI[Auth Routes]
+        SearchAPI[Recherche API]
+        EstabAPI[Établissements API]
+        UploadAPI[Upload API]
+        AdminAPI[Admin API]
+    end
+
+    %% Database Layer
+    subgraph "Base de Données (SQLite + Prisma)"
+        DB[(SQLite Database)]
+        Prisma[Prisma ORM]
+        Models[Modèles de données]
+    end
+
+    %% External Services
+    subgraph "Services Externes"
+        GooglePlaces[Google Places API]
+        GoogleMaps[Google Maps]
+        SIRET[SIRET API]
+        TheFork[TheFork]
+        UberEats[Uber Eats]
+    end
+
+    %% File Storage
+    subgraph "Stockage Fichiers"
+        LocalStorage[Stockage Local]
+        Uploads[Uploads Directory]
+    end
+
+    %% Data Flow
+    UI --> Pages
+    Pages --> Components
+    Components --> API
+    Auth --> AuthAPI
+    
+    API --> Prisma
+    Prisma --> DB
+    Models --> DB
+    
+    SearchAPI --> GooglePlaces
+    EstabAPI --> GooglePlaces
+    EstabAPI --> SIRET
+    
+    UploadAPI --> LocalStorage
+    LocalStorage --> Uploads
+    
+    GooglePlaces --> GoogleMaps
+    EstabAPI --> TheFork
+    EstabAPI --> UberEats
+
+    %% Styling
+    classDef frontend fill:#ff751f,stroke:#333,stroke-width:2px,color:#fff
+    classDef backend fill:#ff1fa9,stroke:#333,stroke-width:2px,color:#fff
+    classDef database fill:#ff3a3a,stroke:#333,stroke-width:2px,color:#fff
+    classDef external fill:#4CAF50,stroke:#333,stroke-width:2px,color:#fff
+    classDef storage fill:#2196F3,stroke:#333,stroke-width:2px,color:#fff
+
+    class UI,Pages,Components,Auth,Maps frontend
+    class API,AuthAPI,SearchAPI,EstabAPI,UploadAPI,AdminAPI backend
+    class DB,Prisma,Models database
+    class GooglePlaces,GoogleMaps,SIRET,TheFork,UberEats external
+    class LocalStorage,Uploads storage
+```
+
+### Description de l'Architecture
+
+#### 🎨 **Frontend (Next.js 15 + React 19)**
+- **Interface Utilisateur** : Interface moderne avec Tailwind CSS utilisant la palette de couleurs orange-pink-rouge
+- **Pages Next.js** : Pages statiques et dynamiques pour la navigation
+- **Composants React** : Composants réutilisables (cartes d'établissements, formulaires, etc.)
+- **NextAuth.js** : Authentification avec support Google/Facebook et credentials
+- **React Leaflet** : Cartes interactives pour la géolocalisation
+
+#### ⚙️ **Backend (Next.js API Routes)**
+- **API Routes** : 44 endpoints API organisés par fonctionnalité
+- **Auth Routes** : Gestion de l'authentification et des sessions
+- **Recherche API** : Recherche intelligente avec filtres et géolocalisation
+- **Établissements API** : CRUD des établissements avec enrichissement automatique
+- **Upload API** : Gestion des images et fichiers
+- **Admin API** : Administration et modération
+
+#### 🗄️ **Base de Données (SQLite + Prisma)**
+- **SQLite** : Base de données relationnelle pour le développement
+- **Prisma ORM** : Gestion des modèles et migrations
+- **Modèles** : 15+ modèles (User, Establishment, Event, Comment, etc.)
+
+#### 🌐 **Services Externes**
+- **Google Places API** : Enrichissement automatique des établissements
+- **Google Maps** : Géolocalisation et cartes
+- **API SIRET** : Vérification des professionnels
+- **TheFork** : Intégration réservations restaurants
+- **Uber Eats** : Liens de livraison
+
+#### 📁 **Stockage Fichiers**
+- **Stockage Local** : Images et fichiers uploadés
+- **Uploads Directory** : Dossier public pour les médias
+
+### Flux de Données Principaux
+
+1. **Recherche d'Établissements** : `Utilisateur → Interface → API Recherche → Prisma → SQLite + Google Places`
+2. **Authentification** : `Utilisateur → NextAuth → Auth API → Prisma → SQLite + OAuth`
+3. **Création d'Établissement** : `Professionnel → Formulaire → API Établissements → Prisma → SQLite + Google Places`
+4. **Upload d'Images** : `Utilisateur → Upload API → Stockage Local → Dossier Public`
+
 ## 🎨 Design System
 
 ### Couleurs Thème

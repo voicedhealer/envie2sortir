@@ -317,6 +317,10 @@ export default function EnvieSearchResults() {
             searchCenter={query?.coordinates}
             searchRadius={query?.rayon}
           />
+          {/* Debug info */}
+          <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-10">
+            Debug: Center: {JSON.stringify(query?.coordinates)}, Radius: {query?.rayon}
+          </div>
         </div>
       </div>
     </main>

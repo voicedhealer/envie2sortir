@@ -16,7 +16,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // Fonction pour extraire les mots-clés significatifs
 function extractKeywords(envie: string): string[] {
-  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux'];
+  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver'];
   
   return envie
     .toLowerCase()
@@ -67,10 +67,12 @@ function isOpenNow(horairesOuverture: any): boolean {
 
 // Fonction pour appliquer le tri selon le filtre
 function applySorting(establishments: any[], filter: string) {
+  // Par défaut, trier par score de pertinence thématique (aucun filtre)
+  if (!filter || filter === 'popular') {
+    return establishments.sort((a, b) => (b.score || 0) - (a.score || 0));
+  }
+
   switch (filter) {
-    case 'popular':
-      return establishments.sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0));
-    
     case 'wanted':
       return establishments.sort((a, b) => (b.likesCount || 0) - (a.likesCount || 0));
     
@@ -83,13 +85,13 @@ function applySorting(establishments: any[], filter: string) {
     
     case 'premium':
       return establishments.sort((a, b) => {
-        // Tri par subscription (PREMIUM en premier) puis par date de création
+        // Tri par subscription (PREMIUM en premier) puis par score de pertinence
         const subscriptionOrder = { 'PREMIUM': 2, 'STANDARD': 1 };
         const orderA = subscriptionOrder[a.subscription as keyof typeof subscriptionOrder] || 0;
         const orderB = subscriptionOrder[b.subscription as keyof typeof subscriptionOrder] || 0;
         
         if (orderA !== orderB) return orderB - orderA;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (b.score || 0) - (a.score || 0);
       });
     
     case 'newest':
@@ -99,7 +101,8 @@ function applySorting(establishments: any[], filter: string) {
       return establishments.sort((a, b) => (b.avgRating || 0) - (a.avgRating || 0));
     
     default:
-      return establishments;
+      // Par défaut, trier par score de pertinence
+      return establishments.sort((a, b) => (b.score || 0) - (a.score || 0));
   }
 }
 
@@ -200,6 +203,9 @@ export async function GET(request: NextRequest) {
         distance = calculateDistance(lat, lng, establishment.latitude, establishment.longitude);
       }
       
+      console.log(` CALCUL SCORE: ${establishment.name}`);
+      console.log(` Mots-clés extraits: [${keywords.join(', ')}]`);
+      
       // Score basé sur les tags
       establishment.tags.forEach(tag => {
         const tagNormalized = tag.tag
@@ -211,6 +217,7 @@ export async function GET(request: NextRequest) {
             const tagScore = tag.poids * 10;
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
+            console.log(`️ TAG MATCH: ${establishment.name} - "${tag.tag}" +${tagScore} (total: ${thematicScore})`);
           }
         });
       });
@@ -228,9 +235,11 @@ export async function GET(request: NextRequest) {
       keywords.forEach(keyword => {
         if (nameNormalized.includes(keyword)) {
           thematicScore += 20;
+          console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +20 (total: ${thematicScore})`);
         }
         if (descriptionNormalized.includes(keyword)) {
           thematicScore += 10;
+          console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +10 (total: ${thematicScore})`);
         }
       });
 
@@ -245,6 +254,7 @@ export async function GET(request: NextRequest) {
             keywords.forEach(keyword => {
               if (activityNormalized.includes(keyword) || keyword.includes(activityNormalized)) {
                 thematicScore += 25;
+                console.log(`🎯 ACTIVITY MATCH: ${establishment.name} - "${activity}" +25 (total: ${thematicScore})`);
               }
             });
           }
@@ -254,6 +264,7 @@ export async function GET(request: NextRequest) {
       const isOpen = isOpenNow(establishment.horairesOuverture);
       if (isOpen && thematicScore > 0) {
         thematicScore += 15;
+        console.log(`🕐 OPEN BONUS: ${establishment.name} +15 (total: ${thematicScore})`);
       }
 
       let finalScore = thematicScore;
@@ -261,7 +272,11 @@ export async function GET(request: NextRequest) {
       if (thematicScore > 0 && lat && lng && establishment.latitude && establishment.longitude) {
         proximityBonus = Math.max(0, 50 - distance * 2);
         finalScore += proximityBonus;
+        console.log(`📍 PROXIMITY BONUS: ${establishment.name} +${proximityBonus} (total: ${finalScore})`);
       }
+
+      console.log(`🎯 FINAL SCORE: ${establishment.name} - thematic: ${thematicScore}, final: ${finalScore}`);
+      console.log(`✅ PASS FILTER: ${establishment.name} - ${thematicScore > 30 ? 'OUI' : 'NON'} (seuil: 30)`);
 
       return {
         ...establishment,
@@ -276,7 +291,7 @@ export async function GET(request: NextRequest) {
 
     // Filtrer par pertinence thématique
     const relevantEstablishments = scoredEstablishments
-      .filter(est => est.thematicScore > 0);
+      .filter(est => est.thematicScore > 200); // Score du resultat filtre
 
     // Appliquer le tri selon le filtre
     const sortedEstablishments = applySorting(relevantEstablishments, filter);
@@ -303,7 +318,7 @@ export async function GET(request: NextRequest) {
       query: {
         envie,
         ville,
-        rayon,
+        rayon: parseInt(rayon.toString()),
         keywords,
         coordinates: lat && lng ? { lat, lng } : null
       }
