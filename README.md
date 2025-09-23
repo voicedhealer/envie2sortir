@@ -240,6 +240,217 @@ graph TB
 
 ## 🗄️ Structure de la Base de Données
 
+### Diagramme Entité-Relation (ER)
+
+```mermaid
+erDiagram
+    User {
+        string id PK
+        string email UK
+        string passwordHash
+        enum role
+        string firstName
+        string lastName
+        string name
+        string phone
+        json preferences
+        boolean newsletterOptIn
+        string provider
+        string providerId
+        string avatar
+        boolean isVerified
+        string establishmentId FK
+        string favoriteCity
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Professional {
+        string id PK
+        string siret UK
+        string firstName
+        string lastName
+        string email UK
+        string phone
+        string companyName
+        string legalStatus
+        enum subscriptionPlan
+        boolean siretVerified
+        datetime siretVerifiedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Establishment {
+        string id PK
+        string name
+        string slug UK
+        string description
+        string address
+        string city
+        string postalCode
+        string country
+        float latitude
+        float longitude
+        string phone
+        string email
+        string website
+        string instagram
+        string facebook
+        string tiktok
+        json activities
+        string specialites
+        string motsClesRecherche
+        json services
+        json ambiance
+        json paymentMethods
+        json horairesOuverture
+        float prixMoyen
+        int capaciteMax
+        boolean accessibilite
+        boolean parking
+        boolean terrasse
+        enum status
+        enum subscription
+        string ownerId FK
+        int viewsCount
+        int clicksCount
+        float avgRating
+        int totalComments
+        string imageUrl
+        float priceMax
+        float priceMin
+        json informationsPratiques
+        string googlePlaceId
+        string googleBusinessUrl
+        boolean enriched
+        json enrichmentData
+        json envieTags
+        int priceLevel
+        float googleRating
+        int googleReviewCount
+        string theForkLink
+        string uberEatsLink
+        json specialties
+        json atmosphere
+        json accessibility
+        json accessibilityDetails
+        json detailedServices
+        json clienteleInfo
+        json detailedPayments
+        json childrenServices
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    UserFavorite {
+        string id PK
+        string userId FK
+        string establishmentId FK
+        boolean receiveNewsletter
+        datetime createdAt
+    }
+
+    UserLike {
+        string id PK
+        string userId FK
+        string establishmentId FK
+        datetime createdAt
+    }
+
+    UserComment {
+        string id PK
+        string content
+        int rating
+        string userId FK
+        string establishmentId FK
+        boolean isVisible
+        int reportedCount
+        datetime moderatedAt
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Image {
+        string id PK
+        string url
+        string altText
+        boolean isPrimary
+        int ordre
+        string establishmentId FK
+        datetime createdAt
+    }
+
+    Event {
+        string id PK
+        string title
+        string description
+        datetime startDate
+        datetime endDate
+        string imageUrl
+        float price
+        int maxCapacity
+        boolean isRecurring
+        string establishmentId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    EtablissementTag {
+        int id PK
+        string etablissementId FK
+        string tag
+        string typeTag
+        int poids
+        datetime createdAt
+    }
+
+    FeaturedPromotion {
+        string id PK
+        string title
+        string description
+        datetime startDate
+        datetime endDate
+        enum placementType
+        string establishmentId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Pricing {
+        string id PK
+        string serviceId
+        float price
+        string establishmentId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    Tariff {
+        string id PK
+        string label
+        float price
+        string establishmentId FK
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    %% Relations
+    User ||--o{ Establishment : owns
+    User ||--o{ UserFavorite : creates
+    User ||--o{ UserLike : creates
+    User ||--o{ UserComment : writes
+    Establishment ||--o{ UserFavorite : "is favorited by"
+    Establishment ||--o{ UserLike : "is liked by"
+    Establishment ||--o{ UserComment : "has comments"
+    Establishment ||--o{ Image : "has images"
+    Establishment ||--o{ Event : "hosts events"
+    Establishment ||--o{ EtablissementTag : "has tags"
+    Establishment ||--o{ FeaturedPromotion : "has promotions"
+    Establishment ||--o{ Pricing : "has pricing"
+    Establishment ||--o{ Tariff : "has tariffs"
+```
+
 ### Modèles Principaux
 ```prisma
 model User {
