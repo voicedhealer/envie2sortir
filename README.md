@@ -623,6 +623,128 @@ enum SubscriptionType {
   ENTERPRISE
 }
 ```
+## 📊 Diagrammes de Séquence - Interactions Critiques
+
+### 1. 🔐 Connexion Utilisateur (Authentification)
+
+```mermaid
+sequenceDiagram
+    participant U as Utilisateur
+    participant F as Frontend (React)
+    participant A as NextAuth API
+    participant D as Database (Prisma)
+    participant S as Session Store
+
+    U->>F: 1. Accède à /auth
+    F->>U: 2. Affiche formulaire de connexion
+    
+    U->>F: 3. Saisit email + mot de passe
+    F->>A: 4. POST /api/auth/signin
+    A->>D: 5. SELECT user WHERE email = ?
+    D-->>A: 6. Retourne utilisateur + hash
+    
+    A->>A: 7. Vérifie mot de passe (bcrypt)
+    alt Mot de passe correct
+        A->>S: 8. Crée session JWT
+        S-->>A: 9. Token de session
+        A-->>F: 10. Succès + redirection
+        F->>U: 11. Redirige vers dashboard
+    else Mot de passe incorrect
+        A-->>F: 12. Erreur d'authentification
+        F->>U: 13. Affiche message d'erreur
+    end
+```
+
+### 2. 🔍 Recherche d'Établissements (Cas Principal)
+
+```mermaid
+sequenceDiagram
+    participant U as Utilisateur
+    participant F as Frontend (React)
+    participant A as API /recherche
+    participant D as Database (Prisma)
+    participant G as Google Places API
+    participant M as Map Component
+
+    U->>F: 1. Saisit ville + activité
+    F->>A: 2. POST /api/recherche/filtered
+    A->>D: 3. SELECT establishments WHERE city = ? AND activities LIKE ?
+    D-->>A: 4. Liste des établissements
+    
+    A->>A: 5. Calcul distances + filtres
+    A->>G: 6. Enrichissement données (optionnel)
+    G-->>A: 7. Données complémentaires
+    
+    A-->>F: 8. Résultats paginés (15/page)
+    F->>M: 9. Affiche carte interactive
+    F->>U: 10. Grille de cartes + carte
+    
+    U->>F: 11. Clique sur établissement
+    F->>U: 12. Redirige vers /etablissements/[slug]
+```
+
+### 3. 🏢 Création d'Établissement (Professionnel)
+
+```mermaid
+sequenceDiagram
+    participant P as Professionnel
+    participant F as Frontend (React)
+    participant A as API /etablissements
+    participant D as Database (Prisma)
+    participant G as Google Places API
+    participant S as Storage (Images)
+
+    P->>F: 1. Accède à /etablissements/nouveau
+    F->>P: 2. Affiche formulaire multi-étapes
+    
+    P->>F: 3. Remplit informations de base
+    F->>A: 4. POST /api/etablissements avec données
+    A->>D: 5. INSERT INTO establishments
+    D-->>A: 6. ID de l'établissement créé
+    
+    P->>F: 7. Upload images
+    F->>S: 8. POST /api/upload/image
+    S-->>F: 9. URLs des images
+    F->>A: 10. PUT /api/etablissements/images
+    
+    A->>G: 11. Enrichissement automatique
+    G-->>A: 12. Données Google Places
+    A->>D: 13. UPDATE establishment avec données enrichies
+    
+    A-->>F: 14. Succès + slug généré
+    F->>P: 15. Redirige vers dashboard pro
+```
+
+### 📋 Résumé des Interactions Critiques
+
+#### 🔐 Authentification (Cas 1)
+- **Composants** : Frontend → NextAuth → Database → Session Store
+- **Points critiques** : Vérification bcrypt, gestion JWT, protection des routes
+- **Sécurité** : Hashage des mots de passe, tokens sécurisés
+
+#### 🔍 Recherche (Cas 2)
+- **Composants** : Frontend → API Recherche → Database → Google Places → Map
+- **Points critiques** : Filtrage intelligent, pagination, géolocalisation
+- **Performance** : Requêtes optimisées, cache des résultats
+
+#### �� Création Établissement (Cas 3)
+- **Composants** : Frontend → API CRUD → Database → Google Places → Storage
+- **Points critiques** : Validation multi-étapes, enrichissement automatique
+- **UX** : Formulaire progressif, upload d'images, génération de slug
+
+#### �� Points Techniques Clés
+
+**Architecture des Interactions :**
+1. **Frontend React** : Interface utilisateur et gestion d'état
+2. **API Next.js** : Logique métier et validation
+3. **Database Prisma** : Persistance des données
+4. **Services externes** : Google Places, Storage, Auth
+
+**Flux de Données :**
+- **Synchronisation** : Session ↔ Database ↔ Frontend
+- **Validation** : Client-side + Server-side
+- **Enrichissement** : Données manuelles + automatiques
+- **Performance** : Cache, pagination, requêtes optimisées
 
 ## 🚀 Installation et Démarrage
 
