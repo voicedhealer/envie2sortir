@@ -19,6 +19,31 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // Créer ou récupérer le Professional pour l'admin
+    let professional = await prisma.professional.findFirst({
+      where: { email: adminUser.email }
+    });
+
+    if (!professional) {
+      console.log('👨‍💼 Création du Professional pour l\'admin...');
+      professional = await prisma.professional.create({
+        data: {
+          siret: `ADMIN_${adminUser.id}`,
+          firstName: adminUser.firstName || 'Admin',
+          lastName: adminUser.lastName || 'Envie2Sortir',
+          email: adminUser.email,
+          phone: '0123456789',
+          companyName: 'Admin Envie2Sortir',
+          legalStatus: 'Admin',
+          subscriptionPlan: 'FREE',
+          siretVerified: true
+        }
+      });
+      console.log('✅ Professional créé:', professional.id);
+    } else {
+      console.log('✅ Professional existant trouvé:', professional.id);
+    }
     
     const formData = await request.formData();
     console.log('📝 FormData reçu:', Array.from(formData.keys()));
@@ -156,7 +181,7 @@ export async function POST(request: NextRequest) {
         envieTags: establishmentData.envieTags,
         theForkLink: establishmentData.theForkLink,
         uberEatsLink: establishmentData.uberEatsLink,
-        ownerId: adminUser.id,
+        ownerId: professional.id,
         status: 'active' // Approuver automatiquement
       }
     });

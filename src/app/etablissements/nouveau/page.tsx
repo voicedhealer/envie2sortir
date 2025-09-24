@@ -12,31 +12,20 @@ export default async function NewEstablishmentPage() {
   if (session?.user?.id) {
     console.log('🔍 Debug - Session user:', {
       id: session.user.id,
-      establishmentId: session.user.establishmentId,
       role: session.user.role
     });
     
     // Vérifier si l'utilisateur a déjà un établissement
-    // D'abord par establishmentId dans la session, puis par ownerId
+    // Recherche directe par ownerId (nouvelle architecture)
     let existingEstablishment = null;
     
-    if (session.user.establishmentId) {
-      console.log('🔍 Debug - Recherche par establishmentId:', session.user.establishmentId);
-      existingEstablishment = await prisma.establishment.findUnique({
-        where: { id: session.user.establishmentId }
-      });
-      console.log('🔍 Debug - Résultat recherche par ID:', existingEstablishment);
-    }
-    
-    if (!existingEstablishment) {
-      console.log('🔍 Debug - Recherche par ownerId:', session.user.id);
-      existingEstablishment = await prisma.establishment.findFirst({
-        where: {
-          ownerId: session.user.id
-        }
-      });
-      console.log('🔍 Debug - Résultat recherche par ownerId:', existingEstablishment);
-    }
+    console.log('🔍 Debug - Recherche par ownerId:', session.user.id);
+    existingEstablishment = await prisma.establishment.findFirst({
+      where: {
+        ownerId: session.user.id
+      }
+    });
+    console.log('🔍 Debug - Résultat recherche par ownerId:', existingEstablishment);
     
     console.log('🔍 Debug - Établissement trouvé:', existingEstablishment);
 

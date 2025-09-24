@@ -8,30 +8,27 @@ datasource db {
 }
 
 /// *
-///  * USER - Utilisateurs du site (consommateurs + professionnels)
-///  * Peuvent : chercher, liker, commenter, mettre en favoris
-///  * Si establishmentId est défini : professionnel propriétaire d'un établissement
+/// * USER - Utilisateurs finaux du site
+/// * Peuvent : chercher, liker, commenter, mettre en favoris
+/// * NE PEUVENT PAS : créer/gérer des établissements
 model User {
-  id              String          @id @default(cuid())
-  email           String          @unique
+  id              String         @id @default(cuid())
+  email           String         @unique
   passwordHash    String?
-  role            UserRole        @default(user)
+  role            UserRole       @default(user)
   firstName       String?
   lastName        String?
   name            String?
   phone           String?
   preferences     Json?
-  newsletterOptIn Boolean         @default(true)
-  // Champs pour l'authentification sociale
-  provider        String?         // "local", "google", "facebook"
-  providerId      String?         // ID du provider social
-  avatar          String?         // URL de l'avatar
-  isVerified      Boolean         @default(false)
-  establishmentId String?         // ID de l'établissement (pour les pros)
-  favoriteCity    String?         // Ville favorite de l'utilisateur
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  establishments  Establishment[]
+  newsletterOptIn Boolean        @default(true)
+  provider        String?
+  providerId      String?
+  avatar          String?
+  isVerified      Boolean        @default(false)
+  favoriteCity    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   comments        UserComment[]
   favorites       UserFavorite[]
   likes           UserLike[]
@@ -40,9 +37,10 @@ model User {
 }
 
 /// *
-///  * PROFESSIONAL - Propriétaires d'établissements
-///  * Seuls autorisés à créer/gérer des établissements
-///  * Vérification obligatoire via SIRET
+/// * PROFESSIONAL - Propriétaires d'établissements
+/// * Seuls autorisés à créer/gérer des établissements
+/// * Vérification obligatoire via SIRET
+/// * Relation 1:1 avec Establishment
 model Professional {
   id               String           @id @default(cuid())
   siret            String           @unique
@@ -57,97 +55,94 @@ model Professional {
   siretVerifiedAt  DateTime?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  establishment    Establishment?
 
   @@map("professionals")
 }
 
 /// *
-///  * ESTABLISHMENT - Établissements de sortie
-///  * Créés et gérés uniquement par des Professionals
-///  * Système de validation par l'admin avant publication
+/// * ESTABLISHMENT - Établissements de sortie
+/// * Créés et gérés uniquement par des Professionals
+/// * Système de validation par l'admin avant publication
+/// * Relation 1:1 avec Professional
 model Establishment {
-  id                 String              @id @default(cuid())
-  name               String
-  slug               String              @unique
-  description        String?
-  address            String
-  city               String?
-  postalCode         String?
-  country            String              @default("France")
-  latitude           Float?
-  longitude          Float?
-  phone              String?
-  email              String?
-  website            String?
-  instagram          String?
-  facebook           String?
-  activities         Json?
-  specialites        String              @default("")
-  motsClesRecherche  String?
-  services           Json?
-  ambiance           Json?
-  paymentMethods     Json?
-  horairesOuverture  Json?
-  prixMoyen          Float?
-  capaciteMax        Int?
-  accessibilite      Boolean             @default(false)
-  parking            Boolean             @default(false)
-  terrasse           Boolean             @default(false)
-  status             EstablishmentStatus @default(pending)
-  subscription       SubscriptionType    @default(STANDARD)
-  ownerId            String
-  viewsCount         Int                 @default(0)
-  clicksCount        Int                 @default(0)
-  avgRating          Float?
-  totalComments      Int                 @default(0)
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  tiktok             String?
-  imageUrl           String?
-  priceMax           Float?
-  priceMin           Float?
+  id                    String              @id @default(cuid())
+  name                  String
+  slug                  String              @unique
+  description           String?
+  address               String
+  city                  String?
+  postalCode            String?
+  country               String              @default("France")
+  latitude              Float?
+  longitude             Float?
+  phone                 String?
+  email                 String?
+  website               String?
+  instagram             String?
+  facebook              String?
+  activities            Json?
+  specialites           String              @default("")
+  motsClesRecherche     String?
+  services              Json?
+  ambiance              Json?
+  paymentMethods        Json?
+  horairesOuverture     Json?
+  prixMoyen             Float?
+  capaciteMax           Int?
+  accessibilite         Boolean             @default(false)
+  parking               Boolean             @default(false)
+  terrasse              Boolean             @default(false)
+  status                EstablishmentStatus @default(pending)
+  subscription          SubscriptionType    @default(STANDARD)
+  ownerId               String              @unique
+  viewsCount            Int                 @default(0)
+  clicksCount           Int                 @default(0)
+  avgRating             Float?
+  totalComments         Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  tiktok                String?
+  imageUrl              String?
+  priceMax              Float?
+  priceMin              Float?
   informationsPratiques Json?
-  
-  // Nouveaux champs pour l'enrichissement automatique
-  googlePlaceId      String?             // ID Google Places pour l'enrichissement
-  googleBusinessUrl  String?             // URL Google My Business
-  enriched           Boolean             @default(false) // Indique si l'établissement a été enrichi
-  enrichmentData     Json?               // Données d'enrichissement complètes
-  envieTags          Json?               // Tags "envie" générés automatiquement
-  priceLevel         Int?                // Niveau de prix (1-4) de Google
-  googleRating       Float?              // Note Google
-  googleReviewCount  Int?                // Nombre d'avis Google
-  theForkLink        String?             // Lien TheFork pour réservations
-  uberEatsLink       String?             // Lien Uber Eats
-  specialties        Json?               // Spécialités extraites des avis
-  atmosphere         Json?               // Ambiance détectée
-  accessibility      Json?               // Informations d'accessibilité (base)
-  
-  // Champs pour l'approche hybride - données complémentaires manuelles
-  accessibilityDetails Json?             // Accessibilité détaillée (toilettes, boucle magnétique, parking)
-  detailedServices   Json?               // Services détaillés (toilettes non genrées, piscine, etc.)
-  clienteleInfo      Json?               // Informations clientèle (LGBTQ+ friendly, etc.)
-  detailedPayments   Json?               // Moyens de paiement détaillés
-  childrenServices   Json?               // Services enfants
-  
-  owner              User                @relation(fields: [ownerId], references: [id])
-  tags               EtablissementTag[]
-  events             Event[]
-  featuredPromotions FeaturedPromotion[]
-  images             Image[]
-  pricing            Pricing[]
-  tariffs            Tariff[]
-  comments           UserComment[]
-  favorites          UserFavorite[]
-  likes              UserLike[]
+  googlePlaceId         String?
+  googleBusinessUrl     String?
+  enriched              Boolean             @default(false)
+  enrichmentData        Json?
+  envieTags             Json?
+  priceLevel            Int?
+  googleRating          Float?
+  googleReviewCount     Int?
+  theForkLink           String?
+  uberEatsLink          String?
+  specialties           Json?
+  atmosphere            Json?
+  accessibility         Json?
+  accessibilityDetails  Json?
+  detailedServices      Json?
+  clienteleInfo         Json?
+  detailedPayments      Json?
+  childrenServices      Json?
+  owner                 Professional        @relation(fields: [ownerId], references: [id])
+  tags                  EtablissementTag[]
+  events                Event[]
+  featuredPromotions    FeaturedPromotion[]
+  images                Image[]
+  pricing               Pricing[]
+  tariffs               Tariff[]
+  comments              UserComment[]
+  favorites             UserFavorite[]
+  likes                 UserLike[]
 
   @@map("establishments")
 }
 
 /// *
-///  * USER_FAVORITE - Établissements mis en favoris
-///  * Permet aux users de sauvegarder leurs établissements préférés
-///  * Active les notifications newsletter
+/// * USER_FAVORITE - Établissements mis en favoris
+/// * Permet aux users de sauvegarder leurs établissements préférés
+/// * Active les notifications newsletter
 model UserFavorite {
   id                String        @id @default(cuid())
   userId            String
@@ -162,8 +157,8 @@ model UserFavorite {
 }
 
 /// *
-///  * USER_LIKE - Système de likes
-///  * Permet aux users d'exprimer leur appréciation rapidement
+/// * USER_LIKE - Système de likes
+/// * Permet aux users d'exprimer leur appréciation rapidement
 model UserLike {
   id              String        @id @default(cuid())
   userId          String
@@ -177,8 +172,8 @@ model UserLike {
 }
 
 /// *
-///  * USER_COMMENT - Avis et commentaires
-///  * Système d'avis complet avec note sur 5 étoiles
+/// * USER_COMMENT - Avis et commentaires
+/// * Système d'avis complet avec note sur 5 étoiles
 model UserComment {
   id              String        @id @default(cuid())
   content         String
@@ -197,8 +192,8 @@ model UserComment {
 }
 
 /// *
-///  * IMAGE - Photos des établissements
-///  * Limitation selon l'abonnement : 1 (FREE) ou 10 (PREMIUM)
+/// * IMAGE - Photos des établissements
+/// * Limitation selon l'abonnement : 1 (FREE) ou 10 (PREMIUM)
 model Image {
   id              String        @id @default(cuid())
   url             String
@@ -213,8 +208,8 @@ model Image {
 }
 
 /// *
-///  * EVENT - Événements organisés par les établissements
-///  * Permet aux pros Premium de promouvoir leurs événements spéciaux
+/// * EVENT - Événements organisés par les établissements
+/// * Permet aux pros Premium de promouvoir leurs événements spéciaux
 model Event {
   id              String        @id @default(cuid())
   title           String
@@ -234,8 +229,8 @@ model Event {
 }
 
 /// *
-///  * ETABLISSEMENT_TAG - Tags pour la recherche
-///  * Système de tags pondérés pour améliorer la recherche "Envie de..."
+/// * ETABLISSEMENT_TAG - Tags pour la recherche
+/// * Système de tags pondérés pour améliorer la recherche "Envie de..."
 model EtablissementTag {
   id              Int           @id @default(autoincrement())
   etablissementId String
@@ -249,8 +244,8 @@ model EtablissementTag {
 }
 
 /// *
-///  * FEATURED_PROMOTION - Promotions mises en avant
-///  * Système de mise en avant payante pour les établissements Premium
+/// * FEATURED_PROMOTION - Promotions mises en avant
+/// * Système de mise en avant payante pour les établissements Premium
 model FeaturedPromotion {
   id              String                @id @default(cuid())
   title           String
@@ -267,8 +262,8 @@ model FeaturedPromotion {
 }
 
 /// *
-///  * PRICING - Tarifs des services/activités
-///  * Permet aux établissements de définir leurs prix par service
+/// * PRICING - Tarifs des services/activités
+/// * Permet aux établissements de définir leurs prix par service
 model Pricing {
   id              String        @id @default(cuid())
   serviceId       String
@@ -282,8 +277,8 @@ model Pricing {
 }
 
 /// *
-///  * TARIFF - Tarifs personnalisés des établissements
-///  * Permet aux professionnels de créer leurs propres tarifs
+/// * TARIFF - Tarifs personnalisés des établissements
+/// * Permet aux professionnels de créer leurs propres tarifs
 model Tariff {
   id              String        @id @default(cuid())
   label           String
@@ -303,10 +298,10 @@ enum UserRole {
 }
 
 /// *
-///  * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
-///  * Chaque activité correspond à une expérience spécifique
-///  * Permet un matching parfait avec les intentions des clients
-///  * Un établissement peut proposer plusieurs activités
+/// * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
+/// * Chaque activité correspond à une expérience spécifique
+/// * Permet un matching parfait avec les intentions des clients
+/// * Un établissement peut proposer plusieurs activités
 enum EstablishmentActivity {
   bar_ambiance
   pub_traditionnel
@@ -315,9 +310,9 @@ enum EstablishmentActivity {
   bar_vins
   bar_sports
   rooftop_bar
-  bar_karaoké
+  // bar_karaoké
   bar_jeux
-  bar_bières
+  // bar_bières
   restaurant_gastronomique
   restaurant_traditionnel
   restaurant_familial

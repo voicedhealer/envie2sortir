@@ -11,13 +11,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: "Aucun établissement associé" }, { status: 404 });
-    }
-    
-    // Récupérer l'établissement de l'utilisateur
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
+    // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
+    const establishment = await prisma.establishment.findFirst({
+      where: { ownerId: session.user.id },
       select: {
         id: true,
         name: true,
@@ -63,7 +59,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    if (!session.user.establishmentId) {
+    // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
+    const establishment = await prisma.establishment.findFirst({
+      where: { ownerId: session.user.id }
+    });
+
+    if (!establishment) {
       return NextResponse.json({ error: "Aucun établissement associé" }, { status: 404 });
     }
 
@@ -71,7 +72,7 @@ export async function PUT(request: NextRequest) {
 
     // Mettre à jour l'image principale
     await prisma.establishment.update({
-      where: { id: session.user.establishmentId },
+      where: { id: establishment.id },
       data: { imageUrl }
     });
 

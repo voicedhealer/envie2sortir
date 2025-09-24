@@ -2,8 +2,6 @@
 
 Une plateforme moderne et intuitive pour découvrir tous les établissements de divertissement près de chez vous.
 
-## 🚀 Fonctionnalités Principales
-
 ### 🏠 Page d'Accueil Ultra-Performante
 - **Hero Section** avec gradient orange-pink-rouge et slogan accrocheur
 - **Barre de recherche intelligente** avec double input (ville + activité)
@@ -48,6 +46,7 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 - **Connexion par email/mot de passe**
 - **Connexion sociale** (Google, Facebook) - optionnelle
 - **Rôles utilisateurs** : Admin, Professionnel, Utilisateur
+- **Architecture cohérente** : User (utilisateurs finaux) ↔ Professional (propriétaires) ↔ Establishment
 - **Protection des routes** avec middleware
 - **Gestion des sessions** avec hydratation optimisée
 
@@ -240,6 +239,28 @@ graph TB
 
 ## 🗄️ Structure de la Base de Données
 
+### Architecture de la Base de Données
+
+#### 🏗️ **Séparation des Responsabilités**
+
+**User (Utilisateurs Finaux)**
+- 👥 **Rôle** : Utilisateurs finaux du site
+- ✅ **Peuvent** : chercher, liker, commenter, mettre en favoris
+- ❌ **NE PEUVENT PAS** : créer/gérer des établissements
+- 🔗 **Relations** : UserComment, UserFavorite, UserLike
+
+**Professional (Propriétaires d'Établissements)**
+- 🏢 **Rôle** : Propriétaires d'établissements
+- ✅ **Seuls autorisés** à créer/gérer des établissements
+- 🔍 **Vérification obligatoire** via SIRET
+- 🔗 **Relation 1:1** avec Establishment
+
+**Establishment (Établissements)**
+- 🏪 **Rôle** : Établissements de sortie
+- 👨‍💼 **Créés et gérés** uniquement par des Professionals
+- ✅ **Système de validation** par l'admin avant publication
+- 🔗 **Propriétaire** : Professional (relation 1:1 avec @unique)
+
 ### Diagramme Entité-Relation (ER)
 
 ```mermaid
@@ -259,7 +280,6 @@ erDiagram
         string providerId
         string avatar
         boolean isVerified
-        string establishmentId FK
         string favoriteCity
         datetime createdAt
         datetime updatedAt
@@ -435,8 +455,8 @@ erDiagram
         datetime updatedAt
     }
 
-    %% Relations
-    User ||--o{ Establishment : owns
+    %% Relations - Architecture Cohérente
+    Professional ||--o| Establishment : owns
     User ||--o{ UserFavorite : creates
     User ||--o{ UserLike : creates
     User ||--o{ UserComment : writes
@@ -451,30 +471,60 @@ erDiagram
     Establishment ||--o{ Tariff : "has tariffs"
 ```
 
-### Modèles Principaux
+### Modèles Principaux - Architecture Cohérente
+
+#### User (Utilisateurs Finaux)
 ```prisma
 model User {
   id              String   @id @default(cuid())
   email           String   @unique
   firstName       String?
   lastName        String?
-  role            UserRole
+  role            UserRole @default(user)
   favoriteCity    String?
-  establishmentId String?
-  establishment   Establishment? @relation(fields: [establishmentId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  
+  // Relations
+  comments        UserComment[]
+  favorites       UserFavorite[]
+  likes           UserLike[]
 }
+```
 
+#### Professional (Propriétaires d'Établissements)
+```prisma
+model Professional {
+  id               String           @id @default(cuid())
+  siret            String           @unique
+  firstName        String
+  lastName         String
+  email            String           @unique
+  phone            String
+  companyName      String
+  legalStatus      String
+  subscriptionPlan SubscriptionPlan @default(FREE)
+  siretVerified    Boolean          @default(false)
+  siretVerifiedAt  DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  
+  // Relations
+  establishment    Establishment?   // Relation 1:1
+}
+```
+
+#### Establishment (Établissements)
+```prisma
 model Establishment {
   id                    String   @id @default(cuid())
   name                  String
   slug                  String   @unique
   description           String?
   address               String
-  city                  String
-  postalCode            String
-  country               String
+  city                  String?
+  postalCode            String?
+  country               String   @default("France")
   latitude              Float?
   longitude             Float?
   phone                 String?
@@ -483,8 +533,8 @@ model Establishment {
   instagram             String?
   facebook              String?
   tiktok                String?
-  activities            String[] // Système d'activités étendu
-  specialites           String?
+  activities            Json?    // Système d'activités étendu
+  specialites           String   @default("")
   motsClesRecherche     String?
   services              Json?    // Services organisés
   ambiance              Json?    // Ambiance organisée
@@ -492,13 +542,13 @@ model Establishment {
   horairesOuverture     Json?    // Horaires
   prixMoyen             Float?
   capaciteMax           Int?
-  accessibilite         String?
-  parking               Boolean?
-  terrasse              Boolean?
-  status                EstablishmentStatus
-  subscription          SubscriptionType
-  ownerId               String
-  owner                 User     @relation(fields: [ownerId], references: [id])
+  accessibilite         Boolean  @default(false)
+  parking               Boolean  @default(false)
+  terrasse              Boolean  @default(false)
+  status                EstablishmentStatus @default(pending)
+  subscription          SubscriptionType    @default(STANDARD)
+  ownerId               String   @unique    // FK vers Professional
+  owner                 Professional @relation(fields: [ownerId], references: [id])
   viewsCount            Int      @default(0)
   clicksCount           Int      @default(0)
   avgRating             Float?

@@ -15,13 +15,9 @@ export default async function DashboardPage() {
     redirect('/auth?error=AccessDenied');
   }
 
-  if (!session.user.establishmentId || session.user.establishmentId === '') {
-    redirect('/etablissements/nouveau');
-  }
-
-  // Récupérer l'établissement de l'utilisateur
-  const establishment = await prisma.establishment.findUnique({
-    where: { id: session.user.establishmentId },
+  // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
+  const establishment = await prisma.establishment.findFirst({
+    where: { ownerId: session.user.id },
     select: {
       id: true,
       name: true,

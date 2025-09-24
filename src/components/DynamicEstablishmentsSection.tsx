@@ -145,10 +145,10 @@ export default function DynamicEstablishmentsSection() {
         {/* Container avec animation de défilement */}
         <div className="relative overflow-hidden">
           <div className="flex animate-scroll space-x-6">
-            {/* Afficher les établissements une seule fois, pas de duplication */}
-            {establishments.map((establishment, index) => (
+            {/* Duplication des établissements pour un scroll infini */}
+            {[...establishments, ...establishments].map((establishment, index) => (
               <div 
-                key={establishment.id} 
+                key={`${establishment.id}-${index}`} 
                 className="flex-shrink-0 w-80"
               >
                 <EstablishmentCard establishment={establishment} />

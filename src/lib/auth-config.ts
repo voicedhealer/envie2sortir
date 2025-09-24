@@ -46,14 +46,6 @@ export const authOptions = {
 
           console.log('✅ Authentification réussie pour:', credentials.email);
 
-          // Rechercher l'établissement de l'utilisateur (seulement pour les pros)
-          let establishment = null;
-          if (user.role === 'pro') {
-            establishment = await prisma.establishment.findFirst({
-              where: { ownerId: user.id }
-            });
-          }
-
           // Retourner les informations utilisateur
           return {
             id: user.id,
@@ -62,7 +54,6 @@ export const authOptions = {
             firstName: user.firstName || '',
             lastName: user.lastName || '',
             role: user.role,
-            establishmentId: establishment?.id || '',
             favoriteCity: user.favoriteCity || ''
           };
         } catch (error) {
@@ -125,7 +116,6 @@ export const authOptions = {
           user.role = existingUser.role;
           user.firstName = existingUser.firstName;
           user.lastName = existingUser.lastName;
-          user.establishmentId = '';
           user.favoriteCity = existingUser.favoriteCity || '';
 
           return true;
@@ -141,7 +131,6 @@ export const authOptions = {
       console.log('🔐 JWT Callback - Token:', token ? 'Present' : 'Not present');
       
       if (user) {
-        token.establishmentId = user.establishmentId;
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
@@ -161,7 +150,6 @@ export const authOptions = {
       
       if (token && session.user) {
         session.user.id = token.sub as string;
-        session.user.establishmentId = token.establishmentId as string;
         session.user.role = token.role as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
