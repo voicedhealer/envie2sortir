@@ -33,7 +33,8 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
 
   const isLoading = status === 'loading';
 
-  if (isLoading) {
+  // Ne pas afficher le contenu tant que l'hydratation n'est pas terminée
+  if (!isHydrated || isLoading) {
     return (
       <div className={`flex items-center space-x-2 ${isMobile ? 'py-2' : ''}`}>
         <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>

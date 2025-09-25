@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from '@/lib/fake-toast';
 import EstablishmentHero from '@/components/EstablishmentHero';
 import EstablishmentInfo from '@/components/EstablishmentInfo';
 import EstablishmentSections from '@/components/EstablishmentSections';
@@ -188,19 +189,45 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     console.log('Ajouter aux favoris');
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
+    // 1. Essayer l'API Web Share (mobile principalement)
     if (navigator.share) {
-      navigator.share({
-        title: establishment.name,
-        text: establishment.description,
-        url: window.location.href,
-      });
-    } else {
-      // Fallback: copier l'URL dans le presse-papiers
-      navigator.clipboard.writeText(window.location.href);
-      alert('Lien copié dans le presse-papiers !');
+      try {
+        const shareData = {
+          title: establishment.name,
+          text: establishment.description || `Découvrez ${establishment.name} sur Envie2Sortir`,
+          url: window.location.href,
+        };
+        
+        await navigator.share(shareData);
+        console.log('✅ Partage réussi via Web Share API');
+        return;
+      } catch (error) {
+        // Si le partage a été annulé par l'utilisateur, c'est normal
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Partage annulé par l\'utilisateur');
+          return;
+        }
+        // Autres erreurs, continuer vers le fallback
+        console.warn('Erreur Web Share API:', error);
+      }
     }
+
+    // 2. Fallback: copier dans le presse-papiers
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('Lien copié dans le presse-papiers !');
+        return;
+      }
+    } catch (error) {
+      console.warn('Erreur clipboard:', error);
+    }
+
+    // 3. Fallback final: afficher une alerte simple
+    alert(`Partagez ce lien : ${window.location.href}`);
   };
+
 
   return (
     <div className="min-h-screen bg-gray-50">

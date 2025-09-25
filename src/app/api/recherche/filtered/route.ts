@@ -214,7 +214,14 @@ export async function GET(request: NextRequest) {
           .replace(/[\u0300-\u036f]/g, "");
         keywords.forEach(keyword => {
           if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
-            const tagScore = tag.poids * 10;
+            // Ajuster le poids pour les tags "envie de" génériques
+            let adjustedPoids = tag.poids;
+            if (tag.tag.toLowerCase().includes('envie de découvrir') || 
+                tag.tag.toLowerCase().includes('envie de sortir') ||
+                tag.tag.toLowerCase().includes('envie de détente')) {
+              adjustedPoids = 3; // Réduire le poids des tags génériques
+            }
+            const tagScore = adjustedPoids * 10;
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
             console.log(`️ TAG MATCH: ${establishment.name} - "${tag.tag}" +${tagScore} (total: ${thematicScore})`);
@@ -291,7 +298,7 @@ export async function GET(request: NextRequest) {
 
     // Filtrer par pertinence thématique
     const relevantEstablishments = scoredEstablishments
-      .filter(est => est.thematicScore > 200); // Score du resultat filtre
+      .filter(est => est.thematicScore > 70); // Score du resultat filtre
 
     // Appliquer le tri selon le filtre
     const sortedEstablishments = applySorting(relevantEstablishments, filter);

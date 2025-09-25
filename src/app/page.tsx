@@ -9,6 +9,16 @@ export default function Home() {
       <section className="relative">
         <div className="hero-gradient/10">
           <div className="absolute inset-0 hero-gradient opacity-15" aria-hidden></div>
+          
+          {/* Image de danse semi-transparente à droite */}
+          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-130 h-140 opacity-30 pointer-events-none hidden lg:block">
+            <img 
+              src="/hero_danse.png" 
+              alt="Silhouettes de danse" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
             <div className="max-w-3xl">
               <span className="inline-block px-3 py-1 text-xs rounded-full bg-black/5 text-gray-700">La plateforme ultra-locale de TOUS les divertissements</span>

@@ -491,7 +491,7 @@ export default function EstablishmentCard({
             </div>
           )}
 
-          {/* Badge catégorie (coin supérieur droit) - FOND NOIR SEMI-TRANSPARENT */}
+          {/* Badge catégorie (coin supérieur droit) - FOND PINK */}
           <div className="absolute top-2 right-2">
             <div className="px-2 py-1 bg-pink-600 bg-opacity-50 text-white text-xs rounded-full font-regular">
               {getMainCategory(establishment)}
@@ -566,7 +566,7 @@ export default function EstablishmentCard({
             {/* 3ème ligne : Description courte */}
             {establishment.description && (
               <p className="text-gray-600 text-sm leading-relaxed">
-                {truncateText(establishment.description, 80)}
+                {truncateText(establishment.description, 70)}
               </p>
             )}
 

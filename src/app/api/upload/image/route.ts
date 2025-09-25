@@ -3,19 +3,60 @@ import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { prisma } from '@/lib/prisma';
+import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
+import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const requestId = request.headers.get('x-request-id') || 'unknown';
+  const ipAddress = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
+  const requestLogger = createRequestLogger(requestId, undefined, ipAddress);
+
   try {
     const formData = await request.formData();
     const file = formData.get('image') as File;
     const establishmentId = formData.get('establishmentId') as string;
     
     if (!file) {
+      const responseTime = Date.now() - startTime;
+      recordAPIMetric('/api/upload/image', 'POST', 400, responseTime, { ipAddress });
+      
+      await requestLogger.warn('No file provided for upload', {
+        establishmentId,
+        ipAddress
+      });
+
       return NextResponse.json({ error: 'Aucun fichier fourni' }, { status: 400 });
     }
 
     if (!establishmentId) {
+      const responseTime = Date.now() - startTime;
+      recordAPIMetric('/api/upload/image', 'POST', 400, responseTime, { ipAddress });
+      
+      await requestLogger.warn('No establishment ID provided for upload', {
+        ipAddress
+      });
+
       return NextResponse.json({ error: 'ID de l\'établissement requis' }, { status: 400 });
+    }
+
+    // Validation sécurisée du fichier
+    const fileValidation = validateFile(file, IMAGE_VALIDATION);
+    if (!fileValidation.valid) {
+      const responseTime = Date.now() - startTime;
+      recordAPIMetric('/api/upload/image', 'POST', 400, responseTime, { ipAddress });
+      
+      await requestLogger.warn('Invalid file upload attempt', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        error: fileValidation.error,
+        ipAddress
+      });
+
+      return NextResponse.json({ 
+        error: fileValidation.error 
+      }, { status: 400 });
     }
 
     // Vérifier que l'établissement existe et récupérer son plan d'abonnement
@@ -51,21 +92,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`📸 Upload autorisé pour ${establishment.name} (${establishment.subscription}): ${existingImagesCount + 1}/${maxImages} images`);
 
-    // Vérifier le type de fichier
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ 
-        error: 'Type de fichier non autorisé. Formats acceptés: JPG, PNG, WebP' 
-      }, { status: 400 });
-    }
-
-    // Vérifier la taille (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ 
-        error: 'Fichier trop volumineux. Taille maximum: 5MB' 
-      }, { status: 400 });
-    }
+    // Le fichier a déjà été validé avec validateFile() plus haut
 
     // Créer le dossier uploads s'il n'existe pas
     const uploadsDir = join(process.cwd(), 'public', 'uploads');
@@ -107,8 +134,20 @@ export async function POST(request: NextRequest) {
       data: { imageUrl: imageUrl }
     });
 
-    console.log('✅ Image créée en base:', imageRecord.id);
-    console.log('✅ ImageUrl de l\'établissement mise à jour:', imageUrl);
+    const responseTime = Date.now() - startTime;
+    recordAPIMetric('/api/upload/image', 'POST', 200, responseTime, {
+      establishmentId,
+      ipAddress
+    });
+
+    await requestLogger.info('Image uploaded successfully', {
+      establishmentId,
+      imageId: imageRecord.id,
+      fileName,
+      fileSize: file.size,
+      fileType: file.type,
+      responseTime
+    });
     
     return NextResponse.json({ 
       success: true, 
@@ -118,7 +157,8 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Erreur upload image:', error);
+    const responseTime = Date.now() - startTime;
+    recordAPIMetric('/api/upload/image', 'POST', 500, responseTime, { ipAddress });
     
     // Messages d'erreur plus spécifiques
     let errorMessage = 'Erreur lors de l\'upload de l\'image';
@@ -134,6 +174,11 @@ export async function POST(request: NextRequest) {
         errorMessage = error.message;
       }
     }
+
+    await requestLogger.error('Image upload failed', {
+      error: errorMessage,
+      ipAddress
+    }, error);
     
     return NextResponse.json({ 
       error: errorMessage 

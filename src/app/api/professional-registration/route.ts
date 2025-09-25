@@ -213,14 +213,14 @@ export async function POST(request: Request) {
         });
       }
       
-      // Tags "envie de" personnalisés (poids très élevé car très spécifiques)
+      // Tags "envie de" personnalisés (poids modéré pour éviter les scores trop élevés)
       for (const envieTag of establishmentData.envieTags) {
         console.log(`  💭 Tag "envie de" ajouté: "${envieTag}"`);
         allTagsData.push({
           etablissementId: establishment.id,
           tag: envieTag.toLowerCase(),
           typeTag: 'envie',
-          poids: 15 // Poids très élevé pour les tags "envie de"
+          poids: 3 // Poids modéré pour les tags "envie de" (3 × 10 = 30 points)
         });
       }
       

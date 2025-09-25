@@ -16,7 +16,7 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
 
 // Fonction pour extraire les mots-clés significatifs
 function extractKeywords(envie: string): string[] {
-  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux'];
+  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire','avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux'];
   
   return envie
     .toLowerCase()
@@ -167,10 +167,17 @@ export async function GET(request: NextRequest) {
           .replace(/[\u0300-\u036f]/g, "");
         keywords.forEach(keyword => {
           if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
-            const tagScore = tag.poids * 10; // Poids du tag * 10
+            // Ajuster le poids pour les tags "envie de" génériques
+            let adjustedPoids = tag.poids;
+            if (tag.tag.toLowerCase().includes('envie de découvrir') || 
+                tag.tag.toLowerCase().includes('envie de sortir') ||
+                tag.tag.toLowerCase().includes('envie de détente')) {
+              adjustedPoids = 3; // Réduire le poids des tags génériques
+            }
+            const tagScore = adjustedPoids * 10; // Poids du tag * 10
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
-            console.log(`  🏷️  Tag "${tag.tag}" (poids: ${tag.poids}) correspond à "${keyword}" → +${tagScore} points`);
+            console.log(`  🏷️  Tag "${tag.tag}" (poids: ${adjustedPoids}) correspond à "${keyword}" → +${tagScore} points`);
           }
         });
       });

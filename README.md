@@ -88,6 +88,429 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 
 ## 🏗️ Architecture du Système
 
+### Diagramme de Classes UML - Backend
+
+```mermaid
+classDiagram
+    %% ===== CLASSES DE SERVICE PRINCIPALES =====
+    
+    class EstablishmentEnrichment {
+        -String apiKey
+        -EnrichmentData enrichmentData
+        -String establishmentType
+        
+        +triggerGoogleEnrichment(googleUrl) Promise~EnrichmentData~
+        -fetchGooglePlaceData(placeId, placeName) Promise~Object~
+        -parseGooglePlaceData(placeData) EnrichmentData
+        -generateEnvieTags(placeData) String[]
+        -extractSpecialties(placeData) String[]
+        -determineAtmosphere(placeData) String[]
+        -extractAccessibilityInfo(placeData) AccessibilityInfo
+        -extractPaymentMethods(placeData) String[]
+        -extractServices(placeData) String[]
+        -extractClienteleInfo(placeData) ClienteleInfo
+        -extractChildrenServices(placeData) String[]
+        -determinePriceLevel(placeData) Number
+        -extractBusinessHours(placeData) Object
+        -extractContactInfo(placeData) Object
+        -extractSocialMedia(placeData) Object
+        -extractImages(placeData) String[]
+        -extractReviews(placeData) Object[]
+        -calculateEnrichmentScore(placeData) Number
+        -validateEnrichmentData(data) Boolean
+    }
+
+    class AuthService {
+        -PrismaClient prisma
+        -String jwtSecret
+        
+        +signUp(firstName, lastName, email, password) Promise~User~
+        +signIn(email, password) Promise~AuthResult~
+        +getCurrentUser(request) Promise~User~
+        +hashPassword(password) Promise~String~
+        +validateCredentials(email, password) Promise~Boolean~
+        +generateToken(user) String
+        +verifyToken(token) Promise~User~
+        +refreshToken(userId) String
+        -sanitizeUserInput(input) String
+        -validateEmailFormat(email) Boolean
+        -checkPasswordStrength(password) Boolean
+    }
+
+    class EstablishmentService {
+        -PrismaClient prisma
+        -ValidationService validator
+        -EnrichmentService enricher
+        
+        +createEstablishment(data) Promise~Establishment~
+        +updateEstablishment(id, data) Promise~Establishment~
+        +deleteEstablishment(id) Promise~Boolean~
+        +getEstablishmentBySlug(slug) Promise~Establishment~
+        +searchEstablishments(query) Promise~Establishment[]~
+        +getEstablishmentsByLocation(lat, lng, radius) Promise~Establishment[]~
+        +getEstablishmentsByCategory(category) Promise~Establishment[]~
+        +getFeaturedEstablishments() Promise~Establishment[]~
+        +incrementViews(establishmentId) Promise~void~
+        +incrementClicks(establishmentId) Promise~void~
+        -validateEstablishmentData(data) Boolean
+        -generateSlug(name) String
+        -sanitizeEstablishmentData(data) Object
+        -checkSlugUniqueness(slug) Promise~Boolean~
+    }
+
+    class SearchService {
+        -PrismaClient prisma
+        -ScoringService scorer
+        -GeocodingService geocoder
+        
+        +searchByEnvie(query, location, radius) Promise~SearchResult[]~
+        +searchByFilters(filters) Promise~Establishment[]~
+        +calculateThematicScore(query, establishment) Number
+        +extractKeywords(query) String[]
+        +applySorting(establishments, filter) Establishment[]
+        +geocodeAddress(address) Promise~Coordinates~
+        +reverseGeocode(lat, lng) Promise~Address~
+        +getNearbyEstablishments(lat, lng, radius) Promise~Establishment[]~
+        -normalizeQuery(query) String
+        -removeStopWords(query) String
+        -calculateDistance(lat1, lng1, lat2, lng2) Number
+        -validateSearchParameters(params) Boolean
+    }
+
+    class ProfessionalService {
+        -PrismaClient prisma
+        -SubscriptionService subscriptionService
+        
+        +createProfessional(data) Promise~Professional~
+        +updateProfessional(id, data) Promise~Professional~
+        +getProfessionalDashboard(professionalId) Promise~DashboardData~
+        +createEstablishment(professionalId, data) Promise~Establishment~
+        +updateEstablishment(professionalId, establishmentId, data) Promise~Establishment~
+        +getProfessionalEstablishments(professionalId) Promise~Establishment[]~
+        +validateSiret(siret) Promise~Boolean~
+        +checkSubscriptionAccess(professionalId, feature) Promise~Boolean~
+        +upgradeSubscription(professionalId, plan) Promise~Boolean~
+        -validateProfessionalData(data) Boolean
+        -checkSiretUniqueness(siret) Promise~Boolean~
+    }
+
+    class EventService {
+        -PrismaClient prisma
+        -SubscriptionService subscriptionService
+        
+        +createEvent(establishmentId, data) Promise~Event~
+        +updateEvent(eventId, data) Promise~Event~
+        +deleteEvent(eventId) Promise~Boolean~
+        +getEstablishmentEvents(establishmentId) Promise~Event[]~
+        +getUpcomingEvents(establishmentId) Promise~Event[]~
+        +getEventById(eventId) Promise~Event~
+        +searchEvents(query) Promise~Event[]~
+        -validateEventData(data) Boolean
+        -checkEventConflicts(establishmentId, startDate, endDate) Promise~Boolean~
+        -calculateEventDuration(startDate, endDate) Number
+    }
+
+    class ImageService {
+        -FileStorageService storage
+        -PrismaClient prisma
+        -SubscriptionService subscriptionService
+        
+        +uploadImage(establishmentId, file) Promise~Image~
+        +deleteImage(imageId) Promise~Boolean~
+        +getEstablishmentImages(establishmentId) Promise~Image[]~
+        +setPrimaryImage(establishmentId, imageId) Promise~Boolean~
+        +reorderImages(establishmentId, imageIds) Promise~Boolean~
+        +validateImageFile(file) Boolean
+        +processImage(file) Promise~ProcessedImage~
+        +generateThumbnail(image) Promise~String~
+        -checkImageLimit(establishmentId) Promise~Boolean~
+        -generateUniqueFilename(originalName) String
+    }
+
+    class SubscriptionService {
+        -PrismaClient prisma
+        
+        +validateSubscriptionAccess(subscription, feature) ValidationResult
+        +getSubscriptionFeatures(subscription) SubscriptionFeatures
+        +upgradeSubscription(establishmentId, newPlan) Promise~Boolean~
+        +downgradeSubscription(establishmentId, newPlan) Promise~Boolean~
+        +getSubscriptionLimits(subscription) SubscriptionLimits
+        +checkFeatureAccess(subscription, feature) Boolean
+        +getPremiumRequiredError(feature) ErrorResponse
+        -calculateUpgradePrice(currentPlan, newPlan) Number
+        -validatePlanTransition(currentPlan, newPlan) Boolean
+    }
+
+    class ValidationService {
+        +validateEstablishmentData(data) ValidationResult
+        +validateUserData(data) ValidationResult
+        +validateEventData(data) ValidationResult
+        +validateImageFile(file) ValidationResult
+        +sanitizeInput(input) String
+        +sanitizeRequestBody(body) Object
+        +validateEmail(email) Boolean
+        +validatePhone(phone) Boolean
+        +validateUrl(url) Boolean
+        +validateCoordinates(lat, lng) Boolean
+        -sanitizeString(input) String
+        -validateRequiredFields(data, requiredFields) Boolean
+    }
+
+    class GeocodingService {
+        -String apiKey
+        
+        +geocodeAddress(address) Promise~Coordinates~
+        +reverseGeocode(lat, lng) Promise~Address~
+        +validateAddress(address) Promise~Boolean~
+        +getAddressComponents(address) Promise~AddressComponents~
+        +calculateDistance(lat1, lng1, lat2, lng2) Number
+        +getBoundingBox(lat, lng, radius) BoundingBox
+        -callGeocodingAPI(address) Promise~Object~
+        -parseGeocodingResponse(response) Coordinates
+    }
+
+    class GooglePlacesService {
+        -String apiKey
+        
+        +fetchPlaceDetails(placeId) Promise~PlaceDetails~
+        +searchPlaces(query, location) Promise~Place[]~
+        +getPlacePhotos(placeId) Promise~String[]~
+        +getPlaceReviews(placeId) Promise~Review[]~
+        +resolveGoogleUrl(url) Promise~PlaceId~
+        +validatePlaceId(placeId) Boolean
+        -callGooglePlacesAPI(endpoint, params) Promise~Object~
+        -parsePlaceDetails(response) PlaceDetails
+        -parsePlaceSearch(response) Place[]
+    }
+
+    class FileStorageService {
+        -String uploadPath
+        -String[] allowedTypes
+        -Number maxFileSize
+        
+        +uploadFile(file, path) Promise~String~
+        +deleteFile(path) Promise~Boolean~
+        +generateUrl(path) String
+        +validateFileType(file) Boolean
+        +validateFileSize(file) Boolean
+        +generateUniquePath(originalName) String
+        +createDirectory(path) Promise~Boolean~
+        -sanitizeFileName(fileName) String
+    }
+
+    class ScoringService {
+        +calculateThematicScore(query, establishment) Number
+        +calculateRelevanceScore(query, establishment) Number
+        +calculateDistanceScore(establishment, userLocation) Number
+        +calculateRatingScore(establishment) Number
+        +calculatePopularityScore(establishment) Number
+        +extractKeywords(query) String[]
+        +removeStopWords(keywords) String[]
+        +calculateKeywordMatch(query, establishment) Number
+        +calculateTagMatch(query, tags) Number
+        -normalizeText(text) String
+        -calculateTFIDF(term, document, documents) Number
+    }
+
+    %% ===== TYPES ET INTERFACES =====
+    
+    class EnrichmentData {
+        +String name
+        +String address
+        +String phone
+        +String website
+        +String[] activities
+        +String[] services
+        +String[] ambiance
+        +String[] paymentMethods
+        +Object businessHours
+        +String[] images
+        +Number rating
+        +Number reviewCount
+        +String[] specialties
+        +String[] atmosphere
+        +AccessibilityInfo accessibility
+        +String[] clienteleInfo
+        +String[] childrenServices
+        +Number priceLevel
+        +Object contactInfo
+        +Object socialMedia
+        +Review[] reviews
+        +String[] parking
+    }
+
+    class SearchResult {
+        +Establishment establishment
+        +Number score
+        +Number distance
+        +String[] matchedKeywords
+        +String reason
+    }
+
+    class ValidationResult {
+        +Boolean isValid
+        +String[] errors
+        +String[] warnings
+    }
+
+    class SubscriptionFeatures {
+        +Number maxImages
+        +Boolean canCreateEvents
+        +Boolean canCreatePromotions
+        +Boolean canAccessAnalytics
+        +Boolean canCustomizeProfile
+    }
+
+    class Coordinates {
+        +Number latitude
+        +Number longitude
+    }
+
+    class Address {
+        +String street
+        +String city
+        +String postalCode
+        +String country
+        +String formattedAddress
+    }
+
+    %% ===== RELATIONS ENTRE CLASSES =====
+    
+    EstablishmentService ||--|| ValidationService : "utilise"
+    EstablishmentService ||--|| EstablishmentEnrichment : "utilise"
+    SearchService ||--|| ScoringService : "utilise"
+    SearchService ||--|| GeocodingService : "utilise"
+    ProfessionalService ||--|| SubscriptionService : "utilise"
+    EventService ||--|| SubscriptionService : "utilise"
+    ImageService ||--|| FileStorageService : "utilise"
+    ImageService ||--|| SubscriptionService : "utilise"
+    EstablishmentEnrichment ||--|| GooglePlacesService : "utilise"
+    AuthService ||--|| ValidationService : "utilise"
+```
+
+### Descriptions des Classes Principales
+
+#### **EstablishmentEnrichment**
+**Description** : Classe principale pour l'enrichissement automatique des établissements via Google Places API.
+- **Responsabilités** : Récupération, parsing et transformation des données Google Places
+- **Méthodes clés** : `triggerGoogleEnrichment()`, `fetchGooglePlaceData()`, `parseGooglePlaceData()`
+- **Données enrichies** : Activités, services, ambiance, moyens de paiement, accessibilité, etc.
+
+#### **AuthService**
+**Description** : Service d'authentification et de gestion des utilisateurs.
+- **Responsabilités** : Inscription, connexion, validation des credentials, gestion des tokens
+- **Méthodes clés** : `signUp()`, `signIn()`, `getCurrentUser()`, `hashPassword()`
+- **Sécurité** : Hachage des mots de passe, validation des entrées, gestion des sessions
+
+#### **EstablishmentService**
+**Description** : Service de gestion des établissements (CRUD, recherche, géolocalisation).
+- **Responsabilités** : Création, modification, suppression, recherche d'établissements
+- **Méthodes clés** : `createEstablishment()`, `searchEstablishments()`, `getEstablishmentsByLocation()`
+- **Fonctionnalités** : Géolocalisation, génération de slugs, statistiques de vues
+
+#### **SearchService**
+**Description** : Service de recherche intelligente avec scoring thématique.
+- **Responsabilités** : Recherche par "envie", filtrage, scoring, géolocalisation
+- **Méthodes clés** : `searchByEnvie()`, `calculateThematicScore()`, `extractKeywords()`
+- **Algorithme** : Scoring basé sur la pertinence thématique, distance, et popularité
+
+#### **ProfessionalService**
+**Description** : Service de gestion des professionnels et de leurs établissements.
+- **Responsabilités** : Gestion des comptes professionnels, validation SIRET, abonnements
+- **Méthodes clés** : `createProfessional()`, `validateSiret()`, `checkSubscriptionAccess()`
+- **Validation** : Vérification SIRET, gestion des abonnements FREE/PREMIUM
+
+#### **EventService**
+**Description** : Service de gestion des événements des établissements.
+- **Responsabilités** : Création, modification, suppression d'événements
+- **Méthodes clés** : `createEvent()`, `getUpcomingEvents()`, `checkEventConflicts()`
+- **Restrictions** : Accès limité aux établissements PREMIUM
+
+#### **ImageService**
+**Description** : Service de gestion des images et fichiers multimédias.
+- **Responsabilités** : Upload, suppression, réorganisation des images
+- **Méthodes clés** : `uploadImage()`, `setPrimaryImage()`, `reorderImages()`
+- **Limites** : Gestion des quotas selon l'abonnement (1 image FREE, 10 PREMIUM)
+
+#### **SubscriptionService**
+**Description** : Service de gestion des abonnements et des fonctionnalités.
+- **Responsabilités** : Validation des accès, gestion des plans, limites de fonctionnalités
+- **Méthodes clés** : `validateSubscriptionAccess()`, `getSubscriptionFeatures()`
+- **Plans** : STANDARD (gratuit) et PREMIUM (payant)
+
+#### **ValidationService**
+**Description** : Service de validation et de sanitisation des données.
+- **Responsabilités** : Validation des entrées, sanitisation, vérification des formats
+- **Méthodes clés** : `validateEstablishmentData()`, `sanitizeInput()`, `validateEmail()`
+- **Sécurité** : Protection contre les injections, validation des types
+
+#### **GeocodingService**
+**Description** : Service de géocodage et de géolocalisation.
+- **Responsabilités** : Conversion adresse ↔ coordonnées, calculs de distance
+- **Méthodes clés** : `geocodeAddress()`, `reverseGeocode()`, `calculateDistance()`
+- **Intégration** : API de géocodage externe
+
+#### **GooglePlacesService**
+**Description** : Service d'intégration avec Google Places API.
+- **Responsabilités** : Récupération des données Google Places, résolution d'URLs
+- **Méthodes clés** : `fetchPlaceDetails()`, `searchPlaces()`, `resolveGoogleUrl()`
+- **Données** : Détails des lieux, photos, avis, informations de contact
+
+#### **FileStorageService**
+**Description** : Service de gestion des fichiers et du stockage.
+- **Responsabilités** : Upload, suppression, validation des fichiers
+- **Méthodes clés** : `uploadFile()`, `deleteFile()`, `validateFileType()`
+- **Sécurité** : Validation des types de fichiers, limitation de taille
+
+#### **ScoringService**
+**Description** : Service de calcul des scores de pertinence pour la recherche.
+- **Responsabilités** : Calcul des scores thématiques, de distance, de popularité
+- **Méthodes clés** : `calculateThematicScore()`, `extractKeywords()`, `calculateRelevanceScore()`
+- **Algorithme** : TF-IDF, matching de mots-clés, scoring multi-critères
+
+### Flux de Données et Relations
+
+```mermaid
+flowchart TD
+    A[Client Request] --> B[API Route]
+    B --> C[Service Layer]
+    C --> D[Validation Service]
+    C --> E[Business Logic]
+    E --> F[Data Access Layer]
+    F --> G[Prisma ORM]
+    G --> H[SQLite Database]
+    
+    C --> I[External Services]
+    I --> J[Google Places API]
+    I --> K[Geocoding API]
+    I --> L[File Storage]
+    
+    C --> M[Authentication]
+    M --> N[NextAuth.js]
+    N --> O[JWT Tokens]
+    
+    C --> P[Subscription Check]
+    P --> Q[Feature Access Control]
+    
+    R[Enrichment Process] --> S[Google Places Data]
+    S --> T[Data Parsing]
+    T --> U[Hybrid Data Management]
+    U --> V[Database Update]
+```
+
+### Technologies et Patterns Utilisés
+
+- **Architecture** : Service Layer Pattern, Repository Pattern
+- **Validation** : Zod schemas, custom validation services
+- **Authentification** : NextAuth.js, JWT tokens
+- **Base de données** : Prisma ORM, SQLite
+- **Services externes** : Google Places API, Geocoding services
+- **Sécurité** : Input sanitization, SQL injection prevention
+- **Performance** : Caching, pagination, lazy loading
+- **Monitoring** : Request logging, error tracking
+
+### Architecture Générale du Système
+
 ```mermaid
 graph TB
     %% Frontend Layer

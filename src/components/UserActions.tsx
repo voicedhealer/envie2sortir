@@ -92,8 +92,9 @@ export default function UserActions({
           setIsFavorite(true);
           toast.success('Ajouté aux favoris');
         } else {
-          const error = await response.json();
-          toast.error(error.error || 'Erreur lors de l\'ajout aux favoris');
+          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
+          toast.error(errorData.error || 'Erreur lors de l\'ajout aux favoris');
+          console.error('Erreur favoris:', response.status, errorData);
         }
       }
     } catch (error) {

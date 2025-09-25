@@ -56,28 +56,74 @@ export default function Navigation() {
           
           {/* Navigation Desktop */}
           <div className="hidden md:flex items-center gap-6">
-            {navItems.map((item) => (
-              <LinkComponent
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
-                  pathname === item.href
-                    ? "bg-black/5 text-black"
-                    : "text-gray-700 hover:text-black hover:bg-black/5"
-                }`}
-              >
-                {item.icon && (
-                  <Image 
-                    src={item.icon} 
-                    alt="" 
-                    width={10} 
-                    height={10} 
-                    className="w-7 h-7"
-                  />
-                )}
-                {item.label}
-              </LinkComponent>
-            ))}
+            {navItems.map((item) => {
+              // Style spécial pour le bouton "Ajoutez mon établissement"
+              if (item.label === "Ajoutez mon établissement") {
+                return (
+                  <LinkComponent
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-md text-sm font-normal transition-colors flex items-center justify-center text-neutral-900 bg-white border border-orange-400 hover:bg-white hover:text-neutral-900 active:bg-white active:text-neutral-900 disabled:opacity-40"
+                    style={{
+                      width: '220px',
+                      height: '40px',
+                      padding: '0 12px',
+                      fontFamily: 'Inter',
+                      fontSize: '14px',
+                      lineHeight: '22px',
+                      fontWeight: '400',
+                      color: '#171A1FFF',
+                      background: '#FFFFFFFF',
+                      opacity: 1,
+                      borderRadius: '6px',
+                      borderWidth: '1px',
+                      borderColor: '#EA916EFF',
+                      borderStyle: 'solid',
+                      boxShadow: '0px 2px 5px #171a1f17, 0px 0px 2px #171a1f1F',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {item.icon && (
+                      <Image 
+                        src={item.icon} 
+                        alt="" 
+                        width={10} 
+                        height={10} 
+                        className="w-7 h-7"
+                      />
+                    )}
+                    {item.label}
+                  </LinkComponent>
+                );
+              }
+              
+              // Style par défaut pour les autres éléments
+              return (
+                <LinkComponent
+                  key={item.href}
+                  href={item.href}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                    pathname === item.href
+                      ? "bg-black/5 text-black"
+                      : "text-gray-700 hover:text-black hover:bg-black/5"
+                  }`}
+                >
+                  {item.icon && (
+                    <Image 
+                      src={item.icon} 
+                      alt="" 
+                      width={10} 
+                      height={10} 
+                      className="w-7 h-7"
+                    />
+                  )}
+                  {item.label}
+                </LinkComponent>
+              );
+            })}
             <UserMenu />
           </div>
 
