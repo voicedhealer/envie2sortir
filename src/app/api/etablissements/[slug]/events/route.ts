@@ -59,7 +59,8 @@ export async function POST(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    if (session.user.role !== 'pro') {
+    // Vérifier que l'utilisateur est un professionnel
+    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 

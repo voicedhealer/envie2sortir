@@ -14,7 +14,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    if (session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (session.user.userType !== 'user' && session.user.role !== 'user') {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 

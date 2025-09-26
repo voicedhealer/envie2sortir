@@ -71,7 +71,8 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
 
   // Gestion des favoris
   const handleFavorite = async () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }

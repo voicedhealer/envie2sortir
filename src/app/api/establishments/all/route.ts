@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     // Charger tous les établissements actifs
     const establishments = await prisma.establishment.findMany({
       where: {
-        status: 'active',
+        status: 'approved',
         latitude: { not: null },
         longitude: { not: null }
       },

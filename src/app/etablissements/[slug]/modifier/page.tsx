@@ -17,7 +17,8 @@ export default async function EditEstablishmentPage({
     redirect('/auth/login');
   }
 
-  if (session.user.role !== 'pro') {
+  // Vérifier que l'utilisateur est un professionnel
+  if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
     redirect('/auth/login?error=AccessDenied');
   }
 
@@ -53,7 +54,32 @@ export default async function EditEstablishmentPage({
       priceMin: true,
       priceMax: true,
       subscription: true,
-      ownerId: true
+      ownerId: true,
+      rejectionReason: true,
+      rejectedAt: true,
+      lastModifiedAt: true,
+      envieTags: true,
+      tags: {
+        select: {
+          tag: true,
+          typeTag: true,
+          poids: true
+        }
+      },
+      owner: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          companyName: true,
+          siret: true,
+          legalStatus: true,
+          siretVerified: true,
+          siretVerifiedAt: true
+        }
+      }
     }
   });
 

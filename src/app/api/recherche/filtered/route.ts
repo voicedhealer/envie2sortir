@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
 
     // Construire la clause WHERE
     const where: any = {
-      status: 'active',
+      status: 'approved',
       latitude: { not: null },
       longitude: { not: null }
     };

@@ -12,7 +12,7 @@ interface Establishment {
   address: string;
   city?: string;
   category?: string;
-  status: 'active' | 'pending' | 'suspended';
+  status: 'approved' | 'pending' | 'rejected';
   latitude?: number;
   longitude?: number;
   images?: Array<{
@@ -145,10 +145,10 @@ export default function DynamicEstablishmentsSection() {
         {/* Container avec animation de défilement */}
         <div className="relative overflow-hidden">
           <div className="flex animate-scroll space-x-6">
-            {/* Duplication des établissements pour un scroll infini */}
-            {[...establishments, ...establishments].map((establishment, index) => (
+            {/* Affichage unique des établissements avec animation */}
+            {establishments.map((establishment, index) => (
               <div 
-                key={`${establishment.id}-${index}`} 
+                key={establishment.id} 
                 className="flex-shrink-0 w-80"
               >
                 <EstablishmentCard establishment={establishment} />
@@ -164,12 +164,12 @@ export default function DynamicEstablishmentsSection() {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-50%);
+            transform: translateX(-100%);
           }
         }
         
         .animate-scroll {
-          animation: scroll 60s linear infinite;
+          animation: scroll 30s linear infinite;
         }
         
         .animate-scroll:hover {

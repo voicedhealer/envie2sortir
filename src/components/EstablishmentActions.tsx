@@ -27,7 +27,8 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
-    if (!session || session.user.role !== 'user') return;
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) return;
     
     const checkFavoriteStatus = async () => {
       try {
@@ -77,7 +78,8 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   };
 
   const handleReview = () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour laisser un avis');
       return;
     }
@@ -86,7 +88,8 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
   // Gestion des favoris
   const handleFavorite = async () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }

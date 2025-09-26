@@ -125,7 +125,8 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
       return;
     }
 
-    if (session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (session.user.userType !== 'user' && session.user.role !== 'user') {
       // Utilisateur connecté mais pas client
       toast.error('Seuls les clients peuvent laisser des avis');
       return;
@@ -148,7 +149,8 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
 
   // Soumission de l'avis
   const handleSubmitComment = async () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour laisser un avis');
       return;
     }
@@ -330,7 +332,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
           </p>
         )}
         
-        {session && session.user.role !== 'user' && (
+        {session && (session.user.userType !== 'user' && session.user.role !== 'user') && (
           <p className="text-xs text-gray-500 mt-2">
             Seuls les clients peuvent laisser des avis
           </p>

@@ -1,18 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiRateLimit, searchRateLimit, uploadRateLimit } from './rate-limit-extended';
+import { apiRateLimit, searchRateLimit, uploadRateLimit, imagesReadRateLimit } from './rate-limit-extended';
 import { sanitizeInput } from './sanitization';
 
 export async function applySecurityMiddleware(
   request: NextRequest,
   endpoint: string
 ): Promise<NextResponse | null> {
-  // Rate limiting selon l'endpoint
+  // Rate limiting selon l'endpoint et la méthode
   let rateLimitResult;
+  const method = request.method;
   
   if (endpoint.includes('/search') || endpoint.includes('/recherche')) {
     rateLimitResult = await searchRateLimit(request);
-  } else if (endpoint.includes('/upload') || endpoint.includes('/images')) {
+  } else if (endpoint.includes('/upload') || (endpoint.includes('/images') && (method === 'POST' || method === 'PUT' || method === 'DELETE'))) {
+    // Rate limiting strict pour les uploads/modifications d'images
     rateLimitResult = await uploadRateLimit(request);
+  } else if (endpoint.includes('/images') && method === 'GET') {
+    // Rate limiting très permissif pour la lecture des images
+    rateLimitResult = await imagesReadRateLimit(request);
   } else {
     rateLimitResult = await apiRateLimit(request);
   }

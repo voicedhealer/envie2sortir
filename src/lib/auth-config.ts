@@ -21,41 +21,57 @@ export const authOptions = {
         try {
           console.log('🔐 Tentative de connexion pour:', credentials.email);
           
-          // Rechercher l'utilisateur par email
-          const user = await prisma.user.findUnique({
+          // 1. Chercher d'abord dans les Users
+          let user = await prisma.user.findUnique({
             where: { email: credentials.email }
           });
 
-          if (!user) {
-            console.log('❌ Utilisateur non trouvé:', credentials.email);
-            return null;
+          if (user && user.passwordHash) {
+            // Vérifier le mot de passe
+            const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
+            
+            if (isValidPassword) {
+              console.log('✅ Authentification User réussie pour:', credentials.email);
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name || `${user.firstName} ${user.lastName}`,
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                role: user.role,
+                userType: 'user',
+                favoriteCity: user.favoriteCity || ''
+              };
+            }
           }
 
-          if (!user.passwordHash) {
-            console.log('❌ Pas de mot de passe hashé pour:', credentials.email);
-            return null;
+          // 2. Si pas trouvé dans Users, chercher dans Professionals
+          const professional = await prisma.professional.findUnique({
+            where: { email: credentials.email }
+          });
+
+          if (professional && professional.passwordHash) {
+            // Vérifier le mot de passe
+            const isValidPassword = await bcrypt.compare(credentials.password, professional.passwordHash);
+            
+            if (isValidPassword) {
+              console.log('✅ Authentification Professional réussie pour:', credentials.email);
+              return {
+                id: professional.id,
+                email: professional.email,
+                name: `${professional.firstName} ${professional.lastName}`,
+                firstName: professional.firstName,
+                lastName: professional.lastName,
+                role: 'pro', // Les professionnels ont toujours le rôle 'pro'
+                userType: 'professional',
+                siret: professional.siret,
+                companyName: professional.companyName
+              };
+            }
           }
 
-          // Vérifier le mot de passe
-          const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
-          
-          if (!isValidPassword) {
-            console.log('❌ Mot de passe incorrect pour:', credentials.email);
-            return null;
-          }
-
-          console.log('✅ Authentification réussie pour:', credentials.email);
-
-          // Retourner les informations utilisateur
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name || `${user.firstName} ${user.lastName}`,
-            firstName: user.firstName || '',
-            lastName: user.lastName || '',
-            role: user.role,
-            favoriteCity: user.favoriteCity || ''
-          };
+          console.log('❌ Aucun utilisateur trouvé avec ces identifiants:', credentials.email);
+          return null;
         } catch (error) {
           console.error('❌ Erreur authentification:', error);
           return null;
@@ -134,7 +150,13 @@ export const authOptions = {
         token.role = user.role;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.userType = user.userType; // Nouveau : type d'utilisateur
         token.favoriteCity = user.favoriteCity;
+        // Ajouter les champs spécifiques aux professionnels
+        if (user.userType === 'professional') {
+          token.siret = user.siret;
+          token.companyName = user.companyName;
+        }
         console.log('🔐 JWT Callback - Updated token with user data');
       } else if (token) {
         // Si pas d'utilisateur mais qu'on a un token, on peut essayer de récupérer les données mises à jour
@@ -153,7 +175,14 @@ export const authOptions = {
         session.user.role = token.role as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        session.user.userType = token.userType as string; // Nouveau : type d'utilisateur
         session.user.favoriteCity = token.favoriteCity as string;
+        
+        // Ajouter les champs spécifiques aux professionnels
+        if (token.userType === 'professional') {
+          session.user.siret = token.siret as string;
+          session.user.companyName = token.companyName as string;
+        }
         
         // Corriger l'affichage du nom
         if (session.user.firstName && session.user.lastName) {

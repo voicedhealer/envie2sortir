@@ -9,12 +9,20 @@ export async function GET(request: NextRequest) {
   const requestLogger = createRequestLogger(requestId, undefined, ipAddress);
 
   try {
-    // Générer un ID de session temporaire basé sur l'IP et l'User-Agent
-    const userAgent = request.headers.get('user-agent') || '';
-    const sessionId = `${ipAddress}-${Buffer.from(userAgent).toString('base64').slice(0, 16)}`;
+    // Utiliser une approche plus simple pour le sessionId
+    // En développement, utiliser une clé fixe pour éviter les problèmes d'IP
+    const isDevelopment = request.url.includes('localhost') || request.url.includes('127.0.0.1');
+    const sessionId = isDevelopment ? 'dev-session' : 
+      `${ipAddress}-${btoa(request.headers.get('user-agent') || '').slice(0, 16)}`;
+    
+    // Debug logs
+    console.log('🔍 CSRF Token Generation Debug:', {
+      isDevelopment,
+      sessionId: sessionId.slice(0, 20) + '...'
+    });
     
     // Générer le token CSRF
-    const csrfToken = generateCSRFToken(sessionId);
+    const csrfToken = await generateCSRFToken(sessionId);
     
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/csrf/token', 'GET', 200, responseTime, { ipAddress });

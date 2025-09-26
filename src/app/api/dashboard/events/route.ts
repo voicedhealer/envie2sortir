@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    if (session.user.role !== 'pro') {
+    // Vérifier que l'utilisateur est un professionnel
+    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
       return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
     }
 
@@ -67,7 +68,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    if (session.user.role !== 'pro') {
+    // Vérifier que l'utilisateur est un professionnel
+    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
       return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
     }
 

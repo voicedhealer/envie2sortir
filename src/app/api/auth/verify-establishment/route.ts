@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier si l'utilisateur est un professionnel
-    if (session.user.role !== 'pro') {
+    // Vérifier que l'utilisateur est un professionnel
+    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
       return NextResponse.json({ 
         hasEstablishment: false, 
         error: 'Utilisateur non professionnel' 

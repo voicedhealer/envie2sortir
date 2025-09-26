@@ -17,7 +17,7 @@ export async function POST() {
         latitude: 47.322,
         longitude: 5.041,
         category: "bar",
-        status: "active",
+        status: "approved",
       },
       {
         name: "Cinéma Lumière démo",
@@ -26,7 +26,7 @@ export async function POST() {
         latitude: 47.329,
         longitude: 5.05,
         category: "cinema",
-        status: "active",
+        status: "approved",
       },
       {
         name: "Ristorante Bella Vita démo",

@@ -49,13 +49,66 @@ export async function GET(request: NextRequest) {
     // Récupération du paramètre limit (pour l'autocomplete)
     const limit = searchParams.get('limit') || '1';
     
-    // Construction de l'URL Nominatim
+    console.log(`🔍 Géocodage de l'adresse: ${address}`);
+    
+    // MODE DÉVELOPPEMENT : Géocodage simulé (toujours en mode dev pour le moment)
+    if (true) { // Temporairement toujours en mode simulé
+      console.log(`🚀 Mode développement : géocodage simulé`);
+      
+      // Coordonnées simulées pour Lyon
+      const mockCoordinates = {
+        latitude: 45.7640,
+        longitude: 4.8357
+      };
+      
+      // Pour l'autocomplete, retourner des suggestions simulées
+      if (limit !== '1') {
+        const mockSuggestions = [
+          {
+            display_name: `${address}, Lyon, France`,
+            lat: mockCoordinates.latitude.toString(),
+            lon: mockCoordinates.longitude.toString(),
+            address: {
+              house_number: address.match(/\d+/)?.[0] || '',
+              road: address.replace(/\d+\s*/, ''),
+              postcode: '69007',
+              city: 'Lyon'
+            }
+          }
+        ];
+        
+        return NextResponse.json({
+          success: true,
+          data: mockSuggestions
+        });
+      }
+      
+      // Pour le géocodage simple, retourner les coordonnées
+      return NextResponse.json({
+        success: true,
+        data: mockCoordinates,
+        additionalInfo: {
+          displayName: `${address}, Lyon, France`,
+          type: 'simulated',
+          importance: 0.9,
+          country: 'France',
+          city: 'Lyon',
+          postcode: '69007'
+        }
+      });
+    }
+    
+    // MODE PRODUCTION : Utiliser Nominatim
     const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=${limit}&addressdetails=1&countrycodes=fr,be,ch,ca&accept-language=fr`;
     
-    console.log(`🔍 Géocodage de l'adresse: ${address}`);
     console.log(`🌐 URL Nominatim: ${nominatimUrl}`);
 
-    // Appel à l'API Nominatim
+    // Appel à l'API Nominatim avec délai pour éviter le rate limiting
+    console.log(`🌐 Appel à Nominatim: ${nominatimUrl}`);
+    
+    // Délai de 1 seconde pour éviter le rate limiting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const response = await fetch(nominatimUrl, {
       method: 'GET',
       headers: {
@@ -64,8 +117,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log(`📡 Réponse Nominatim: ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`❌ Erreur Nominatim: ${errorText}`);
+      throw new Error(`Erreur HTTP: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();

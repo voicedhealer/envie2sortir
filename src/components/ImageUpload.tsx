@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, X, Check } from 'lucide-react';
 
 interface ImageUploadProps {
@@ -20,7 +20,19 @@ export default function ImageUpload({
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Timer pour masquer la notification de succès après 3 secondes
+  useEffect(() => {
+    if (showSuccessMessage) {
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessMessage]);
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -64,6 +76,7 @@ export default function ImageUpload({
       }
 
       onImageUpload(result.imageUrl);
+      setShowSuccessMessage(true);
     } catch (error) {
       console.error('Erreur upload:', error);
       setUploadError(error instanceof Error ? error.message : 'Erreur lors de l\'upload');
@@ -143,11 +156,11 @@ export default function ImageUpload({
         </div>
       )}
 
-      {/* Message de succès */}
-      {currentImageUrl && !isUploading && !uploadError && (
+      {/* Message de succès temporaire */}
+      {showSuccessMessage && (
         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
           <Check className="w-4 h-4 text-green-600" />
-          <p className="text-sm text-green-600">Image uploadée avec succès</p>
+          <p className="text-sm text-green-600">Image ajoutée avec succès !</p>
         </div>
       )}
     </div>

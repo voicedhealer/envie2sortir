@@ -684,15 +684,15 @@ graph TB
 - ✅ **Système de validation** par l'admin avant publication
 - 🔗 **Propriétaire** : Professional (relation 1:1 avec @unique)
 
-### Diagramme Entité-Relation (ER)
+### Diagramme Entité-Relation (ER) - Architecture Unifiée
 
 ```mermaid
 erDiagram
+    %% ENTITÉS PRINCIPALES
     User {
         string id PK
         string email UK
         string passwordHash
-        enum role
         string firstName
         string lastName
         string name
@@ -704,6 +704,7 @@ erDiagram
         string avatar
         boolean isVerified
         string favoriteCity
+        enum role "user|admin"
         datetime createdAt
         datetime updatedAt
     }
@@ -714,10 +715,11 @@ erDiagram
         string firstName
         string lastName
         string email UK
+        string passwordHash
         string phone
         string companyName
         string legalStatus
-        enum subscriptionPlan
+        enum subscriptionPlan "FREE|PREMIUM"
         boolean siretVerified
         datetime siretVerifiedAt
         datetime createdAt
@@ -740,7 +742,6 @@ erDiagram
         string website
         string instagram
         string facebook
-        string tiktok
         json activities
         string specialites
         string motsClesRecherche
@@ -753,13 +754,16 @@ erDiagram
         boolean accessibilite
         boolean parking
         boolean terrasse
-        enum status
-        enum subscription
+        enum status "pending|approved|rejected"
+        enum subscription "FREE|STANDARD|PREMIUM"
         string ownerId FK
         int viewsCount
         int clicksCount
         float avgRating
         int totalComments
+        datetime createdAt
+        datetime updatedAt
+        string tiktok
         string imageUrl
         float priceMax
         float priceMin
@@ -782,6 +786,15 @@ erDiagram
         json clienteleInfo
         json detailedPayments
         json childrenServices
+    }
+
+    %% ENTITÉS DE RELATION
+    UserComment {
+        string id PK
+        string content
+        int rating
+        string userId FK
+        string establishmentId FK
         datetime createdAt
         datetime updatedAt
     }
@@ -790,7 +803,6 @@ erDiagram
         string id PK
         string userId FK
         string establishmentId FK
-        boolean receiveNewsletter
         datetime createdAt
     }
 
@@ -801,15 +813,38 @@ erDiagram
         datetime createdAt
     }
 
-    UserComment {
+    EtablissementTag {
         string id PK
-        string content
-        int rating
-        string userId FK
+        string etablissementId FK
+        string tag
+        string typeTag
+        int poids
+        datetime createdAt
+    }
+
+    Event {
+        string id PK
+        string title
+        string description
+        string imageUrl
         string establishmentId FK
-        boolean isVisible
-        int reportedCount
-        datetime moderatedAt
+        datetime startDate
+        datetime endDate
+        float price
+        int maxCapacity
+        boolean isRecurring
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    FeaturedPromotion {
+        string id PK
+        string title
+        string description
+        string establishmentId FK
+        datetime startDate
+        datetime endDate
+        float discount
         datetime createdAt
         datetime updatedAt
     }
@@ -824,45 +859,10 @@ erDiagram
         datetime createdAt
     }
 
-    Event {
-        string id PK
-        string title
-        string description
-        datetime startDate
-        datetime endDate
-        string imageUrl
-        float price
-        int maxCapacity
-        boolean isRecurring
-        string establishmentId FK
-        datetime createdAt
-        datetime updatedAt
-    }
-
-    EtablissementTag {
-        int id PK
-        string etablissementId FK
-        string tag
-        string typeTag
-        int poids
-        datetime createdAt
-    }
-
-    FeaturedPromotion {
-        string id PK
-        string title
-        string description
-        datetime startDate
-        datetime endDate
-        enum placementType
-        string establishmentId FK
-        datetime createdAt
-        datetime updatedAt
-    }
-
     Pricing {
         string id PK
-        string serviceId
+        string name
+        string description
         float price
         string establishmentId FK
         datetime createdAt
@@ -871,28 +871,65 @@ erDiagram
 
     Tariff {
         string id PK
-        string label
+        string name
+        string description
         float price
         string establishmentId FK
         datetime createdAt
         datetime updatedAt
     }
 
-    %% Relations - Architecture Cohérente
-    Professional ||--o| Establishment : owns
-    User ||--o{ UserFavorite : creates
-    User ||--o{ UserLike : creates
-    User ||--o{ UserComment : writes
-    Establishment ||--o{ UserFavorite : "is favorited by"
-    Establishment ||--o{ UserLike : "is liked by"
-    Establishment ||--o{ UserComment : "has comments"
-    Establishment ||--o{ Image : "has images"
-    Establishment ||--o{ Event : "hosts events"
-    Establishment ||--o{ EtablissementTag : "has tags"
-    Establishment ||--o{ FeaturedPromotion : "has promotions"
-    Establishment ||--o{ Pricing : "has pricing"
-    Establishment ||--o{ Tariff : "has tariffs"
+    %% RELATIONS PRINCIPALES
+    Professional ||--o| Establishment : "possède (1:1)"
+    Professional {
+        string id PK
+    }
+    Establishment {
+        string ownerId FK
+    }
+
+    %% RELATIONS UTILISATEURS
+    User ||--o{ UserComment : "écrit"
+    User ||--o{ UserFavorite : "favorise"
+    User ||--o{ UserLike : "aime"
+
+    %% RELATIONS ÉTABLISSEMENTS
+    Establishment ||--o{ UserComment : "reçoit"
+    Establishment ||--o{ UserFavorite : "est favorisé"
+    Establishment ||--o{ UserLike : "est aimé"
+    Establishment ||--o{ EtablissementTag : "a des tags"
+    Establishment ||--o{ Event : "organise"
+    Establishment ||--o{ FeaturedPromotion : "propose"
+    Establishment ||--o{ Image : "a des images"
+    Establishment ||--o{ Pricing : "a des tarifs"
+    Establishment ||--o{ Tariff : "a des forfaits"
 ```
+
+### 🏗️ **Points Clés de l'Architecture Unifiée**
+
+#### **1. SÉPARATION CLAIRE DES RÔLES :**
+- **`User`** : Clients simples (consultation, commentaires, favoris)
+- **`Professional`** : Propriétaires d'établissements (création, gestion)
+
+#### **2. RELATION 1:1 OBLIGATOIRE :**
+- **`Professional` ↔ `Establishment`** : Un professionnel = Un établissement maximum
+- **`ownerId`** : Clé étrangère directe vers `Professional.id`
+
+#### **3. SYSTÈME D'AUTHENTIFICATION UNIFIÉ :**
+- **NextAuth** gère les deux types via `userType`
+- **Recherche automatique** dans les deux tables lors de la connexion
+
+#### **4. VALIDATION ET SÉCURITÉ :**
+- **SIRET obligatoire** pour les professionnels
+- **Statut d'établissement** : `pending` → `approved` → `rejected`
+- **Vérification admin** avant publication
+
+#### **5. FONCTIONNALITÉS UTILISATEURS :**
+- **Commentaires** : `User` → `Establishment`
+- **Favoris** : `User` → `Establishment` (relation unique)
+- **Likes** : `User` → `Establishment` (relation unique)
+
+Cette architecture garantit une séparation claire des responsabilités tout en maintenant une cohérence dans le système d'authentification ! 🚀
 
 ### Modèles Principaux - Architecture Cohérente
 

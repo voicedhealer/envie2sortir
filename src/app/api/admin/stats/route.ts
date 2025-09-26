@@ -9,7 +9,7 @@ export async function GET() {
         where: { status: "pending" },
       }),
       prisma.establishment.count({
-        where: { status: "active" },
+        where: { status: "approved" },
       }),
     ]);
 

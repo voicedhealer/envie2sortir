@@ -42,6 +42,10 @@ export interface EstablishmentFormData {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  
+  // Contacts professionnels (pour le résumé)
+  professionalPhone?: string;
+  professionalEmail?: string;
 }
 
 // Props du composant
@@ -269,14 +273,35 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
             Modifier
           </button>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Contact de l'établissement */}
           <div>
-            <span className="font-medium text-gray-700">Téléphone :</span>
-            <span className="ml-2 text-gray-900">{data.phone || 'Non renseigné'}</span>
+            <h4 className="text-sm font-semibold text-gray-800 mb-2">📞 Contact établissement (visible clients)</h4>
+            <div className="space-y-2 pl-4">
+              <div>
+                <span className="font-medium text-gray-700">Téléphone :</span>
+                <span className="ml-2 text-gray-900">{data.phone || 'Non renseigné'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Email :</span>
+                <span className="ml-2 text-gray-900">{data.email || 'Non renseigné'}</span>
+              </div>
+            </div>
           </div>
+          
+          {/* Contact professionnel */}
           <div>
-            <span className="font-medium text-gray-700">Email :</span>
-            <span className="ml-2 text-gray-900">{data.email || 'Non renseigné'}</span>
+            <h4 className="text-sm font-semibold text-gray-800 mb-2">👤 Contact professionnel (admin uniquement)</h4>
+            <div className="space-y-2 pl-4">
+              <div>
+                <span className="font-medium text-gray-700">Téléphone :</span>
+                <span className="ml-2 text-gray-900">{data.professionalPhone || 'Non renseigné'}</span>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Email :</span>
+                <span className="ml-2 text-gray-900">{data.professionalEmail || 'Non renseigné'}</span>
+              </div>
+            </div>
           </div>
           <div>
             <span className="font-medium text-gray-700">Site web :</span>

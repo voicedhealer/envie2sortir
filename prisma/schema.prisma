@@ -1,43 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 /// *
-/// * USER - Utilisateurs finaux du site
-/// * Peuvent : chercher, liker, commenter, mettre en favoris
-/// * NE PEUVENT PAS : créer/gérer des établissements
+/// * USER - Utilisateurs simples (clients)
+/// * Peuvent consulter, commenter, ajouter aux favoris
+/// * Ne peuvent PAS créer d'établissements
 model User {
-  id              String         @id @default(cuid())
-  email           String         @unique
-  passwordHash    String?
-  role            UserRole       @default(user)
-  firstName       String?
-  lastName        String?
-  name            String?
-  phone           String?
-  preferences     Json?
-  newsletterOptIn Boolean        @default(true)
-  provider        String?
-  providerId      String?
-  avatar          String?
-  isVerified      Boolean        @default(false)
-  favoriteCity    String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-  comments        UserComment[]
-  favorites       UserFavorite[]
-  likes           UserLike[]
+  id               String           @id @default(cuid())
+  email            String           @unique
+  passwordHash     String?
+  firstName        String?
+  lastName         String?
+  name             String?
+  phone            String?
+  preferences      Json?
+  newsletterOptIn  Boolean          @default(true)
+  provider         String?
+  providerId       String?
+  avatar           String?
+  isVerified       Boolean          @default(false)
+  favoriteCity     String?
+  role             UserRole         @default(user)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  comments         UserComment[]
+  favorites        UserFavorite[]
+  likes            UserLike[]
+  adminActions     AdminAction[]
 
   @@map("users")
 }
 
 /// *
 /// * PROFESSIONAL - Propriétaires d'établissements
+/// * Contient TOUT : authentification + données professionnelles
 /// * Seuls autorisés à créer/gérer des établissements
 /// * Vérification obligatoire via SIRET
 /// * Relation 1:1 avec Establishment
@@ -47,6 +52,7 @@ model Professional {
   firstName        String
   lastName         String
   email            String           @unique
+  passwordHash     String
   phone            String
   companyName      String
   legalStatus      String
@@ -96,6 +102,9 @@ model Establishment {
   status                EstablishmentStatus @default(pending)
   subscription          SubscriptionType    @default(STANDARD)
   ownerId               String              @unique
+  rejectionReason       String?
+  rejectedAt            DateTime?
+  lastModifiedAt        DateTime?
   viewsCount            Int                 @default(0)
   clicksCount           Int                 @default(0)
   avgRating             Float?
@@ -135,305 +144,27 @@ model Establishment {
   comments              UserComment[]
   favorites             UserFavorite[]
   likes                 UserLike[]
+  adminActions          AdminAction[]
 
   @@map("establishments")
 }
 
-/// *
-/// * USER_FAVORITE - Établissements mis en favoris
-/// * Permet aux users de sauvegarder leurs établissements préférés
-/// * Active les notifications newsletter
-model UserFavorite {
-  id                String        @id @default(cuid())
-  userId            String
-  establishmentId   String
-  receiveNewsletter Boolean       @default(true)
-  createdAt         DateTime      @default(now())
-  establishment     Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, establishmentId])
-  @@map("user_favorites")
-}
-
-/// *
-/// * USER_LIKE - Système de likes
-/// * Permet aux users d'exprimer leur appréciation rapidement
-model UserLike {
-  id              String        @id @default(cuid())
-  userId          String
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, establishmentId])
-  @@map("user_likes")
-}
-
-/// *
-/// * USER_COMMENT - Avis et commentaires
-/// * Système d'avis complet avec note sur 5 étoiles
-model UserComment {
-  id              String        @id @default(cuid())
-  content         String
-  rating          Int?
-  userId          String
-  establishmentId String
-  isVisible       Boolean       @default(true)
-  reportedCount   Int           @default(0)
-  moderatedAt     DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_comments")
-}
-
-/// *
-/// * IMAGE - Photos des établissements
-/// * Limitation selon l'abonnement : 1 (FREE) ou 10 (PREMIUM)
-model Image {
-  id              String        @id @default(cuid())
-  url             String
-  altText         String?
-  isPrimary       Boolean       @default(false)
-  ordre           Int           @default(0)
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-
-  @@map("images")
-}
-
-/// *
-/// * EVENT - Événements organisés par les établissements
-/// * Permet aux pros Premium de promouvoir leurs événements spéciaux
-model Event {
-  id              String        @id @default(cuid())
-  title           String
-  description     String?
-  startDate       DateTime
-  endDate         DateTime?
-  imageUrl        String?
-  price           Float?
-  maxCapacity     Int?
-  isRecurring     Boolean       @default(false)
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-
-  @@map("events")
-}
-
-/// *
-/// * ETABLISSEMENT_TAG - Tags pour la recherche
-/// * Système de tags pondérés pour améliorer la recherche "Envie de..."
-model EtablissementTag {
-  id              Int           @id @default(autoincrement())
-  etablissementId String
-  tag             String
-  typeTag         String
-  poids           Int           @default(5)
-  createdAt       DateTime      @default(now())
-  etablissement   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
-
-  @@map("etablissement_tags")
-}
-
-/// *
-/// * FEATURED_PROMOTION - Promotions mises en avant
-/// * Système de mise en avant payante pour les établissements Premium
-model FeaturedPromotion {
-  id              String                @id @default(cuid())
-  title           String
-  description     String?
-  startDate       DateTime
-  endDate         DateTime
-  placementType   FeaturedPlacementType
-  establishmentId String
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
-  establishment   Establishment         @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-
-  @@map("featured_promotions")
-}
-
-/// *
-/// * PRICING - Tarifs des services/activités
-/// * Permet aux établissements de définir leurs prix par service
-model Pricing {
-  id              String        @id @default(cuid())
-  serviceId       String
-  price           Float
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-
-  @@map("pricing")
-}
-
-/// *
-/// * TARIFF - Tarifs personnalisés des établissements
-/// * Permet aux professionnels de créer leurs propres tarifs
-model Tariff {
-  id              String        @id @default(cuid())
-  label           String
-  price           Float
-  establishmentId String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-
-  @@map("tariffs")
-}
-
+// Enums
 enum UserRole {
   user
-  pro
   admin
 }
 
-/// *
-/// * ACTIVITÉS MULTIPLES POUR SYSTÈME "ENVIE DE..."
-/// * Chaque activité correspond à une expérience spécifique
-/// * Permet un matching parfait avec les intentions des clients
-/// * Un établissement peut proposer plusieurs activités
-enum EstablishmentActivity {
-  bar_ambiance
-  pub_traditionnel
-  brasserie_artisanale
-  bar_cocktails
-  bar_vins
-  bar_sports
-  rooftop_bar
-  // bar_karaoké
-  bar_jeux
-  // bar_bières
-  restaurant_gastronomique
-  restaurant_traditionnel
-  restaurant_familial
-  bistrot
-  brasserie_restaurant
-  restaurant_rapide
-  restaurant_italien
-  restaurant_asiatique
-  restaurant_oriental
-  restaurant_mexicain
-  restaurant_indien
-  restaurant_veggie
-  creperie
-  pizzeria
-  kebab
-  tacos_mexicain
-  burger
-  sandwich
-  fish_and_chips
-  food_truck
-  friterie
-  poke_bowl
-  discotheque
-  club_prive
-  boite_nuit_mainstream
-  club_techno
-  club_hip_hop
-  club_latino
-  dancing_retro
-  boite_estudiantine
-  bowling
-  billard_americain
-  billard_francais
-  snooker
-  ping_pong_bar
-  squash
-  badminton
-  tennis_table
-  futsal
-  football_5vs5
-  football_7vs7
-  tennis_exterieur
-  padel
-  basketball
-  beach_volley
-  escape_game_horreur
-  escape_game_aventure
-  escape_game_familial
-  escape_game_immersif
-  laser_game
-  paintball_exterieur
-  paintball_interieur
-  realite_virtuelle
-  salle_jeux_arcade
-  casino
-  salle_jeux_moderne
-  cinema_mainstream
-  cinema_art_essai
-  cinema_imax
-  drive_in
-  theatre_classique
-  theatre_cafe
-  spectacle_humour
-  concert_rock
-  concert_jazz
-  concert_rap
-  concert_electronique
-  concert_classique
-  concert_variete
-  musee_art
-  musee_histoire
-  musee_science
-  musee_insolite
-  galerie_art
-  centre_exposition
-  planetarium
-  marche_nocturne
-  marche_artisanal
-  marche_vintage
-  festival_plein_air
-  foire_commerciale
-  salon_professionnel
-  spa_detente
-  hammam_traditionnel
-  sauna_finlandais
-  spa_nordique
-  centre_massage
-  institut_beaute
-  salon_coiffure_premium
-  onglerie
-  piscine_couverte
-  piscine_exterieure
-  centre_aquatique
-  aqua_fitness
-  atelier_cuisine
-  atelier_patisserie
-  atelier_poterie
-  atelier_peinture
-  cours_danse
-  salle_musique
-  parc_attraction
-  parc_aquatique
-  mini_golf
-  golf_practice
-  karting_interieur
-  karting_exterieur
-  trampoline_park
-  accrobranche
-  salle_privee
-  peniche
-  rooftop_restaurant
-  cave_degustation
-  microbrasserie
-  distillerie
-  autre
+enum EstablishmentStatus {
+  pending
+  approved
+  rejected
 }
 
-enum EstablishmentStatus {
-  active
-  pending
-  suspended
+enum SubscriptionType {
+  FREE
+  STANDARD
+  PREMIUM
 }
 
 enum SubscriptionPlan {
@@ -441,13 +172,157 @@ enum SubscriptionPlan {
   PREMIUM
 }
 
-enum SubscriptionType {
-  STANDARD
-  PREMIUM
+// Autres modèles (simplifiés pour l'exemple)
+model UserComment {
+  id             String       @id @default(cuid())
+  content        String
+  rating         Int
+  userId         String
+  establishmentId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("user_comments")
 }
 
-enum FeaturedPlacementType {
-  homepage
-  search
-  map
+model UserFavorite {
+  id             String       @id @default(cuid())
+  userId         String
+  establishmentId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, establishmentId])
+  @@map("user_favorites")
+}
+
+model UserLike {
+  id             String       @id @default(cuid())
+  userId         String
+  establishmentId String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, establishmentId])
+  @@map("user_likes")
+}
+
+model EtablissementTag {
+  id              String       @id @default(cuid())
+  etablissementId String
+  tag             String
+  typeTag         String
+  poids           Int          @default(5)
+  establishment   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  createdAt       DateTime     @default(now())
+
+  @@map("etablissement_tags")
+}
+
+model Event {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  imageUrl       String?
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  endDate        DateTime?
+  price          Float?
+  maxCapacity    Int?
+  isRecurring    Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("events")
+}
+
+model FeaturedPromotion {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  startDate      DateTime
+  endDate        DateTime?
+  discount       Float?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("featured_promotions")
+}
+
+model Image {
+  id             String       @id @default(cuid())
+  url            String
+  altText        String?
+  isPrimary      Boolean      @default(false)
+  ordre          Int          @default(0)
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@map("images")
+}
+
+model Pricing {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  price          Float
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("pricing")
+}
+
+model Tariff {
+  id             String       @id @default(cuid())
+  name           String
+  description    String?
+  price          Float
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("tariffs")
+}
+
+/// *
+/// * ADMIN_ACTIONS - Historique des actions administratives
+/// * Traçabilité complète pour conformité juridique
+/// * Qui, quoi, quand, pourquoi pour chaque action
+model AdminAction {
+  id              String        @id @default(cuid())
+  adminId         String        // ID de l'admin qui a fait l'action
+  establishmentId String        // ID de l'établissement concerné
+  action          AdminActionType // Type d'action effectuée
+  reason          String?       // Raison optionnelle (rejet, suppression)
+  previousStatus  String?       // Statut précédent
+  newStatus       String?       // Nouveau statut
+  details         Json?         // Détails supplémentaires (métadonnées)
+  createdAt       DateTime      @default(now())
+  
+  // Relations
+  admin           User          @relation(fields: [adminId], references: [id])
+  establishment   Establishment @relation(fields: [establishmentId], references: [id])
+
+  @@map("admin_actions")
+}
+
+/// Types d'actions administratives
+enum AdminActionType {
+  APPROVE         // Approuver un établissement
+  REJECT          // Rejeter un établissement
+  PENDING         // Remettre en attente
+  DELETE          // Supprimer un établissement
+  RESTORE         // Restaurer un établissement supprimé
+  UPDATE          // Mise à jour d'informations
 }

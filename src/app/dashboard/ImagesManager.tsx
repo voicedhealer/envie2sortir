@@ -240,6 +240,8 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
   const updatePrimaryImage = async (imageUrl: string) => {
     try {
+      console.log('🔄 Mise à jour image principale:', imageUrl);
+      
       const response = await fetch(`/api/etablissements/images`, {
         method: 'PUT',
         headers: {
@@ -251,9 +253,18 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         }),
       });
 
+      console.log('📡 Réponse API:', response.status, response.statusText);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erreur API:', errorData);
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (parseError) {
+          console.error('❌ Erreur parsing JSON:', parseError);
+          errorData = { error: `Erreur ${response.status}: ${response.statusText}` };
+        }
+        
+        console.error('❌ Erreur API:', errorData);
         
         if (response.status === 403) {
           setError('Vous n\'avez pas les permissions pour modifier cet établissement. Assurez-vous d\'être connecté avec le bon compte.');
@@ -261,13 +272,16 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           setError(errorData.error || 'Erreur lors de la mise à jour');
         }
         
-        throw new Error(errorData.error || 'Erreur lors de la mise à jour');
+        throw new Error(`Erreur API: ${JSON.stringify(errorData)}`);
       }
 
+      const result = await response.json();
+      console.log('✅ Image principale mise à jour:', result);
+      
       setPrimaryImage(imageUrl);
       toast.success('Image principale mise à jour !');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'image principale:', error);
+      console.error('❌ Erreur lors de la mise à jour de l\'image principale:', error);
       toast.error('Erreur lors de la mise à jour de l\'image principale');
     }
   };

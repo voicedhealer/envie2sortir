@@ -79,6 +79,12 @@ export class MetricsCollector {
       return;
     }
 
+    // Désactiver complètement le monitoring en Edge Runtime
+    if (typeof window !== 'undefined') {
+      // On est côté client, ne pas démarrer le monitoring
+      return;
+    }
+
     // Monitoring de la mémoire
     setInterval(() => {
       try {

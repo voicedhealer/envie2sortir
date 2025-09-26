@@ -13,6 +13,7 @@ import EnrichmentStep from '@/components/forms/EnrichmentStep';
 import { EnrichmentData } from '@/lib/enrichment-system';
 import OrganizedServicesAmbianceManager from '@/components/OrganizedServicesAmbianceManager';
 import EnvieTagsInput from '@/components/forms/EnvieTagsInput';
+import PhoneVerificationModal from '@/components/forms/PhoneVerificationModal';
 
 // Fonction pour parser l'adresse Google en format formulaire
 function parseAddressFromGoogle(googleAddress: string): AddressData {
@@ -153,7 +154,7 @@ type ProfessionalData = {
   accountPasswordConfirm: string;
   accountFirstName: string;
   accountLastName: string;
-  accountPhone?: string;
+  accountPhone: string; // Obligatoire pour la vérification Twilio
   
   // Données légales/administratives
   siret: string;
@@ -186,7 +187,7 @@ type ProfessionalData = {
   facebook?: string;
   tiktok?: string;
   
-  // Contact
+  // Contact de l'établissement (différent du contact professionnel)
   phone?: string;
   email?: string;
   
@@ -405,12 +406,13 @@ const SUBSCRIPTION_PLANS = {
   premium: {
     label: "Plan Premium",
     features: [
-      "10 photos maximum",
+      "+ 10 photos = valeurs visuelles ajoutées",
       "Description détaillée",
-      "Mise en avant dans les résultats",
-      "Statistiques avancées",
-      "Badge 'Partenaire vérifié'",
-      "Support prioritaire"
+      "Logo flamme pour un visuel client tendance",
+      "Mise en avant de votre établissement avec l'offre premium dans le filtre de recherche",
+      "Statistiques avancées, détails de vos visiteurs",
+      "Support prioritaire",
+      "Événements temporaires + visuel sur la card de votre établissement"
     ],
     price: "29€/mois"
   }
@@ -573,6 +575,17 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [envieGeneratedTags, setEnvieGeneratedTags] = useState<string[]>([]);
+  
+  // État pour la vérification SMS
+  const [phoneVerification, setPhoneVerification] = useState({
+    isVerified: false,
+    isSending: false,
+    verificationCode: '',
+    error: ''
+  });
+  
+  // État pour le modal de vérification téléphone
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
     const [enrichmentData, setEnrichmentData] = useState<EnrichmentData>({
     name: '',
     establishmentType: '',
@@ -642,6 +655,103 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     if (isEditMode && establishment) {
       console.log('🔄 Chargement des données existantes en mode édition:', establishment);
       
+      
+      // Charger les données du professionnel (propriétaire)
+      if (establishment.owner) {
+        console.log('👤 Chargement des données du professionnel:', establishment.owner);
+        setFormData(prev => ({
+          ...prev,
+          firstName: establishment.owner.firstName || "",
+          lastName: establishment.owner.lastName || "",
+          email: establishment.owner.email || "",
+          phone: establishment.owner.phone || "",
+          companyName: establishment.owner.companyName || "",
+          siret: establishment.owner.siret || "",
+          legalStatus: establishment.owner.legalStatus || ""
+        }));
+      }
+      
+      // Parser l'adresse complète pour extraire les composants
+      const parseAddress = (fullAddress: string) => {
+        if (!fullAddress) return { street: "", postalCode: "", city: "" };
+        
+        // Pattern pour extraire : "8 Pl. Raspail, 69007 Lyon"
+        const match = fullAddress.match(/^(.+?),\s*(\d{5})\s+(.+)$/);
+        if (match) {
+          return {
+            street: match[1].trim(),
+            postalCode: match[2].trim(),
+            city: match[3].trim()
+          };
+        }
+        
+        // Si le pattern ne correspond pas, essayer de séparer par virgule
+        const parts = fullAddress.split(',').map(p => p.trim());
+        if (parts.length >= 3) {
+          return {
+            street: parts[0],
+            postalCode: parts[1],
+            city: parts[2]
+          };
+        }
+        
+        // Fallback : tout dans street
+        return {
+          street: fullAddress,
+          postalCode: "",
+          city: ""
+        };
+      };
+
+      const parsedAddress = parseAddress(establishment.address || "");
+      
+      console.log('🔍 Parsing de l\'adresse:', {
+        original: establishment.address,
+        parsed: parsedAddress,
+        hasCoordinates: !!(establishment.latitude && establishment.longitude)
+      });
+
+      // Charger les données de l'établissement
+      const newFormData = {
+        establishmentName: establishment.name || "",
+        description: establishment.description || "",
+        address: {
+          street: parsedAddress.street || establishment.address || "",
+          postalCode: establishment.postalCode || parsedAddress.postalCode || "",
+          city: establishment.city || parsedAddress.city || "",
+          latitude: establishment.latitude || undefined,
+          longitude: establishment.longitude || undefined
+        },
+        phone: establishment.phone || "",
+        email: establishment.email || "",
+        website: establishment.website || "",
+        instagram: establishment.instagram || "",
+        facebook: establishment.facebook || "",
+        tiktok: establishment.tiktok || "",
+        activities: establishment.activities ? (typeof establishment.activities === 'string' ? JSON.parse(establishment.activities) : establishment.activities) : [],
+        paymentMethods: establishment.paymentMethods ? convertPaymentMethodsArrayToObject(typeof establishment.paymentMethods === 'string' ? JSON.parse(establishment.paymentMethods) : establishment.paymentMethods) : {},
+        horairesOuverture: establishment.horairesOuverture ? (typeof establishment.horairesOuverture === 'string' ? JSON.parse(establishment.horairesOuverture) : establishment.horairesOuverture) : {},
+        prixMoyen: establishment.prixMoyen || "",
+        capaciteMax: establishment.capaciteMax || "",
+        accessibilite: establishment.accessibilite ? (typeof establishment.accessibilite === 'string' ? JSON.parse(establishment.accessibilite) : establishment.accessibilite) : {},
+        parking: establishment.parking || false,
+        terrasse: establishment.terrasse || false,
+        priceMin: establishment.priceMin || "",
+        priceMax: establishment.priceMax || ""
+      };
+      
+      setFormData(prev => ({ ...prev, ...newFormData }));
+      
+      // Déclencher la géolocalisation automatique si l'adresse est complète
+      if (newFormData.address.street && newFormData.address.postalCode && newFormData.address.city) {
+        console.log('🚀 Déclenchement de la géolocalisation automatique en mode édition');
+        // Utiliser setTimeout pour s'assurer que setFormData est terminé
+        setTimeout(() => {
+          // Simuler un changement de champ pour déclencher la géolocalisation
+          handleInputChange('address', newFormData.address);
+        }, 100);
+      }
+      
       // Charger les données Google Places existantes
       if (establishment.services) {
         try {
@@ -676,9 +786,22 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         }
       }
       
-      console.log('✅ Données Google Places chargées en mode édition');
-    }
-  }, [isEditMode, establishment]);
+      
+      // Charger les tags existants
+      if (establishment.tags && Array.isArray(establishment.tags)) {
+        const existingTags = establishment.tags.map(t => t.tag);
+        console.log("🏷️ Tags existants chargés:", existingTags);
+        setFormData(prev => ({ ...prev, tags: existingTags }));
+      }
+      
+      // Charger les envie tags existants
+      if (establishment.envieTags && Array.isArray(establishment.envieTags)) {
+        console.log("💭 Envie tags existants chargés:", establishment.envieTags);
+        setFormData(prev => ({ ...prev, envieTags: establishment.envieTags }));
+      }      
+      console.log('✅ Toutes les données chargées en mode édition');
+      }
+}, [isEditMode, establishment]);
 
   // Vérification SIRET en temps réel
   const verifySiret = async (siret: string) => {
@@ -712,6 +835,55 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
 
 
+  // Fonction pour gérer la validation de l'adresse
+  const handleAddressValidation = useCallback((isValid: boolean) => {
+    if (isValid) {
+      // Supprimer l'erreur d'adresse si elle est validée
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.address;
+        return newErrors;
+      });
+    }
+  }, []);
+
+  // Géocodage automatique en mode édition si l'adresse n'a pas de coordonnées
+  useEffect(() => {
+    if (isEditMode && formData.address && 
+        formData.address.street && formData.address.postalCode && formData.address.city &&
+        (!formData.address.latitude || !formData.address.longitude)) {
+      
+      console.log('🌍 Géocodage automatique en mode édition pour:', formData.address);
+      
+      // Déclencher le géocodage via l'API
+      const geocodeAddress = async () => {
+        try {
+          const fullAddress = `${formData.address.street}, ${formData.address.postalCode} ${formData.address.city}`;
+          const response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
+          const result = await response.json();
+
+          if (result.success && result.data) {
+            console.log('✅ Géocodage réussi en mode édition:', result.data);
+            setFormData(prev => ({
+              ...prev,
+              address: {
+                ...prev.address,
+                latitude: result.data.latitude,
+                longitude: result.data.longitude
+              }
+            }));
+          } else {
+            console.log('❌ Échec du géocodage en mode édition:', result);
+          }
+        } catch (error) {
+          console.error('❌ Erreur géocodage en mode édition:', error);
+        }
+      };
+
+      geocodeAddress();
+    }
+  }, [isEditMode, formData.address?.street, formData.address?.postalCode, formData.address?.city]);
+
   const handleInputChange = (field: keyof ProfessionalData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
@@ -739,7 +911,152 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     }
   };
 
+  // Fonctions pour la vérification SMS
+  const sendVerificationCode = async () => {
+    if (!formData.accountPhone) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Numéro de téléphone requis' }));
+      return;
+    }
+
+    setPhoneVerification(prev => ({ ...prev, isSending: true, error: '' }));
+
+    try {
+      const response = await fetch('/api/verify-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone: formData.accountPhone, 
+          action: 'send' 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPhoneVerification(prev => ({ 
+          ...prev, 
+          isSending: false,
+          error: ''
+        }));
+        console.log('📱 Code de vérification envoyé:', data.debugCode);
+      } else {
+        setPhoneVerification(prev => ({ 
+          ...prev, 
+          isSending: false,
+          error: data.error || 'Erreur lors de l\'envoi du code'
+        }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({ 
+        ...prev, 
+        isSending: false,
+        error: 'Erreur de connexion'
+      }));
+    }
+  };
+
+  const verifyCode = async () => {
+    if (!phoneVerification.verificationCode) {
+      setPhoneVerification(prev => ({ ...prev, error: 'Code de vérification requis' }));
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/verify-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          phone: formData.accountPhone, 
+          action: 'verify',
+          code: phoneVerification.verificationCode
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPhoneVerification(prev => ({ 
+          ...prev, 
+          isVerified: true,
+          error: ''
+        }));
+        // Passer à l'étape suivante automatiquement
+        nextStep();
+      } else {
+        setPhoneVerification(prev => ({ 
+          ...prev, 
+          error: data.error || 'Code de vérification incorrect'
+        }));
+      }
+    } catch (error) {
+      setPhoneVerification(prev => ({ 
+        ...prev, 
+        error: 'Erreur de connexion'
+      }));
+    }
+  };
+
+  // Fonctions pour gérer le modal de vérification téléphone
+  const handlePhoneVerificationSuccess = () => {
+    setPhoneVerification(prev => ({ 
+      ...prev, 
+      isVerified: true,
+      error: ''
+    }));
+    setShowPhoneModal(false);
+  };
+
+  const handleClosePhoneModal = () => {
+    setShowPhoneModal(false);
+  };
+
   // Fonction pour convertir un tableau de moyens de paiement en objet
+  // Fonction pour convertir un objet de moyens de paiement en tableau
+  // Cache pour le token CSRF
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const [csrfTokenExpiry, setCsrfTokenExpiry] = useState<number>(0);
+
+  // Fonction pour récupérer un token CSRF valide
+  const getCSRFToken = async (): Promise<string> => {
+    const now = Date.now();
+    
+    // Si on a un token valide et qu'il n'est pas expiré, le réutiliser
+    if (csrfToken && csrfTokenExpiry > now) {
+      return csrfToken;
+    }
+    
+    try {
+      const response = await fetch('/api/csrf/token');
+      const data = await response.json();
+      
+      if (data.token) {
+        setCsrfToken(data.token);
+        setCsrfTokenExpiry(now + (5 * 60 * 1000)); // 5 minutes
+        return data.token;
+      }
+      
+      throw new Error('Token CSRF non reçu');
+    } catch (error) {
+      console.error('Erreur lors de la récupération du token CSRF:', error);
+      throw new Error('Impossible de récupérer le token CSRF');
+    }
+  };
+
+  const convertPaymentMethodsObjectToArray = (paymentMethodsObj: any) => {
+    if (!paymentMethodsObj || typeof paymentMethodsObj !== 'object') return [];
+    
+    const methods: string[] = [];
+    
+    if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit');
+    if (paymentMethodsObj.debitCards) methods.push('Cartes de débit');
+    if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC');
+    if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
+    if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant');
+    if (paymentMethodsObj.pluxee) methods.push('Pluxee');
+    
+    return methods;
+  };
+
   const convertPaymentMethodsArrayToObject = (paymentMethodsArray: string[]) => {
     const paymentMethodsObj: any = {};
     
@@ -839,6 +1156,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     console.log('✅ Données d\'enrichissement intégrées, passage à l\'étape 3');
     // Passer à l'étape 3 (Informations sur l'établissement)
     setCurrentStep(3);
+    // Scroll vers le haut de la page pour une meilleure UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   const handleTagsChange = (tags: string[]) => {
     // Combiner les tags manuels avec les tags générés par les envies
@@ -885,11 +1204,20 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         else if (formData.accountPassword.length < 8) {
           newErrors.accountPassword = "Le mot de passe doit contenir au moins 8 caractères";
         }
+        if (!formData.accountPhone) newErrors.accountPhone = "Téléphone professionnel requis pour la vérification";
+        else if (!/^(?:(?:\+|00)33|0)\s*[1-9](?:[\s.-]*\d{2}){4}$/.test(formData.accountPhone.replace(/\s/g, ''))) {
+          newErrors.accountPhone = "Format de téléphone français invalide";
+        }
+        // Vérification que le téléphone est vérifié
+        if (!phoneVerification.isVerified) {
+          newErrors.phoneVerification = "Vérification du téléphone requise";
+        }
         if (!formData.accountPasswordConfirm) newErrors.accountPasswordConfirm = "Confirmation du mot de passe requise";
         else if (formData.accountPassword !== formData.accountPasswordConfirm) {
           newErrors.accountPasswordConfirm = "Les mots de passe ne correspondent pas";
         }
         break;
+
 
       case 1:
         if (!formData.siret) newErrors.siret = "SIRET requis";
@@ -904,6 +1232,9 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         if (!formData.establishmentName) newErrors.establishmentName = "Nom requis";
         if (!formData.address.street || !formData.address.postalCode || !formData.address.city) {
           newErrors.address = "Adresse complète requise (rue, code postal et ville)";
+        }
+        if (!formData.address.latitude || !formData.address.longitude) {
+          newErrors.address = "Géolocalisation requise pour valider l'adresse";
         }
         if (formData.activities.length === 0) newErrors.activities = "Sélectionnez au moins une activité";
         break;
@@ -941,11 +1272,15 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(8, prev + 1) as FormStep);
+      // Scroll vers le haut de la page pour une meilleure UX
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(0, prev - 1) as FormStep);
+    // Scroll vers le haut de la page pour une meilleure UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSubmit = async () => {
@@ -972,7 +1307,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           activities: formData.activities,
           services: formData.services,
           ambiance: formData.ambiance,
-          paymentMethods: formData.paymentMethods,
+          paymentMethods: convertPaymentMethodsObjectToArray(formData.paymentMethods),
           horairesOuverture: formData.hours,
           website: formData.website,
           instagram: formData.instagram,
@@ -982,6 +1317,14 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           priceMax: formData.priceMax,
           informationsPratiques: formData.informationsPratiques,
           subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD',
+          // === RE-DEMANDE DE VALIDATION ===
+          // Si l'établissement était rejeté, le remettre en attente
+          ...(establishment.status === 'rejected' && {
+            status: 'pending',
+            rejectionReason: null,
+            rejectedAt: null,
+            lastModifiedAt: new Date().toISOString()
+          }),
           // === DONNÉES HYBRIDES ===
           accessibilityDetails: formData.hybridAccessibilityDetails,
           detailedServices: formData.hybridDetailedServices,
@@ -990,12 +1333,18 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           childrenServices: formData.hybridChildrenServices
         };
 
+        // Récupérer le token CSRF
+        const csrfToken = await getCSRFToken();
+
         const response = await fetch(`/api/etablissements/${establishment.slug}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(updateData),
+          body: JSON.stringify({
+            ...updateData,
+            csrfToken
+          }),
         });
 
         const result = await response.json();
@@ -1068,20 +1417,25 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             });
 
             if (signInResult?.ok) {
+              // Forcer le rafraîchissement de la session
+              await new Promise(resolve => setTimeout(resolve, 1000));
               // Redirection vers le dashboard
               router.push('/dashboard');
             } else {
-              // Fallback vers la page d'établissement
-              router.push(`/etablissements/${result.establishment.slug}`);
+              console.error('Échec de la connexion automatique:', signInResult?.error);
+              // Attendre un peu et forcer la redirection vers le dashboard
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              router.push('/dashboard');
             }
           } catch (error) {
             console.error('Erreur connexion automatique:', error);
-            // Fallback vers la page d'établissement
-            router.push(`/etablissements/${result.establishment.slug}`);
+            // Attendre un peu et forcer la redirection vers le dashboard
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            router.push('/dashboard');
           }
         } else {
-          // Redirection classique
-          router.push(`/etablissements/${result.establishment.slug}`);
+          // Redirection vers le dashboard même sans autoLogin
+          router.push('/dashboard');
         }
       }
       
@@ -1168,18 +1522,52 @@ const renderStep = () => {
             )}
           </div>
 
-          {/* Téléphone */}
+          {/* Téléphone professionnel - OBLIGATOIRE pour vérification Twilio */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Téléphone (optionnel)
+              Téléphone professionnel * 
+              <span className="text-xs text-gray-500 ml-1">(pour vérification Twilio)</span>
             </label>
-            <input
-              type="tel"
-              value={formData.accountPhone || ''}
-              onChange={(e) => handleInputChange('accountPhone', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              placeholder="06 12 34 56 78"
-            />
+            <div className="relative">
+              <input
+                type="tel"
+                value={formData.accountPhone || ''}
+                onChange={(e) => {
+                  const phone = e.target.value;
+                  handleInputChange('accountPhone', phone);
+                  
+                  // Validation en temps réel du numéro français
+                  const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+                  const isValidFrenchPhone = /^(0[1-9]|\+33[1-9])[0-9]{8}$/.test(cleanPhone);
+                  
+                  if (isValidFrenchPhone && !phoneVerification.isVerified) {
+                    // Ouvrir le modal de vérification automatiquement
+                    setShowPhoneModal(true);
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                  phoneVerification.isVerified ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                }`}
+                placeholder="06 12 34 56 78"
+              />
+              {phoneVerification.isVerified && (
+                <div className="absolute right-3 top-3">
+                  <Icons.Check />
+                </div>
+              )}
+            </div>
+            {errors.accountPhone && (
+              <p className="text-red-500 text-sm mt-1">{errors.accountPhone}</p>
+            )}
+            {phoneVerification.isVerified ? (
+              <p className="text-xs text-green-600 mt-1 flex items-center">
+                ✓ Numéro de téléphone vérifié
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500 mt-1">
+                📱 Un SMS de vérification sera envoyé à ce numéro
+              </p>
+            )}
           </div>
 
           {/* Mot de passe */}
@@ -1217,6 +1605,7 @@ const renderStep = () => {
           </div>
         </div>
       );
+
 
     // === Étape 1 : Informations professionnelles et vérification SIRET ===
     case 1:
@@ -1294,19 +1683,16 @@ const renderStep = () => {
           </div>
         </div>
       );
-        // === Étape 2 : Enrichissement automatique ===
+        // === Étape 2 : Informations de l'établissement ===
     case 2:
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">
-              {isEditMode ? 'Réenrichissement avec Google Places' : 'Enrichissement automatique'}
+              Informations de votre établissement
             </h2>
             <p className="text-gray-600 mt-2">
-              {isEditMode 
-                ? 'Vous pouvez refaire l\'enrichissement pour mettre à jour les informations de votre établissement'
-                : 'Récupérez automatiquement les informations de votre établissement depuis Google Places'
-              }
+              Décrivez votre établissement et ses caractéristiques principales
             </p>
           </div>
           
@@ -1315,6 +1701,8 @@ const renderStep = () => {
             onSkip={() => {
               console.log('Enrichissement ignoré par l\'utilisateur');
               setCurrentStep(3);
+              // Scroll vers le haut de la page pour une meilleure UX
+              window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
             isVisible={true}
             onEnrichmentDataChange={handleEnrichmentDataChange}
@@ -1364,7 +1752,8 @@ const renderStep = () => {
             value={formData.address}
             onChange={(address) => handleInputChange('address', address)}
             error={errors.address}
-            disableAutoGeocode={isEditMode}
+            disableAutoGeocode={false}
+            onValidationChange={handleAddressValidation}
           />
           
           {/* Horaires d'ouverture */}
@@ -1379,6 +1768,54 @@ const renderStep = () => {
             onChange={(value) => handleInputChange('activities', value)}
             error={errors.activities}
           />
+          
+          {/* === CONTACT DE L'ÉTABLISSEMENT === */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+              📞 Contact de l'établissement
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Ces informations seront visibles par les clients (différentes de vos coordonnées professionnelles)
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Téléphone de l'établissement */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Téléphone de l'établissement
+                  <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phone || ''}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="04 78 90 12 34"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  📱 Numéro visible par les clients
+                </p>
+              </div>
+              
+              {/* Email de l'établissement */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Email de l'établissement
+                  <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+                </label>
+                <input
+                  type="email"
+                  value={formData.email || ''}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="contact@votre-etablissement.com"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  ✉️ Email visible par les clients
+                </p>
+              </div>
+            </div>
+          </div>
           
         </div>
       );
@@ -1667,8 +2104,15 @@ const renderStep = () => {
               instagram: formData.instagram,
               facebook: formData.facebook,
               tiktok: formData.tiktok,
+              // Ajout des contacts professionnels pour le résumé
+              professionalPhone: formData.accountPhone,
+              professionalEmail: formData.accountEmail,
             }}
-            onEdit={(step) => setCurrentStep(step as FormStep)}
+            onEdit={(step) => {
+              setCurrentStep(step as FormStep);
+              // Scroll vers le haut de la page pour une meilleure UX
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
           />
           {/* Conditions d'utilisation (seulement en mode création) */}
           {!isEditMode && (
@@ -1820,6 +2264,14 @@ const renderStep = () => {
           )}
         </div>
       </div>
+
+      {/* Modal de vérification téléphone */}
+      <PhoneVerificationModal
+        isOpen={showPhoneModal}
+        onClose={handleClosePhoneModal}
+        phoneNumber={formData.accountPhone || ''}
+        onVerificationSuccess={handlePhoneVerificationSuccess}
+      />
     </div>
   );
 }

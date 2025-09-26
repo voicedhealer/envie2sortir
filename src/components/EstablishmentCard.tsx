@@ -189,7 +189,7 @@ interface EstablishmentCardProps {
     address: string;
     city?: string;
     category?: string;
-    status: 'active' | 'pending' | 'suspended';
+    status: 'approved' | 'pending' | 'rejected';
     latitude?: number;
     longitude?: number;
     images?: Array<{
@@ -361,7 +361,8 @@ export default function EstablishmentCard({
     e.preventDefault();
     e.stopPropagation();
     
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }

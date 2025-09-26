@@ -27,10 +27,16 @@ export default function AdminLayout({
                   Dashboard
                 </Link>
                 <Link
-                  href="/admin/demandes"
+                  href="/admin/etablissements"
                   className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
                 >
-                  Demandes
+                  Gérer les établissements
+                </Link>
+                <Link
+                  href="/admin/historique"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Historique
                 </Link>
               </nav>
             </div>

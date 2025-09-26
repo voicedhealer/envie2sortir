@@ -9,7 +9,7 @@ interface Establishment {
   address: string;
   city?: string;
   category?: string;
-  status: 'active' | 'pending' | 'suspended';
+  status: 'approved' | 'pending' | 'rejected';
   latitude?: number;
   longitude?: number;
   images?: Array<{

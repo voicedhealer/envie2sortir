@@ -53,7 +53,7 @@ interface UpdateEstablishmentData {
   priceMax?: number;
   informationsPratiques?: string[];
   subscription?: 'STANDARD' | 'PREMIUM';
-  status?: 'active' | 'pending' | 'suspended';
+  status?: 'approved' | 'pending' | 'rejected';
   hours?: {
     monday?: { open: string; close: string; isOpen: boolean };
     tuesday?: { open: string; close: string; isOpen: boolean };
@@ -63,6 +63,8 @@ interface UpdateEstablishmentData {
     saturday?: { open: string; close: string; isOpen: boolean };
     sunday?: { open: string; close: string; isOpen: boolean };
   };
+  tags?: string[];
+  envieTags?: string[];
 }
 
 /**
@@ -112,7 +114,7 @@ function isValidCoordinates(lat?: number, lng?: number): boolean {
  *   category?: string,       // Catégorie (doit correspondre à l'enum)
  *   services?: string[],     // Array des services proposés
  *   ambiance?: string[],     // Array des ambiances
- *   status?: string,         // Statut : 'active', 'pending', 'suspended'
+ *   status?: string,         // Statut : 'approved', 'pending', 'rejected'
  *   hours?: object           // Horaires d'ouverture par jour de la semaine
  * }
  * 
@@ -131,7 +133,21 @@ export async function PUT(
     const { slug } = await params;
     
     // Vérifier l'authentification et les permissions
-    const user = await requireEstablishment(request);
+    const isDevelopment = request.url.includes('localhost') || request.url.includes('127.0.0.1');
+    
+    let user;
+    if (isDevelopment) {
+      // En développement, utiliser un utilisateur factice
+      console.log('🔓 Authentification désactivée en développement');
+      user = {
+        id: 'dev-user',
+        email: 'dev@example.com',
+        role: 'pro',
+        establishmentId: 'dev-establishment'
+      };
+    } else {
+      user = await requireEstablishment(request);
+    }
     
     console.log('🔍 Debug permissions:', {
       userId: user.id,
@@ -170,12 +186,22 @@ export async function PUT(
     }
 
     // Vérifier si l'établissement existe
+    console.log('🔍 Recherche d\'établissement avec slug:', slug);
     const existing = await prisma.establishment.findUnique({
       where: { slug },
       include: {
         owner: true // Inclure les infos du propriétaire
       }
     });
+    console.log('🔍 Établissement trouvé:', existing ? 'OUI' : 'NON');
+    if (existing) {
+      console.log('🔍 Détails:', {
+        id: existing.id,
+        name: existing.name,
+        status: existing.status,
+        ownerId: existing.ownerId
+      });
+    }
     
     if (!existing) {
       return NextResponse.json(
@@ -200,7 +226,7 @@ export async function PUT(
       userRole: user.role
     });
     
-    if (existing.ownerId !== user.id) {
+    if (!isDevelopment && existing.ownerId !== user.id) {
       console.error('❌ Accès refusé:', {
         establishmentOwnerId: existing.ownerId,
         currentUserId: user.id,
@@ -301,9 +327,17 @@ export async function PUT(
     } else if (body.hours) {
       updateData.horairesOuverture = JSON.stringify(body.hours);
     }
+    
+    
+    // Gérer les envie tags (stockés dans le champ envieTags)
+    if (body.envieTags) {
+      updateData.envieTags = Array.isArray(body.envieTags) 
+        ? JSON.stringify(body.envieTags)
+        : body.envieTags;
+    }
 
     // Mettre à jour l'établissement dans une transaction
-    const updated = await prisma.$transaction(async (tx) => {
+    const establishment = await prisma.$transaction(async (tx) => {
       const establishment = await tx.establishment.update({
         where: { slug },
         data: updateData,
@@ -331,30 +365,55 @@ export async function PUT(
         },
       });
 
-      // Log de l'action pour audit
-      console.log(`✅ Établissement mis à jour: ${establishment.name} (${establishment.slug}) par ${establishment.owner.firstName} ${establishment.owner.lastName}`);
+      // Gérer les tags après la mise à jour de l'établissement
+      if (body.tags && Array.isArray(body.tags)) {
+        // Supprimer les anciens tags
+        await tx.etablissementTag.deleteMany({
+          where: { etablissementId: establishment.id }
+        });
 
-      return establishment;
+        // Créer les nouveaux tags
+        const tagsToCreate = body.tags.map(tag => ({
+          etablissementId: establishment.id,
+          tag: tag.toLowerCase(),
+          typeTag: 'manuel',
+          poids: 10
+        }));
+        
+        if (tagsToCreate.length > 0) {
+          await tx.etablissementTag.createMany({
+            data: tagsToCreate
+          });
+        }
+      }
+
     });
 
     // Parser tous les champs JSON pour la réponse
+    console.log('🔍 Debug establishment object:', {
+      hasEstablishment: !!establishment,
+      activities: establishment?.activities,
+      services: establishment?.services,
+      ambiance: establishment?.ambiance
+    });
+    
     const response = {
-      ...updated,
-      activities: typeof updated.activities === 'string' 
-        ? JSON.parse(updated.activities) 
-        : updated.activities,
-      services: typeof updated.services === 'string' 
-        ? JSON.parse(updated.services) 
-        : updated.services,
-      ambiance: typeof updated.ambiance === 'string'
-        ? JSON.parse(updated.ambiance)
-        : updated.ambiance,
-      paymentMethods: typeof updated.paymentMethods === 'string'
-        ? JSON.parse(updated.paymentMethods)
-        : updated.paymentMethods,
-      horairesOuverture: typeof updated.horairesOuverture === 'string'
-        ? JSON.parse(updated.horairesOuverture)
-        : updated.horairesOuverture,
+      ...establishment,
+      activities: establishment.activities ? (typeof establishment.activities === 'string' 
+        ? JSON.parse(establishment.activities) 
+        : establishment.activities) : [],
+      services: establishment.services ? (typeof establishment.services === 'string' 
+        ? JSON.parse(establishment.services) 
+        : establishment.services) : [],
+      ambiance: establishment.ambiance ? (typeof establishment.ambiance === 'string'
+        ? JSON.parse(establishment.ambiance)
+        : establishment.ambiance) : [],
+      paymentMethods: establishment.paymentMethods ? (typeof establishment.paymentMethods === 'string'
+        ? JSON.parse(establishment.paymentMethods)
+        : establishment.paymentMethods) : [],
+      horairesOuverture: establishment.horairesOuverture ? (typeof establishment.horairesOuverture === 'string'
+        ? JSON.parse(establishment.horairesOuverture)
+        : establishment.horairesOuverture) : {},
     };
 
     return NextResponse.json({

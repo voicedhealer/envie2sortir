@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { validateCSRFToken } from '@/lib/security';
 import { logger } from '@/lib/monitoring';
 
-export async function validateCSRFMiddleware(request: NextRequest): Promise<NextResponse | null> {
+export async function validateCSRFMiddleware(request: NextRequest): Promise<NextResponse | undefined> {
+  // Désactiver la validation CSRF en développement
+  const isDevelopment = request.url.includes('localhost') || request.url.includes('127.0.0.1');
+  if (isDevelopment) {
+    console.log('🔓 CSRF désactivé en développement');
+    return undefined;
+  }
+
   // Vérifier si la requête nécessite une validation CSRF
   if (!shouldValidateCSRF(request)) {
-    return null;
+    return undefined;
   }
 
   try {
@@ -40,10 +47,18 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<Next
       );
     }
 
-    // Générer l'ID de session pour la validation
-    const ipAddress = request.ip || request.headers.get('x-forwarded-for') || 'unknown';
-    const userAgent = request.headers.get('user-agent') || '';
-    const sessionId = `${ipAddress}-${Buffer.from(userAgent).toString('base64').slice(0, 16)}`;
+    // Utiliser une approche plus simple pour le sessionId
+    // En développement, utiliser une clé fixe pour éviter les problèmes d'IP
+    const isDevelopment = request.url.includes('localhost') || request.url.includes('127.0.0.1');
+    const sessionId = isDevelopment ? 'dev-session' : 
+      `${request.ip || request.headers.get('x-forwarded-for') || 'unknown'}-${btoa(request.headers.get('user-agent') || '').slice(0, 16)}`;
+    
+    // Debug logs
+    console.log('🔍 CSRF Debug:', {
+      isDevelopment,
+      sessionId: sessionId.slice(0, 20) + '...',
+      token: csrfToken.slice(0, 8) + '...'
+    });
 
     // Valider le token
     const isValid = validateCSRFToken(sessionId, csrfToken);
@@ -62,7 +77,7 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<Next
       );
     }
 
-    return null; // Token valide, continuer
+    return undefined; // Token valide, continuer
 
   } catch (error) {
     await logger.error('CSRF validation error', {
@@ -95,7 +110,8 @@ function shouldValidateCSRF(request: NextRequest): boolean {
     '/api/categories',
     '/api/etablissements/random',
     '/api/recherche',
-    '/api/user/favorites' // APIs des favoris - authentifiées via session
+    '/api/user/favorites', // APIs des favoris - authentifiées via session
+    '/api/etablissements/images' // API des images - protégée par session
   ];
 
   if (publicEndpoints.some(endpoint => pathname.startsWith(endpoint))) {

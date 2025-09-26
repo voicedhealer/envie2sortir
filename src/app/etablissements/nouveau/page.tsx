@@ -9,6 +9,69 @@ export default async function NewEstablishmentPage() {
   // Vérifier si l'utilisateur est connecté
   const session = await getServerSession(authOptions);
   
+  // Si l'utilisateur n'est pas connecté, afficher le formulaire d'inscription professionnelle
+  if (!session?.user) {
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50">
+        {/* Header avec navigation */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Espace Professionnel</h1>
+                <p className="text-gray-600 mt-2">Rejoignez Envie2Sortir et faites découvrir votre établissement</p>
+              </div>
+              <a href="/" className="text-orange-600 hover:text-orange-700 font-medium">
+                ← Retour à l'accueil
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Contenu principal */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <EstablishmentForm />
+          </div>
+        </div>
+      </main>
+    );
+  }
+  
+  // Vérifier que l'utilisateur est un professionnel
+  if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-2xl">🚫</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Accès non autorisé
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Seuls les professionnels peuvent créer des établissements. 
+            Les administrateurs ne peuvent pas créer d'établissements.
+          </p>
+          <div className="space-y-3">
+            <a 
+              href="/dashboard" 
+              className="block w-full px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors"
+            >
+              Retour au tableau de bord
+            </a>
+            <a 
+              href="/" 
+              className="block w-full px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              Retour à l'accueil
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   if (session?.user?.id) {
     console.log('🔍 Debug - Session user:', {
       id: session.user.id,

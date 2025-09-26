@@ -373,10 +373,10 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                   <Link
-                    href={`/admin/demandes/${establishment.id}`}
+                    href={`/admin/etablissements`}
                     className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
-                    Voir détails →
+                    Gérer →
                   </Link>
                 </div>
               </div>
@@ -394,13 +394,7 @@ export default function AdminDashboard() {
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Actions rapides
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Link
-            href="/admin/demandes"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
-          >
-            Voir toutes les demandes
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Link
             href="/api/monitoring/metrics"
             target="_blank"

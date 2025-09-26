@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
         theForkLink: establishmentData.theForkLink,
         uberEatsLink: establishmentData.uberEatsLink,
         ownerId: professional.id,
-        status: 'active' // Approuver automatiquement
+        status: 'approved' // Approuver automatiquement
       }
     });
     

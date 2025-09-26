@@ -32,6 +32,9 @@ interface Establishment {
   imageUrl: string | null;
   status: string;
   subscription: string;
+  rejectionReason: string | null;
+  rejectedAt: string | null;
+  lastModifiedAt: string | null;
   viewsCount: number;
   clicksCount: number;
   avgRating: number | null;
@@ -67,11 +70,11 @@ export default function DashboardContent({ user, establishment }: DashboardConte
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'approved':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
-      case 'suspended':
+      case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -80,12 +83,12 @@ export default function DashboardContent({ user, establishment }: DashboardConte
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active':
-        return 'Actif';
+      case 'approved':
+        return 'Approuvé';
       case 'pending':
         return 'En attente de validation';
-      case 'suspended':
-        return 'Suspendu';
+      case 'rejected':
+        return 'Rejeté';
       default:
         return 'Inconnu';
     }
@@ -172,6 +175,50 @@ export default function DashboardContent({ user, establishment }: DashboardConte
             </span>
           </div>
         </div>
+        
+        {/* Informations de rejet */}
+        {establishment.status === 'rejected' && establishment.rejectionReason && (
+          <div className="px-6 py-4 bg-red-50 border-t border-red-200">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Votre établissement a été rejeté
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p><strong>Raison du rejet :</strong></p>
+                  <p className="mt-1">{establishment.rejectionReason}</p>
+                  {establishment.rejectedAt && (
+                    <p className="mt-2 text-xs text-red-600">
+                      Rejeté le {new Date(establishment.rejectedAt).toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="mt-4">
+                  <Link
+                    href={`/etablissements/${establishment.slug}/modifier`}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Modifier et redemander validation
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         
         <div className="px-6 py-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

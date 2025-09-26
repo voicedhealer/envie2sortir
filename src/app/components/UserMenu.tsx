@@ -81,7 +81,7 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
 
       {showUserMenu && (
         <div className={`absolute ${isMobile ? 'left-0' : 'right-0'} mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50`}>
-          {session.user.role === 'user' && (
+          {(session.user.userType === 'user' || session.user.role === 'user') && (
             <>
               <Link href="/mon-compte" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
                 <User className="w-4 h-4 mr-3" />
@@ -93,7 +93,7 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
               </Link>
             </>
           )}
-          {session.user.role === 'pro' && (
+          {(session.user.userType === 'professional' || session.user.role === 'pro') && (
             <Link href="/dashboard" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
               <Settings className="w-4 h-4 mr-3" />
               Dashboard Pro

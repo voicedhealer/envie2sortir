@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Navigation from "./navigation";
 import AuthProvider from "./components/AuthProvider";
+import { CSRFProvider } from "@/components/CSRFProvider";
 import FakeToaster from "@/components/FakeToaster";
 
 const inter = Inter({
@@ -24,9 +25,11 @@ export default function RootLayout({
     <html lang="fr">
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning={true}>
         <AuthProvider>
-          <Navigation />
-          {children}
-          <FakeToaster />
+          <CSRFProvider>
+            <Navigation />
+            {children}
+            <FakeToaster />
+          </CSRFProvider>
         </AuthProvider>
       </body>
     </html>

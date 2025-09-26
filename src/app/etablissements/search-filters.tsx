@@ -8,7 +8,7 @@ const categories = [
   "restaurant", "cinema", "theater", "concert", "museum", "other"
 ];
 
-const statuses = ["active", "pending", "suspended"];
+const statuses = ["approved", "pending", "rejected"];
 
 export default function SearchFilters() {
   const router = useRouter();

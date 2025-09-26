@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 // Types pour les données d'adresse
 export interface AddressData {
@@ -17,6 +17,7 @@ interface AdresseStepProps {
   onChange: (address: AddressData) => void;
   error?: string;
   disableAutoGeocode?: boolean; // Nouveau prop pour désactiver le géocodage automatique
+  onValidationChange?: (isValid: boolean) => void; // Callback pour notifier la validation
 }
 
 // Type pour les suggestions d'autocomplete
@@ -34,7 +35,7 @@ interface Suggestion {
   };
 }
 
-export default function AdresseStep({ value, onChange, error, disableAutoGeocode = false }: AdresseStepProps) {
+export default function AdresseStep({ value, onChange, error, disableAutoGeocode = false, onValidationChange }: AdresseStepProps) {
   // États locaux
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
@@ -44,6 +45,42 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
 
   // Debounce pour l'autocomplete
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Ref pour stocker la fonction de callback et éviter les boucles infinies
+  const onValidationChangeRef = useRef(onValidationChange);
+  onValidationChangeRef.current = onValidationChange;
+
+  // Ref pour stocker la dernière valeur de validation pour éviter les appels inutiles
+  const lastValidationRef = useRef<boolean | null>(null);
+
+  // Vérifier la validation de l'adresse
+  useEffect(() => {
+    if (onValidationChangeRef.current) {
+      const isValid = !!(
+        value.street?.trim() && 
+        value.postalCode?.trim() && 
+        value.city?.trim() && 
+        value.latitude && 
+        value.longitude
+      );
+      
+      // Ne pas appeler le callback si la validation n'a pas changé
+      if (lastValidationRef.current !== isValid) {
+        lastValidationRef.current = isValid;
+        onValidationChangeRef.current(isValid);
+        
+        // Log pour debug
+        console.log('📍 Validation adresse:', {
+          street: value.street,
+          postalCode: value.postalCode,
+          city: value.city,
+          latitude: value.latitude,
+          longitude: value.longitude,
+          isValid
+        });
+      }
+    }
+  }, [value.street, value.postalCode, value.city, value.latitude, value.longitude]);
 
   // Fonction de géocodage automatique
   const geocodeAddress = useCallback(async (street: string, postalCode: string, city: string) => {
@@ -69,11 +106,17 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
 
       if (result.success && result.data) {
         // Mise à jour des coordonnées
-        onChange({
+        const updatedAddress = {
           ...value,
           latitude: result.data.latitude,
           longitude: result.data.longitude
-        });
+        };
+        onChange(updatedAddress);
+        
+        // Notifier que l'adresse est validée
+        if (onValidationChange) {
+          onValidationChange(true);
+        }
         
         console.log(`✅ Géocodage réussi: ${result.data.latitude}, ${result.data.longitude}`);
       } else {

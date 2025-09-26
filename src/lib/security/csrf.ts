@@ -1,5 +1,3 @@
-import { randomBytes } from 'crypto';
-
 interface CSRFStore {
   [key: string]: {
     token: string;
@@ -9,8 +7,12 @@ interface CSRFStore {
 
 const store: CSRFStore = {};
 
-export function generateCSRFToken(sessionId: string): string {
-  const token = randomBytes(32).toString('hex');
+export async function generateCSRFToken(sessionId: string): Promise<string> {
+  // Utiliser l'API Web Crypto au lieu de Node.js crypto
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  const token = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  
   store[sessionId] = {
     token,
     expires: Date.now() + 3600000 // 1 heure
@@ -35,5 +37,5 @@ export function cleanupExpiredTokens(): void {
   });
 }
 
-// Nettoyage automatique toutes les heures
-setInterval(cleanupExpiredTokens, 3600000);
+// Nettoyage automatique - sera appelé manuellement
+// setInterval n'est pas supporté dans l'Edge Runtime

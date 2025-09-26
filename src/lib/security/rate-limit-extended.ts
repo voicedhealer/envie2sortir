@@ -25,3 +25,8 @@ export const adminRateLimit = createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 tentatives max
 });
+
+export const imagesReadRateLimit = createRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 lectures d'images par minute
+});

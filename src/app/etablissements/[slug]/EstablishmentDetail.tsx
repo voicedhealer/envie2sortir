@@ -107,6 +107,36 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     tiktok: establishment.tiktok || '',
   });
 
+  // Cache pour le token CSRF
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
+  const [csrfTokenExpiry, setCsrfTokenExpiry] = useState<number>(0);
+
+  // Fonction pour récupérer un token CSRF valide
+  const getCSRFToken = async (): Promise<string> => {
+    const now = Date.now();
+    
+    // Si on a un token valide et qu'il n'est pas expiré, le réutiliser
+    if (csrfToken && csrfTokenExpiry > now) {
+      return csrfToken;
+    }
+
+    try {
+      const response = await fetch('/api/csrf/token');
+      const data = await response.json();
+      
+      if (data.token) {
+        setCsrfToken(data.token);
+        setCsrfTokenExpiry(data.expires || now + 3600000); // 1 heure par défaut
+        return data.token;
+      }
+      
+      throw new Error('Token CSRF non reçu');
+    } catch (error) {
+      console.error('Erreur lors de la récupération du token CSRF:', error);
+      throw error;
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setEditForm(prev => ({
@@ -125,12 +155,18 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
 
   const handleSave = async () => {
     try {
+      // Récupérer le token CSRF
+      const csrfToken = await getCSRFToken();
+
       const response = await fetch(`/api/etablissements/${establishment.slug}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          csrfToken
+        }),
       });
 
       if (response.ok) {
@@ -146,12 +182,18 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
 
   const handleSocialsSave = async () => {
     try {
+      // Récupérer le token CSRF
+      const csrfToken = await getCSRFToken();
+
       const response = await fetch(`/api/etablissements/${establishment.slug}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(socialsForm),
+        body: JSON.stringify({
+          ...socialsForm,
+          csrfToken
+        }),
       });
 
       if (response.ok) {
@@ -170,8 +212,15 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     }
 
     try {
+      // Récupérer le token CSRF
+      const csrfToken = await getCSRFToken();
+
       const response = await fetch(`/api/etablissements/${establishment.slug}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ csrfToken }),
       });
 
       if (response.ok) {

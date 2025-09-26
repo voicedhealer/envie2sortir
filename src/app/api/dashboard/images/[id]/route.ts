@@ -17,7 +17,8 @@ export async function DELETE(
     }
 
     // Vérifier que l'utilisateur est un professionnel
-    if (session.user.role !== 'pro') {
+    // Vérifier que l'utilisateur est un professionnel
+    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 

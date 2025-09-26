@@ -1,42 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createTagsData } from "@/lib/category-tags-mapping";
-import bcrypt from "bcryptjs";
-import { logSubscriptionChange } from "@/lib/subscription-logger";
+import bcrypt from 'bcryptjs';
+import { geocodeAddress } from '@/lib/geocoding';
+import { createTagsData } from '@/lib/category-tags-mapping';
+import { logSubscriptionChange } from '@/lib/subscription-logger';
 
-// Fonction pour géocoder une adresse
-async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number } | null> {
-  try {
-    const encodedAddress = encodeURIComponent(address);
-    const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&countrycodes=fr`);
-    
-    if (!response.ok) {
-      console.error('Erreur géocodage:', response.statusText);
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (data && data.length > 0) {
-      const result = data[0];
-      return {
-        latitude: parseFloat(result.lat),
-        longitude: parseFloat(result.lon)
-      };
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Erreur lors du géocodage:', error);
-    return null;
-  }
-}
-
-/**
- * API d'inscription professionnelle
- * Traite le formulaire multi-étapes et crée professionnel + établissement
- */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
@@ -67,53 +36,38 @@ export async function POST(request: Request) {
         const paymentMethodsData = formData.get('paymentMethods');
         console.log('🔍 paymentMethodsData type:', typeof paymentMethodsData);
         console.log('🔍 paymentMethodsData value:', paymentMethodsData);
-        
-        if (typeof paymentMethodsData === 'string') {
-          // Vérifier si c'est "[object Object]" (erreur côté client)
-          if (paymentMethodsData === '[object Object]') {
-            console.warn('⚠️ Reçu "[object Object]" - problème côté client');
-            return [];
-          }
+        if (paymentMethodsData && typeof paymentMethodsData === 'string') {
           try {
             return JSON.parse(paymentMethodsData);
           } catch (e) {
-            console.error('❌ Erreur JSON.parse paymentMethods:', e);
-            console.error('❌ Valeur reçue:', paymentMethodsData);
-            return [];
+            console.log('⚠️ Erreur parsing paymentMethods, utilisation de la valeur brute');
+            return [paymentMethodsData];
           }
-        } else if (paymentMethodsData && typeof paymentMethodsData === 'object') {
-          return paymentMethodsData;
         }
         return [];
       })(),
-      tags: JSON.parse(formData.get('tags') as string || '[]'),
-      hours: (() => {
-        const hoursData = formData.get('hours');
-        if (typeof hoursData === 'string') {
-          return JSON.parse(hoursData);
-        } else if (hoursData && typeof hoursData === 'object') {
-          return hoursData;
-        }
-        return {};
-      })(),
+      hours: JSON.parse(formData.get('hours') as string || '{}'),
       website: formData.get('website') as string || '',
       instagram: formData.get('instagram') as string || '',
       facebook: formData.get('facebook') as string || '',
       tiktok: formData.get('tiktok') as string || '',
-      priceMin: formData.get('priceMin') ? parseFloat(formData.get('priceMin') as string) : null,
-      priceMax: formData.get('priceMax') ? parseFloat(formData.get('priceMax') as string) : null,
+      priceMin: parseFloat(formData.get('priceMin') as string) || 0,
+      priceMax: parseFloat(formData.get('priceMax') as string) || 0,
       informationsPratiques: (() => {
         const infosData = formData.get('informationsPratiques');
-        if (typeof infosData === 'string') {
-          return JSON.parse(infosData);
-        } else if (infosData && typeof infosData === 'object') {
-          return infosData;
+        if (infosData && typeof infosData === 'string') {
+          try {
+            return JSON.parse(infosData);
+          } catch (e) {
+            return [infosData];
+          }
         }
-        return {};
+        return [];
       })(),
-      envieTags: JSON.parse(formData.get('envieTags') as string || '[]'),
       theForkLink: formData.get('theForkLink') as string || '',
       uberEatsLink: formData.get('uberEatsLink') as string || '',
+      tags: JSON.parse(formData.get('tags') as string || '[]'),
+      envieTags: JSON.parse(formData.get('envieTags') as string || '[]'),
     };
 
     // Générer un slug unique
@@ -141,25 +95,30 @@ export async function POST(request: Request) {
       console.log('❌ Impossible de géocoder l\'adresse');
     }
 
-    // Transaction pour créer user + établissement ensemble
+    // Transaction pour créer professional + établissement ensemble
     const result = await prisma.$transaction(async (tx) => {
       // 1. Hacher le mot de passe
+      console.log('🔐 Password type:', typeof accountData.password);
+      console.log('🔐 Password value:', accountData.password);
       const passwordHash = await bcrypt.hash(accountData.password, 12);
 
-      // 2. Créer l'utilisateur
-      const user = await tx.user.create({
+      // 2. Créer le professionnel (contient tout : auth + données pro)
+      const professional = await tx.professional.create({
         data: {
-          email: accountData.email,
-          passwordHash: passwordHash,
+          siret: professionalData.siret,
           firstName: accountData.firstName,
           lastName: accountData.lastName,
+          email: accountData.email,
+          passwordHash: passwordHash,
           phone: accountData.phone,
-          role: 'pro', // Rôle professionnel
-          name: `${accountData.firstName} ${accountData.lastName}`,
+          companyName: professionalData.companyName,
+          legalStatus: professionalData.legalStatus,
+          subscriptionPlan: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
+          siretVerified: false, // À vérifier plus tard
         }
       });
 
-      // 3. Créer l'établissement lié à l'utilisateur
+      // 3. Créer l'établissement lié au professionnel
       const establishment = await tx.establishment.create({
         data: {
           name: establishmentData.name,
@@ -182,13 +141,13 @@ export async function POST(request: Request) {
           informationsPratiques: establishmentData.informationsPratiques,
           theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
           uberEatsLink: establishmentData.uberEatsLink, // Lien Uber Eats
-          ownerId: user.id, // Lien vers l'utilisateur
+          ownerId: professional.id, // Lien vers le professionnel
           status: 'pending', // En attente de validation
           subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement
         }
       });
 
-      // 3. Créer les tags : automatiques (basés sur activités) + manuels (sélectionnés par l'utilisateur)
+      // 4. Créer les tags : automatiques (basés sur activités) + manuels (sélectionnés par l'utilisateur)
       console.log('🏷️  Création des tags pour:', establishment.name);
       console.log('📝 Activités:', establishmentData.activities);
       console.log('🏷️  Tags manuels:', establishmentData.tags);
@@ -247,14 +206,14 @@ export async function POST(request: Request) {
         console.log('⚠️  Aucun tag à créer');
       }
 
-      return { user, establishment };
+      return { professional, establishment };
     });
 
     // Logger le changement de subscription
     await logSubscriptionChange(
       result.establishment.id,
       result.establishment.subscription,
-      result.user.id,
+      result.professional.id,
       'Inscription professionnelle'
     );
 
@@ -264,12 +223,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true,
       message: 'Inscription réussie ! Votre établissement sera vérifié sous 24h.',
-      user: {
-        id: result.user.id,
-        email: result.user.email,
-        firstName: result.user.firstName,
-        lastName: result.user.lastName,
-        role: result.user.role
+      professional: {
+        id: result.professional.id,
+        email: result.professional.email,
+        firstName: result.professional.firstName,
+        lastName: result.professional.lastName,
+        siret: result.professional.siret
       },
       establishment: {
         id: result.establishment.id,
@@ -280,10 +239,12 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
-    console.error('Erreur inscription professionnelle:', error);
+    console.error('❌ Erreur inscription professionnelle:', error);
+    console.error('❌ Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     
     // Gestion des erreurs spécifiques
     if (error instanceof Error) {
+      console.error('❌ Error message:', error.message);
       if (error.message.includes('Unique constraint')) {
         return NextResponse.json({ 
           error: 'SIRET ou email déjà utilisé' 
@@ -292,7 +253,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ 
-      error: 'Erreur lors de l\'inscription. Veuillez réessayer.' 
+      error: 'Erreur lors de l\'inscription. Veuillez réessayer.',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

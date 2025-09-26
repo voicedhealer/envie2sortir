@@ -11,7 +11,8 @@ export default async function DashboardPage() {
     redirect('/auth');
   }
 
-  if (session.user.role !== 'pro') {
+  // Vérifier que l'utilisateur est un professionnel
+  if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
     redirect('/auth?error=AccessDenied');
   }
 
@@ -34,6 +35,9 @@ export default async function DashboardPage() {
       imageUrl: true,
       status: true,
       subscription: true,
+      rejectionReason: true,
+      rejectedAt: true,
+      lastModifiedAt: true,
       viewsCount: true,
       clicksCount: true,
       avgRating: true,

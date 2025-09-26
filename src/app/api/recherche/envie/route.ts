@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     // 1. Charger TOUS les établissements actifs avec coordonnées
     const establishments = await prisma.establishment.findMany({
       where: { 
-        status: 'active' as const,
+        status: 'approved' as const,
         // Seulement les établissements avec coordonnées GPS
         latitude: { not: null },
         longitude: { not: null }

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     
     // Construire les conditions de recherche
     const whereConditions: any = {
-      status: 'active'
+      status: 'approved'
     };
     
     // Filtrer par ville si spécifiée

@@ -50,7 +50,8 @@ export default function UserActions({
   };
 
   const handleToggleFavorite = async () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }
@@ -106,7 +107,8 @@ export default function UserActions({
   };
 
   const handleSubmitComment = async () => {
-    if (!session || session.user.role !== 'user') {
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
       toast.error('Vous devez être connecté pour laisser un avis');
       return;
     }
@@ -165,7 +167,8 @@ export default function UserActions({
   }
 
   // Si l'utilisateur n'est pas un utilisateur normal, ne pas afficher
-  if (session.user.role !== 'user') {
+  // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+  if (session.user.userType !== 'user' && session.user.role !== 'user') {
     return null;
   }
 

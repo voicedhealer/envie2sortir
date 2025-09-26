@@ -291,10 +291,10 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
               </div>
             </div>
 
-            {/* Section collapsible pour les détails */}
-            <details className="bg-white rounded border">
+            {/* Section collapsible pour les détails - Ouverte par défaut après enrichissement */}
+            <details className="bg-white rounded border" open={true}>
               <summary className="p-3 cursor-pointer hover:bg-gray-50 font-medium text-gray-900">
-                📋 Voir toutes les informations détaillées ({enrichmentData.envieTags.length} tags générés)
+                📋 Voir toutes les informations détaillées ({enrichmentData.envieTags.length} commodités générés)
               </summary>
               <div className="p-4 border-t">
                 <EnrichmentSections 
