@@ -29,7 +29,7 @@ export default withAuth(
 
       // Vérifier que l'utilisateur est un professionnel
       if (token.role !== 'pro') {
-        return NextResponse.redirect(new URL('/auth?error=AccessDenied', req.url));
+        return NextResponse.redirect(new URL('/', req.url));
       }
 
       // Note: La vérification de l'établissement se fera côté API

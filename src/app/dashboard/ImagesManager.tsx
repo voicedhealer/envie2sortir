@@ -5,8 +5,8 @@ import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
 
 interface ImagesManagerProps {
-  establishmentId: string;
-  establishmentSlug: string;
+  establishmentId: string; // Gardé pour compatibilité mais non utilisé
+  establishmentSlug: string; // Gardé pour compatibilité mais non utilisé
   currentImageUrl?: string | null;
   subscription?: 'STANDARD' | 'PREMIUM';
 }
@@ -46,8 +46,21 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const loadImages = async () => {
     try {
       console.log('🔄 Chargement des images pour l\'établissement:', establishmentId);
+      console.log('🔍 Appel API /api/etablissements/images (sans establishmentId - recherche par session)');
+      
       const response = await fetch(`/api/etablissements/images`, {
-        credentials: 'include' // Inclure les cookies de session
+        method: 'GET',
+        credentials: 'include', // Inclure les cookies de session
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      console.log('📡 Réponse API:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
       });
       if (response.ok) {
         const data = await response.json();
@@ -257,22 +270,66 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
       if (!response.ok) {
         let errorData;
+        let responseText = '';
+        
         try {
-          errorData = await response.json();
-        } catch (parseError) {
-          console.error('❌ Erreur parsing JSON:', parseError);
-          errorData = { error: `Erreur ${response.status}: ${response.statusText}` };
+          responseText = await response.text();
+          console.log('📝 Réponse brute:', responseText);
+          console.log('📝 Longueur de la réponse:', responseText.length);
+          
+          if (responseText.trim()) {
+            try {
+              errorData = JSON.parse(responseText);
+            } catch (jsonError) {
+              console.error('❌ Erreur parsing JSON:', jsonError);
+              errorData = { 
+                error: `Réponse invalide du serveur: ${responseText.substring(0, 100)}...`,
+                rawResponse: responseText
+              };
+            }
+          } else {
+            errorData = { 
+              error: `Erreur ${response.status}: ${response.statusText}`,
+              emptyResponse: true
+            };
+          }
+        } catch (textError) {
+          console.error('❌ Erreur lecture réponse:', textError);
+          errorData = { 
+            error: `Erreur ${response.status}: ${response.statusText}`,
+            readError: textError instanceof Error ? textError.message : 'Erreur inconnue'
+          };
         }
         
-        console.error('❌ Erreur API:', errorData);
+        console.error('❌ Erreur API détaillée:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText: responseText,
+          errorData: errorData,
+          url: response.url,
+          headers: Object.fromEntries(response.headers.entries())
+        });
         
-        if (response.status === 403) {
-          setError('Vous n\'avez pas les permissions pour modifier cet établissement. Assurez-vous d\'être connecté avec le bon compte.');
+        let errorMessage = 'Erreur lors de la mise à jour';
+        
+        if (response.status === 401) {
+          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        } else if (response.status === 403) {
+          errorMessage = 'Vous n\'avez pas les permissions pour modifier cet établissement.';
+        } else if (response.status === 404) {
+          errorMessage = 'Établissement non trouvé.';
+        } else if (response.status === 500) {
+          errorMessage = 'Erreur serveur. Veuillez réessayer.';
+        } else if (errorData && errorData.error) {
+          errorMessage = errorData.error;
+        } else if (errorData && typeof errorData === 'object' && Object.keys(errorData).length > 0) {
+          errorMessage = `Erreur: ${JSON.stringify(errorData)}`;
         } else {
-          setError(errorData.error || 'Erreur lors de la mise à jour');
+          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
         }
         
-        throw new Error(`Erreur API: ${JSON.stringify(errorData)}`);
+        setError(errorMessage);
+        throw new Error(`Erreur API ${response.status}: ${errorMessage}`);
       }
 
       const result = await response.json();

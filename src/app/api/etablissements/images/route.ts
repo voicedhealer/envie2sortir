@@ -5,11 +5,29 @@ import { authOptions } from "@/lib/auth-config";
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 API GET /api/etablissements/images appelée');
+    
     const session = await getServerSession(authOptions);
+    console.log('👤 Session utilisateur complète:', {
+      id: session?.user?.id,
+      email: session?.user?.email,
+      role: session?.user?.role,
+      userType: session?.user?.userType,
+      companyName: session?.user?.companyName
+    });
     
     if (!session?.user) {
+      console.log('❌ Utilisateur non authentifié');
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
+
+    // Vérifier que c'est bien un professionnel
+    if (session.user.role !== 'pro' || session.user.userType !== 'professional') {
+      console.log('❌ Utilisateur n\'est pas un professionnel:', session.user.role, session.user.userType);
+      return NextResponse.json({ error: "Accès refusé - Professionnel requis" }, { status: 403 });
+    }
+
+    console.log('🔍 Recherche de l\'établissement avec ownerId:', session.user.id);
 
     // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
     const establishment = await prisma.establishment.findFirst({
@@ -31,10 +49,61 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log('🏢 Établissement trouvé:', establishment?.id, establishment?.name);
+
     if (!establishment) {
-      return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
+      console.log('❌ Aucun établissement trouvé pour ownerId:', session.user.id);
+      
+      // Debug: lister tous les établissements avec leurs propriétaires
+      const allEstablishments = await prisma.establishment.findMany({
+        select: { 
+          id: true, 
+          name: true, 
+          ownerId: true,
+          status: true,
+          createdAt: true
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      // Debug: lister tous les professionnels
+      const allProfessionals = await prisma.professional.findMany({
+        select: { 
+          id: true, 
+          email: true, 
+          firstName: true, 
+          lastName: true,
+          companyName: true
+        }
+      });
+      
+      console.log('📋 Tous les établissements:', allEstablishments);
+      console.log('👥 Tous les professionnels:', allProfessionals);
+      
+      // Vérifier s'il y a un établissement avec un ownerId qui ne correspond à aucun professionnel
+      const invalidOwners = allEstablishments.filter(est => 
+        est.ownerId && !allProfessionals.some(p => p.id === est.ownerId)
+      );
+      
+      if (invalidOwners.length > 0) {
+        console.log('⚠️ Établissements avec ownerId invalide:', invalidOwners);
+      }
+      
+      return NextResponse.json({ 
+        error: "Établissement non trouvé",
+        debug: {
+          userId: session.user.id,
+          userEmail: session.user.email,
+          userRole: session.user.role,
+          userType: session.user.userType,
+          allEstablishments: allEstablishments,
+          allProfessionals: allProfessionals,
+          invalidOwners: invalidOwners
+        }
+      }, { status: 404 });
     }
 
+    console.log('✅ Retour des données de l\'établissement');
     return NextResponse.json({
       establishment: {
         id: establishment.id,
@@ -46,8 +115,11 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error("Erreur récupération images:", error);
-    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    console.error("❌ Erreur récupération images:", error);
+    return NextResponse.json({ 
+      error: "Erreur serveur",
+      details: error instanceof Error ? error.message : 'Erreur inconnue'
+    }, { status: 500 });
   }
 }
 

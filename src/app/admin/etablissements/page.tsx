@@ -97,14 +97,7 @@ export default function AdminEstablishmentsPage() {
     loadEstablishments();
   }, [selectedStatus, searchTerm]);
 
-  // Redirection si pas admin
-  if (status === 'loading') {
-    return <div className="flex justify-center items-center min-h-screen">Chargement...</div>;
-  }
-
-  if (!session || session.user.role !== 'admin') {
-    redirect('/auth/login?error=AccessDenied');
-  }
+  // Le layout admin s'occupe de la vérification d'authentification
 
   // Actions admin
   const handleAction = async (establishmentId: string, action: 'approve' | 'reject' | 'pending' | 'delete', reason?: string) => {

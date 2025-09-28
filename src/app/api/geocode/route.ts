@@ -51,8 +51,11 @@ export async function GET(request: NextRequest) {
     
     console.log(`🔍 Géocodage de l'adresse: ${address}`);
     
-    // MODE DÉVELOPPEMENT : Géocodage simulé (toujours en mode dev pour le moment)
-    if (true) { // Temporairement toujours en mode simulé
+    // Pour activer le mode simulé en développement, définir USE_MOCK_GEOCODING=true dans .env
+    // Sinon, le système utilisera le vrai service Nominatim (OpenStreetMap)
+    
+    // MODE DÉVELOPPEMENT : Géocodage simulé (seulement si NODE_ENV=development)
+    if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_GEOCODING === 'true') { // Mode simulé optionnel
       console.log(`🚀 Mode développement : géocodage simulé`);
       
       // Coordonnées simulées pour Lyon

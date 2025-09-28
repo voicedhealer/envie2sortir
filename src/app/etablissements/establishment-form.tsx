@@ -1307,7 +1307,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           activities: formData.activities,
           services: formData.services,
           ambiance: formData.ambiance,
-          paymentMethods: convertPaymentMethodsObjectToArray(formData.paymentMethods),
+          paymentMethods: formData.paymentMethods,
           horairesOuverture: formData.hours,
           website: formData.website,
           instagram: formData.instagram,
@@ -1417,23 +1417,27 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             });
 
             if (signInResult?.ok) {
-              // Forcer le rafraîchissement de la session
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              // Forcer le rafraîchissement de la session et attendre que l'établissement soit créé
+              await new Promise(resolve => setTimeout(resolve, 2000));
               // Redirection vers le dashboard
               router.push('/dashboard');
             } else {
               console.error('Échec de la connexion automatique:', signInResult?.error);
               // Attendre un peu et forcer la redirection vers le dashboard
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise(resolve => setTimeout(resolve, 2000));
               router.push('/dashboard');
             }
           } catch (error) {
             console.error('Erreur connexion automatique:', error);
             // Attendre un peu et forcer la redirection vers le dashboard
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 2000));
             router.push('/dashboard');
           }
         } else {
+          // Afficher un message de succès (utiliser l'état error mais avec un style de succès)
+          setError('✅ Établissement créé avec succès ! Redirection vers votre dashboard...');
+          // Attendre que l'établissement soit créé avant la redirection
+          await new Promise(resolve => setTimeout(resolve, 2000));
           // Redirection vers le dashboard même sans autoLogin
           router.push('/dashboard');
         }
@@ -1464,7 +1468,7 @@ const renderStep = () => {
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">
-              Création de votre compte
+              Création de votre compte PRO
             </h2>
             <p className="text-gray-600 mt-2">
               Créez votre compte professionnel pour gérer votre établissement
@@ -1508,7 +1512,7 @@ const renderStep = () => {
           {/* Email */}
           <div>
             <label className="block text-sm font-medium mb-2">
-              Email professionnel *
+              Email professionnel * <span className="text-xs text-gray-500 ml-1">(email qui sera utilisé pour la connexion)</span>
             </label>
             <input
               type="email"
@@ -1527,6 +1531,11 @@ const renderStep = () => {
             <label className="block text-sm font-medium mb-2">
               Téléphone professionnel * 
               <span className="text-xs text-gray-500 ml-1">(pour vérification Twilio)</span>
+              {!phoneVerification.isVerified && (
+                <span className="text-xs text-red-500 ml-2 font-semibold">
+                  ⚠️ Validation requise
+                </span>
+              )}
             </label>
             <div className="relative">
               <input
@@ -1546,7 +1555,11 @@ const renderStep = () => {
                   }
                 }}
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  phoneVerification.isVerified ? 'border-green-500 bg-green-50' : 'border-gray-300'
+                  phoneVerification.isVerified 
+                    ? 'border-green-500 bg-green-50' 
+                    : !phoneVerification.isVerified && formData.accountPhone
+                    ? 'border-red-300 bg-red-50'
+                    : 'border-gray-300'
                 }`}
                 placeholder="06 12 34 56 78"
               />
@@ -1563,9 +1576,28 @@ const renderStep = () => {
               <p className="text-xs text-green-600 mt-1 flex items-center">
                 ✓ Numéro de téléphone vérifié
               </p>
+            ) : formData.accountPhone ? (
+              <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800 flex items-center">
+                  <span className="mr-2">📱</span>
+                  <span className="font-medium">Validation requise :</span> Un SMS de vérification sera envoyé à ce numéro. 
+                  <button 
+                    type="button"
+                    onClick={() => setShowPhoneModal(true)}
+                    className="ml-2 text-blue-600 underline hover:text-blue-800"
+                  >
+                    Cliquez ici pour valider
+                  </button>
+                </p>
+              </div>
             ) : (
               <p className="text-xs text-gray-500 mt-1">
                 📱 Un SMS de vérification sera envoyé à ce numéro
+              </p>
+            )}
+            {errors.phoneVerification && (
+              <p className="text-red-500 text-sm mt-1 flex items-center">
+                ⚠️ {errors.phoneVerification}
               </p>
             )}
           </div>
@@ -1738,7 +1770,7 @@ const renderStep = () => {
           </div>
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium mb-2">Description de l’établissement</label>
+            <label className="block text-sm font-medium mb-2">Description de l’établissement <span className="text-xs text-gray-500 ml-1">(Pensez à aérer votre description pour une meilleure visibilité)</span></label>
             <textarea
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
@@ -2095,7 +2127,7 @@ const renderStep = () => {
               hours: formData.hours,
               services: formData.services,
               ambiance: formData.ambiance,
-              paymentMethods: [], // Géré par l'enrichissement automatique
+              paymentMethods: formData.paymentMethods ? convertPaymentMethodsObjectToArray(formData.paymentMethods) : [],
               tags: formData.tags,
               photos: [], // Les photos sont maintenant ajoutées sur la page pro
               phone: formData.phone || '',
@@ -2237,9 +2269,14 @@ const renderStep = () => {
                   nextStep();
                 }
               }}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              disabled={currentStep === 0 && !phoneVerification.isVerified}
+              className={`px-6 py-2 rounded-lg transition-all ${
+                currentStep === 0 && !phoneVerification.isVerified
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              Suivant
+              {currentStep === 0 && !phoneVerification.isVerified ? 'Validez votre téléphone' : 'Suivant'}
             </button>
           ) : currentStep === 8 ? (
             <button

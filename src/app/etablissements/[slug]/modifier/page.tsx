@@ -14,12 +14,12 @@ export default async function EditEstablishmentPage({
   const session = await getServerSession(authOptions);
 
   if (!session?.user) {
-    redirect('/auth/login');
+    redirect('/auth');
   }
 
   // Vérifier que l'utilisateur est un professionnel
   if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-    redirect('/auth/login?error=AccessDenied');
+    redirect('/auth?error=AccessDenied');
   }
 
   const establishment = await prisma.establishment.findUnique({

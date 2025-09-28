@@ -25,10 +25,56 @@ export async function POST(request: NextRequest) {
       subscriptionPlan: formData.get('subscriptionPlan') as string || 'free',
     };
 
+    // Fonction pour extraire city et postalCode de l'adresse complète
+    const parseAddressComponents = (fullAddress: string) => {
+      if (!fullAddress) return { city: null, postalCode: null };
+      
+      // Pattern pour extraire : "19 Rue du Garet, 69001 Lyon"
+      const match = fullAddress.match(/^(.+?),\s*(\d{5})\s+(.+)$/);
+      if (match) {
+        return {
+          city: match[3].trim(),
+          postalCode: match[2].trim()
+        };
+      }
+      
+      // Si le pattern ne correspond pas, essayer de séparer par virgule
+      const parts = fullAddress.split(',').map(p => p.trim());
+      if (parts.length >= 3) {
+        // Chercher le code postal (5 chiffres)
+        const postalCodeMatch = parts[1].match(/(\d{5})/);
+        if (postalCodeMatch) {
+          return {
+            city: parts[2],
+            postalCode: postalCodeMatch[1]
+          };
+        }
+      }
+      
+      // Fallback : essayer d'extraire depuis la fin de l'adresse
+      const postalCodeMatch = fullAddress.match(/(\d{5})\s+([^,]+)$/);
+      if (postalCodeMatch) {
+        return {
+          city: postalCodeMatch[2].trim(),
+          postalCode: postalCodeMatch[1]
+        };
+      }
+      
+      return { city: null, postalCode: null };
+    };
+
+    const addressComponents = parseAddressComponents(formData.get('address') as string);
+    console.log('🔍 Parsing de l\'adresse:', {
+      fullAddress: formData.get('address'),
+      extracted: addressComponents
+    });
+
     const establishmentData = {
       name: formData.get('establishmentName') as string,
       description: formData.get('description') as string || '',
       address: formData.get('address') as string,
+      city: addressComponents.city,
+      postalCode: addressComponents.postalCode,
       activities: JSON.parse(formData.get('activities') as string || '[]'),
       services: JSON.parse(formData.get('services') as string || '[]'),
       ambiance: JSON.parse(formData.get('ambiance') as string || '[]'),
@@ -41,10 +87,10 @@ export async function POST(request: NextRequest) {
             return JSON.parse(paymentMethodsData);
           } catch (e) {
             console.log('⚠️ Erreur parsing paymentMethods, utilisation de la valeur brute');
-            return [paymentMethodsData];
+            return {};
           }
         }
-        return [];
+        return {};
       })(),
       hours: JSON.parse(formData.get('hours') as string || '{}'),
       website: formData.get('website') as string || '',
@@ -125,6 +171,8 @@ export async function POST(request: NextRequest) {
           slug: generateSlug(establishmentData.name),
           description: establishmentData.description,
           address: establishmentData.address,
+          city: establishmentData.city,
+          postalCode: establishmentData.postalCode,
           latitude: coordinates?.latitude || null, // Coordonnées GPS
           longitude: coordinates?.longitude || null, // Coordonnées GPS
           activities: establishmentData.activities, // Activités multiples (JSON)

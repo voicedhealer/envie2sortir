@@ -1,13 +1,42 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
+  useEffect(() => {
+    if (status === 'loading') return; // En cours de chargement
+    
+    if (!session || session.user.role !== 'admin') {
+      router.push('/auth?error=AccessDenied');
+    }
+  }, [session, status, router]);
+
+  // Afficher un loader pendant la vérification
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Vérification des permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si pas admin, ne rien afficher (redirection en cours)
+  if (!session || session.user.role !== 'admin') {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

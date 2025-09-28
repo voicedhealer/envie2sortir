@@ -44,7 +44,7 @@ export default function ForgotPasswordPage() {
               Vérifiez votre boîte de réception et suivez les instructions pour réinitialiser votre mot de passe.
             </p>
             <Link
-              href="/auth/login"
+              href="/auth"
               className="inline-flex items-center text-sm text-orange-600 hover:text-orange-500"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
 
           <div className="mt-6 text-center">
             <Link
-              href="/auth/login"
+              href="/auth"
               className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />

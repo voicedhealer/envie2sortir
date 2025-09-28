@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn as nextAuthSignIn, signUp as nextAuthSignUp, getSession } from 'next-auth/react';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
@@ -25,6 +25,30 @@ export default function AuthPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 
+  // Gérer les erreurs depuis l'URL
+  useEffect(() => {
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      switch (errorParam) {
+        case 'AccessDenied':
+          // Ne pas afficher l'erreur automatiquement, seulement si l'utilisateur essaie de se connecter
+          console.log('🔐 Erreur AccessDenied détectée dans l\'URL - sera affichée lors de la tentative de connexion');
+          break;
+        case 'EstablishmentNotFound':
+          setError('Aucun établissement trouvé pour votre compte. Veuillez contacter le support.');
+          break;
+        case 'Configuration':
+          setError('Il y a un problème avec la configuration du serveur.');
+          break;
+        case 'Verification':
+          setError('Le token de vérification a expiré ou a déjà été utilisé.');
+          break;
+        default:
+          setError('Une erreur d\'authentification s\'est produite.');
+      }
+    }
+  }, [searchParams]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -41,15 +65,32 @@ export default function AuthPage() {
 
         if (result?.error) {
           console.error('Erreur de connexion:', result.error);
-          setError('Email ou mot de passe incorrect');
+          
+          // Gérer les erreurs spécifiques
+          if (result.error === 'AccessDenied') {
+            setError('Accès refusé. Veuillez vérifier que vous avez sélectionné le bon type de compte (Utilisateur, Professionnel, ou Admin).');
+          } else if (result.error === 'CredentialsSignin') {
+            setError('Email ou mot de passe incorrect');
+          } else {
+            setError(`Erreur de connexion: ${result.error}`);
+          }
         } else if (result?.ok) {
           // Forcer la synchronisation de la session
           const session = await getSession();
           console.log('🔐 Session après connexion:', session);
           
           // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
+          console.log('🔐 Rôle de l\'utilisateur:', session?.user?.role);
+          console.log('🔐 Rôle sélectionné:', selectedRole);
+          console.log('🔐 Type d\'utilisateur:', session?.user?.userType);
+          
           if (session?.user?.role !== selectedRole) {
-            setError(`Ce compte n'est pas un compte ${selectedRole === 'pro' ? 'professionnel' : selectedRole === 'admin' ? 'administrateur' : 'utilisateur'}. Veuillez sélectionner le bon type de compte.`);
+            const roleNames = {
+              'user': 'utilisateur',
+              'pro': 'professionnel', 
+              'admin': 'administrateur'
+            };
+            setError(`Ce compte est un compte ${roleNames[session?.user?.role as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
             return;
           }
           
@@ -252,6 +293,10 @@ export default function AuthPage() {
                   Admin
                 </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 <strong>Important :</strong> Sélectionnez le bon type de compte selon votre profil. 
+                Les comptes professionnels sont créés via l'inscription professionnelle.
+              </p>
             </div>
           )}
 

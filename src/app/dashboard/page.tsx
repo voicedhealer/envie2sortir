@@ -17,40 +17,56 @@ export default async function DashboardPage() {
   }
 
   // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
-  const establishment = await prisma.establishment.findFirst({
-    where: { ownerId: session.user.id },
-    select: {
-      id: true,
-      name: true,
-      slug: true,
-      description: true,
-      address: true,
-      city: true,
-      phone: true,
-      email: true,
-      website: true,
-      instagram: true,
-      facebook: true,
-      tiktok: true,
-      imageUrl: true,
-      status: true,
-      subscription: true,
-      rejectionReason: true,
-      rejectedAt: true,
-      lastModifiedAt: true,
-      viewsCount: true,
-      clicksCount: true,
-      avgRating: true,
-      totalComments: true,
-      createdAt: true,
-      updatedAt: true,
-      images: true,
-      tags: true,
-      events: true,
+  // Essayer plusieurs fois avec un délai pour gérer les problèmes de timing
+  let establishment = null;
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (!establishment && attempts < maxAttempts) {
+    establishment = await prisma.establishment.findFirst({
+      where: { ownerId: session.user.id },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        address: true,
+        city: true,
+        phone: true,
+        email: true,
+        website: true,
+        instagram: true,
+        facebook: true,
+        tiktok: true,
+        imageUrl: true,
+        status: true,
+        subscription: true,
+        rejectionReason: true,
+        rejectedAt: true,
+        lastModifiedAt: true,
+        viewsCount: true,
+        clicksCount: true,
+        avgRating: true,
+        totalComments: true,
+        createdAt: true,
+        updatedAt: true,
+        images: true,
+        tags: true,
+        events: true,
+      }
+    });
+    
+    if (!establishment && attempts < maxAttempts - 1) {
+      // Attendre 1 seconde avant de réessayer
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
+    } else {
+      break;
     }
-  });
+  }
 
   if (!establishment) {
+    console.error('Aucun établissement trouvé après', maxAttempts, 'tentatives pour l\'utilisateur:', session.user.id);
     redirect('/auth?error=EstablishmentNotFound');
   }
 
