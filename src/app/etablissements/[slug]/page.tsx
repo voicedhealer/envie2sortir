@@ -217,7 +217,7 @@ export default async function EstablishmentPage({
     }
     
     // Si on vient de la page d'accueil
-    if (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard')) {
+    if (search.from === 'homepage' || (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard'))) {
       return '/';
     }
     
@@ -238,7 +238,7 @@ export default async function EstablishmentPage({
     if ((referer && referer.includes('/dashboard')) || search.from === 'dashboard') {
       return '← Retour à la gestion';
     }
-    if (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard')) {
+    if (search.from === 'homepage' || (referer && referer.includes('/') && !referer.includes('/etablissements') && !referer.includes('/recherche') && !referer.includes('/carte') && !referer.includes('/dashboard'))) {
       return '← Retour à l\'accueil';
     }
     return '← Retour à la liste';

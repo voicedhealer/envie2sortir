@@ -151,7 +151,7 @@ export default function DynamicEstablishmentsSection() {
                 key={establishment.id} 
                 className="flex-shrink-0 w-80"
               >
-                <EstablishmentCard establishment={establishment} />
+                <EstablishmentCard establishment={establishment} from="homepage" />
               </div>
             ))}
           </div>
