@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Star, Heart, Share2 } from 'lucide-react';
+import { MapPin, Star, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
+import Image from 'next/image';
 import { getActivityInfo } from '@/lib/category-tags-mapping';
 import PhotoGallery from './PhotoGallery';
 
@@ -33,6 +34,7 @@ export default function EstablishmentHeroWithGallery({
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Détecter si on est sur mobile
   useEffect(() => {
@@ -71,6 +73,18 @@ export default function EstablishmentHeroWithGallery({
   
   // Déduplication des images (éviter les doublons)
   const uniqueImages = [...new Set(allImages)];
+  
+  // Calculer l'index valide pour l'image actuelle
+  const validCurrentIndex = uniqueImages.length > 0 ? Math.min(currentImageIndex, uniqueImages.length - 1) : 0;
+  
+  // Fonctions de navigation des images
+  const nextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % uniqueImages.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + uniqueImages.length) % uniqueImages.length);
+  };
   
   // Vérifier si l'établissement est en favori
   useEffect(() => {
