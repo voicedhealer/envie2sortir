@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
-import EstablishmentHero from '@/components/EstablishmentHero';
+import EstablishmentHeroWithGallery from '@/components/EstablishmentHeroWithGallery';
 import EstablishmentInfo from '@/components/EstablishmentInfo';
 import EstablishmentSections from '@/components/EstablishmentSections';
 import EstablishmentActions from '@/components/EstablishmentActions';
@@ -293,7 +293,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Section Hero */}
         <div className="mb-8">
-          <EstablishmentHero 
+          <EstablishmentHeroWithGallery 
             establishment={{
               id: establishment.id,
               name: establishment.name,
