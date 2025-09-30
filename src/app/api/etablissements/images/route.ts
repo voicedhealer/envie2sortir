@@ -127,8 +127,19 @@ export async function PUT(request: NextRequest) {
   try {
     console.log('🔄 API PUT /api/etablissements/images appelée');
     
+    // Debug des headers de la requête
+    const cookies = request.headers.get('cookie');
+    console.log('🍪 Cookies reçus:', cookies);
+    
     const session = await getServerSession(authOptions);
-    console.log('👤 Session utilisateur:', session?.user?.id, session?.user?.role);
+    console.log('👤 Session utilisateur complète:', {
+      id: session?.user?.id,
+      email: session?.user?.email,
+      role: session?.user?.role,
+      userType: session?.user?.userType,
+      hasSession: !!session,
+      hasUser: !!session?.user
+    });
     
     if (!session?.user) {
       console.log('❌ Utilisateur non authentifié');

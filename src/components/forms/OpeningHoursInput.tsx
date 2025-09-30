@@ -86,10 +86,16 @@ export default function OpeningHoursInput({ value, onChange }: OpeningHoursInput
   // Fonction pour supprimer un créneau
   const removeSlot = (dayKey: keyof HoursData, slotIndex: number) => {
     const currentDay = value[dayKey];
-    if (!currentDay?.slots || currentDay.slots.length <= 1) return;
+    if (!currentDay?.slots || currentDay.slots.length === 0) return;
     
     const updatedSlots = currentDay.slots.filter((_, index) => index !== slotIndex);
-    updateDay(dayKey, { slots: updatedSlots });
+    
+    // Si c'était le dernier créneau, fermer le jour
+    if (updatedSlots.length === 0) {
+      updateDay(dayKey, { isOpen: false, slots: [] });
+    } else {
+      updateDay(dayKey, { slots: updatedSlots });
+    }
   };
 
   // Fonction pour mettre à jour un créneau
@@ -149,16 +155,14 @@ export default function OpeningHoursInput({ value, onChange }: OpeningHoursInput
                         </p>
                       </div>
                       
-                      {/* Bouton supprimer - seulement si > 1 créneau */}
-                      {dayData.slots.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeSlot(key, slotIndex)}
-                          className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
-                        >
-                          Supprimer
-                        </button>
-                      )}
+                      {/* Bouton supprimer - toujours visible */}
+                      <button
+                        type="button"
+                        onClick={() => removeSlot(key, slotIndex)}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                      >
+                        Supprimer
+                      </button>
                     </div>
                     
                     {/* Horaires du créneau */}

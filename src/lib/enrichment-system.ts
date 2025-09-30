@@ -1428,19 +1428,73 @@ export class EstablishmentEnrichment {
     const types = result.types || [];
     const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
     
+    console.log('🅿️ Texte des avis analysé:', reviewText.substring(0, 500) + '...');
+    
+    // === DÉTECTION PARKING GRATUIT (plus flexible) ===
+    if (reviewText.includes('parking gratuit') || reviewText.includes('free parking') || 
+        reviewText.includes('stationnement gratuit') || 
+        reviewText.includes('parking gratuit dans la rue') || reviewText.includes('free street parking') ||
+        reviewText.includes('gratuit') && (reviewText.includes('parking') || reviewText.includes('stationnement'))) {
+      parking.push('Parking gratuit');
+      console.log('🅿️ Détecté: Parking gratuit');
+    }
+    
+    if (reviewText.includes('stationnement facile') || reviewText.includes('easy parking') ||
+        reviewText.includes('facile de se garer') || reviewText.includes('easy to park') ||
+        reviewText.includes('facile') && (reviewText.includes('parking') || reviewText.includes('stationnement'))) {
+      parking.push('Stationnement facile');
+      console.log('🅿️ Détecté: Stationnement facile');
+    }
+    
+    if (reviewText.includes('parking gratuit dans la rue') || reviewText.includes('free street parking') ||
+        reviewText.includes('rue') && reviewText.includes('gratuit')) {
+      parking.push('Parking gratuit dans la rue');
+      console.log('🅿️ Détecté: Parking gratuit dans la rue');
+    }
+    
+    // === DÉTECTION PARKING PAYANT ===
     if (reviewText.includes('parking couvert payant') || reviewText.includes('covered paid parking')) {
       parking.push('Parking couvert payant');
+      console.log('🅿️ Détecté: Parking couvert payant');
     }
     
-    if (reviewText.includes('parking payant') || reviewText.includes('paid parking')) {
+    if (reviewText.includes('parking payant') || reviewText.includes('paid parking') ||
+        reviewText.includes('payant') && (reviewText.includes('parking') || reviewText.includes('stationnement'))) {
       parking.push('Parking payant');
+      console.log('🅿️ Détecté: Parking payant');
     }
     
-    // Parking par défaut pour les établissements
-    if (types.includes('restaurant') || types.includes('bar') || types.includes('cafe')) {
-      if (!parking.includes('Parking payant')) parking.push('Parking payant');
+    // === DÉTECTION AUTRES TYPES DE PARKING ===
+    if (reviewText.includes('parking privé') || reviewText.includes('private parking')) {
+      parking.push('Parking privé');
+      console.log('🅿️ Détecté: Parking privé');
     }
     
+    if (reviewText.includes('parking souterrain') || reviewText.includes('underground parking')) {
+      parking.push('Parking souterrain');
+      console.log('🅿️ Détecté: Parking souterrain');
+    }
+    
+    if (reviewText.includes('valet parking') || reviewText.includes('service de voiturier')) {
+      parking.push('Service de voiturier');
+      console.log('🅿️ Détecté: Service de voiturier');
+    }
+    
+    // === DÉTECTION GÉNÉRALE DE PARKING ===
+    if (parking.length === 0) {
+      // Si aucun type spécifique n'est détecté, mais que "parking" est mentionné
+      if (reviewText.includes('parking') || reviewText.includes('stationnement')) {
+        parking.push('Parking disponible');
+        console.log('🅿️ Détecté: Parking disponible (générique)');
+      }
+    }
+    
+    // === DÉTECTION PAR DÉFAUT (seulement si aucune mention spécifique) ===
+    if (parking.length === 0) {
+      console.log('🅿️ Aucune information de parking trouvée dans les avis');
+    }
+    
+    console.log('🅿️ Parking détecté final:', parking);
     return parking;
   }
 

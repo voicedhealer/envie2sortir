@@ -6,6 +6,7 @@ import DetailedServicesForm, { DetailedServicesData } from './DetailedServicesFo
 import ClienteleInfoForm, { ClienteleInfoData } from './ClienteleInfoForm';
 import DetailedPaymentsForm, { DetailedPaymentsData } from './DetailedPaymentsForm';
 import ChildrenServicesForm, { ChildrenServicesData } from './ChildrenServicesForm';
+import ParkingInfoForm, { ParkingInfoData } from './ParkingInfoForm';
 
 export interface HybridEnrichmentData {
   accessibilityDetails?: DetailedAccessibilityData;
@@ -13,6 +14,7 @@ export interface HybridEnrichmentData {
   clienteleInfo?: ClienteleInfoData;
   detailedPayments?: DetailedPaymentsData;
   childrenServices?: ChildrenServicesData;
+  parkingInfo?: ParkingInfoData;
 }
 
 interface HybridEnrichmentFormProps {
@@ -35,6 +37,7 @@ export default function HybridEnrichmentForm({
     clientele: false,
     payments: false,
     children: false,
+    parking: false,
   });
 
   useEffect(() => {
@@ -216,6 +219,35 @@ export default function HybridEnrichmentForm({
                 <ChildrenServicesForm
                   initialData={data.childrenServices}
                   onChange={(childrenData) => updateData('childrenServices', childrenData)}
+                  disabled={disabled}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Section Parking */}
+          <div className="border border-gray-200 rounded-lg">
+            <button
+              onClick={() => toggleSection('parking')}
+              className="w-full p-4 text-left flex justify-between items-center hover:bg-gray-50"
+              disabled={disabled}
+            >
+              <div className="flex items-center space-x-3">
+                <span className="text-lg">🅿️</span>
+                <span className="font-medium">Options de parking</span>
+                <span className="text-sm text-gray-500">
+                  ({getSectionSummary('parkingInfo')} sélectionnés)
+                </span>
+              </div>
+              <span className="text-gray-400">
+                {openSections.parking ? '▲' : '▼'}
+              </span>
+            </button>
+            {openSections.parking && (
+              <div className="p-4 border-t border-gray-200">
+                <ParkingInfoForm
+                  initialData={data.parkingInfo}
+                  onChange={(parkingData) => updateData('parkingInfo', parkingData)}
                   disabled={disabled}
                 />
               </div>

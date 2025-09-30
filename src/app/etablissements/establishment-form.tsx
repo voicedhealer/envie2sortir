@@ -2,6 +2,7 @@
 
 import { useEstablishmentForm } from '@/hooks/useEstablishmentForm';
 import { EstablishmentFormProps, FormStep } from '@/types/establishment-form.types';
+import { convertPaymentMethodsObjectToArray } from '@/lib/establishment-form.utils';
 import AccountStep from '@/components/forms/steps/AccountStep';
 import ProfessionalStep from '@/components/forms/steps/ProfessionalStep';
 import EnrichmentStepWrapper from '@/components/forms/steps/EnrichmentStep';
@@ -192,7 +193,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               hours: formData.hours,
               services: formData.services,
               ambiance: formData.ambiance,
-              paymentMethods: formData.paymentMethods,
+              paymentMethods: convertPaymentMethodsObjectToArray(formData.paymentMethods),
               tags: formData.tags,
               phone: formData.phone,
               email: formData.email,

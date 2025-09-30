@@ -303,9 +303,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
               totalComments: establishment.totalComments,
               imageUrl: establishment.imageUrl,
               images: establishment.images?.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) || [],
-              category: establishment.activities && establishment.activities.length > 0 
-                ? establishment.activities[0].charAt(0).toUpperCase() + establishment.activities[0].slice(1)
-                : 'Établissement'
+              activities: establishment.activities
             }}
             onFavorite={handleFavorite}
             onShare={handleShare}

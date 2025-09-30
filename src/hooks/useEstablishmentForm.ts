@@ -871,6 +871,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         
         if (result.autoLogin && result.user) {
           try {
+            console.log('🔄 Tentative de connexion automatique...');
             const signInResult = await signIn('credentials', {
               email: result.user.email,
               password: formData.accountPassword,
@@ -878,21 +879,35 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             });
 
             if (signInResult?.ok) {
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              router.push('/dashboard');
+              console.log('✅ Connexion automatique réussie');
+              // Attendre que la session soit mise à jour
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Vérifier que la session est bien établie
+              const sessionCheck = await fetch('/api/auth/session');
+              const sessionData = await sessionCheck.json();
+              
+              if (sessionData?.user?.id) {
+                console.log('✅ Session confirmée, redirection vers dashboard');
+                router.push('/dashboard');
+              } else {
+                console.log('⚠️ Session non confirmée, redirection forcée vers dashboard');
+                // Forcer la redirection même si la session n'est pas encore propagée
+                window.location.href = '/dashboard';
+              }
             } else {
-              console.error('Échec de la connexion automatique:', signInResult?.error);
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              router.push('/dashboard');
+              console.error('❌ Échec de la connexion automatique:', signInResult?.error);
+              // En cas d'échec, rediriger vers la page de connexion avec un message
+              router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
             }
           } catch (error) {
-            console.error('Erreur connexion automatique:', error);
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            router.push('/dashboard');
+            console.error('❌ Erreur connexion automatique:', error);
+            // En cas d'erreur, rediriger vers la page de connexion avec un message
+            router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
           }
         } else {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          router.push('/dashboard');
+          console.log('⚠️ Pas de connexion automatique, redirection vers page de connexion');
+          router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
         }
       }
       

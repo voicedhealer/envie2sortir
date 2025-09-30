@@ -25,9 +25,12 @@ export default function AuthPage() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
 
-  // Gérer les erreurs depuis l'URL
+  // Gérer les erreurs et messages depuis l'URL
   useEffect(() => {
     const errorParam = searchParams.get('error');
+    const messageParam = searchParams.get('message');
+    const emailParam = searchParams.get('email');
+    
     if (errorParam) {
       switch (errorParam) {
         case 'AccessDenied':
@@ -46,6 +49,12 @@ export default function AuthPage() {
         default:
           setError('Une erreur d\'authentification s\'est produite.');
       }
+    }
+    
+    if (messageParam === 'account-created' && emailParam) {
+      setSuccess(`🎉 Votre compte professionnel a été créé avec succès ! Connectez-vous avec l'email : ${emailParam}`);
+      // Pré-remplir l'email
+      setFormData(prev => ({ ...prev, email: emailParam }));
     }
   }, [searchParams]);
 
@@ -427,7 +436,7 @@ export default function AuthPage() {
                 </button>
               </div>
             )}
-
+            
             {success && (
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center justify-between">
                 <span>{success}</span>

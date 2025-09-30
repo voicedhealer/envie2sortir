@@ -26,7 +26,11 @@ interface Establishment {
   description: string | null;
   address: string;
   city: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
   status: 'pending' | 'approved' | 'rejected';
+  subscription: 'FREE' | 'PREMIUM';
   rejectionReason: string | null;
   rejectedAt: string | null;
   lastModifiedAt: string | null;

@@ -333,6 +333,7 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                       clienteleInfo: hybridData.clienteleInfo,
                       detailedPayments: hybridData.detailedPayments,
                       childrenServices: hybridData.childrenServices,
+                      parkingInfo: hybridData.parkingInfo,
                     };
                     onEnrichmentComplete(combinedData);
                   }

@@ -78,6 +78,7 @@ export default async function EstablishmentPage({
       totalComments: true,
       createdAt: true,
       updatedAt: true,
+      imageUrl: true,
       images: true,
       events: { 
         orderBy: { startDate: "asc" },

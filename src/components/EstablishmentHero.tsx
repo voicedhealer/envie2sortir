@@ -5,6 +5,7 @@ import { MapPin, Star, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-r
 import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
 import Image from 'next/image';
+import { getActivityInfo } from '@/lib/category-tags-mapping';
 
 interface EstablishmentHeroProps {
   establishment: {
@@ -17,6 +18,7 @@ interface EstablishmentHeroProps {
     imageUrl?: string;
     images?: string[];
     category?: string;
+    activities?: string[];
   };
   onFavorite?: () => void;
   onShare?: () => void;
@@ -26,6 +28,23 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
   const { data: session } = useSession();
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Calculer la catégorie à partir des activités
+  const getDisplayCategory = () => {
+    if (establishment.category) {
+      return establishment.category;
+    }
+    
+    if (establishment.activities && establishment.activities.length > 0) {
+      const firstActivity = establishment.activities[0];
+      const activityInfo = getActivityInfo(firstActivity);
+      return activityInfo?.label || firstActivity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    return null;
+  };
+  
+  const displayCategory = getDisplayCategory();
   
   // Combiner imageUrl et images pour créer un carrousel
   const allImages = [
@@ -202,10 +221,10 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
       </div>
 
       {/* Badge catégorie en haut à gauche */}
-      {establishment.category && (
+      {displayCategory && (
         <div className="absolute top-4 left-4">
           <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-            {establishment.category}
+            {displayCategory}
           </span>
         </div>
       )}

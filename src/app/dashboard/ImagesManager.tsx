@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
 
@@ -29,6 +30,7 @@ function getImageUrl(imagePath: string): string {
 }
 
 export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'STANDARD' }: ImagesManagerProps) {
+  const { data: session, status } = useSession();
   const [images, setImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string | null>(currentImageUrl || null);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +44,69 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   // Log pour debug
   console.log('🔍 État des images:', { images: images.length, maxImages, canUploadMore, subscription });
 
+  // Charger les images quand la session est prête
+  useEffect(() => {
+    console.log('🔍 État de la session:', { status, hasSession: !!session, hasUser: !!session?.user });
+    
+    if (status === 'authenticated' && session?.user) {
+      console.log('✅ Session authentifiée, chargement des images...');
+      loadImages();
+    } else if (status === 'unauthenticated') {
+      console.log('❌ Session non authentifiée');
+      setError('Session expirée. Veuillez vous reconnecter.');
+    } else if (status === 'loading') {
+      console.log('⏳ Session en cours de chargement...');
+    } else {
+      console.log('⚠️ État de session inattendu:', { status, session });
+    }
+  }, [status, session]);
+
+  // Afficher un message si l'utilisateur n'est pas connecté
+  if (status === 'unauthenticated') {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <div className="text-red-600 mb-4">
+          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-red-800 mb-2">Session expirée</h3>
+        <p className="text-red-600 mb-4">Vous devez vous reconnecter pour gérer vos images.</p>
+        <a 
+          href="/auth" 
+          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Se reconnecter
+        </a>
+      </div>
+    );
+  }
+
+  // Afficher un loader pendant le chargement de la session
+  if (status === 'loading') {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <p className="text-gray-600">Chargement de votre session...</p>
+      </div>
+    );
+  }
+
   // Fonction pour charger les images avec retry et backoff
   const loadImages = async (retryCount = 0) => {
     try {
+      // Vérifier l'authentification
+      if (status === 'loading') {
+        console.log('⏳ Session en cours de chargement...');
+        return;
+      }
+      
+      if (!session?.user) {
+        console.error('❌ Utilisateur non authentifié');
+        setError('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+      
       console.log('🔄 Chargement des images pour l\'établissement:', establishmentId);
       console.log('🔍 Appel API /api/etablissements/images (sans establishmentId - recherche par session)');
       
@@ -108,10 +170,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     }
   };
 
-  // Charger les images existantes depuis la base de données
-  useEffect(() => {
-    loadImages();
-  }, [establishmentId]);
+  // Note: Le chargement des images est maintenant géré par l'effet de session ci-dessus
 
   // Effet pour recharger les images quand establishmentData change
   useEffect(() => {
@@ -211,6 +270,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
   const handleImageUpload = async (imageUrl: string) => {
     try {
+      // Vérifier l'authentification
+      if (!session?.user) {
+        console.error('❌ Utilisateur non authentifié');
+        setError('Session expirée. Veuillez vous reconnecter.');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+      
       setIsLoading(true);
       console.log('📸 handleImageUpload appelé avec:', imageUrl);
       
@@ -262,6 +329,21 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
   const updatePrimaryImage = async (imageUrl: string) => {
     try {
+      // Vérifier l'authentification
+      console.log('🔍 Vérification de session avant updatePrimaryImage:', { 
+        status, 
+        hasSession: !!session, 
+        hasUser: !!session?.user,
+        userId: session?.user?.id 
+      });
+      
+      if (!session?.user) {
+        console.error('❌ Utilisateur non authentifié');
+        setError('Session expirée. Veuillez vous reconnecter.');
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        return;
+      }
+      
       console.log('🔄 Mise à jour image principale:', imageUrl);
       
       // Utiliser l'API pour l'établissement de l'utilisateur connecté

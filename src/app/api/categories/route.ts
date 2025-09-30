@@ -180,6 +180,10 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
     label: "Bar kosher",
     keywords: ["bar", "kosher", "juif", "religieux", "traditionnel", "respectueux", "culturel", "communauté", "tradition", "spirituel", "religieux", "respect", "diversité", "inclusif", "culturel"]
   },
+  bar_jeux: {
+    label: "Bar à jeux",
+    keywords: ["bar", "jeux", "pétanque", "fléchettes", "billard", "arcade", "baby-foot", "ping-pong", "intérieur", "divertissement", "ludique", "amis", "famille", "soirée", "détente", "compétition", "boissons", "snacks", "ambiance", "convivialité", "loisirs"]
+  },
 
   // ===== RESTAURANTS =====
   

@@ -169,6 +169,11 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
     relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
   },
+  bar_jeux: {
+    primaryTags: ["bar", "jeux", "pétanque", "fléchettes", "billard", "arcade"],
+    secondaryTags: ["baby-foot", "ping-pong", "intérieur", "divertissement", "ludique"],
+    relatedTags: ["amis", "famille", "soirée", "détente", "compétition", "boissons", "snacks", "ambiance", "convivialité", "loisirs"]
+  },
 
   // 🍽️ Restaurants
   restaurant_gastronomique: {
@@ -723,6 +728,14 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
     relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
   },
+  bar_jeux: {
+    label: "Bar à jeux",
+    services: ["Pétanque intérieure", "Fléchettes", "Billard", "Baby-foot", "Ping-pong", "Jeux d'arcade", "Boissons", "Snacks"],
+    ambiance: ["Ludique", "Conviviale", "Décontractée", "Compétitive", "Amusante"],
+    primaryTags: ["bar", "jeux", "pétanque", "fléchettes", "billard", "arcade"],
+    secondaryTags: ["baby-foot", "ping-pong", "intérieur", "divertissement", "ludique"],
+    relatedTags: ["amis", "famille", "soirée", "détente", "compétition", "boissons", "snacks", "ambiance", "convivialité", "loisirs"]
+  },
 
   // 🍽️ Restaurants
   restaurant_gastronomique: {
@@ -1142,7 +1155,7 @@ export function getGroupedActivities() {
       "bar_plage", "bar_rooftop", "bar_brasserie", "bar_whisky", "bar_rhum", 
       "bar_gin", "bar_tequila", "bar_champagne", "bar_apéritif", "bar_afterwork",
       "bar_brunch", "bar_glacé", "bar_healthy", "bar_vegan", "bar_gluten_free",
-      "bar_halal", "bar_kosher", "pub_traditionnel", "brasserie_artisanale"
+      "bar_halal", "bar_kosher", "bar_jeux", "pub_traditionnel", "brasserie_artisanale"
     ],
     "🍽️ Restaurants": [
       "restaurant_gastronomique", "restaurant_traditionnel", "restaurant_familial", "bistrot"

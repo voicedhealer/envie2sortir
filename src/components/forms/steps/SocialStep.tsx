@@ -19,7 +19,7 @@ export default function SocialStep({
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-gray-900">Réseaux sociaux</h2>
         <p className="text-gray-600 mt-2">
-          Ajoutez vos liens réseaux sociaux pour améliorer votre visibilité
+          Ajoutez vos liens réseaux sociaux pour améliorer votre visibilité, il seront affichés sur votre page d'établissement.
         </p>
       </div>
       
