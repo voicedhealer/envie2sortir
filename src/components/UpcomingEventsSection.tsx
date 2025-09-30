@@ -32,6 +32,7 @@ export default function UpcomingEventsSection({
     const fetchUpcomingEvents = async () => {
       try {
         setLoading(true);
+        console.log('🔍 Chargement des événements pour:', establishmentSlug);
         const response = await fetch(`/api/etablissements/${establishmentSlug}/events`);
         
         if (!response.ok) {
@@ -57,6 +58,7 @@ export default function UpcomingEventsSection({
       } catch (err) {
         console.error('Erreur lors du chargement des événements:', err);
         setError(err instanceof Error ? err.message : 'Erreur inconnue');
+        setEvents([]); // S'assurer que events est un tableau vide en cas d'erreur
       } finally {
         setLoading(false);
       }
