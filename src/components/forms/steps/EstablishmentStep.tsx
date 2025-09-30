@@ -11,6 +11,8 @@ interface EstablishmentStepProps {
     hours: any;
     activities: string[];
     phone?: string;
+    whatsappPhone?: string;
+    messengerUrl?: string;
     email?: string;
   };
   errors: Record<string, string>;
@@ -108,7 +110,43 @@ export default function EstablishmentStep({
               placeholder="04 78 90 12 34"
             />
             <p className="text-xs text-gray-500 mt-1">
-              📱 Numéro visible par les clients
+              📞 Numéro fixe pour les appels
+            </p>
+          </div>
+          
+          {/* WhatsApp de l'établissement */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              WhatsApp
+              <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+            </label>
+            <input
+              type="tel"
+              value={formData.whatsappPhone || ''}
+              onChange={(e) => onInputChange('whatsappPhone', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="06 12 34 56 78"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              📱 Numéro mobile pour WhatsApp
+            </p>
+          </div>
+          
+          {/* Messenger de l'établissement */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Messenger (Facebook)
+              <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+            </label>
+            <input
+              type="url"
+              value={formData.messengerUrl || ''}
+              onChange={(e) => onInputChange('messengerUrl', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              placeholder="https://m.me/votre-page-facebook"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              💬 Lien vers votre page Facebook Messenger
             </p>
           </div>
           

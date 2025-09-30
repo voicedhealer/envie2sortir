@@ -1,15 +1,20 @@
 'use client';
 
-import { Phone, MapPin, MessageCircle, Star, Heart } from 'lucide-react';
+import { Phone, MapPin, Star, Heart } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
+import ContactButtons from './ContactButtons';
 
 interface EstablishmentActionsProps {
   establishment: {
     id: string;
+    name: string;
     phone?: string;
+    whatsappPhone?: string;
+    messengerUrl?: string;
+    email?: string;
     address: string;
     city?: string;
     avgRating?: number;
@@ -198,31 +203,12 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           <span>Itinéraire</span>
         </button>
 
-        {/* Appeler */}
-        <button
-          onClick={() => {
-            handleCall();
-            incrementClick(establishment.id);
-          }}
-          className={`action-btn ${establishment.phone ? 'success' : 'disabled'}`}
-          disabled={!establishment.phone}
-        >
-          <Phone className="w-4 h-4" />
-          <span>Appeler</span>
-        </button>
-
-        {/* Message */}
-        <button
-          onClick={() => {
-            console.log('Message');
-            incrementClick(establishment.id);
-          }}
-          className="action-btn"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>Message</span>
-        </button>
-
+        {/* Boutons de contact (inclut Appeler, WhatsApp, Email) */}
+        <ContactButtons 
+          establishment={establishment}
+          onContactClick={() => incrementClick(establishment.id)}
+        />
+        
         {/* Favoris */}
         {session?.user?.role === 'user' && (
           <button

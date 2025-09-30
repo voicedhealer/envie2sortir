@@ -106,8 +106,8 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
             </Link>
           )}
           <button
-            onClick={() => {
-              signOut();
+            onClick={async () => {
+              await signOut({ callbackUrl: '/' });
               setShowUserMenu(false);
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

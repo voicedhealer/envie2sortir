@@ -110,6 +110,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               hours: formData.hours,
               activities: formData.activities,
               phone: formData.phone,
+              whatsappPhone: formData.whatsappPhone,
+              messengerUrl: formData.messengerUrl,
               email: formData.email
             }}
             errors={errors}

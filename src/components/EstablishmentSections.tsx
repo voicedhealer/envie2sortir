@@ -257,14 +257,14 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
 
     // Catégoriser les activités
     activities.forEach((activity: string) => {
-      if (seenItems.has(activity)) return; // Éviter les doublons
+      if (seenItems.has(activity)) return;
       seenItems.add(activity);
       categories.activites.push(activity);
     });
 
     // Intégrer les données hybrides d'accessibilité dans les commodités
     accessibilityItems.forEach((item: string) => {
-      if (seenItems.has(item)) return; // Éviter les doublons
+      if (seenItems.has(item)) return;
       seenItems.add(item);
       categories.commodites.push(item);
     });

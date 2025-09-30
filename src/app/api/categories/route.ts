@@ -78,6 +78,108 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
     label: "Bar avec jeux",
     keywords: ["jeux", "fléchettes", "babyfoot", "arcade", "borne", "flipper", "amusement", "compétition", "détente", "fun"]
   },
+  
+  // ===== NOUVEAUX TYPES DE BARS - Système hiérarchique amélioré =====
+  
+  bar_jus_smoothies: {
+    label: "Bar à jus et smoothies",
+    keywords: ["bar", "jus", "smoothies", "fruits", "healthy", "frais", "naturel", "vitamines", "détox", "boisson", "santé", "léger", "rafraîchissant", "matin", "après-sport"]
+  },
+  
+  bar_tapas: {
+    label: "Bar tapas",
+    keywords: ["bar", "tapas", "espagnol", "petites", "assiettes", "partage", "convivial", "sangria", "jambon", "fromage", "apéro", "entre amis", "dégustation", "méditerranéen", "chaleureux"]
+  },
+  
+  bar_lounge: {
+    label: "Bar lounge",
+    keywords: ["bar", "lounge", "détente", "confortable", "sofa", "musique", "douce", "intimiste", "chic", "élégant", "relaxation", "sophistiqué", "rendez-vous", "calme", "premium"]
+  },
+  
+  bar_plage: {
+    label: "Bar de plage",
+    keywords: ["bar", "plage", "bord", "mer", "sable", "cocktails", "tropical", "été", "vue", "mer", "vacances", "détente", "soleil", "pieds", "nus", "relax"]
+  },
+  
+  bar_rooftop: {
+    label: "Bar rooftop",
+    keywords: ["bar", "rooftop", "terrasse", "hauteur", "vue", "panoramique", "coucher", "soleil", "premium", "exclusif", "romantique", "instagram", "haut", "ville", "élégant"]
+  },
+  
+  bar_brasserie: {
+    label: "Bar brasserie",
+    keywords: ["bar", "brasserie", "bière", "artisanale", "locale", "dégustation", "houblon", "malt", "craft", "traditionnel", "authentique", "terroir", "découverte", "artisanal", "convivial"]
+  },
+  
+  bar_whisky: {
+    label: "Bar à whisky",
+    keywords: ["bar", "whisky", "scotch", "bourbon", "spécialisé", "dégustation", "collection", "expert", "premium", "raffiné", "sophistiqué", "connaisseur", "intimiste", "élégant", "traditionnel"]
+  },
+  
+  bar_rhum: {
+    label: "Bar à rhum",
+    keywords: ["bar", "rhum", "caraïbes", "tropical", "cocktails", "mojito", "daiquiri", "coco", "exotique", "chaud", "vacances", "détente", "tropical", "festif", "coloré"]
+  },
+  
+  bar_gin: {
+    label: "Bar à gin",
+    keywords: ["bar", "gin", "tonic", "botaniques", "spécialisé", "cocktails", "signature", "premium", "rafraîchissant", "sophistiqué", "élégant", "moderne", "créatif", "délicat", "trendy"]
+  },
+  
+  bar_tequila: {
+    label: "Bar à tequila",
+    keywords: ["bar", "tequila", "mexicain", "margarita", "agave", "cocktails", "épicé", "chaud", "festif", "authentique", "mexicain", "coloré", "amusant", "entre amis", "décontracté"]
+  },
+  
+  bar_champagne: {
+    label: "Bar à champagne",
+    keywords: ["bar", "champagne", "bulles", "mousseux", "célébration", "premium", "élégant", "sophistiqué", "fête", "spécial", "luxe", "romantique", "anniversaire", "réussite", "raffiné"]
+  },
+  
+  bar_apéritif: {
+    label: "Bar apéritif",
+    keywords: ["bar", "apéritif", "apéro", "avant", "repas", "convivial", "partage", "petites", "assiettes", "détente", "entre amis", "chaleureux", "décontracté", "traditionnel", "famille"]
+  },
+  
+  bar_afterwork: {
+    label: "Bar afterwork",
+    keywords: ["bar", "afterwork", "travail", "bureau", "soirée", "collègues", "détente", "happy hour", "convivial", "professionnel", "réseautage", "décompression", "collaboration", "moderne", "urbain"]
+  },
+  
+  bar_brunch: {
+    label: "Bar brunch",
+    keywords: ["bar", "brunch", "weekend", "matin", "déjeuner", "œufs", "benedict", "pancakes", "mimosa", "détente", "famille", "paresseux", "gourmand", "chaleureux", "dominical"]
+  },
+  
+  bar_glacé: {
+    label: "Bar glacé",
+    keywords: ["bar", "glacé", "glace", "dessert", "sucré", "parfums", "cônes", "sundae", "milkshake", "gourmandise", "enfants", "famille", "été", "rafraîchissant", "amusant"]
+  },
+  
+  bar_healthy: {
+    label: "Bar healthy",
+    keywords: ["bar", "healthy", "santé", "bio", "naturel", "smoothies", "détox", "vitamines", "légumes", "fruits", "bien-être", "sport", "léger", "pur", "équilibré"]
+  },
+  
+  bar_vegan: {
+    label: "Bar vegan",
+    keywords: ["bar", "vegan", "végétal", "sans", "animal", "bio", "naturel", "éthique", "responsable", "alternatif", "écologique", "conscient", "moderne", "sain", "engagé"]
+  },
+  
+  bar_gluten_free: {
+    label: "Bar sans gluten",
+    keywords: ["bar", "sans", "gluten", "intolérance", "allergie", "sans", "blé", "alternatif", "santé", "spécialisé", "précaution", "inclusif", "attention", "soin", "adapté"]
+  },
+  
+  bar_halal: {
+    label: "Bar halal",
+    keywords: ["bar", "halal", "musulman", "islamique", "religieux", "sans", "alcool", "respectueux", "traditionnel", "culturel", "communauté", "respect", "diversité", "inclusif", "culturel"]
+  },
+  
+  bar_kosher: {
+    label: "Bar kosher",
+    keywords: ["bar", "kosher", "juif", "religieux", "traditionnel", "respectueux", "culturel", "communauté", "tradition", "spirituel", "religieux", "respect", "diversité", "inclusif", "culturel"]
+  },
 
   // ===== RESTAURANTS =====
   
@@ -127,15 +229,100 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
     label: "Restaurant oriental",
     keywords: ["oriental", "couscous", "tajine", "maghrébin", "marocain", "tunisien", "algérien", "merguez", "semoule", "harissa"]
   },
+
+  // 🌏 CUISINES ASIATIQUES SPÉCIFIQUES
+  restaurant_chinois: {
+    label: "Restaurant chinois",
+    keywords: ["chinois", "cantonais", "dim sum", "wok", "nems", "canard laqué", "riz cantonais", "chow mein", "lo mein", "szechuan"]
+  },
+  
+  restaurant_japonais: {
+    label: "Restaurant japonais",
+    keywords: ["japonais", "sushi", "sashimi", "maki", "tempura", "ramen", "yakitori", "saké", "teriyaki", "wasabi", "gingembre"]
+  },
+  
+  restaurant_thai: {
+    label: "Restaurant thaïlandais",
+    keywords: ["thaï", "thaïlandais", "pad thaï", "curry thaï", "tom yam", "coco", "épicé", "basilic", "citronnelle", "galanga"]
+  },
+  
+  restaurant_vietnamien: {
+    label: "Restaurant vietnamien",
+    keywords: ["vietnamien", "pho", "nems", "bun bo", "bouillon", "herbes", "frais", "baguette vietnamienne", "nuoc mam", "coriandre"]
+  },
+  
+  restaurant_coreen: {
+    label: "Restaurant coréen",
+    keywords: ["coréen", "kimchi", "bulgogi", "bibimbap", "barbecue coréen", "fermenté", "épicé", "gochujang", "sésame", "soju"]
+  },
+
+  // 🕌 CUISINES DU MOYEN-ORIENT
+  restaurant_indien: {
+    label: "Restaurant indien",
+    keywords: ["indien", "curry", "tandoor", "naan", "biryani", "épices", "végétarien", "tikka", "masala", "dal", "chutney"]
+  },
+  
+  restaurant_libanais: {
+    label: "Restaurant libanais",
+    keywords: ["libanais", "mezze", "houmous", "falafel", "taboulé", "kebab", "moutabal", "pita", "zaatar", "méditerranéen"]
+  },
+  
+  restaurant_turc: {
+    label: "Restaurant turc",
+    keywords: ["turc", "kebab", "döner", "pide", "lahmacun", "ayran", "baklava", "turkish", "oriental", "épicé", "traditionnel"]
+  },
+  
+  restaurant_grec: {
+    label: "Restaurant grec",
+    keywords: ["grec", "moussaka", "souvlaki", "tzatziki", "feta", "olives", "ouzo", "grecque", "méditerranéen", "frais", "convivial"]
+  },
+
+  // 🇪🇺 CUISINES EUROPÉENNES
+  restaurant_espagnol: {
+    label: "Restaurant espagnol",
+    keywords: ["espagnol", "paella", "tapas", "jambon ibérique", "sangria", "gazpacho", "chorizo", "espagne", "méditerranéen", "convivial"]
+  },
+  
+  restaurant_portugais: {
+    label: "Restaurant portugais",
+    keywords: ["portugais", "bacalhau", "pasteis de nata", "porto", "sardines", "portugaise", "océan", "traditionnel", "familial", "découverte"]
+  },
+  
+  restaurant_allemand: {
+    label: "Restaurant allemand",
+    keywords: ["allemand", "choucroute", "wurst", "bière", "pretzel", "schnitzel", "allemande", "traditionnel", "copieux", "convivial"]
+  },
+  
+  restaurant_russe: {
+    label: "Restaurant russe",
+    keywords: ["russe", "borsch", "vodka", "caviar", "blinis", "russie", "traditionnel", "festif", "authentique", "unique"]
+  },
+
+  // 🌍 CUISINES AFRICAINES
+  restaurant_marocain: {
+    label: "Restaurant marocain",
+    keywords: ["marocain", "tajine", "couscous", "menthe", "épices", "marocaine", "oriental", "traditionnel", "chaleureux", "exotique"]
+  },
+  
+  restaurant_ethiopien: {
+    label: "Restaurant éthiopien",
+    keywords: ["éthiopien", "injera", "wot", "éthiopie", "fermenté", "épicé", "traditionnel", "unique", "découverte", "authentique"]
+  },
+
+  // 🌎 CUISINES AMÉRICAINES
+  restaurant_brasilien: {
+    label: "Restaurant brésilien",
+    keywords: ["brésilien", "feijoada", "caipirinha", "churrasco", "brésil", "tropical", "festif", "convivial", "coloré", "découverte"]
+  },
+  
+  restaurant_peruvien: {
+    label: "Restaurant péruvien",
+    keywords: ["péruvien", "ceviche", "pisco", "quinoa", "pérou", "andine", "traditionnel", "unique", "découverte", "exotique"]
+  },
   
   restaurant_mexicain: {
     label: "Restaurant mexicain",
     keywords: ["mexicain", "tacos", "burritos", "tex-mex", "guacamole", "salsa", "chili", "nachos", "quesadilla", "épicé"]
-  },
-  
-  restaurant_indien: {
-    label: "Restaurant indien",
-    keywords: ["indien", "curry", "tandoori", "épices", "naan", "basmati", "masala", "bollywood", "végétarien", "dal"]
   },
   
   restaurant_veggie: {
@@ -329,24 +516,41 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
 
   // ===== ACTIVITÉS LUDIQUES & GAMING =====
   
+  // ===== ESCAPE GAMES - Système hiérarchique amélioré =====
+  
+  escape_game: {
+    label: "Escape Game (général)",
+    keywords: ["escape game", "énigmes", "salles", "thématiques", "team building", "réservation", "challenge", "groupe", "immersive", "aventure", "mystère", "famille"]
+  },
+  
   escape_game_horreur: {
-    label: "Escape game horreur",
-    keywords: ["escape game", "horreur", "peur", "énigmes", "zombie", "thriller", "frissons", "équipe", "adrénaline", "sombre"]
+    label: "Escape Game Horreur",
+    keywords: ["escape game", "horreur", "frissons", "adrénaline", "effrayant", "salles", "thématiques", "team building", "challenge", "groupe", "adultes", "zombie", "thriller", "sombre"]
   },
   
   escape_game_aventure: {
-    label: "Escape game aventure",
-    keywords: ["escape game", "aventure", "énigmes", "mystère", "trésor", "exploration", "équipe", "mission", "défi", "puzzle"]
+    label: "Escape Game Aventure",
+    keywords: ["escape game", "aventure", "pirate", "trésor", "exploration", "salles", "thématiques", "team building", "challenge", "famille", "enfants", "mystère", "mission", "défi", "puzzle"]
+  },
+  
+  escape_game_mystere: {
+    label: "Escape Game Mystère",
+    keywords: ["escape game", "mystère", "enquête", "détective", "logique", "salles", "thématiques", "team building", "challenge", "groupe", "intellectuel", "puzzle", "réflexion"]
+  },
+  
+  escape_game_sf: {
+    label: "Escape Game Science-Fiction",
+    keywords: ["escape game", "science-fiction", "futuriste", "technologie", "space", "salles", "thématiques", "team building", "challenge", "groupe", "innovant", "VR", "réalité virtuelle", "immersion", "3D"]
+  },
+  
+  escape_game_fantasy: {
+    label: "Escape Game Fantasy",
+    keywords: ["escape game", "fantasy", "magie", "médiéval", "sorcier", "salles", "thématiques", "team building", "challenge", "famille", "imaginaire", "aventure", "mystère"]
   },
   
   escape_game_familial: {
-    label: "Escape game familial",
-    keywords: ["escape game", "famille", "enfants", "tous âges", "accessible", "amusant", "éducatif", "coopération", "simple"]
-  },
-  
-  escape_game_immersif: {
-    label: "Escape game immersif",
-    keywords: ["escape game", "VR", "réalité virtuelle", "immersion", "technologie", "futuriste", "casque", "moderne", "3D"]
+    label: "Escape Game Familial",
+    keywords: ["escape game", "familial", "enfant", "doux", "éducatif", "salles", "thématiques", "team building", "challenge", "famille", "tous âges", "accessible", "amusant", "coopération", "simple"]
   },
   
   laser_game: {
@@ -734,10 +938,6 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
     keywords: ["marché", "nocturne", "produits", "local", "artisanal", "animation"]
   },
   
-  escape_game: {
-    label: "Escape game / Jeu d'évasion",
-    keywords: ["escape game", "énigmes", "évasion", "équipe", "mystère", "réflexion"]
-  },
   
   other: {
     label: "Autres activités",
@@ -780,21 +980,36 @@ export async function GET(request: Request) {
       ];
     }
 
-    // Requête groupée pour compter les établissements par catégorie
-    const rows = await prisma.establishment.groupBy({
-      by: ["category"],                                    // Grouper par catégorie
-      _count: { category: true },                          // Compter les occurrences
-      orderBy: { _count: { category: "desc" } },          // Trier par popularité décroissante
-      where: Object.keys(where).length ? where : undefined // Appliquer les filtres si présents
+    // Récupérer tous les établissements avec leurs activités
+    const establishments = await prisma.establishment.findMany({
+      where: Object.keys(where).length ? where : undefined,
+      select: {
+        activities: true
+      }
+    });
+
+    // Compter les occurrences de chaque activité
+    const activityCounts: Record<string, number> = {};
+    
+    establishments.forEach(establishment => {
+      if (establishment.activities && Array.isArray(establishment.activities)) {
+        establishment.activities.forEach(activity => {
+          if (typeof activity === 'string') {
+            activityCounts[activity] = (activityCounts[activity] || 0) + 1;
+          }
+        });
+      }
     });
 
     // Enrichissement des données avec labels et mots-clés
-    const data = rows.map((r) => ({
-      value: r.category,                                   // Enum Prisma original
-      label: CATEGORY_DATA[r.category]?.label ?? r.category, // Label enrichi ou fallback
-      keywords: CATEGORY_DATA[r.category]?.keywords ?? [], // Mots-clés pour recherche
-      count: r._count.category,                            // Nombre d'établissements
-    }));
+    const data = Object.entries(activityCounts)
+      .map(([activity, count]) => ({
+        value: activity,
+        label: CATEGORY_DATA[activity]?.label ?? activity,
+        keywords: CATEGORY_DATA[activity]?.keywords ?? [],
+        count: count,
+      }))
+      .sort((a, b) => b.count - a.count); // Trier par popularité décroissante
 
     return NextResponse.json({ categories: data });
     

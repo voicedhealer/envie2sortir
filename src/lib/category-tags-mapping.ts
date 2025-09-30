@@ -67,6 +67,108 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     secondaryTags: ["tapas", "planches", "happy hour", "terrasse"],
     relatedTags: ["amusant", "décontracté", "festif", "entre amis", "dj", "live", "sport"]
   },
+  
+  // 🍹 NOUVEAUX TYPES DE BARS - Système hiérarchique amélioré
+  bar_jus_smoothies: {
+    primaryTags: ["bar", "jus", "smoothies", "fruits", "healthy"],
+    secondaryTags: ["frais", "naturel", "vitamines", "détox", "boisson"],
+    relatedTags: ["santé", "léger", "rafraîchissant", "matin", "après-sport"]
+  },
+  bar_tapas: {
+    primaryTags: ["bar", "tapas", "espagnol", "petites", "assiettes"],
+    secondaryTags: ["partage", "convivial", "sangria", "jambon", "fromage"],
+    relatedTags: ["apéro", "entre amis", "dégustation", "méditerranéen", "chaleureux"]
+  },
+  bar_lounge: {
+    primaryTags: ["bar", "lounge", "détente", "confortable", "sofa"],
+    secondaryTags: ["musique", "douce", "intimiste", "chic", "élégant"],
+    relatedTags: ["relaxation", "sophistiqué", "rendez-vous", "calme", "premium"]
+  },
+  bar_plage: {
+    primaryTags: ["bar", "plage", "bord", "mer", "sable"],
+    secondaryTags: ["cocktails", "tropical", "été", "vue", "mer"],
+    relatedTags: ["vacances", "détente", "soleil", "pieds", "nus", "relax"]
+  },
+  bar_rooftop: {
+    primaryTags: ["bar", "rooftop", "terrasse", "hauteur", "vue"],
+    secondaryTags: ["panoramique", "coucher", "soleil", "premium", "exclusif"],
+    relatedTags: ["romantique", "instagram", "haut", "vue", "ville", "élégant"]
+  },
+  bar_brasserie: {
+    primaryTags: ["bar", "brasserie", "bière", "artisanale", "locale"],
+    secondaryTags: ["dégustation", "houblon", "malt", "craft", "traditionnel"],
+    relatedTags: ["authentique", "terroir", "découverte", "artisanal", "convivial"]
+  },
+  bar_whisky: {
+    primaryTags: ["bar", "whisky", "scotch", "bourbon", "spécialisé"],
+    secondaryTags: ["dégustation", "collection", "expert", "premium", "raffiné"],
+    relatedTags: ["sophistiqué", "connaisseur", "intimiste", "élégant", "traditionnel"]
+  },
+  bar_rhum: {
+    primaryTags: ["bar", "rhum", "caraïbes", "tropical", "cocktails"],
+    secondaryTags: ["mojito", "daiquiri", "coco", "exotique", "chaud"],
+    relatedTags: ["vacances", "détente", "tropical", "festif", "coloré"]
+  },
+  bar_gin: {
+    primaryTags: ["bar", "gin", "tonic", "botaniques", "spécialisé"],
+    secondaryTags: ["cocktails", "signature", "premium", "rafraîchissant", "sophistiqué"],
+    relatedTags: ["élégant", "moderne", "créatif", "délicat", "trendy"]
+  },
+  bar_tequila: {
+    primaryTags: ["bar", "tequila", "mexicain", "margarita", "agave"],
+    secondaryTags: ["cocktails", "épicé", "chaud", "festif", "authentique"],
+    relatedTags: ["mexicain", "coloré", "amusant", "entre amis", "décontracté"]
+  },
+  bar_champagne: {
+    primaryTags: ["bar", "champagne", "bulles", "mousseux", "célébration"],
+    secondaryTags: ["premium", "élégant", "sophistiqué", "fête", "spécial"],
+    relatedTags: ["luxe", "romantique", "anniversaire", "réussite", "raffiné"]
+  },
+  bar_apéritif: {
+    primaryTags: ["bar", "apéritif", "apéro", "avant", "repas"],
+    secondaryTags: ["convivial", "partage", "petites", "assiettes", "détente"],
+    relatedTags: ["entre amis", "chaleureux", "décontracté", "traditionnel", "famille"]
+  },
+  bar_afterwork: {
+    primaryTags: ["bar", "afterwork", "travail", "bureau", "soirée"],
+    secondaryTags: ["collègues", "détente", "happy hour", "convivial", "professionnel"],
+    relatedTags: ["réseautage", "décompression", "collaboration", "moderne", "urbain"]
+  },
+  bar_brunch: {
+    primaryTags: ["bar", "brunch", "weekend", "matin", "déjeuner"],
+    secondaryTags: ["œufs", "benedict", "pancakes", "mimosa", "détente"],
+    relatedTags: ["famille", "paresseux", "gourmand", "chaleureux", "dominical"]
+  },
+  bar_glacé: {
+    primaryTags: ["bar", "glacé", "glace", "dessert", "sucré"],
+    secondaryTags: ["parfums", "cônes", "sundae", "milkshake", "gourmandise"],
+    relatedTags: ["enfants", "famille", "été", "rafraîchissant", "amusant"]
+  },
+  bar_healthy: {
+    primaryTags: ["bar", "healthy", "santé", "bio", "naturel"],
+    secondaryTags: ["smoothies", "détox", "vitamines", "légumes", "fruits"],
+    relatedTags: ["bien-être", "sport", "léger", "pur", "équilibré"]
+  },
+  bar_vegan: {
+    primaryTags: ["bar", "vegan", "végétal", "sans", "animal"],
+    secondaryTags: ["bio", "naturel", "éthique", "responsable", "alternatif"],
+    relatedTags: ["écologique", "conscient", "moderne", "sain", "engagé"]
+  },
+  bar_gluten_free: {
+    primaryTags: ["bar", "sans", "gluten", "intolérance", "allergie"],
+    secondaryTags: ["sans", "blé", "alternatif", "santé", "spécialisé"],
+    relatedTags: ["précaution", "inclusif", "attention", "soin", "adapté"]
+  },
+  bar_halal: {
+    primaryTags: ["bar", "halal", "musulman", "islamique", "religieux"],
+    secondaryTags: ["sans", "alcool", "respectueux", "traditionnel", "culturel"],
+    relatedTags: ["communauté", "respect", "diversité", "inclusif", "culturel"]
+  },
+  bar_kosher: {
+    primaryTags: ["bar", "kosher", "juif", "religieux", "traditionnel"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
+    relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
+  },
 
   // 🍽️ Restaurants
   restaurant_gastronomique: {
@@ -105,6 +207,106 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     primaryTags: ["restaurant", "oriental", "couscous", "tajines"],
     secondaryTags: ["menthe", "pâtisseries", "orientales", "épices"],
     relatedTags: ["chaleureuse", "conviviale", "orientale", "traditionnel"]
+  },
+
+  // 🌏 CUISINES ASIATIQUES SPÉCIFIQUES
+  restaurant_chinois: {
+    primaryTags: ["restaurant", "chinois", "cantonais", "dim sum"],
+    secondaryTags: ["wok", "nems", "canard", "laqué", "riz"],
+    relatedTags: ["traditionnel", "familial", "convivial", "authentique"]
+  },
+  restaurant_japonais: {
+    primaryTags: ["restaurant", "japonais", "sushi", "sashimi"],
+    secondaryTags: ["maki", "tempura", "ramen", "yakitori", "saké"],
+    relatedTags: ["zen", "raffiné", "frais", "traditionnel", "artisanal"]
+  },
+  restaurant_thai: {
+    primaryTags: ["restaurant", "thaïlandais", "thaï", "pad", "thai"],
+    secondaryTags: ["curry", "coco", "épicé", "basilic", "citronnelle"],
+    relatedTags: ["exotique", "épicé", "parfumé", "équilibré", "coloré"]
+  },
+  restaurant_vietnamien: {
+    primaryTags: ["restaurant", "vietnamien", "pho", "nems", "vietnam"],
+    secondaryTags: ["bouillon", "herbes", "frais", "baguette", "vietnamienne"],
+    relatedTags: ["frais", "léger", "herbacé", "authentique", "sain"]
+  },
+  restaurant_coreen: {
+    primaryTags: ["restaurant", "coréen", "corée", "kimchi", "bulgogi"],
+    secondaryTags: ["barbecue", "coréen", "fermenté", "épicé", "traditionnel"],
+    relatedTags: ["fermenté", "épicé", "traditionnel", "unique", "découverte"]
+  },
+
+  // 🕌 CUISINES DU MOYEN-ORIENT
+  restaurant_indien: {
+    primaryTags: ["restaurant", "indien", "curry", "tandoor", "indien"],
+    secondaryTags: ["naan", "biryani", "épices", "végétarien", "tikka"],
+    relatedTags: ["épicé", "parfumé", "végétarien", "traditionnel", "coloré"]
+  },
+  restaurant_libanais: {
+    primaryTags: ["restaurant", "libanais", "mezze", "houmous", "liban"],
+    secondaryTags: ["falafel", "taboulé", "kebab", "moutabal", "pita"],
+    relatedTags: ["partage", "convivial", "méditerranéen", "frais", "authentique"]
+  },
+  restaurant_turc: {
+    primaryTags: ["restaurant", "turc", "kebab", "döner", "turquie"],
+    secondaryTags: ["pide", "lahmacun", "ayran", "baklava", "turkish"],
+    relatedTags: ["oriental", "épicé", "traditionnel", "convivial", "authentique"]
+  },
+  restaurant_grec: {
+    primaryTags: ["restaurant", "grec", "moussaka", "souvlaki", "grèce"],
+    secondaryTags: ["tzatziki", "feta", "olives", "ouzo", "grecque"],
+    relatedTags: ["méditerranéen", "frais", "convivial", "traditionnel", "familial"]
+  },
+
+  // 🇪🇺 CUISINES EUROPÉENNES
+  restaurant_espagnol: {
+    primaryTags: ["restaurant", "espagnol", "paella", "tapas", "espagne"],
+    secondaryTags: ["jambon", "chorizo", "sangria", "gazpacho", "espagnole"],
+    relatedTags: ["méditerranéen", "convivial", "partage", "chaleureux", "festif"]
+  },
+  restaurant_portugais: {
+    primaryTags: ["restaurant", "portugais", "bacalhau", "pasteis", "portugal"],
+    secondaryTags: ["porto", "sardines", "portugaise", "traditionnel", "océan"],
+    relatedTags: ["océan", "traditionnel", "authentique", "familial", "découverte"]
+  },
+  restaurant_allemand: {
+    primaryTags: ["restaurant", "allemand", "choucroute", "wurst", "allemagne"],
+    secondaryTags: ["bière", "pretzel", "schnitzel", "allemande", "traditionnel"],
+    relatedTags: ["traditionnel", "copieux", "convivial", "authentique", "familial"]
+  },
+  restaurant_russe: {
+    primaryTags: ["restaurant", "russe", "borsch", "vodka", "russie"],
+    secondaryTags: ["caviar", "blinis", "russe", "traditionnel", "festif"],
+    relatedTags: ["traditionnel", "festif", "authentique", "découverte", "unique"]
+  },
+
+  // 🌍 CUISINES AFRICAINES
+  restaurant_marocain: {
+    primaryTags: ["restaurant", "marocain", "tajine", "couscous", "maroc"],
+    secondaryTags: ["menthe", "épices", "marocaine", "traditionnel", "oriental"],
+    relatedTags: ["épicé", "parfumé", "traditionnel", "chaleureux", "exotique"]
+  },
+  restaurant_ethiopien: {
+    primaryTags: ["restaurant", "éthiopien", "injera", "wot", "éthiopie"],
+    secondaryTags: ["épicé", "fermenté", "éthiopienne", "traditionnel", "unique"],
+    relatedTags: ["unique", "épicé", "traditionnel", "découverte", "authentique"]
+  },
+
+  // 🌎 CUISINES AMÉRICAINES
+  restaurant_brasilien: {
+    primaryTags: ["restaurant", "brésilien", "feijoada", "caipirinha", "brésil"],
+    secondaryTags: ["churrasco", "brésilienne", "tropical", "festif", "convivial"],
+    relatedTags: ["tropical", "festif", "convivial", "coloré", "découverte"]
+  },
+  restaurant_peruvien: {
+    primaryTags: ["restaurant", "péruvien", "ceviche", "pisco", "pérou"],
+    secondaryTags: ["quinoa", "péruvienne", "andine", "traditionnel", "unique"],
+    relatedTags: ["unique", "traditionnel", "découverte", "authentique", "exotique"]
+  },
+  restaurant_mexicain: {
+    primaryTags: ["restaurant", "mexicain", "tacos", "burritos", "mexique"],
+    secondaryTags: ["guacamole", "jalapeños", "tequila", "mexicaine", "épicé"],
+    relatedTags: ["épicé", "coloré", "festif", "convivial", "authentique"]
   },
 
   // 🥙 Fast Food & Street Food
@@ -162,10 +364,41 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     secondaryTags: ["tables", "tournois", "compétition", "sport"],
     relatedTags: ["précision", "stratégie", "traditionnel", "loisir"]
   },
+  // 🎯 ESCAPE GAMES - Système hiérarchique amélioré
+  escape_game: {
+    primaryTags: ["escape game", "énigmes", "salles", "thématiques"],
+    secondaryTags: ["team building", "réservation", "challenge", "groupe"],
+    relatedTags: ["immersive", "énigme", "aventure", "mystère", "famille"]
+  },
   escape_game_horreur: {
-    primaryTags: ["escape game", "horreur", "salles", "thématiques"],
-    secondaryTags: ["frissons", "team building", "réservation", "challenge"],
-    relatedTags: ["adrénaline", "immersive", "énigme", "groupe"]
+    primaryTags: ["escape game", "horreur", "frissons", "adrénaline"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["effrayant", "immersive", "énigme", "groupe", "adultes"]
+  },
+  escape_game_aventure: {
+    primaryTags: ["escape game", "aventure", "pirate", "trésor"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["exploration", "immersive", "énigme", "famille", "enfants"]
+  },
+  escape_game_mystere: {
+    primaryTags: ["escape game", "mystère", "enquête", "détective"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["logique", "immersive", "énigme", "groupe", "intellectuel"]
+  },
+  escape_game_sf: {
+    primaryTags: ["escape game", "science-fiction", "futuriste", "technologie"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["space", "immersive", "énigme", "groupe", "innovant"]
+  },
+  escape_game_fantasy: {
+    primaryTags: ["escape game", "fantasy", "magie", "médiéval"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["sorcier", "immersive", "énigme", "famille", "imaginaire"]
+  },
+  escape_game_familial: {
+    primaryTags: ["escape game", "familial", "enfant", "doux"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["éducatif", "immersive", "énigme", "famille", "tous âges"]
   },
   futsal: {
     primaryTags: ["futsal", "football", "terrain", "couvert"],
@@ -329,6 +562,168 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["amusant", "décontracté", "festif", "entre amis", "dj", "live", "sport"]
   },
 
+  // 🍹 NOUVEAUX TYPES DE BARS - Informations complètes
+  bar_jus_smoothies: {
+    label: "Bar à jus et smoothies",
+    services: ["Jus frais", "Smoothies", "Boissons healthy", "Détox"],
+    ambiance: ["Saine", "Rafraîchissante", "Légère", "Énergisante"],
+    primaryTags: ["bar", "jus", "smoothies", "fruits", "healthy"],
+    secondaryTags: ["frais", "naturel", "vitamines", "détox", "boisson"],
+    relatedTags: ["santé", "léger", "rafraîchissant", "matin", "après-sport"]
+  },
+  bar_tapas: {
+    label: "Bar tapas",
+    services: ["Petites assiettes", "Sangria", "Partage", "Apéritifs"],
+    ambiance: ["Conviviale", "Méditerranéenne", "Chaleureuse", "Partage"],
+    primaryTags: ["bar", "tapas", "espagnol", "petites", "assiettes"],
+    secondaryTags: ["partage", "convivial", "sangria", "jambon", "fromage"],
+    relatedTags: ["apéro", "entre amis", "dégustation", "méditerranéen", "chaleureux"]
+  },
+  bar_lounge: {
+    label: "Bar lounge",
+    services: ["Cocktails", "Sofas", "Musique douce", "Ambiance intimiste"],
+    ambiance: ["Détendue", "Sophistiquée", "Intimiste", "Élégante"],
+    primaryTags: ["bar", "lounge", "détente", "confortable", "sofa"],
+    secondaryTags: ["musique", "douce", "intimiste", "chic", "élégant"],
+    relatedTags: ["relaxation", "sophistiqué", "rendez-vous", "calme", "premium"]
+  },
+  bar_plage: {
+    label: "Bar de plage",
+    services: ["Cocktails tropicaux", "Vue sur mer", "Pieds dans le sable", "Détente"],
+    ambiance: ["Tropicale", "Détendue", "Vacances", "Soleil"],
+    primaryTags: ["bar", "plage", "bord", "mer", "sable"],
+    secondaryTags: ["cocktails", "tropical", "été", "vue", "mer"],
+    relatedTags: ["vacances", "détente", "soleil", "pieds", "nus", "relax"]
+  },
+  bar_rooftop: {
+    label: "Bar rooftop",
+    services: ["Vue panoramique", "Cocktails premium", "Terrasse", "Coucher de soleil"],
+    ambiance: ["Exclusive", "Romantique", "Élégante", "Panoramique"],
+    primaryTags: ["bar", "rooftop", "terrasse", "hauteur", "vue"],
+    secondaryTags: ["panoramique", "coucher", "soleil", "premium", "exclusif"],
+    relatedTags: ["romantique", "instagram", "haut", "vue", "ville", "élégant"]
+  },
+  bar_brasserie: {
+    label: "Bar brasserie",
+    services: ["Bières artisanales", "Dégustation", "Produits locaux", "Visite"],
+    ambiance: ["Authentique", "Traditionnelle", "Conviviale", "Artisanale"],
+    primaryTags: ["bar", "brasserie", "bière", "artisanale", "locale"],
+    secondaryTags: ["dégustation", "houblon", "malt", "craft", "traditionnel"],
+    relatedTags: ["authentique", "terroir", "découverte", "artisanal", "convivial"]
+  },
+  bar_whisky: {
+    label: "Bar à whisky",
+    services: ["Collection whisky", "Dégustation", "Expert conseil", "Premium"],
+    ambiance: ["Sophistiquée", "Intimiste", "Élégante", "Traditionnelle"],
+    primaryTags: ["bar", "whisky", "scotch", "bourbon", "spécialisé"],
+    secondaryTags: ["dégustation", "collection", "expert", "premium", "raffiné"],
+    relatedTags: ["sophistiqué", "connaisseur", "intimiste", "élégant", "traditionnel"]
+  },
+  bar_rhum: {
+    label: "Bar à rhum",
+    services: ["Cocktails tropicaux", "Rhum premium", "Ambiance caraïbes", "Exotique"],
+    ambiance: ["Tropicale", "Festive", "Colorée", "Exotique"],
+    primaryTags: ["bar", "rhum", "caraïbes", "tropical", "cocktails"],
+    secondaryTags: ["mojito", "daiquiri", "coco", "exotique", "chaud"],
+    relatedTags: ["vacances", "détente", "tropical", "festif", "coloré"]
+  },
+  bar_gin: {
+    label: "Bar à gin",
+    services: ["Gin premium", "Tonic", "Cocktails signature", "Botaniques"],
+    ambiance: ["Élégante", "Moderne", "Créative", "Sophistiquée"],
+    primaryTags: ["bar", "gin", "tonic", "botaniques", "spécialisé"],
+    secondaryTags: ["cocktails", "signature", "premium", "rafraîchissant", "sophistiqué"],
+    relatedTags: ["élégant", "moderne", "créatif", "délicat", "trendy"]
+  },
+  bar_tequila: {
+    label: "Bar à tequila",
+    services: ["Tequila premium", "Margaritas", "Cocktails mexicains", "Authentique"],
+    ambiance: ["Mexicaine", "Colorée", "Festive", "Décontractée"],
+    primaryTags: ["bar", "tequila", "mexicain", "margarita", "agave"],
+    secondaryTags: ["cocktails", "épicé", "chaud", "festif", "authentique"],
+    relatedTags: ["mexicain", "coloré", "amusant", "entre amis", "décontracté"]
+  },
+  bar_champagne: {
+    label: "Bar à champagne",
+    services: ["Champagne premium", "Bulles", "Célébrations", "Élégance"],
+    ambiance: ["Luxueuse", "Sophistiquée", "Romantique", "Exclusive"],
+    primaryTags: ["bar", "champagne", "bulles", "mousseux", "célébration"],
+    secondaryTags: ["premium", "élégant", "sophistiqué", "fête", "spécial"],
+    relatedTags: ["luxe", "romantique", "anniversaire", "réussite", "raffiné"]
+  },
+  bar_apéritif: {
+    label: "Bar apéritif",
+    services: ["Apéritifs", "Petites assiettes", "Partage", "Convivialité"],
+    ambiance: ["Conviviale", "Chaleureuse", "Décontractée", "Traditionnelle"],
+    primaryTags: ["bar", "apéritif", "apéro", "avant", "repas"],
+    secondaryTags: ["convivial", "partage", "petites", "assiettes", "détente"],
+    relatedTags: ["entre amis", "chaleureux", "décontracté", "traditionnel", "famille"]
+  },
+  bar_afterwork: {
+    label: "Bar afterwork",
+    services: ["Happy hour", "Réseautage", "Détente", "Professionnel"],
+    ambiance: ["Moderne", "Urbaine", "Conviviale", "Professionnelle"],
+    primaryTags: ["bar", "afterwork", "travail", "bureau", "soirée"],
+    secondaryTags: ["collègues", "détente", "happy hour", "convivial", "professionnel"],
+    relatedTags: ["réseautage", "décompression", "collaboration", "moderne", "urbain"]
+  },
+  bar_brunch: {
+    label: "Bar brunch",
+    services: ["Brunch weekend", "Œufs Benedict", "Pancakes", "Mimosa"],
+    ambiance: ["Chaleureuse", "Familiale", "Détendue", "Dominicale"],
+    primaryTags: ["bar", "brunch", "weekend", "matin", "déjeuner"],
+    secondaryTags: ["œufs", "benedict", "pancakes", "mimosa", "détente"],
+    relatedTags: ["famille", "paresseux", "gourmand", "chaleureux", "dominical"]
+  },
+  bar_glacé: {
+    label: "Bar glacé",
+    services: ["Glaces artisanales", "Sundae", "Milkshakes", "Desserts"],
+    ambiance: ["Amusante", "Familiale", "Rafraîchissante", "Gourmande"],
+    primaryTags: ["bar", "glacé", "glace", "dessert", "sucré"],
+    secondaryTags: ["parfums", "cônes", "sundae", "milkshake", "gourmandise"],
+    relatedTags: ["enfants", "famille", "été", "rafraîchissant", "amusant"]
+  },
+  bar_healthy: {
+    label: "Bar healthy",
+    services: ["Smoothies", "Jus détox", "Boissons naturelles", "Bien-être"],
+    ambiance: ["Saine", "Énergisante", "Pure", "Équilibrée"],
+    primaryTags: ["bar", "healthy", "santé", "bio", "naturel"],
+    secondaryTags: ["smoothies", "détox", "vitamines", "légumes", "fruits"],
+    relatedTags: ["bien-être", "sport", "léger", "pur", "équilibré"]
+  },
+  bar_vegan: {
+    label: "Bar vegan",
+    services: ["Boissons végétales", "Alternatives", "Bio", "Éthique"],
+    ambiance: ["Consciente", "Moderne", "Engagée", "Responsable"],
+    primaryTags: ["bar", "vegan", "végétal", "sans", "animal"],
+    secondaryTags: ["bio", "naturel", "éthique", "responsable", "alternatif"],
+    relatedTags: ["écologique", "conscient", "moderne", "sain", "engagé"]
+  },
+  bar_gluten_free: {
+    label: "Bar sans gluten",
+    services: ["Boissons sans gluten", "Alternatives", "Précaution", "Spécialisé"],
+    ambiance: ["Attentionnée", "Inclusive", "Soignée", "Adaptée"],
+    primaryTags: ["bar", "sans", "gluten", "intolérance", "allergie"],
+    secondaryTags: ["sans", "blé", "alternatif", "santé", "spécialisé"],
+    relatedTags: ["précaution", "inclusif", "attention", "soin", "adapté"]
+  },
+  bar_halal: {
+    label: "Bar halal",
+    services: ["Boissons halal", "Sans alcool", "Respectueux", "Culturel"],
+    ambiance: ["Respectueuse", "Culturelle", "Inclusive", "Communautaire"],
+    primaryTags: ["bar", "halal", "musulman", "islamique", "religieux"],
+    secondaryTags: ["sans", "alcool", "respectueux", "traditionnel", "culturel"],
+    relatedTags: ["communauté", "respect", "diversité", "inclusif", "culturel"]
+  },
+  bar_kosher: {
+    label: "Bar kosher",
+    services: ["Boissons kosher", "Respectueux", "Traditionnel", "Culturel"],
+    ambiance: ["Respectueuse", "Traditionnelle", "Culturelle", "Spirituelle"],
+    primaryTags: ["bar", "kosher", "juif", "religieux", "traditionnel"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
+    relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
+  },
+
   // 🍽️ Restaurants
   restaurant_gastronomique: {
     label: "Restaurant gastronomique",
@@ -387,6 +782,160 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     primaryTags: ["restaurant", "oriental", "couscous", "tajines"],
     secondaryTags: ["menthe", "pâtisseries", "orientales", "épices"],
     relatedTags: ["chaleureuse", "conviviale", "orientale", "traditionnel"]
+  },
+
+  // 🌏 CUISINES ASIATIQUES SPÉCIFIQUES
+  restaurant_chinois: {
+    label: "Restaurant chinois",
+    services: ["Cuisine cantonaise", "Dim sum", "Wok", "Canard laqué"],
+    ambiance: ["Traditionnelle", "Familiale", "Conviviale", "Authentique"],
+    primaryTags: ["restaurant", "chinois", "cantonais", "dim sum"],
+    secondaryTags: ["wok", "nems", "canard", "laqué", "riz"],
+    relatedTags: ["traditionnel", "familial", "convivial", "authentique"]
+  },
+  restaurant_japonais: {
+    label: "Restaurant japonais",
+    services: ["Sushi frais", "Sashimi", "Ramen", "Tempura", "Saké"],
+    ambiance: ["Zen", "Raffinée", "Traditionnelle", "Artisanale"],
+    primaryTags: ["restaurant", "japonais", "sushi", "sashimi"],
+    secondaryTags: ["maki", "tempura", "ramen", "yakitori", "saké"],
+    relatedTags: ["zen", "raffiné", "frais", "traditionnel", "artisanal"]
+  },
+  restaurant_thai: {
+    label: "Restaurant thaïlandais",
+    services: ["Curry thaï", "Pad thaï", "Tom yam", "Cuisine épicée"],
+    ambiance: ["Exotique", "Épicée", "Parfumée", "Colorée"],
+    primaryTags: ["restaurant", "thaïlandais", "thaï", "pad", "thai"],
+    secondaryTags: ["curry", "coco", "épicé", "basilic", "citronnelle"],
+    relatedTags: ["exotique", "épicé", "parfumé", "équilibré", "coloré"]
+  },
+  restaurant_vietnamien: {
+    label: "Restaurant vietnamien",
+    services: ["Pho", "Nems", "Bun bo", "Cuisine fraîche"],
+    ambiance: ["Fraîche", "Légère", "Herbacée", "Authentique"],
+    primaryTags: ["restaurant", "vietnamien", "pho", "nems", "vietnam"],
+    secondaryTags: ["bouillon", "herbes", "frais", "baguette", "vietnamienne"],
+    relatedTags: ["frais", "léger", "herbacé", "authentique", "sain"]
+  },
+  restaurant_coreen: {
+    label: "Restaurant coréen",
+    services: ["Bulgogi", "Kimchi", "Bibimbap", "Barbecue coréen"],
+    ambiance: ["Traditionnelle", "Unique", "Épicée", "Authentique"],
+    primaryTags: ["restaurant", "coréen", "corée", "kimchi", "bulgogi"],
+    secondaryTags: ["barbecue", "coréen", "fermenté", "épicé", "traditionnel"],
+    relatedTags: ["fermenté", "épicé", "traditionnel", "unique", "découverte"]
+  },
+
+  // 🕌 CUISINES DU MOYEN-ORIENT
+  restaurant_indien: {
+    label: "Restaurant indien",
+    services: ["Curry", "Tandoor", "Naan", "Biryani", "Cuisine végétarienne"],
+    ambiance: ["Épicée", "Parfumée", "Colorée", "Traditionnelle"],
+    primaryTags: ["restaurant", "indien", "curry", "tandoor", "indien"],
+    secondaryTags: ["naan", "biryani", "épices", "végétarien", "tikka"],
+    relatedTags: ["épicé", "parfumé", "végétarien", "traditionnel", "coloré"]
+  },
+  restaurant_libanais: {
+    label: "Restaurant libanais",
+    services: ["Mezze", "Houmous", "Falafel", "Taboulé", "Kebab"],
+    ambiance: ["Conviviale", "Méditerranéenne", "Partage", "Authentique"],
+    primaryTags: ["restaurant", "libanais", "mezze", "houmous", "liban"],
+    secondaryTags: ["falafel", "taboulé", "kebab", "moutabal", "pita"],
+    relatedTags: ["partage", "convivial", "méditerranéen", "frais", "authentique"]
+  },
+  restaurant_turc: {
+    label: "Restaurant turc",
+    services: ["Kebab", "Döner", "Pide", "Baklava", "Ayran"],
+    ambiance: ["Orientale", "Conviviale", "Traditionnelle", "Authentique"],
+    primaryTags: ["restaurant", "turc", "kebab", "döner", "turquie"],
+    secondaryTags: ["pide", "lahmacun", "ayran", "baklava", "turkish"],
+    relatedTags: ["oriental", "épicé", "traditionnel", "convivial", "authentique"]
+  },
+  restaurant_grec: {
+    label: "Restaurant grec",
+    services: ["Moussaka", "Souvlaki", "Tzatziki", "Feta", "Ouzo"],
+    ambiance: ["Méditerranéenne", "Conviviale", "Familiale", "Traditionnelle"],
+    primaryTags: ["restaurant", "grec", "moussaka", "souvlaki", "grèce"],
+    secondaryTags: ["tzatziki", "feta", "olives", "ouzo", "grecque"],
+    relatedTags: ["méditerranéen", "frais", "convivial", "traditionnel", "familial"]
+  },
+
+  // 🇪🇺 CUISINES EUROPÉENNES
+  restaurant_espagnol: {
+    label: "Restaurant espagnol",
+    services: ["Paella", "Tapas", "Jambon ibérique", "Sangria", "Gazpacho"],
+    ambiance: ["Méditerranéenne", "Conviviale", "Festive", "Chaleureuse"],
+    primaryTags: ["restaurant", "espagnol", "paella", "tapas", "espagne"],
+    secondaryTags: ["jambon", "chorizo", "sangria", "gazpacho", "espagnole"],
+    relatedTags: ["méditerranéen", "convivial", "partage", "chaleureux", "festif"]
+  },
+  restaurant_portugais: {
+    label: "Restaurant portugais",
+    services: ["Bacalhau", "Pasteis de nata", "Porto", "Sardines", "Cuisine océane"],
+    ambiance: ["Océane", "Traditionnelle", "Familiale", "Authentique"],
+    primaryTags: ["restaurant", "portugais", "bacalhau", "pasteis", "portugal"],
+    secondaryTags: ["porto", "sardines", "portugaise", "traditionnel", "océan"],
+    relatedTags: ["océan", "traditionnel", "authentique", "familial", "découverte"]
+  },
+  restaurant_allemand: {
+    label: "Restaurant allemand",
+    services: ["Choucroute", "Wurst", "Bière", "Pretzel", "Schnitzel"],
+    ambiance: ["Traditionnelle", "Conviviale", "Copieuse", "Familiale"],
+    primaryTags: ["restaurant", "allemand", "choucroute", "wurst", "allemagne"],
+    secondaryTags: ["bière", "pretzel", "schnitzel", "allemande", "traditionnel"],
+    relatedTags: ["traditionnel", "copieux", "convivial", "authentique", "familial"]
+  },
+  restaurant_russe: {
+    label: "Restaurant russe",
+    services: ["Borsch", "Caviar", "Blinis", "Vodka", "Cuisine traditionnelle"],
+    ambiance: ["Traditionnelle", "Festive", "Authentique", "Unique"],
+    primaryTags: ["restaurant", "russe", "borsch", "vodka", "russie"],
+    secondaryTags: ["caviar", "blinis", "russe", "traditionnel", "festif"],
+    relatedTags: ["traditionnel", "festif", "authentique", "découverte", "unique"]
+  },
+
+  // 🌍 CUISINES AFRICAINES
+  restaurant_marocain: {
+    label: "Restaurant marocain",
+    services: ["Tajine", "Couscous", "Thé à la menthe", "Pâtisseries orientales"],
+    ambiance: ["Orientale", "Épicée", "Chaleureuse", "Exotique"],
+    primaryTags: ["restaurant", "marocain", "tajine", "couscous", "maroc"],
+    secondaryTags: ["menthe", "épices", "marocaine", "traditionnel", "oriental"],
+    relatedTags: ["épicé", "parfumé", "traditionnel", "chaleureux", "exotique"]
+  },
+  restaurant_ethiopien: {
+    label: "Restaurant éthiopien",
+    services: ["Injera", "Wot", "Cuisine fermentée", "Café éthiopien"],
+    ambiance: ["Unique", "Traditionnelle", "Authentique", "Découverte"],
+    primaryTags: ["restaurant", "éthiopien", "injera", "wot", "éthiopie"],
+    secondaryTags: ["épicé", "fermenté", "éthiopienne", "traditionnel", "unique"],
+    relatedTags: ["unique", "épicé", "traditionnel", "découverte", "authentique"]
+  },
+
+  // 🌎 CUISINES AMÉRICAINES
+  restaurant_brasilien: {
+    label: "Restaurant brésilien",
+    services: ["Feijoada", "Churrasco", "Caipirinha", "Cuisine tropicale"],
+    ambiance: ["Tropicale", "Festive", "Conviviale", "Colorée"],
+    primaryTags: ["restaurant", "brésilien", "feijoada", "caipirinha", "brésil"],
+    secondaryTags: ["churrasco", "brésilienne", "tropical", "festif", "convivial"],
+    relatedTags: ["tropical", "festif", "convivial", "coloré", "découverte"]
+  },
+  restaurant_peruvien: {
+    label: "Restaurant péruvien",
+    services: ["Ceviche", "Quinoa", "Pisco sour", "Cuisine andine"],
+    ambiance: ["Unique", "Traditionnelle", "Authentique", "Exotique"],
+    primaryTags: ["restaurant", "péruvien", "ceviche", "pisco", "pérou"],
+    secondaryTags: ["quinoa", "péruvienne", "andine", "traditionnel", "unique"],
+    relatedTags: ["unique", "traditionnel", "découverte", "authentique", "exotique"]
+  },
+  restaurant_mexicain: {
+    label: "Restaurant mexicain",
+    services: ["Tacos", "Burritos", "Guacamole", "Tequila", "Cuisine épicée"],
+    ambiance: ["Épicée", "Colorée", "Festive", "Conviviale"],
+    primaryTags: ["restaurant", "mexicain", "tacos", "burritos", "mexique"],
+    secondaryTags: ["guacamole", "jalapeños", "tequila", "mexicaine", "épicé"],
+    relatedTags: ["épicé", "coloré", "festif", "convivial", "authentique"]
   },
 
   // 🥙 Fast Food & Street Food
@@ -474,13 +1023,62 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     secondaryTags: ["tables", "tournois", "compétition", "sport"],
     relatedTags: ["précision", "stratégie", "traditionnel", "loisir"]
   },
-  escape_game_horreur: {
-    label: "Escape game horreur",
+  // 🎯 ESCAPE GAMES - Informations complètes
+  escape_game: {
+    label: "Escape Game (général)",
     services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
-    ambiance: ["Adrénaline", "Immersive", "Énigme", "Groupe"],
-    primaryTags: ["escape game", "horreur", "salles", "thématiques"],
-    secondaryTags: ["frissons", "team building", "réservation", "challenge"],
-    relatedTags: ["adrénaline", "immersive", "énigme", "groupe"]
+    ambiance: ["Immersive", "Énigme", "Aventure", "Mystère"],
+    primaryTags: ["escape game", "énigmes", "salles", "thématiques"],
+    secondaryTags: ["team building", "réservation", "challenge", "groupe"],
+    relatedTags: ["immersive", "énigme", "aventure", "mystère", "famille"]
+  },
+  escape_game_horreur: {
+    label: "Escape Game Horreur",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Adrénaline", "Frissons", "Immersive", "Énigme"],
+    primaryTags: ["escape game", "horreur", "frissons", "adrénaline"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["effrayant", "immersive", "énigme", "groupe", "adultes"]
+  },
+  escape_game_aventure: {
+    label: "Escape Game Aventure",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Exploration", "Pirate", "Trésor", "Aventure"],
+    primaryTags: ["escape game", "aventure", "pirate", "trésor"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["exploration", "immersive", "énigme", "famille", "enfants"]
+  },
+  escape_game_mystere: {
+    label: "Escape Game Mystère",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Logique", "Enquête", "Détective", "Mystère"],
+    primaryTags: ["escape game", "mystère", "enquête", "détective"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["logique", "immersive", "énigme", "groupe", "intellectuel"]
+  },
+  escape_game_sf: {
+    label: "Escape Game Science-Fiction",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Futuriste", "Technologie", "Space", "Innovant"],
+    primaryTags: ["escape game", "science-fiction", "futuriste", "technologie"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["space", "immersive", "énigme", "groupe", "innovant"]
+  },
+  escape_game_fantasy: {
+    label: "Escape Game Fantasy",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Magie", "Médiéval", "Sorcier", "Imaginaire"],
+    primaryTags: ["escape game", "fantasy", "magie", "médiéval"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["sorcier", "immersive", "énigme", "famille", "imaginaire"]
+  },
+  escape_game_familial: {
+    label: "Escape Game Familial",
+    services: ["Salles thématiques", "Énigmes", "Réservation", "Challenge"],
+    ambiance: ["Éducatif", "Doux", "Tous âges", "Famille"],
+    primaryTags: ["escape game", "familial", "enfant", "doux"],
+    secondaryTags: ["salles", "thématiques", "team building", "challenge"],
+    relatedTags: ["éducatif", "immersive", "énigme", "famille", "tous âges"]
   },
   futsal: {
     label: "Futsal",
@@ -539,14 +1137,28 @@ export function getActivityInfo(activityKey: string): ActivityInfo | null {
 export function getGroupedActivities() {
   const groups = {
     "🍹 Bars & Boissons": [
-      "bar_ambiance", "pub_traditionnel", "brasserie_artisanale", "bar_cocktails",
-      "bar_vins", "bar_sports", "rooftop_bar", "bar_karaoke", "bar_bières"
+      "bar_ambiance", "bar_lounge", "bar_cocktails", "bar_vins", "bar_sports", 
+      "rooftop_bar", "bar_karaoke", "bar_bières", "bar_jus_smoothies", "bar_tapas",
+      "bar_plage", "bar_rooftop", "bar_brasserie", "bar_whisky", "bar_rhum", 
+      "bar_gin", "bar_tequila", "bar_champagne", "bar_apéritif", "bar_afterwork",
+      "bar_brunch", "bar_glacé", "bar_healthy", "bar_vegan", "bar_gluten_free",
+      "bar_halal", "bar_kosher", "pub_traditionnel", "brasserie_artisanale"
     ],
     "🍽️ Restaurants": [
       "restaurant_gastronomique", "restaurant_traditionnel", "restaurant_familial", "bistrot"
     ],
     "🌍 Cuisines du monde": [
-      "restaurant_italien", "restaurant_asiatique", "restaurant_oriental"
+      // Cuisines asiatiques
+      "restaurant_italien", "restaurant_chinois", "restaurant_japonais", "restaurant_thai", 
+      "restaurant_vietnamien", "restaurant_coreen", "restaurant_asiatique", "restaurant_oriental",
+      // Cuisines du Moyen-Orient
+      "restaurant_indien", "restaurant_libanais", "restaurant_turc", "restaurant_grec",
+      // Cuisines européennes
+      "restaurant_espagnol", "restaurant_portugais", "restaurant_allemand", "restaurant_russe",
+      // Cuisines africaines
+      "restaurant_marocain", "restaurant_ethiopien",
+      // Cuisines américaines
+      "restaurant_brasilien", "restaurant_peruvien", "restaurant_mexicain"
     ],
     "🥙 Fast Food & Street Food": [
       "kebab", "tacos_mexicain", "burger", "pizzeria"
@@ -555,8 +1167,11 @@ export function getGroupedActivities() {
       "discotheque", "club_techno", "boite_nuit_mainstream"
     ],
     "🎯 Sports & Activités": [
-      "bowling", "billard_americain", "billard_francais", "escape_game_horreur",
-      "futsal", "karting", "laser_game", "vr_experience"
+      "bowling", "billard_americain", "billard_francais", "futsal", "karting", "laser_game", "vr_experience"
+    ],
+    "🎮 Escape Games": [
+      "escape_game", "escape_game_horreur", "escape_game_aventure", "escape_game_mystere",
+      "escape_game_sf", "escape_game_fantasy", "escape_game_familial"
     ],
     "❓ Autres": [
       "autre"

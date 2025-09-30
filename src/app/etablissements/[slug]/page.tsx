@@ -80,7 +80,18 @@ export default async function EstablishmentPage({
       updatedAt: true,
       images: true,
       events: { 
-        orderBy: { startDate: "asc" }
+        orderBy: { startDate: "asc" },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          startDate: true,
+          endDate: true,
+          price: true,
+          maxCapacity: true,
+          isRecurring: true,
+          createdAt: true
+        }
       },
       owner: {
         select: {

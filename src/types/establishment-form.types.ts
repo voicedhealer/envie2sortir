@@ -43,6 +43,8 @@ export type ProfessionalData = {
   
   // Contact de l'établissement (différent du contact professionnel)
   phone?: string;
+  whatsappPhone?: string;
+  messengerUrl?: string;
   email?: string;
   
   // Prix
@@ -141,6 +143,8 @@ export type ExistingEstablishment = {
   latitude: number | null;
   longitude: number | null;
   phone: string | null;
+  whatsappPhone: string | null;
+  messengerUrl: string | null;
   email: string | null;
   website: string | null;
   instagram: string | null;
