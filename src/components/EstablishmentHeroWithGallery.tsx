@@ -145,17 +145,17 @@ export default function EstablishmentHeroWithGallery({
             establishmentName={establishment.name}
           />
           
-          {/* Badge catégorie en haut à gauche */}
+          {/* Badge catégorie en haut à gauche - masqué sur mobile */}
           {displayCategory && (
-            <div className="absolute top-4 left-4 z-10">
+            <div className="absolute top-4 left-4 z-10 hidden md:block">
               <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
                 {displayCategory}
               </span>
             </div>
           )}
 
-          {/* Actions en haut à droite */}
-          <div className="absolute top-4 right-4 z-10 flex space-x-2">
+          {/* Actions en haut à droite - masquées sur mobile */}
+          <div className="absolute top-4 right-4 z-10 flex space-x-2 hidden md:flex">
             <button
               onClick={handleFavorite}
               disabled={isLoading}
@@ -174,8 +174,8 @@ export default function EstablishmentHeroWithGallery({
             </button>
           </div>
 
-          {/* Informations principales en bas */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 text-white bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
+          {/* Informations principales en bas - masquées sur mobile */}
+          <div className="absolute bottom-0 left-0 right-0 p-6 text-white bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10 hidden md:block">
             <h1 className="text-3xl md:text-4xl font-bold mb-2 drop-shadow-lg">
               {establishment.name}
             </h1>

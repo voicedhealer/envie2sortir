@@ -801,15 +801,17 @@ body {
 @media (max-width: 768px) {
   .photo-gallery-container {
     flex-direction: column;
-    height: auto;
+    height: 100vh;
     max-height: none;
-    gap: 8px;
+    gap: 0;
+    padding: 0;
+    margin: 0;
   }
   
   .gallery_item {
-    height: 200px;
+    height: 100vh;
     filter: grayscale(0);
-    border-radius: 12px;
+    border-radius: 0;
     position: relative;
     overflow: hidden;
     /* Pas d'effet hover sur mobile */
@@ -822,8 +824,13 @@ body {
     box-shadow: none;
   }
   
+  .gallery_item_overlay {
+    padding: 20px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  }
+  
   .gallery_item_overlay p {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 16px;
+    font-weight: 600;
   }
 }
