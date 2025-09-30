@@ -30,23 +30,38 @@ export default function UpcomingEventsSection({
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
+      if (!establishmentSlug) {
+        console.log('⚠️ Aucun slug d\'établissement fourni');
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         console.log('🔍 Chargement des événements pour:', establishmentSlug);
         const response = await fetch(`/api/etablissements/${establishmentSlug}/events`);
         
         if (!response.ok) {
+          console.log('❌ Erreur API événements:', response.status, response.statusText);
           if (response.status === 404) {
             // Établissement non trouvé ou non disponible
+            console.log('📝 Établissement non trouvé, pas d\'événements');
             setEvents([]);
             setLoading(false);
             return;
           }
-          throw new Error('Erreur lors du chargement des événements');
+          // Pour les autres erreurs, ne pas lancer d'exception, juste logger
+          console.warn('⚠️ Erreur lors du chargement des événements:', response.status);
+          setEvents([]);
+          setLoading(false);
+          return;
         }
 
         const data = await response.json();
+        console.log('📊 Données reçues:', data);
         const allEvents = data.events || [];
+        console.log('📅 Événements trouvés:', allEvents.length);
         
         // 🔧 CORRECTION: Filtrer SEULEMENT les événements à venir (pas les événements passés ou en cours)
         const upcomingEvents = allEvents
@@ -54,6 +69,7 @@ export default function UpcomingEventsSection({
           .sort((a: Event, b: Event) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
           .slice(0, maxEvents);
 
+        console.log('🎯 Événements à venir:', upcomingEvents.length);
         setEvents(upcomingEvents);
       } catch (err) {
         console.error('Erreur lors du chargement des événements:', err);
