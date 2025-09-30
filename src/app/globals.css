@@ -764,8 +764,7 @@ body {
   cursor: pointer;
 }
 
-.gallery_item:hover,
-.gallery_item_active {
+.gallery_item:hover {
   flex: 3;
   filter: grayscale(0);
 }
@@ -787,8 +786,7 @@ body {
   transition: opacity 0.8s ease-in-out;
 }
 
-.gallery_item:hover .gallery_item_overlay,
-.gallery_item_active .gallery_item_overlay {
+.gallery_item:hover .gallery_item_overlay {
   opacity: 1;
 }
 
@@ -798,7 +796,7 @@ body {
     flex-direction: column;
     height: auto;
     max-height: none;
-    gap: 12px;
+    gap: 8px;
   }
   
   .gallery_item {
@@ -807,24 +805,25 @@ body {
     border-radius: 12px;
     position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
+    /* Pas d'effet hover sur mobile */
   }
   
-  .gallery_item:hover,
-  .gallery_item_active {
+  .gallery_item:hover {
+    /* Désactiver l'effet hover sur mobile */
     flex: 1;
-    transform: scale(1.02);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: none;
+    box-shadow: none;
   }
   
   .gallery_item_overlay {
+    /* Overlay toujours visible sur mobile */
     opacity: 1;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
-    padding: 16px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+    padding: 12px;
   }
   
   .gallery_item_overlay p {
-    font-size: 16px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 500;
   }
 }
