@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Instagram, Facebook, Globe } from "lucide-react";
 import EventsManager from "./EventsManager";
@@ -52,21 +50,7 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ user, establishment }: DashboardContentProps) {
-  const [isSigningOut, setIsSigningOut] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events'>('overview');
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    setIsSigningOut(true);
-    try {
-      await signOut({ redirect: false });
-      router.push('/');
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    } finally {
-      setIsSigningOut(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,13 +92,6 @@ export default function DashboardContent({ user, establishment }: DashboardConte
                 Bienvenue, {user.firstName} {user.lastName}
               </p>
             </div>
-            <button
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {isSigningOut ? 'Déconnexion...' : 'Se déconnecter'}
-            </button>
           </div>
         </div>
         

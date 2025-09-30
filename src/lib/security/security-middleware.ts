@@ -15,7 +15,7 @@ export async function applySecurityMiddleware(
   } else if (endpoint.includes('/upload') || (endpoint.includes('/images') && (method === 'POST' || method === 'PUT' || method === 'DELETE'))) {
     // Rate limiting strict pour les uploads/modifications d'images
     rateLimitResult = await uploadRateLimit(request);
-  } else if (endpoint.includes('/images') && method === 'GET') {
+  } else if ((endpoint.includes('/images') || endpoint.includes('/etablissements/images')) && method === 'GET') {
     // Rate limiting très permissif pour la lecture des images
     rateLimitResult = await imagesReadRateLimit(request);
   } else {

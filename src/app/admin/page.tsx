@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface DashboardStats {
@@ -45,13 +47,23 @@ interface HealthStatus {
 }
 
 export default function AdminDashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
+  // Vérifier l'authentification admin
   useEffect(() => {
+    if (status === 'loading') return; // En cours de chargement
+    
+    if (!session || session.user.role !== 'admin') {
+      router.push('/auth?error=AccessDenied');
+      return;
+    }
+    
     fetchAllData();
     
     // Actualiser toutes les 30 secondes
@@ -60,7 +72,7 @@ export default function AdminDashboard() {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [session, status, router]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -113,12 +125,18 @@ export default function AdminDashboard() {
     }
   };
 
-  if (isLoading) {
+  // Afficher un loader pendant la vérification de l'authentification
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-gray-500">Chargement...</div>
       </div>
     );
+  }
+
+  // Si pas de session ou pas admin, ne rien afficher (redirection en cours)
+  if (!session || session.user.role !== 'admin') {
+    return null;
   }
 
   return (

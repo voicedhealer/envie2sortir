@@ -141,6 +141,7 @@ model Establishment {
   images                Image[]
   pricing               Pricing[]
   tariffs               Tariff[]
+  menus                 EstablishmentMenu[]
   comments              UserComment[]
   favorites             UserFavorite[]
   likes                 UserLike[]
@@ -293,6 +294,24 @@ model Tariff {
   updatedAt      DateTime     @updatedAt
 
   @@map("tariffs")
+}
+
+model EstablishmentMenu {
+  id             String       @id @default(cuid())
+  name           String       // Nom du menu (ex: "Menu du jour", "Carte des vins")
+  description    String?      // Description optionnelle
+  fileUrl        String       // URL du fichier PDF stocké
+  fileName       String       // Nom original du fichier
+  fileSize       Int          // Taille du fichier en bytes
+  mimeType       String       @default("application/pdf")
+  order          Int          @default(0) // Ordre d'affichage
+  isActive       Boolean      @default(true) // Menu actif/inactif
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("establishment_menus")
 }
 
 /// *

@@ -101,7 +101,9 @@ export default function AuthPage() {
           } else if (session.user.role === 'admin') {
             redirectUrl = '/admin';
           }
-          router.push(decodeURIComponent(redirectUrl));
+          
+          // Utiliser window.location.href pour forcer le rechargement complet de la page
+          window.location.href = decodeURIComponent(redirectUrl);
         } else {
           setError('Erreur de connexion inattendue');
         }

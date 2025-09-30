@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from '@/lib/fake-toast';
+import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
 import EstablishmentHero from '@/components/EstablishmentHero';
 import EstablishmentInfo from '@/components/EstablishmentInfo';
 import EstablishmentSections from '@/components/EstablishmentSections';
@@ -81,6 +82,7 @@ interface EstablishmentDetailProps {
 
 export default function EstablishmentDetail({ establishment, isDashboard = false }: EstablishmentDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const { incrementView, incrementClick } = useEstablishmentStats();
   const [editForm, setEditForm] = useState({
     name: establishment.name || '',
     description: establishment.description || '',
@@ -110,6 +112,13 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
   // Cache pour le token CSRF
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [csrfTokenExpiry, setCsrfTokenExpiry] = useState<number>(0);
+
+  // Incrémenter les vues au chargement de la page (seulement si ce n'est pas le dashboard)
+  useEffect(() => {
+    if (!isDashboard && establishment.id) {
+      incrementView(establishment.id);
+    }
+  }, [establishment.id, isDashboard, incrementView]);
 
   // Fonction pour récupérer un token CSRF valide
   const getCSRFToken = async (): Promise<string> => {

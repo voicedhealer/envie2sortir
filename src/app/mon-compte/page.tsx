@@ -557,7 +557,9 @@ export default function MonComptePage() {
                   
                   <div className="mt-8 pt-6 border-t border-gray-200 space-y-4">
                     <button
-                      onClick={() => router.push('/api/auth/signout')}
+                      onClick={async () => {
+                        await signOut({ callbackUrl: '/' });
+                      }}
                       className="flex items-center text-red-600 hover:text-red-700"
                     >
                       <LogOut className="w-4 h-4 mr-2" />

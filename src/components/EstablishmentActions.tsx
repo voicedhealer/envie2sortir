@@ -4,6 +4,7 @@ import { Phone, MapPin, MessageCircle, Star, Heart } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { toast } from '@/lib/fake-toast';
+import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
 
 interface EstablishmentActionsProps {
   establishment: {
@@ -18,12 +19,14 @@ interface EstablishmentActionsProps {
 
 export default function EstablishmentActions({ establishment }: EstablishmentActionsProps) {
   const { data: session } = useSession();
+  const { incrementClick } = useEstablishmentStats();
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
   const [comment, setComment] = useState('');
   const [rating, setRating] = useState(0);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
@@ -197,7 +200,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
         {/* Appeler */}
         <button
-          onClick={handleCall}
+          onClick={() => {
+            handleCall();
+            incrementClick(establishment.id);
+          }}
           className={`action-btn ${establishment.phone ? 'success' : 'disabled'}`}
           disabled={!establishment.phone}
         >
@@ -207,7 +213,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
         {/* Message */}
         <button
-          onClick={() => console.log('Message')}
+          onClick={() => {
+            console.log('Message');
+            incrementClick(establishment.id);
+          }}
           className="action-btn"
         >
           <MessageCircle className="w-4 h-4" />
@@ -217,7 +226,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         {/* Favoris */}
         {session?.user?.role === 'user' && (
           <button
-            onClick={handleFavorite}
+            onClick={() => {
+              handleFavorite();
+              incrementClick(establishment.id);
+            }}
             disabled={isLoading}
             className={`action-btn ${isLiked ? 'danger' : 'secondary'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
@@ -230,7 +242,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         {/* Laisser un avis */}
         {session?.user?.role === 'user' && (
           <button
-            onClick={handleReview}
+            onClick={() => {
+              handleReview();
+              incrementClick(establishment.id);
+            }}
             className="action-btn primary"
           >
             <Star className="w-4 h-4" />

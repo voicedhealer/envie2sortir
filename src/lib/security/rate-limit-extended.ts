@@ -28,5 +28,5 @@ export const adminRateLimit = createRateLimit({
 
 export const imagesReadRateLimit = createRateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60, // 60 lectures d'images par minute
+  max: 200, // 200 lectures d'images par minute (plus permissif pour les établissements)
 });

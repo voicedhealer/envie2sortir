@@ -22,6 +22,9 @@ export const toast = {
 
 // Fonction pour afficher des notifications visibles
 function showNotification(message: string, type: 'success' | 'error' | 'loading') {
+  // Supprimer toute notification existante avant d'en créer une nouvelle
+  hideNotification();
+  
   // Créer l'élément de notification
   const notification = document.createElement('div');
   notification.id = 'toast-notification';
@@ -43,14 +46,37 @@ function showNotification(message: string, type: 'success' | 'error' | 'loading'
     opacity: 0;
     transform: translateX(100%);
     transition: all 0.3s ease;
+    cursor: pointer;
   `;
   
   // Icône selon le type
   const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : '⏳';
-  notification.textContent = `${icon} ${message}`;
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <span>${icon} ${message}</span>
+      <button onclick="window.hideToastNotification()" style="
+        background: none;
+        border: none;
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-left: 10px;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">×</button>
+    </div>
+  `;
   
   // Ajouter au DOM
   document.body.appendChild(notification);
+  
+  // Exposer la fonction de fermeture globalement
+  (window as any).hideToastNotification = hideNotification;
   
   // Animation d'entrée
   setTimeout(() => {
@@ -58,21 +84,26 @@ function showNotification(message: string, type: 'success' | 'error' | 'loading'
     notification.style.transform = 'translateX(0)';
   }, 100);
   
-  // Auto-dismiss après 4 secondes (sauf pour loading)
+  // Auto-dismiss après 5 secondes (sauf pour loading)
   if (type !== 'loading') {
     setTimeout(() => {
       hideNotification();
-    }, 4000);
+    }, 5000);
   }
 }
 
 function hideNotification() {
   const notification = document.getElementById('toast-notification');
   if (notification) {
+    // Animation de sortie
     notification.style.opacity = '0';
     notification.style.transform = 'translateX(100%)';
+    
+    // Supprimer l'élément après l'animation
     setTimeout(() => {
-      notification.remove();
+      if (notification && notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
     }, 300);
   }
 }

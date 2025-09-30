@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateCSRFToken } from '@/lib/security';
-import { logger } from '@/lib/monitoring';
 
 export async function validateCSRFMiddleware(request: NextRequest): Promise<NextResponse | undefined> {
   // Désactiver la validation CSRF en développement
@@ -35,7 +34,7 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<Next
     }
 
     if (!csrfToken) {
-      await logger.warn('CSRF token missing', {
+      console.warn('CSRF token missing:', {
         method: request.method,
         url: request.url,
         ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown'
@@ -64,10 +63,10 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<Next
     const isValid = validateCSRFToken(sessionId, csrfToken);
     
     if (!isValid) {
-      await logger.warn('CSRF token validation failed', {
+      console.warn('CSRF token validation failed:', {
         method: request.method,
         url: request.url,
-        ip: ipAddress,
+        ip: request.ip || request.headers.get('x-forwarded-for') || 'unknown',
         token: csrfToken.slice(0, 8) + '...' // Masquer pour la sécurité
       });
 
@@ -80,11 +79,11 @@ export async function validateCSRFMiddleware(request: NextRequest): Promise<Next
     return undefined; // Token valide, continuer
 
   } catch (error) {
-    await logger.error('CSRF validation error', {
+    console.error('CSRF validation error:', {
       method: request.method,
       url: request.url,
       error: error instanceof Error ? error.message : 'Unknown error'
-    }, error instanceof Error ? error : undefined);
+    });
 
     return NextResponse.json(
       { error: 'Erreur de validation CSRF' },

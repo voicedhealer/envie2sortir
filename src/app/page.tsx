@@ -8,14 +8,18 @@ export default function Home() {
       {/* HERO */}
       <section className="relative">
         <div className="hero-gradient/10">
-          <div className="absolute inset-0 hero-gradient opacity-15" aria-hidden></div>
+          <div className="absolute inset-0 hero-gradient opacity-16" aria-hidden></div>
           
-          {/* Image de danse semi-transparente à droite */}
-          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-130 h-140 opacity-30 pointer-events-none hidden lg:block">
-            <img 
-              src="/hero_danse.png" 
-              alt="Silhouettes de danse" 
+          {/* Vidéo de danse semi-transparente à droite */}
+          <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-132 h-140 opacity-95 pointer-events-none hidden lg:block">
+            <video 
+              src="/hero_danse.mp4" 
+              autoPlay
+              loop={false}
+              muted
+              playsInline
               className="w-full h-full object-contain"
+              aria-label="Silhouettes de danse animées"
             />
           </div>
           

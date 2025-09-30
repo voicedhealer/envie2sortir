@@ -42,8 +42,8 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   // Log pour debug
   console.log('🔍 État des images:', { images: images.length, maxImages, canUploadMore, subscription });
 
-  // Fonction pour charger les images
-  const loadImages = async () => {
+  // Fonction pour charger les images avec retry et backoff
+  const loadImages = async (retryCount = 0) => {
     try {
       console.log('🔄 Chargement des images pour l\'établissement:', establishmentId);
       console.log('🔍 Appel API /api/etablissements/images (sans establishmentId - recherche par session)');
@@ -62,6 +62,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         ok: response.ok,
         url: response.url
       });
+      
       if (response.ok) {
         const data = await response.json();
         console.log('📊 Données reçues:', data.establishment);
@@ -91,6 +92,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           setImages(imageUrls);
           console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
         }
+      } else if (response.status === 429 && retryCount < 3) {
+        // Rate limiting - retry avec backoff exponentiel
+        const delay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+        console.log(`⏳ Rate limiting détecté, retry dans ${delay}ms (tentative ${retryCount + 1}/3)`);
+        setTimeout(() => {
+          loadImages(retryCount + 1);
+        }, delay);
+        return;
       } else {
         console.error('❌ Erreur lors du chargement des images:', response.status);
       }
@@ -255,6 +264,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     try {
       console.log('🔄 Mise à jour image principale:', imageUrl);
       
+      // Utiliser l'API pour l'établissement de l'utilisateur connecté
       const response = await fetch(`/api/etablissements/images`, {
         method: 'PUT',
         headers: {
@@ -308,6 +318,15 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           errorData: errorData,
           url: response.url,
           headers: Object.fromEntries(response.headers.entries())
+        });
+        
+        // Log supplémentaire pour debug
+        console.error('❌ Détails de l\'erreur:', {
+          hasErrorData: !!errorData,
+          errorDataKeys: errorData ? Object.keys(errorData) : 'N/A',
+          errorDataType: typeof errorData,
+          responseTextLength: responseText.length,
+          responseTextPreview: responseText.substring(0, 200)
         });
         
         let errorMessage = 'Erreur lors de la mise à jour';

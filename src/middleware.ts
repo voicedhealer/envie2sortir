@@ -1,25 +1,12 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { applySecurityMiddleware } from '@/lib/security';
-import { logger, generateRequestId } from '@/lib/monitoring';
 import { validateCSRFMiddleware } from '@/lib/csrf-middleware';
 
 export default withAuth(
   async function middleware(req) {
     const { pathname } = req.nextUrl;
     const token = req.nextauth.token;
-    
-    // Générer un ID de requête pour le tracking
-    const requestId = generateRequestId();
-    
-    // Logging de sécurité pour toutes les requêtes
-    await logger.info('Request received', {
-      requestId,
-      method: req.method,
-      url: req.url,
-      userAgent: req.headers.get('user-agent'),
-      ip: req.ip || req.headers.get('x-forwarded-for') || 'unknown'
-    });
 
     // Protection du dashboard
     if (pathname.startsWith('/dashboard')) {
@@ -39,12 +26,6 @@ export default withAuth(
     // Protection des pages admin
     if (pathname.startsWith('/admin')) {
       if (!token || token.role !== 'admin') {
-        await logger.warn('Unauthorized admin access attempt', {
-          requestId,
-          pathname,
-          userId: token?.id,
-          ip: req.ip || req.headers.get('x-forwarded-for') || 'unknown'
-        });
         return NextResponse.redirect(new URL('/auth?error=AccessDenied', req.url));
       }
     }
@@ -54,22 +35,12 @@ export default withAuth(
       // Validation CSRF
       const csrfCheck = await validateCSRFMiddleware(req);
       if (csrfCheck) {
-        await logger.warn('CSRF validation blocked request', {
-          requestId,
-          pathname,
-          reason: 'CSRF token validation failed'
-        });
         return csrfCheck;
       }
 
       // Rate limiting et autres protections
       const securityCheck = await applySecurityMiddleware(req, pathname);
       if (securityCheck) {
-        await logger.warn('Security middleware blocked request', {
-          requestId,
-          pathname,
-          reason: 'Rate limit or security violation'
-        });
         return securityCheck;
       }
     }

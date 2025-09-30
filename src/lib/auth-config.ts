@@ -56,6 +56,13 @@ export const authOptions = {
             
             if (isValidPassword) {
               console.log('✅ Authentification Professional réussie pour:', credentials.email);
+              
+              // Récupérer l'établissement associé au professionnel
+              const establishment = await prisma.establishment.findUnique({
+                where: { ownerId: professional.id },
+                select: { id: true }
+              });
+              
               return {
                 id: professional.id,
                 email: professional.email,
@@ -65,9 +72,25 @@ export const authOptions = {
                 role: 'pro', // Les professionnels ont toujours le rôle 'pro'
                 userType: 'professional',
                 siret: professional.siret,
-                companyName: professional.companyName
+                companyName: professional.companyName,
+                establishmentId: establishment?.id // Ajouter l'ID de l'établissement
               };
             }
+          }
+
+          // 3. Vérifier si c'est un admin (utilisateur avec role 'admin')
+          if (user && user.role === 'admin') {
+            console.log('✅ Authentification Admin réussie pour:', credentials.email);
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name || `${user.firstName} ${user.lastName}`,
+              firstName: user.firstName || '',
+              lastName: user.lastName || '',
+              role: 'admin',
+              userType: 'admin',
+              favoriteCity: user.favoriteCity || ''
+            };
           }
 
           console.log('❌ Aucun utilisateur trouvé avec ces identifiants:', credentials.email);
@@ -95,13 +118,24 @@ export const authOptions = {
     async signIn({ user, account, profile }: { user: any; account: any; profile: any }) {
       if (account?.provider === 'google' || account?.provider === 'facebook') {
         try {
-          // Vérifier si l'utilisateur existe déjà
+          // Vérifier si l'email correspond à un professionnel
+          const existingProfessional = await prisma.professional.findUnique({
+            where: { email: user.email }
+          });
+
+          if (existingProfessional) {
+            // Les professionnels ne peuvent PAS se connecter via Google/Facebook
+            console.log('❌ Connexion sociale refusée pour professionnel:', user.email);
+            return false;
+          }
+
+          // Vérifier si l'utilisateur existe déjà dans Users
           let existingUser = await prisma.user.findUnique({
             where: { email: user.email }
           });
 
           if (!existingUser) {
-            // Créer un nouvel utilisateur
+            // Créer un nouvel utilisateur (seulement pour les users normaux)
             existingUser = await prisma.user.create({
               data: {
                 email: user.email,
@@ -130,6 +164,7 @@ export const authOptions = {
           // Ajouter les informations utilisateur au token
           user.id = existingUser.id;
           user.role = existingUser.role;
+          user.userType = 'user';
           user.firstName = existingUser.firstName;
           user.lastName = existingUser.lastName;
           user.favoriteCity = existingUser.favoriteCity || '';
@@ -156,12 +191,37 @@ export const authOptions = {
         if (user.userType === 'professional') {
           token.siret = user.siret;
           token.companyName = user.companyName;
+          token.establishmentId = user.establishmentId;
         }
         console.log('🔐 JWT Callback - Updated token with user data');
       } else if (token) {
         // Si pas d'utilisateur mais qu'on a un token, on peut essayer de récupérer les données mises à jour
         // Cela se produit lors des appels suivants après la connexion
         console.log('🔐 JWT Callback - No user, using existing token');
+        
+        // Si c'est un professionnel et qu'on n'a pas l'establishmentId, le récupérer
+        // (seulement pour les connexions credentials, pas les réseaux sociaux)
+        if (token.userType === 'professional' && !token.establishmentId) {
+          try {
+            const professional = await prisma.professional.findUnique({
+              where: { id: token.sub as string },
+              select: { id: true }
+            });
+            
+            if (professional) {
+              const establishment = await prisma.establishment.findUnique({
+                where: { ownerId: professional.id },
+                select: { id: true }
+              });
+              
+              if (establishment) {
+                token.establishmentId = establishment.id;
+              }
+            }
+          } catch (error) {
+            console.error('Erreur lors de la récupération de l\'establishmentId:', error);
+          }
+        }
       }
       
       return token;
@@ -182,6 +242,7 @@ export const authOptions = {
         if (token.userType === 'professional') {
           session.user.siret = token.siret as string;
           session.user.companyName = token.companyName as string;
+          session.user.establishmentId = token.establishmentId as string;
         }
         
         // Corriger l'affichage du nom
