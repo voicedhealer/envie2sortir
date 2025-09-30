@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface PhotoGalleryProps {
@@ -9,7 +9,20 @@ interface PhotoGalleryProps {
 }
 
 export default function PhotoGallery({ images, establishmentName }: PhotoGalleryProps) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Détecter si on est sur mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Si moins de 2 images, ne pas afficher la galerie
   if (!images || images.length < 2) {
@@ -19,14 +32,36 @@ export default function PhotoGallery({ images, establishmentName }: PhotoGallery
   // Limiter à 5 images maximum pour l'effet galerie
   const galleryImages = images.slice(0, 5);
 
+  const handleItemClick = (index: number) => {
+    if (isMobile) {
+      // Sur mobile, basculer l'état actif
+      setActiveIndex(activeIndex === index ? null : index);
+    }
+  };
+
+  const handleItemHover = (index: number) => {
+    if (!isMobile) {
+      // Sur desktop, utiliser le hover
+      setActiveIndex(index);
+    }
+  };
+
+  const handleItemLeave = () => {
+    if (!isMobile) {
+      // Sur desktop, désactiver au leave
+      setActiveIndex(null);
+    }
+  };
+
   return (
     <div className="photo-gallery-container">
       {galleryImages.map((image, index) => (
         <div
           key={index}
-          className="gallery_item"
-          onMouseEnter={() => setHoveredIndex(index)}
-          onMouseLeave={() => setHoveredIndex(null)}
+          className={`gallery_item ${activeIndex === index ? 'gallery_item_active' : ''}`}
+          onMouseEnter={() => handleItemHover(index)}
+          onMouseLeave={handleItemLeave}
+          onClick={() => handleItemClick(index)}
         >
           <Image
             src={image}
@@ -37,7 +72,7 @@ export default function PhotoGallery({ images, establishmentName }: PhotoGallery
             priority={index === 0}
           />
           
-          {hoveredIndex === index && (
+          {activeIndex === index && (
             <div className="gallery_item_overlay">
               <p className="text-sm font-medium">Image {index + 1} / {galleryImages.length}</p>
             </div>
