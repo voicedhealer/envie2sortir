@@ -37,11 +37,9 @@ export default function PhotoGallery({ images, establishmentName }: PhotoGallery
             priority={index === 0}
           />
           
-          {hoveredIndex === index && (
-            <div className="gallery_item_overlay">
-              <p className="text-sm font-medium">Image {index + 1} / {galleryImages.length}</p>
-            </div>
-          )}
+          <div className="gallery_item_overlay">
+            <p className="text-sm font-medium">Image {index + 1} / {galleryImages.length}</p>
+          </div>
         </div>
       ))}
     </div>

@@ -790,6 +790,13 @@ body {
   opacity: 1;
 }
 
+/* Overlay toujours visible sur mobile */
+@media (max-width: 768px) {
+  .gallery_item_overlay {
+    opacity: 1;
+  }
+}
+
 /* Responsive pour la galerie */
 @media (max-width: 768px) {
   .photo-gallery-container {
@@ -813,13 +820,6 @@ body {
     flex: 1;
     transform: none;
     box-shadow: none;
-  }
-  
-  .gallery_item_overlay {
-    /* Overlay toujours visible sur mobile */
-    opacity: 1;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
-    padding: 12px;
   }
   
   .gallery_item_overlay p {
