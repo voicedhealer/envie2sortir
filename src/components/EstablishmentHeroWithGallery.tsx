@@ -284,7 +284,10 @@ export default function EstablishmentHeroWithGallery({
         uniqueImages.length >= 2 ? (
           <div className="relative">
             <PhotoGallery 
-              images={uniqueImages} 
+              images={uniqueImages.map((url, index) => ({ 
+                url, 
+                isMain: index === 0 // Pour l'instant, la première image est principale
+              }))} 
               establishmentName={establishment.name}
             />
             

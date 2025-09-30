@@ -764,7 +764,8 @@ body {
   cursor: pointer;
 }
 
-.gallery_item:hover {
+.gallery_item:hover,
+.gallery_item_active {
   flex: 3;
   filter: grayscale(0);
 }
@@ -786,7 +787,8 @@ body {
   transition: opacity 0.8s ease-in-out;
 }
 
-.gallery_item:hover .gallery_item_overlay {
+.gallery_item:hover .gallery_item_overlay,
+.gallery_item_active .gallery_item_overlay {
   opacity: 1;
 }
 
