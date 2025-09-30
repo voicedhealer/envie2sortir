@@ -790,47 +790,11 @@ body {
   opacity: 1;
 }
 
-/* Overlay toujours visible sur mobile */
-@media (max-width: 768px) {
-  .gallery_item_overlay {
-    opacity: 1;
-  }
-}
-
-/* Responsive pour la galerie */
-@media (max-width: 768px) {
+/* Responsive pour la galerie - uniquement desktop */
+@media (min-width: 769px) {
   .photo-gallery-container {
-    flex-direction: column;
-    height: 100vh;
-    max-height: none;
-    gap: 0;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .gallery_item {
-    height: 100vh;
-    filter: grayscale(0);
-    border-radius: 0;
-    position: relative;
-    overflow: hidden;
-    /* Pas d'effet hover sur mobile */
-  }
-  
-  .gallery_item:hover {
-    /* Désactiver l'effet hover sur mobile */
-    flex: 1;
-    transform: none;
-    box-shadow: none;
-  }
-  
-  .gallery_item_overlay {
-    padding: 20px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-  }
-  
-  .gallery_item_overlay p {
-    font-size: 16px;
-    font-weight: 600;
+    height: 80vh;
+    min-height: 400px;
+    max-height: 600px;
   }
 }
