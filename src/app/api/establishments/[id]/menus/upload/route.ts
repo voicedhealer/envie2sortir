@@ -10,7 +10,7 @@ import { existsSync } from 'fs';
 // POST /api/establishments/[id]/menus/upload - Uploader un menu PDF
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const establishmentId = params.id;
+    const { id: establishmentId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
     const establishment = await prisma.establishment.findFirst({

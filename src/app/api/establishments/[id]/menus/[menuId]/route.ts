@@ -8,7 +8,7 @@ import { join } from 'path';
 // DELETE /api/establishments/[id]/menus/[menuId] - Supprimer un menu
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; menuId: string } }
+  { params }: { params: Promise<{ id: string; menuId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { id: establishmentId, menuId } = params;
+    const { id: establishmentId, menuId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
     const establishment = await prisma.establishment.findFirst({
@@ -88,7 +88,7 @@ export async function DELETE(
 // PUT /api/establishments/[id]/menus/[menuId] - Mettre à jour un menu
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; menuId: string } }
+  { params }: { params: Promise<{ id: string; menuId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -97,7 +97,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const { id: establishmentId, menuId } = params;
+    const { id: establishmentId, menuId } = await params;
     const body = await request.json();
     const { name, description, order, isActive } = body;
 

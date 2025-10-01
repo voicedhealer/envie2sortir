@@ -7,7 +7,7 @@ import { EstablishmentMenu } from '@/types/menu.types';
 // GET /api/establishments/[id]/menus - Récupérer les menus d'un établissement
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const establishmentId = params.id;
+    const { id: establishmentId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
     const establishment = await prisma.establishment.findFirst({

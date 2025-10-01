@@ -1,15 +1,17 @@
 'use client';
 
-import { Phone, MapPin, Star, Heart } from 'lucide-react';
+import { Phone, MapPin, Star, Heart, FileText } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
 import ContactButtons from './ContactButtons';
+import { PublicMenuDisplay } from '@/types/menu.types';
 
 interface EstablishmentActionsProps {
   establishment: {
     id: string;
+    slug?: string;
     name: string;
     phone?: string;
     whatsappPhone?: string;
@@ -31,6 +33,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const [comment, setComment] = useState('');
   const [rating, setRating] = useState(0);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [menus, setMenus] = useState<PublicMenuDisplay[]>([]);
+  const [isLoadingMenus, setIsLoadingMenus] = useState(false);
+  const [showMenuModal, setShowMenuModal] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<PublicMenuDisplay | null>(null);
 
 
   // Vérifier si l'établissement est en favori
@@ -54,6 +60,32 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     checkFavoriteStatus();
   }, [session?.user?.role, establishment.id]);
 
+  // Charger les menus publics pour cet établissement
+  useEffect(() => {
+    const slug = establishment.slug;
+    if (!slug) return;
+
+    const loadMenus = async () => {
+      try {
+        setIsLoadingMenus(true);
+        const response = await fetch(`/api/public/establishments/${slug}/menus`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (data?.menus?.length) {
+          setMenus(data.menus as PublicMenuDisplay[]);
+          setActiveMenu((prev) => prev ?? data.menus[0]);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des menus:', error);
+      } finally {
+        setIsLoadingMenus(false);
+      }
+    };
+
+    loadMenus();
+  }, [establishment.slug]);
+
   // Gestion de la touche Échap pour fermer le modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -72,6 +104,25 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
       document.body.style.overflow = 'unset';
     };
   }, [showCommentForm]);
+
+  // Gestion du blur et de la touche Échap pour le modal menu
+  useEffect(() => {
+    if (!showMenuModal) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMenuModal(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [showMenuModal]);
 
   const handleCall = () => {
     if (establishment.phone) {
@@ -203,6 +254,20 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           <span>Itinéraire</span>
         </button>
 
+        {/* Consulter le menu */}
+        {!isLoadingMenus && menus.length > 0 && (
+          <button
+            onClick={() => {
+              incrementClick(establishment.id);
+              setShowMenuModal(true);
+            }}
+            className="action-btn premium"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Consulter le menu</span>
+          </button>
+        )}
+
         {/* Boutons de contact (inclut Appeler, WhatsApp, Email) */}
         <ContactButtons 
           establishment={establishment}
@@ -321,6 +386,78 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
               >
                 {isSubmittingComment ? 'Envoi...' : 'Publier'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de menu */}
+      {showMenuModal && activeMenu && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[9999] p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowMenuModal(false);
+            }
+          }}
+        >
+          <div 
+            className="bg-orange-400/30 border border-orange-400 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[100vh] h-full flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Menus de {establishment.name}</h3>
+                {menus.length > 1 && (
+                  <p className="text-sm text-gray-500">Sélectionnez un menu pour le consulter</p>
+                )}
+              </div>
+              <button
+                onClick={() => setShowMenuModal(false)}
+                className="text-gray-700 hover:text-gray-900 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+
+            {menus.length > 1 && (
+              <div className="px-6 py-3 border-b border-gray-100 bg-gray-50 flex gap-2 overflow-x-auto">
+                {menus.map((menu) => (
+                  <button
+                    key={menu.id}
+                    onClick={() => setActiveMenu(menu)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                      activeMenu?.id === menu.id
+                        ? 'bg-orange-500 text-white shadow'
+                        : 'bg-white border border-gray-200 text-gray-700 hover:border-orange-400'
+                    }`}
+                  >
+                    {menu.name}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex-1 bg-gray-100">
+              <iframe
+                src={`${activeMenu.fileUrl}#toolbar=1&navpanes=1&scrollbar=1`}
+                title={activeMenu.name}
+                className="w-full h-full border-0"
+              />
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-100 bg-white flex items-center justify-between text-sm text-gray-500">
+              <div>
+                {activeMenu.fileName} • {(activeMenu.fileSize / (1024 * 1024)).toFixed(2)} MB
+              </div>
+              <a
+                href={activeMenu.fileUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+              >
+                Télécharger
+              </a>
             </div>
           </div>
         </div>
