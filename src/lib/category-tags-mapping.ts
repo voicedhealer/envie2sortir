@@ -369,6 +369,16 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     secondaryTags: ["tables", "tournois", "compétition", "sport"],
     relatedTags: ["précision", "stratégie", "traditionnel", "loisir"]
   },
+  roller_indoor: {
+    primaryTags: ["roller", "patin", "piste", "indoor"],
+    secondaryTags: ["anniversaires", "location", "équipements", "famille"],
+    relatedTags: ["urbain", "fun", "sport", "glisse"]
+  },
+  moto_electrique_indoor: {
+    primaryTags: ["moto", "électrique", "circuit", "indoor"],
+    secondaryTags: ["sensations", "karting", "piste", "location"],
+    relatedTags: ["adrénaline", "innovant", "protection", "activité"]
+  },
   // 🎯 ESCAPE GAMES - Système hiérarchique amélioré
   escape_game: {
     primaryTags: ["escape game", "énigmes", "salles", "thématiques"],
@@ -1036,6 +1046,22 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     secondaryTags: ["tables", "tournois", "compétition", "sport"],
     relatedTags: ["précision", "stratégie", "traditionnel", "loisir"]
   },
+  roller_indoor: {
+    label: "Roller indoor",
+    services: ["Piste indoor", "Location patins", "Cours", "Anniversaires"],
+    ambiance: ["Urbain", "Fun", "Sportif", "Famille"],
+    primaryTags: ["roller", "patin", "piste", "indoor"],
+    secondaryTags: ["anniversaires", "location", "équipements", "famille"],
+    relatedTags: ["urbain", "fun", "sport", "glisse"]
+  },
+  moto_electrique_indoor: {
+    label: "Moto électrique indoor",
+    services: ["Circuits indoor", "Motos électriques", "Sessions", "Sensations"],
+    ambiance: ["Innovant", "Adrénaline", "Sécurisé", "Sportif"],
+    primaryTags: ["moto", "électrique", "circuit", "indoor"],
+    secondaryTags: ["sensations", "karting", "piste", "location"],
+    relatedTags: ["adrénaline", "innovant", "protection", "activité"]
+  },
   // 🎯 ESCAPE GAMES - Informations complètes
   escape_game: {
     label: "Escape Game (général)",
@@ -1180,7 +1206,7 @@ export function getGroupedActivities() {
       "discotheque", "club_techno", "boite_nuit_mainstream"
     ],
     "🎯 Sports & Activités": [
-      "bowling", "billard_americain", "billard_francais", "futsal", "karting", "laser_game", "vr_experience"
+    "bowling", "billard_americain", "billard_francais", "roller_indoor", "moto_electrique_indoor", "futsal", "karting", "laser_game", "vr_experience"
     ],
     "🎮 Escape Games": [
       "escape_game", "escape_game_horreur", "escape_game_aventure", "escape_game_mystere",
