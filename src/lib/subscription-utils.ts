@@ -6,6 +6,7 @@
 export type SubscriptionType = 'STANDARD' | 'PREMIUM';
 
 export interface SubscriptionFeatures {
+  minImages: number;
   maxImages: number;
   canCreateEvents: boolean;
   canUseAdvancedAnalytics: boolean;
@@ -18,14 +19,16 @@ export interface SubscriptionFeatures {
  */
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeatures> = {
   STANDARD: {
-    maxImages: 1,
+    minImages: 2,
+    maxImages: 2,
     canCreateEvents: false,
     canUseAdvancedAnalytics: false,
     canUsePromotions: false,
     canUsePrioritySupport: false,
   },
   PREMIUM: {
-    maxImages: 10,
+    minImages: 2,
+    maxImages: 5,
     canCreateEvents: true,
     canUseAdvancedAnalytics: true,
     canUsePromotions: true,
@@ -59,6 +62,13 @@ export function canUsePromotions(subscription: SubscriptionType): boolean {
  */
 export function getMaxImages(subscription: SubscriptionType): number {
   return SUBSCRIPTION_FEATURES[subscription].maxImages;
+}
+
+/**
+ * Retourne le nombre minimum d'images requises
+ */
+export function getMinImages(subscription: SubscriptionType): number {
+  return SUBSCRIPTION_FEATURES[subscription].minImages;
 }
 
 /**
@@ -124,6 +134,7 @@ export function getSubscriptionDisplayInfo(subscription: SubscriptionType) {
     label: subscription === 'PREMIUM' ? 'Premium' : 'Standard',
     badgeColor: subscription === 'PREMIUM' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800',
     features: getAvailableFeatures(subscription),
+    minImages: getMinImages(subscription),
     maxImages: getMaxImages(subscription)
   };
 }

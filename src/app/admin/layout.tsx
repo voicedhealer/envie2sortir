@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function AdminLayout({
   children,
@@ -12,6 +12,8 @@ export default function AdminLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [pendingEstablishments, setPendingEstablishments] = useState(0);
+  const [pendingModifications, setPendingModifications] = useState(0);
 
   useEffect(() => {
     if (status === 'loading') return; // En cours de chargement
@@ -20,6 +22,30 @@ export default function AdminLayout({
       router.push('/auth?error=AccessDenied');
     }
   }, [session, status, router]);
+
+  // Récupérer le nombre de demandes en attente
+  useEffect(() => {
+    if (session?.user.role === 'admin') {
+      fetchPendingCounts();
+      
+      // Rafraîchir toutes les 30 secondes
+      const interval = setInterval(fetchPendingCounts, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
+
+  const fetchPendingCounts = async () => {
+    try {
+      const response = await fetch('/api/admin/pending-count');
+      if (response.ok) {
+        const data = await response.json();
+        setPendingEstablishments(data.details?.establishments || 0);
+        setPendingModifications(data.details?.professionalUpdates || 0);
+      }
+    } catch (error) {
+      console.error('Erreur récupération compteurs:', error);
+    }
+  };
 
   // Afficher un loader pendant la vérification
   if (status === 'loading') {
@@ -57,9 +83,25 @@ export default function AdminLayout({
                 </Link>
                 <Link
                   href="/admin/etablissements"
-                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium relative"
                 >
                   Gérer les établissements
+                  {pendingEstablishments > 0 && (
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
+                      {pendingEstablishments}
+                    </span>
+                  )}
+                </Link>
+                <Link
+                  href="/admin/modifications"
+                  className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium relative"
+                >
+                  Modifications professionnelles
+                  {pendingModifications > 0 && (
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
+                      {pendingModifications}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/admin/historique"

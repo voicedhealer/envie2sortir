@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { getMaxImages } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier les restrictions selon l'abonnement
-    const maxImages = establishment.subscription === 'PREMIUM' ? 10 : 1;
+    const maxImages = getMaxImages(establishment.subscription);
     const currentImageCount = establishment.images.length;
 
     if (currentImageCount >= maxImages) {

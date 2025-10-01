@@ -16,6 +16,24 @@ export default async function DashboardPage() {
     redirect('/auth?error=AccessDenied');
   }
 
+  // Récupérer le professionnel
+  const professional = await prisma.professional.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      siret: true,
+      companyName: true,
+    }
+  });
+
+  if (!professional) {
+    redirect('/auth?error=ProfessionalNotFound');
+  }
+
   // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
   // Essayer plusieurs fois avec un délai pour gérer les problèmes de timing
   let establishment = null;
@@ -74,7 +92,8 @@ export default async function DashboardPage() {
     <div className="min-h-screen bg-gray-50">
       <DashboardContent 
         user={session.user} 
-        establishment={establishment as any} 
+        establishment={establishment as any}
+        professional={professional as any}
       />
     </div>
   );

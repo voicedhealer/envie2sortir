@@ -7,7 +7,8 @@ import {
   hasPremiumAccess, 
   canCreateEvents, 
   canUsePromotions, 
-  getMaxImages, 
+  getMaxImages,
+  getMinImages, 
   getPremiumRequiredMessage,
   getPremiumRequiredError,
   validateSubscriptionAccess,
@@ -45,12 +46,20 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
   });
 
   describe('Limites par abonnement', () => {
-    test('getMaxImages - STANDARD doit retourner 1', () => {
-      expect(getMaxImages('STANDARD')).toBe(1);
+    test('getMinImages - STANDARD doit retourner 2', () => {
+      expect(getMinImages('STANDARD')).toBe(2);
     });
 
-    test('getMaxImages - PREMIUM doit retourner 10', () => {
-      expect(getMaxImages('PREMIUM')).toBe(10);
+    test('getMinImages - PREMIUM doit retourner 2', () => {
+      expect(getMinImages('PREMIUM')).toBe(2);
+    });
+
+    test('getMaxImages - STANDARD doit retourner 2', () => {
+      expect(getMaxImages('STANDARD')).toBe(2);
+    });
+
+    test('getMaxImages - PREMIUM doit retourner 5', () => {
+      expect(getMaxImages('PREMIUM')).toBe(5);
     });
   });
 
@@ -112,7 +121,8 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
       expect(info.label).toBe('Standard');
       expect(info.badgeColor).toBe('bg-gray-100 text-gray-800');
       expect(info.features).toEqual([]);
-      expect(info.maxImages).toBe(1);
+      expect(info.minImages).toBe(2);
+      expect(info.maxImages).toBe(2);
     });
 
     test('getSubscriptionDisplayInfo - PREMIUM doit avoir les bonnes propriétés', () => {
@@ -121,7 +131,8 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
       expect(info.label).toBe('Premium');
       expect(info.badgeColor).toBe('bg-orange-100 text-orange-800');
       expect(info.features.length).toBeGreaterThan(0);
-      expect(info.maxImages).toBe(10);
+      expect(info.minImages).toBe(2);
+      expect(info.maxImages).toBe(5);
     });
   });
 
@@ -132,7 +143,8 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
       expect(features.canUseAdvancedAnalytics).toBe(false);
       expect(features.canUsePromotions).toBe(false);
       expect(features.canUsePrioritySupport).toBe(false);
-      expect(features.maxImages).toBe(1);
+      expect(features.minImages).toBe(2);
+      expect(features.maxImages).toBe(2);
     });
 
     test('PREMIUM doit avoir toutes les fonctionnalités', () => {
@@ -141,7 +153,8 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
       expect(features.canUseAdvancedAnalytics).toBe(true);
       expect(features.canUsePromotions).toBe(true);
       expect(features.canUsePrioritySupport).toBe(true);
-      expect(features.maxImages).toBe(10);
+      expect(features.minImages).toBe(2);
+      expect(features.maxImages).toBe(5);
     });
   });
 
@@ -157,9 +170,15 @@ describe('Logique de différenciation STANDARD vs PREMIUM', () => {
       expect(standardFeatures.canUsePrioritySupport).not.toBe(premiumFeatures.canUsePrioritySupport);
     });
 
-    test('Les limites d\'images doivent être différentes', () => {
-      expect(SUBSCRIPTION_FEATURES.STANDARD.maxImages).not.toBe(SUBSCRIPTION_FEATURES.PREMIUM.maxImages);
+    test('Les limites d\'images doivent être correctes', () => {
+      // Les deux plans ont le même minimum
+      expect(SUBSCRIPTION_FEATURES.STANDARD.minImages).toBe(SUBSCRIPTION_FEATURES.PREMIUM.minImages);
+      expect(SUBSCRIPTION_FEATURES.STANDARD.minImages).toBe(2);
+      
+      // PREMIUM doit avoir un maximum supérieur à STANDARD
       expect(SUBSCRIPTION_FEATURES.STANDARD.maxImages).toBeLessThan(SUBSCRIPTION_FEATURES.PREMIUM.maxImages);
+      expect(SUBSCRIPTION_FEATURES.STANDARD.maxImages).toBe(2);
+      expect(SUBSCRIPTION_FEATURES.PREMIUM.maxImages).toBe(5);
     });
   });
 });

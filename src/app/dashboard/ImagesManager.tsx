@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
+import { getMinImages, getMaxImages } from "@/lib/subscription-utils";
 
 interface ImagesManagerProps {
   establishmentId: string; // Gardé pour compatibilité mais non utilisé
@@ -37,12 +38,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const [error, setError] = useState<string | null>(null);
   const [establishmentData, setEstablishmentData] = useState<any>(null);
 
-  // Calculer la limite d'images selon l'abonnement
-  const maxImages = subscription === 'PREMIUM' ? 10 : 1;
+  // Calculer les limites d'images selon l'abonnement
+  const minImages = getMinImages(subscription);
+  const maxImages = getMaxImages(subscription);
   const canUploadMore = images.length < maxImages;
+  const hasMinimumImages = images.length >= minImages;
   
   // Log pour debug
-  console.log('🔍 État des images:', { images: images.length, maxImages, canUploadMore, subscription });
+  console.log('🔍 État des images:', { images: images.length, minImages, maxImages, canUploadMore, hasMinimumImages, subscription });
 
   // Charger les images quand la session est prête
   useEffect(() => {
@@ -562,6 +565,45 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           Ajouter une image
         </h3>
         
+        {/* Message informatif sur le format des images */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start">
+            <div className="text-blue-500 mr-3 mt-0.5">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-blue-900 mb-1">💡 Astuce sur les formats d'images</h4>
+              <p className="text-sm text-blue-800">
+                <strong>Photos en mode paysage</strong> (horizontales) : créent un effet de zoom immersif dans la galerie, idéal pour mettre en valeur l'ambiance.
+                <br />
+                <strong>Photos en mode portrait ou carré</strong> : s'affichent avec un effet plus doux.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        {/* Avertissement si minimum non atteint */}
+        {!hasMinimumImages && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+            <div className="flex items-start">
+              <div className="text-orange-500 mr-3 mt-0.5">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-orange-900 mb-1">⚠️ Photos obligatoires</h4>
+                <p className="text-sm text-orange-800">
+                  Vous devez ajouter au minimum <strong>{minImages} photos</strong> pour votre établissement. 
+                  Actuellement : {images.length}/{minImages}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {canUploadMore ? (
           <ImageUpload 
             onImageUpload={handleImageUpload}
@@ -576,12 +618,12 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
               Limite d'images atteinte
             </h4>
             <p className="text-gray-600 mb-4">
-              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Gratuit'}.
+              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Standard'}.
             </p>
             {subscription === 'STANDARD' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800 font-medium mb-2">
-                  💡 Passez au plan Premium pour uploader jusqu'à 10 images !
+                  💡 Passez au plan Premium pour uploader jusqu'à 5 images !
                 </p>
                 <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                   Voir les plans
@@ -593,7 +635,10 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         
         <div className="mt-4 text-sm text-gray-500">
           Images actuelles : {images.length}/{maxImages} 
-          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Gratuit)'}
+          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Standard)'}
+          {!hasMinimumImages && (
+            <span className="text-orange-600 font-medium"> - Minimum requis : {minImages}</span>
+          )}
         </div>
       </div>
 
