@@ -11,7 +11,9 @@ export const SECURITY_CONFIG = {
   RATE_LIMITS: {
     API: { windowMs: 15 * 60 * 1000, max: 100 },
     SEARCH: { windowMs: 60 * 1000, max: 20 },
-    UPLOAD: { windowMs: 60 * 1000, max: 5 },
+    UPLOAD: { windowMs: 60 * 1000, max: 10 }, // Uploads de fichiers
+    IMAGE_MANAGEMENT: { windowMs: 60 * 1000, max: 30 }, // Gestion des images (définir principale, supprimer)
+    IMAGES_READ: { windowMs: 60 * 1000, max: 200 }, // Lecture d'images
     AUTH: { windowMs: 15 * 60 * 1000, max: 10 },
     ADMIN: { windowMs: 15 * 60 * 1000, max: 5 }
   },

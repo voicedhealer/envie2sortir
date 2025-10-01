@@ -364,25 +364,43 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       console.log('📡 Réponse API:', response.status, response.statusText);
 
       if (!response.ok) {
-        let errorData;
+        let errorData: any = {};
         let responseText = '';
         
         try {
-          responseText = await response.text();
+          // Cloner la réponse pour pouvoir la lire plusieurs fois
+          const responseClone = response.clone();
+          responseText = await responseClone.text();
           console.log('📝 Réponse brute:', responseText);
           console.log('📝 Longueur de la réponse:', responseText.length);
+          console.log('📝 Type de contenu:', response.headers.get('content-type'));
           
           if (responseText.trim()) {
-            try {
-              errorData = JSON.parse(responseText);
-            } catch (jsonError) {
-              console.error('❌ Erreur parsing JSON:', jsonError);
+            // Vérifier si c'est du JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType?.includes('application/json')) {
+              try {
+                errorData = JSON.parse(responseText);
+                console.log('✅ JSON parsé avec succès:', errorData);
+              } catch (jsonError) {
+                console.error('❌ Erreur parsing JSON:', jsonError);
+                errorData = { 
+                  error: `Réponse JSON invalide du serveur`,
+                  rawResponse: responseText.substring(0, 200),
+                  parseError: jsonError instanceof Error ? jsonError.message : 'Erreur inconnue'
+                };
+              }
+            } else {
+              // Probablement du HTML ou du texte
+              console.warn('⚠️ Réponse non-JSON reçue, probablement une erreur Next.js');
               errorData = { 
-                error: `Réponse invalide du serveur: ${responseText.substring(0, 100)}...`,
-                rawResponse: responseText
+                error: `Erreur serveur (${response.status})`,
+                rawResponse: responseText.substring(0, 200),
+                isHtml: contentType?.includes('text/html')
               };
             }
           } else {
+            console.warn('⚠️ Réponse vide reçue');
             errorData = { 
               error: `Erreur ${response.status}: ${response.statusText}`,
               emptyResponse: true
@@ -391,7 +409,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         } catch (textError) {
           console.error('❌ Erreur lecture réponse:', textError);
           errorData = { 
-            error: `Erreur ${response.status}: ${response.statusText}`,
+            error: `Erreur ${response.status}: Impossible de lire la réponse`,
             readError: textError instanceof Error ? textError.message : 'Erreur inconnue'
           };
         }
@@ -399,9 +417,10 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         console.error('❌ Erreur API détaillée:', {
           status: response.status,
           statusText: response.statusText,
-          responseText: responseText,
+          responseText: responseText.substring(0, 500),
           errorData: errorData,
           url: response.url,
+          contentType: response.headers.get('content-type'),
           headers: Object.fromEntries(response.headers.entries())
         });
         

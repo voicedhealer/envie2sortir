@@ -869,11 +869,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           throw new Error(result.error || 'Erreur lors de l\'inscription');
         }
         
-        if (result.autoLogin && result.user) {
+        if (result.autoLogin && result.professional) {
           try {
             console.log('🔄 Tentative de connexion automatique...');
             const signInResult = await signIn('credentials', {
-              email: result.user.email,
+              email: result.professional.email,
               password: formData.accountPassword,
               redirect: false,
             });
@@ -898,16 +898,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             } else {
               console.error('❌ Échec de la connexion automatique:', signInResult?.error);
               // En cas d'échec, rediriger vers la page de connexion avec un message
-              router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
+              router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
             }
           } catch (error) {
             console.error('❌ Erreur connexion automatique:', error);
             // En cas d'erreur, rediriger vers la page de connexion avec un message
-            router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
+            router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
           }
         } else {
           console.log('⚠️ Pas de connexion automatique, redirection vers page de connexion');
-          router.push('/auth?message=account-created&email=' + encodeURIComponent(result.user.email));
+          router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
         }
       }
       

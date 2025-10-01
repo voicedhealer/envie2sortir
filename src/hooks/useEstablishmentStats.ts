@@ -14,7 +14,13 @@ export function useEstablishmentStats() {
       });
 
       if (!response.ok) {
-        console.error('Erreur lors de l\'incrémentation des vues:', response.status);
+        // 403 signifie que l'établissement n'est pas disponible publiquement
+        // C'est normal pour les établissements en attente ou rejetés, on ignore silencieusement
+        if (response.status === 403) {
+          console.log('ℹ️ Vue non comptabilisée (établissement non public)');
+          return false;
+        }
+        console.warn('⚠️ Erreur lors de l\'incrémentation des vues:', response.status);
         return false;
       }
 
@@ -22,7 +28,8 @@ export function useEstablishmentStats() {
       console.log('✅ Vue incrémentée:', result);
       return true;
     } catch (error) {
-      console.error('❌ Erreur incrémentation vue:', error);
+      // Erreur silencieuse - ne pas perturber l'expérience utilisateur
+      console.debug('Incrémentation vue ignorée:', error);
       return false;
     }
   }, []);
@@ -37,7 +44,13 @@ export function useEstablishmentStats() {
       });
 
       if (!response.ok) {
-        console.error('Erreur lors de l\'incrémentation des clics:', response.status);
+        // 403 signifie que l'établissement n'est pas disponible publiquement
+        // C'est normal pour les établissements en attente ou rejetés, on ignore silencieusement
+        if (response.status === 403) {
+          console.log('ℹ️ Clic non comptabilisé (établissement non public)');
+          return false;
+        }
+        console.warn('⚠️ Erreur lors de l\'incrémentation des clics:', response.status);
         return false;
       }
 
@@ -45,7 +58,8 @@ export function useEstablishmentStats() {
       console.log('✅ Clic incrémenté:', result);
       return true;
     } catch (error) {
-      console.error('❌ Erreur incrémentation clic:', error);
+      // Erreur silencieuse - ne pas perturber l'expérience utilisateur
+      console.debug('Incrémentation clic ignorée:', error);
       return false;
     }
   }, []);

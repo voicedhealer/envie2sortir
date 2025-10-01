@@ -74,8 +74,7 @@ export default function HybridEnrichmentForm({
             {title}
           </h2>
           <p className="text-gray-600">
-            Complétez les informations automatiquement récupérées avec des détails spécifiques 
-            à votre établissement. Ces informations amélioreront votre visibilité.
+            Complétez les informations manquantes ci-dessus pour améliorer votre visibilité.
           </p>
         </div>
 

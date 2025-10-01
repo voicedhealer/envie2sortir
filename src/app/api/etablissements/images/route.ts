@@ -180,13 +180,36 @@ export async function PUT(request: NextRequest) {
 
     // Mettre à jour l'image principale
     console.log('💾 Mise à jour de l\'image principale:', imageUrl);
-    await prisma.establishment.update({
-      where: { id: establishment.id },
-      data: { imageUrl }
+    
+    // Transaction pour mettre à jour l'établissement ET les images
+    await prisma.$transaction(async (tx) => {
+      // 1. Mettre à jour l'imageUrl de l'établissement
+      await tx.establishment.update({
+        where: { id: establishment.id },
+        data: { imageUrl }
+      });
+      
+      // 2. Marquer toutes les images comme non-principales
+      await tx.image.updateMany({
+        where: { establishmentId: establishment.id },
+        data: { isPrimary: false }
+      });
+      
+      // 3. Marquer l'image sélectionnée comme principale
+      await tx.image.updateMany({
+        where: { 
+          establishmentId: establishment.id,
+          url: imageUrl
+        },
+        data: { isPrimary: true }
+      });
     });
 
     console.log('✅ Image principale mise à jour avec succès');
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Image principale mise à jour'
+    });
 
   } catch (error) {
     console.error("❌ Erreur mise à jour image:", error);

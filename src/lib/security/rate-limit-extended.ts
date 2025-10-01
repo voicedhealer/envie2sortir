@@ -13,7 +13,12 @@ export const searchRateLimit = createRateLimit({
 
 export const uploadRateLimit = createRateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 uploads par minute
+  max: 10, // 10 uploads par minute (augmenté de 5 à 10)
+});
+
+export const imageManagementRateLimit = createRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30, // 30 actions de gestion d'images par minute (définir principale, supprimer, etc.)
 });
 
 export const authRateLimit = createRateLimit({

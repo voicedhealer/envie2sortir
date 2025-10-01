@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { apiRateLimit, searchRateLimit, uploadRateLimit, imagesReadRateLimit } from './rate-limit-extended';
+import { apiRateLimit, searchRateLimit, uploadRateLimit, imageManagementRateLimit, imagesReadRateLimit } from './rate-limit-extended';
 import { sanitizeInput } from './sanitization';
 
 export async function applySecurityMiddleware(
@@ -12,9 +12,12 @@ export async function applySecurityMiddleware(
   
   if (endpoint.includes('/search') || endpoint.includes('/recherche')) {
     rateLimitResult = await searchRateLimit(request);
-  } else if (endpoint.includes('/upload') || (endpoint.includes('/images') && (method === 'POST' || method === 'PUT' || method === 'DELETE'))) {
-    // Rate limiting strict pour les uploads/modifications d'images
+  } else if (endpoint.includes('/upload') || (endpoint.includes('/images') && method === 'POST')) {
+    // Rate limiting pour les uploads de nouveaux fichiers uniquement
     rateLimitResult = await uploadRateLimit(request);
+  } else if (endpoint.includes('/images') && (method === 'PUT' || method === 'DELETE')) {
+    // Rate limiting plus permissif pour la gestion des images (définir principale, supprimer, etc.)
+    rateLimitResult = await imageManagementRateLimit(request);
   } else if ((endpoint.includes('/images') || endpoint.includes('/etablissements/images')) && method === 'GET') {
     // Rate limiting très permissif pour la lecture des images
     rateLimitResult = await imagesReadRateLimit(request);

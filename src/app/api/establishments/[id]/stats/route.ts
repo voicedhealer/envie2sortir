@@ -38,8 +38,10 @@ export async function POST(
       );
     }
 
-    // Vérifier que l'établissement est approuvé (seuls les établissements approuvés peuvent être vus)
-    if (establishment.status !== 'approved') {
+    // Note: On permet l'incrémentation même pour les établissements en attente
+    // car le propriétaire peut voir et tester sa propre page avant validation
+    // Les établissements rejetés sont exclus
+    if (establishment.status === 'rejected') {
       return NextResponse.json(
         { error: "Établissement non disponible" },
         { status: 403 }
