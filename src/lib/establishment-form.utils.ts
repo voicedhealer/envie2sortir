@@ -209,7 +209,17 @@ export function convertPaymentMethodsObjectToArray(paymentMethodsObj: any) {
 }
 
 // Fonction pour convertir un tableau de moyens de paiement en objet
-export function convertPaymentMethodsArrayToObject(paymentMethodsArray: string[]) {
+export function convertPaymentMethodsArrayToObject(paymentMethodsArray: string[] | any) {
+  // Si c'est déjà un objet, le retourner tel quel
+  if (paymentMethodsArray && typeof paymentMethodsArray === 'object' && !Array.isArray(paymentMethodsArray)) {
+    return paymentMethodsArray;
+  }
+  
+  // Si ce n'est pas un tableau valide, retourner un objet vide
+  if (!Array.isArray(paymentMethodsArray)) {
+    return {};
+  }
+  
   const paymentMethodsObj: any = {};
   
   paymentMethodsArray.forEach(method => {
