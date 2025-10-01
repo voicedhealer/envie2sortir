@@ -62,8 +62,41 @@ model Professional {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   establishment    Establishment?
+  updateRequests   ProfessionalUpdateRequest[]
 
   @@map("professionals")
+}
+
+/// *
+/// * PROFESSIONAL UPDATE REQUEST - Demandes de modification d'informations professionnelles
+/// * Nécessite validation admin pour email, SIRET, nom d'entreprise
+/// * Vérification SMS obligatoire avant toute demande
+model ProfessionalUpdateRequest {
+  id                 String       @id @default(cuid())
+  professionalId     String
+  professional       Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  
+  fieldName          String       // 'email', 'siret', 'companyName'
+  oldValue           String
+  newValue           String
+  
+  // Pour l'email : token de vérification
+  verificationToken  String?
+  isEmailVerified    Boolean      @default(false)
+  
+  // SMS verification
+  smsCode            String?
+  smsCodeExpiry      DateTime?
+  isSmsVerified      Boolean      @default(false)
+  
+  status             String       @default("pending") // 'pending', 'approved', 'rejected'
+  rejectionReason    String?
+  
+  requestedAt        DateTime     @default(now())
+  reviewedAt         DateTime?
+  reviewedBy         String?      // ID de l'admin
+  
+  @@map("professional_update_requests")
 }
 
 /// *

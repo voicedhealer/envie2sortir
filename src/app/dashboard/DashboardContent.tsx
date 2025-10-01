@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Instagram, Facebook, Globe } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
+import ParametresManager from "./ParametresManager";
 
 interface User {
   id: string;
@@ -44,13 +45,24 @@ interface Establishment {
   events: any[];
 }
 
+interface Professional {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  siret: string;
+  companyName: string;
+}
+
 interface DashboardContentProps {
   user: User;
   establishment: Establishment;
+  professional: Professional;
 }
 
-export default function DashboardContent({ user, establishment }: DashboardContentProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events'>('overview');
+export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
+  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'parametres'>('overview');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -132,6 +144,16 @@ export default function DashboardContent({ user, establishment }: DashboardConte
                   Premium
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('parametres')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'parametres'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Paramètres
             </button>
           </nav>
         </div>
@@ -384,11 +406,15 @@ export default function DashboardContent({ user, establishment }: DashboardConte
           currentImageUrl={establishment.imageUrl}
           subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
         />
-      ) : (
+      ) : activeTab === 'events' ? (
         <EventsManager 
           establishmentId={establishment.id} 
           isPremium={establishment.subscription === 'PREMIUM'} 
           subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
+        />
+      ) : (
+        <ParametresManager 
+          professional={professional}
         />
       )}
     </div>
