@@ -6,6 +6,7 @@ import { Instagram, Facebook, Globe } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
+import MenuManager from "@/components/dashboard/MenuManager";
 
 interface User {
   id: string;
@@ -62,7 +63,7 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'parametres'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'parametres'>('overview');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,6 +140,21 @@ export default function DashboardContent({ user, establishment, professional }: 
               }`}
             >
               Mes événements
+              {establishment.subscription === 'PREMIUM' && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Premium
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('menus')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'menus'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Mes menus
               {establishment.subscription === 'PREMIUM' && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                   Premium
@@ -411,6 +427,11 @@ export default function DashboardContent({ user, establishment, professional }: 
           establishmentId={establishment.id} 
           isPremium={establishment.subscription === 'PREMIUM'} 
           subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
+        />
+      ) : activeTab === 'menus' ? (
+        <MenuManager 
+          establishmentId={establishment.id} 
+          isPremium={establishment.subscription === 'PREMIUM'}
         />
       ) : (
         <ParametresManager 
