@@ -247,9 +247,9 @@ export const CATEGORIES = {
 
 export const SUBSCRIPTION_PLANS = {
   free: {
-    label: "Plan Gratuit",
+    label: "Plan Standard",
     features: [
-      "1 photo maximum",
+      "2 photos obligatoires",
       "Informations de base",
       "Présence sur la carte",
       "Statistiques limitées"
@@ -259,7 +259,7 @@ export const SUBSCRIPTION_PLANS = {
   premium: {
     label: "Plan Premium",
     features: [
-      "+ 10 photos = valeurs visuelles ajoutées",
+      "2 à 5 photos pour une galerie immersive",
       "Description détaillée",
       "Logo flamme pour un visuel client tendance",
       "Mise en avant de votre établissement avec l'offre premium dans le filtre de recherche",

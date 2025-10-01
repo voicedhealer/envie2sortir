@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import { prisma } from '@/lib/prisma';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
+import { getMaxImages } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -78,10 +79,10 @@ export async function POST(request: NextRequest) {
       where: { establishmentId: establishmentId }
     });
 
-    const maxImages = establishment.subscription === 'PREMIUM' ? 10 : 1;
+    const maxImages = getMaxImages(establishment.subscription);
     
     if (existingImagesCount >= maxImages) {
-      const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Gratuit';
+      const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Standard';
       return NextResponse.json({ 
         error: `Limite d'images atteinte pour le plan ${planName}. Maximum: ${maxImages} image${maxImages > 1 ? 's' : ''}.`,
         subscription: establishment.subscription,
