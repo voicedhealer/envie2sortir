@@ -201,10 +201,47 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const hybridClientele = parseHybridData(establishment.clienteleInfo);
   const hybridChildren = parseHybridData(establishment.childrenServices);
   
-  // Extraire les éléments utilisables
+  // Debug: Afficher les données récupérées
+  console.log('🔍 Debug EstablishmentInfo pour:', establishment.name);
+  console.log('📊 accessibilityDetails brut:', establishment.accessibilityDetails);
+  console.log('📊 detailedPayments brut:', establishment.detailedPayments);
+  console.log('📊 detailedServices brut:', establishment.detailedServices);
+  console.log('📊 informationsPratiques brut:', establishment.informationsPratiques);
+  console.log('📊 paymentMethods brut:', establishment.paymentMethods);
+  
+  // Extraire les éléments utilisables - Utiliser les données existantes si les hybrides sont vides
   const accessibilityItems = getAccessibilityItems(hybridAccessibility);
   const paymentMethods = getPaymentMethods(hybridPayments);
   const detailedServices = getDetailedServices(hybridServices);
+  
+  // Fallback: Utiliser les données classiques si les hybrides sont vides
+  const fallbackPaymentMethods = establishment.paymentMethods && typeof establishment.paymentMethods === 'object' 
+    ? Object.keys(establishment.paymentMethods).filter(key => 
+        establishment.paymentMethods && 
+        typeof establishment.paymentMethods === 'object' && 
+        'JsonObject' in establishment.paymentMethods &&
+        (establishment.paymentMethods as any)[key] === true
+      )
+    : [];
+  
+  const fallbackAccessibilityItems = establishment.services && Array.isArray(establishment.services)
+    ? establishment.services.filter(service => 
+        typeof service === 'string' && (
+          service.toLowerCase().includes('accessible') || 
+          service.toLowerCase().includes('fauteuil') ||
+          service.toLowerCase().includes('mobilité')
+        )
+      )
+    : [];
+  
+  // Utiliser les données hybrides si disponibles, sinon les données classiques
+  const finalPaymentMethods = paymentMethods.length > 0 ? paymentMethods : fallbackPaymentMethods;
+  const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
+  
+  // Debug: Afficher les données parsées
+  console.log('✅ accessibilityItems parsés:', finalAccessibilityItems);
+  console.log('✅ paymentMethods parsés:', finalPaymentMethods);
+  console.log('✅ detailedServices parsés:', detailedServices);
   
   // Fonction pour obtenir le jour actuel
   const getCurrentDay = () => {
@@ -331,7 +368,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   });
 
   // Combiner les moyens de paiement traditionnels et hybrides
-  const moyensPaiement = [...traditionalPayments, ...paymentMethods];
+  const moyensPaiement = [...traditionalPayments, ...finalPaymentMethods];
 
   return (
     <div className="space-y-6">

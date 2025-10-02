@@ -144,6 +144,14 @@ export default async function EstablishmentPage({
   establishment.informationsPratiques = parseGooglePlacesData(establishment.informationsPratiques, 'informationsPratiques');
   establishment.activities = parseGooglePlacesData(establishment.activities, 'activities');
 
+  // Debug: Afficher les données récupérées
+  console.log('🔍 Debug page publique pour:', establishment.name);
+  console.log('📊 accessibilityDetails:', establishment.accessibilityDetails);
+  console.log('📊 detailedPayments:', establishment.detailedPayments);
+  console.log('📊 detailedServices:', establishment.detailedServices);
+  console.log('📊 informationsPratiques:', establishment.informationsPratiques);
+  console.log('📊 paymentMethods:', establishment.paymentMethods);
+
   // Déterminer la page de retour basée sur le referer ou les paramètres
   const getBackUrl = () => {
     // Vérifier si referer est une URL valide

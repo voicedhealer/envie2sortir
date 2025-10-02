@@ -37,6 +37,14 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     setExpandedSection(expandedSection === section ? null : section);
   };
 
+  // Debug: Afficher les données hybrides
+  console.log('🔍 Debug EstablishmentSections pour:', establishment.name);
+  console.log('📊 activities brut:', establishment.activities);
+  console.log('📊 services brut:', establishment.services);
+  console.log('📊 ambiance brut:', establishment.ambiance);
+  console.log('📊 informationsPratiques brut:', establishment.informationsPratiques);
+  console.log('📊 accessibilityDetails brut:', establishment.accessibilityDetails);
+
   // Fonction générique pour parser les données hybrides JSON
   const parseHybridData = (jsonField: any): any => {
     if (!jsonField) return null;
@@ -105,6 +113,20 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   
   // Extraire les éléments utilisables
   const accessibilityItems = getAccessibilityItems(hybridAccessibility);
+  
+  // Fallback: Utiliser les données classiques si les hybrides sont vides
+  const fallbackAccessibilityItems = establishment.services && Array.isArray(establishment.services)
+    ? establishment.services.filter(service => 
+        typeof service === 'string' && (
+          service.toLowerCase().includes('accessible') || 
+          service.toLowerCase().includes('fauteuil') ||
+          service.toLowerCase().includes('mobilité')
+        )
+      )
+    : [];
+  
+  // Utiliser les données hybrides si disponibles, sinon les données classiques
+  const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
 
   // Fonction robuste pour parser les données Google Places
   const parseGooglePlacesField = (field: any, fieldName: string) => {
@@ -263,7 +285,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     });
 
     // Intégrer les données hybrides d'accessibilité dans les commodités
-    accessibilityItems.forEach((item: string) => {
+    finalAccessibilityItems.forEach((item: string) => {
       if (seenItems.has(item)) return;
       seenItems.add(item);
       categories.commodites.push(item);
