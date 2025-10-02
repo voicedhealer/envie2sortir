@@ -133,82 +133,89 @@ export default function UpcomingEventsSection({
           </div>
         </div>
 
-        <div className="space-y-4">
-          {events.map((event) => (
-            <div key={event.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm overflow-hidden">
-              <div className="flex">
-                {/* Image à gauche */}
-                <div className="w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0">
-                  {event.imageUrl ? (
-                    <img
-                      src={event.imageUrl}
-                      alt={event.title}
-                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity duration-200"
-                      onClick={() => setModalImage({ url: event.imageUrl!, title: event.title })}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                      <Calendar className="w-8 h-8 text-amber-600" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Contenu à droite */}
-                <div className="flex-1 p-4 flex flex-col justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-amber-100 rounded-lg">
-                      <Calendar className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
-                        <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
-                          À venir
-                        </span>
-                      </div>
-                      
-                      {event.description && (
-                        <p className="text-gray-700 mb-3 leading-relaxed">
-                          {event.description}
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          <span className="font-medium">
-                            Début: {formatEventDate(event.startDate)}
-                          </span>
+        {/* Afficher seulement le premier événement (le plus proche) */}
+        {events.length > 0 && (
+          <div className="space-y-4">
+            {(() => {
+              const mainEvent = events[0]; // Premier événement (le plus proche)
+              return (
+                <div key={mainEvent.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm overflow-hidden">
+                  <div className="flex">
+                    {/* Image à gauche */}
+                    <div className="w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0">
+                      {mainEvent.imageUrl ? (
+                        <img
+                          src={mainEvent.imageUrl}
+                          alt={mainEvent.title}
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity duration-200"
+                          onClick={() => setModalImage({ url: mainEvent.imageUrl!, title: mainEvent.title })}
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                          <Calendar className="w-8 h-8 text-amber-600" />
                         </div>
-                        
-                        {event.endDate && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            <span className="font-medium">
-                              Fin: {formatEventDate(event.endDate)}
+                      )}
+                    </div>
+
+                    {/* Contenu à droite */}
+                    <div className="flex-1 p-4 flex flex-col justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-amber-100 rounded-lg">
+                          <Calendar className="w-5 h-5 text-amber-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-bold text-gray-900">{mainEvent.title}</h3>
+                            <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
+                              À venir
                             </span>
                           </div>
-                        )}
+                          
+                          {mainEvent.description && (
+                            <p className="text-gray-700 mb-3 leading-relaxed">
+                              {mainEvent.description}
+                            </p>
+                          )}
 
-                        {event.price && (
-                          <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
-                            {event.price}€
-                          </div>
-                        )}
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              <span className="font-medium">
+                                Début: {formatEventDate(mainEvent.startDate)}
+                              </span>
+                            </div>
+                            
+                            {mainEvent.endDate && (
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                <span className="font-medium">
+                                  Fin: {formatEventDate(mainEvent.endDate)}
+                                </span>
+                              </div>
+                            )}
 
-                        {event.maxCapacity && (
-                          <div className="text-gray-500">
-                            Capacité: {event.maxCapacity} places
+                            {mainEvent.price && (
+                              <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
+                                {mainEvent.price}€
+                              </div>
+                            )}
+
+                            {mainEvent.maxCapacity && (
+                              <div className="text-gray-500">
+                                Capacité: {mainEvent.maxCapacity} places
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })()}
+          </div>
+        )}
+
       </div>
 
       {/* Lien "Voir tous les événements" si plus d'événements */}
