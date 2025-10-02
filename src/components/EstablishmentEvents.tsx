@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, Euro, MapPin } from 'lucide-react';
+import AddToCalendar from './AddToCalendar';
+import { getEstablishmentInfo } from '../lib/calendar-utils';
 
 interface Event {
   id: string;
@@ -22,6 +24,12 @@ interface EstablishmentEventsProps {
 export default function EstablishmentEvents({ establishmentId, establishmentSlug }: EstablishmentEventsProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [establishmentInfo, setEstablishmentInfo] = useState<{
+    name: string;
+    address: string;
+    city: string;
+    postalCode: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -39,6 +47,18 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
     };
 
     fetchEvents();
+  }, [establishmentSlug]);
+
+  // Charger les informations de l'établissement pour enrichir les événements
+  useEffect(() => {
+    const loadEstablishmentInfo = async () => {
+      if (establishmentSlug) {
+        const info = await getEstablishmentInfo(establishmentSlug);
+        setEstablishmentInfo(info);
+      }
+    };
+
+    loadEstablishmentInfo();
   }, [establishmentSlug]);
 
   const formatDate = (dateString: string) => {
@@ -119,9 +139,23 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
               )}
             </div>
             
-            <button className="event-cta">
-              Événement à venir
-            </button>
+            <div className="event-cta-container">
+              
+              {/* Bouton d'ajout au calendrier */}
+              <AddToCalendar
+                event={{
+                  title: event.title,
+                  description: event.description || undefined,
+                  startDate: event.startDate,
+                  endDate: event.endDate || undefined,
+                  location: establishmentInfo ? 
+                    `${establishmentInfo.address}, ${establishmentInfo.postalCode} ${establishmentInfo.city}` : 
+                    undefined
+                }}
+                establishmentName={establishmentInfo?.name}
+                className="mt-2 w-full"
+              />
+            </div>
           </div>
         ))}
       </div>

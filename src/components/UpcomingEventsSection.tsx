@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { Calendar, ChevronRight, Clock } from 'lucide-react';
 import EventCard from './EventCard';
 import ImageModal from './ImageModal';
+import AddToCalendar from './AddToCalendar';
 import { formatEventDate, isEventInProgress, isEventUpcoming } from '../lib/date-utils';
+import { getEstablishmentInfo } from '../lib/calendar-utils';
 
 interface Event {
   id: string;
@@ -30,6 +32,12 @@ export default function UpcomingEventsSection({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalImage, setModalImage] = useState<{ url: string; title: string } | null>(null);
+  const [establishmentInfo, setEstablishmentInfo] = useState<{
+    name: string;
+    address: string;
+    city: string;
+    postalCode: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -86,6 +94,18 @@ export default function UpcomingEventsSection({
     fetchUpcomingEvents();
   }, [establishmentSlug, maxEvents]);
 
+  // Charger les informations de l'établissement pour enrichir les événements
+  useEffect(() => {
+    const loadEstablishmentInfo = async () => {
+      if (establishmentSlug) {
+        const info = await getEstablishmentInfo(establishmentSlug);
+        setEstablishmentInfo(info);
+      }
+    };
+
+    loadEstablishmentInfo();
+  }, [establishmentSlug]);
+
   // Ne pas afficher la section s'il n'y a pas d'événements
   if (loading) {
     return (
@@ -139,19 +159,19 @@ export default function UpcomingEventsSection({
             {(() => {
               const mainEvent = events[0]; // Premier événement (le plus proche)
               return (
-                <div key={mainEvent.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm overflow-hidden">
+                <div key={mainEvent.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm">
                   <div className="flex">
                     {/* Image à gauche */}
-                    <div className="w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0">
+                    <div className="w-32 sm:w-40 h-40 sm:h-48 flex-shrink-0">
                       {mainEvent.imageUrl ? (
                         <img
                           src={mainEvent.imageUrl}
                           alt={mainEvent.title}
-                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity duration-200"
+                          className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity duration-200 rounded-l-lg"
                           onClick={() => setModalImage({ url: mainEvent.imageUrl!, title: mainEvent.title })}
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                        <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center rounded-l-lg">
                           <Calendar className="w-8 h-8 text-amber-600" />
                         </div>
                       )}
@@ -205,6 +225,23 @@ export default function UpcomingEventsSection({
                                 Capacité: {mainEvent.maxCapacity} places
                               </div>
                             )}
+                          </div>
+
+                          {/* Bouton d'ajout au calendrier */}
+                          <div className="mt-4 pt-4 border-t border-amber-200 relative z-10">
+                            <AddToCalendar
+                              event={{
+                                title: mainEvent.title,
+                                description: mainEvent.description || undefined,
+                                startDate: mainEvent.startDate,
+                                endDate: mainEvent.endDate || undefined,
+                                location: establishmentInfo ? 
+                                  `${establishmentInfo.address}, ${establishmentInfo.postalCode} ${establishmentInfo.city}` : 
+                                  undefined
+                              }}
+                              establishmentName={establishmentInfo?.name}
+                              className="w-full sm:w-auto"
+                            />
                           </div>
                         </div>
                       </div>

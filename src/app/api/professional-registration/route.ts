@@ -114,8 +114,68 @@ export async function POST(request: NextRequest) {
       uberEatsLink: formData.get('uberEatsLink') as string || '',
       tags: JSON.parse(formData.get('tags') as string || '[]'),
       envieTags: JSON.parse(formData.get('envieTags') as string || '[]'),
+      // Données hybrides
+      accessibilityDetails: (() => {
+        const data = formData.get('hybridAccessibilityDetails');
+        if (data && typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            console.log('⚠️ Erreur parsing hybridAccessibilityDetails');
+            return null;
+          }
+        }
+        return null;
+      })(),
+      detailedServices: (() => {
+        const data = formData.get('hybridDetailedServices');
+        if (data && typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            console.log('⚠️ Erreur parsing hybridDetailedServices');
+            return null;
+          }
+        }
+        return null;
+      })(),
+      clienteleInfo: (() => {
+        const data = formData.get('hybridClienteleInfo');
+        if (data && typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            console.log('⚠️ Erreur parsing hybridClienteleInfo');
+            return null;
+          }
+        }
+        return null;
+      })(),
+      detailedPayments: (() => {
+        const data = formData.get('hybridDetailedPayments');
+        if (data && typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            console.log('⚠️ Erreur parsing hybridDetailedPayments');
+            return null;
+          }
+        }
+        return null;
+      })(),
+      childrenServices: (() => {
+        const data = formData.get('hybridChildrenServices');
+        if (data && typeof data === 'string') {
+          try {
+            return JSON.parse(data);
+          } catch (e) {
+            console.log('⚠️ Erreur parsing hybridChildrenServices');
+            return null;
+          }
+        }
+        return null;
+      })(),
     };
-
     // Générer un slug unique
     const generateSlug = (name: string): string => {
       return name
@@ -130,7 +190,6 @@ export async function POST(request: NextRequest) {
         .replace(/-+/g, '-')
         .trim();
     };
-
     // Géocoder l'adresse automatiquement
     console.log('🌍 Géocodage de l\'adresse:', establishmentData.address);
     const coordinates = await geocodeAddress(establishmentData.address);
@@ -189,6 +248,12 @@ export async function POST(request: NextRequest) {
           informationsPratiques: establishmentData.informationsPratiques,
           theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
           uberEatsLink: establishmentData.uberEatsLink, // Lien Uber Eats
+          // Données hybrides
+          accessibilityDetails: establishmentData.accessibilityDetails,
+          detailedServices: establishmentData.detailedServices,
+          clienteleInfo: establishmentData.clienteleInfo,
+          detailedPayments: establishmentData.detailedPayments,
+          childrenServices: establishmentData.childrenServices,
           ownerId: professional.id, // Lien vers le professionnel
           status: 'pending', // En attente de validation
           subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement

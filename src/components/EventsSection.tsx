@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import AddToCalendar from './AddToCalendar';
+import { getEstablishmentInfo } from '../lib/calendar-utils';
 
 interface Event {
   id: string;
@@ -22,6 +24,12 @@ interface EventsSectionProps {
 export default function EventsSection({ establishmentId, establishmentSlug }: EventsSectionProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [establishmentInfo, setEstablishmentInfo] = useState<{
+    name: string;
+    address: string;
+    city: string;
+    postalCode: string;
+  } | null>(null);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -39,6 +47,18 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
     };
 
     fetchEvents();
+  }, [establishmentSlug]);
+
+  // Charger les informations de l'établissement pour enrichir les événements
+  useEffect(() => {
+    const loadEstablishmentInfo = async () => {
+      if (establishmentSlug) {
+        const info = await getEstablishmentInfo(establishmentSlug);
+        setEstablishmentInfo(info);
+      }
+    };
+
+    loadEstablishmentInfo();
   }, [establishmentSlug]);
 
   // Formater la date pour l'affichage
@@ -148,6 +168,23 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
                     {event.maxCapacity} places
                   </div>
                 )}
+              </div>
+
+              {/* Bouton d'ajout au calendrier */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <AddToCalendar
+                  event={{
+                    title: event.title,
+                    description: event.description || undefined,
+                    startDate: event.startDate,
+                    endDate: event.endDate || undefined,
+                    location: establishmentInfo ? 
+                      `${establishmentInfo.address}, ${establishmentInfo.postalCode} ${establishmentInfo.city}` : 
+                      undefined
+                  }}
+                  establishmentName={establishmentInfo?.name}
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
