@@ -203,8 +203,20 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               instagram: formData.instagram,
               facebook: formData.facebook,
               tiktok: formData.tiktok,
+              youtube: formData.youtube,
               accountPhone: formData.accountPhone,
-              accountEmail: formData.accountEmail
+              accountEmail: formData.accountEmail,
+              // Données d'enrichissement
+              theForkLink: formData.theForkLink,
+              uberEatsLink: formData.uberEatsLink,
+              informationsPratiques: formData.informationsPratiques,
+              envieTags: formData.envieTags,
+              // Données d'enrichissement hybride
+              hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
+              hybridDetailedServices: formData.hybridDetailedServices,
+              hybridClienteleInfo: formData.hybridClienteleInfo,
+              hybridDetailedPayments: formData.hybridDetailedPayments,
+              hybridChildrenServices: formData.hybridChildrenServices
             }}
             isEditMode={isEditMode}
             onEdit={(step) => {

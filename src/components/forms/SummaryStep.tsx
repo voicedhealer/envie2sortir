@@ -47,6 +47,19 @@ export interface EstablishmentFormData {
   // Contacts professionnels (pour le résumé)
   professionalPhone?: string;
   professionalEmail?: string;
+  
+  // Données d'enrichissement
+  theForkLink?: string;
+  uberEatsLink?: string;
+  informationsPratiques?: string;
+  envieTags?: string[];
+  
+  // Données d'enrichissement hybride
+  hybridAccessibilityDetails?: string;
+  hybridDetailedServices?: string;
+  hybridClienteleInfo?: string;
+  hybridDetailedPayments?: string;
+  hybridChildrenServices?: string;
 }
 
 // Props du composant
@@ -505,6 +518,142 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
           </div>
         </div>
       </div>
+
+      {/* Données d'enrichissement */}
+      {(data.theForkLink || data.uberEatsLink || data.informationsPratiques || data.envieTags?.length || 
+        data.hybridAccessibilityDetails || data.hybridDetailedServices || data.hybridClienteleInfo || 
+        data.hybridDetailedPayments || data.hybridChildrenServices) && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">🔍</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Données d'enrichissement
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(2)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Liens externes */}
+            {(data.theForkLink || data.uberEatsLink) && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+                  <span className="text-lg">🔗</span>
+                  <span>Liens externes</span>
+                </h4>
+                <div className="space-y-3">
+                  {data.theForkLink && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">TheFork</label>
+                      <p className="text-gray-900 break-all">{data.theForkLink}</p>
+                    </div>
+                  )}
+                  {data.uberEatsLink && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-500 mb-1">Uber Eats</label>
+                      <p className="text-gray-900 break-all">{data.uberEatsLink}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Informations pratiques */}
+            {data.informationsPratiques && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+                  <span className="text-lg">ℹ️</span>
+                  <span>Informations pratiques</span>
+                </h4>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-gray-900 text-sm leading-relaxed">{data.informationsPratiques}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Tags Envie */}
+            {data.envieTags && data.envieTags.length > 0 && (
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+                  <span className="text-lg">🏷️</span>
+                  <span>Tags Envie</span>
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {data.envieTags.map((tag, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Données d'enrichissement hybride */}
+          {(data.hybridAccessibilityDetails || data.hybridDetailedServices || data.hybridClienteleInfo || 
+            data.hybridDetailedPayments || data.hybridChildrenServices) && (
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center space-x-2">
+                <span className="text-xl">✏️</span>
+                <span>Informations complémentaires (saisies manuellement)</span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {data.hybridAccessibilityDetails && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Accessibilité</label>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-900 text-sm">{data.hybridAccessibilityDetails}</p>
+                    </div>
+                  </div>
+                )}
+                {data.hybridDetailedServices && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Services détaillés</label>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-900 text-sm">{data.hybridDetailedServices}</p>
+                    </div>
+                  </div>
+                )}
+                {data.hybridClienteleInfo && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Clientèle</label>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-900 text-sm">{data.hybridClienteleInfo}</p>
+                    </div>
+                  </div>
+                )}
+                {data.hybridDetailedPayments && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Paiements détaillés</label>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-900 text-sm">{data.hybridDetailedPayments}</p>
+                    </div>
+                  </div>
+                )}
+                {data.hybridChildrenServices && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 mb-2">Services enfants</label>
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-gray-900 text-sm">{data.hybridChildrenServices}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Message final */}
       <div className="text-center py-8">
