@@ -38,7 +38,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     prevStep,
     handleSubmit,
     handleEnrichmentDataChange,
-    setShowPhoneModal
+    setShowPhoneModal,
+    setCurrentStep
   } = useEstablishmentForm({ establishment, isEditMode });
 
   /**
@@ -207,7 +208,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             }}
             isEditMode={isEditMode}
             onEdit={(step) => {
-              nextStep();
+              setCurrentStep(step as FormStep);
             }}
           />
         );
