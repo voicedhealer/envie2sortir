@@ -9,6 +9,7 @@ interface Event {
   id: string;
   title: string;
   description?: string;
+  modality?: string;
   startDate: string;
   endDate?: string;
   price?: number;
@@ -158,6 +159,9 @@ export default function EventsTimeline({
                 {/* Titre de l'événement */}
                 <div className="flex-1">
                   <h4 className="font-semibold text-sm">{shortTitle}</h4>
+                  {event.modality && (
+                    <p className="text-xs opacity-80 italic">{event.modality}</p>
+                  )}
                   <p className="text-xs opacity-90">
                     {new Date(event.startDate).toLocaleTimeString('fr-FR', {
                       hour: '2-digit',

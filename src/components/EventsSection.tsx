@@ -9,6 +9,7 @@ interface Event {
   id: string;
   title: string;
   description: string | null;
+  modality: string | null;
   startDate: string;
   endDate: string | null;
   imageUrl: string | null;
@@ -131,6 +132,12 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
               {event.description && (
                 <p className="text-gray-600 text-sm mb-3 line-clamp-3">
                   {event.description}
+                </p>
+              )}
+              
+              {event.modality && (
+                <p className="text-xs text-gray-500 mb-3 italic line-clamp-2">
+                  {event.modality}
                 </p>
               )}
               

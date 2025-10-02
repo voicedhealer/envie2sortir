@@ -12,6 +12,7 @@ interface Event {
   id: string;
   title: string;
   description: string | null;
+  modality?: string | null;
   startDate: string;
   endDate?: string | null;
   price?: number | null;
@@ -197,6 +198,12 @@ export default function UpcomingEventsSection({
                             </p>
                           )}
 
+                          {mainEvent.modality && (
+                            <p className="text-sm text-gray-600 mb-3 leading-relaxed italic">
+                              {mainEvent.modality}
+                            </p>
+                          )}
+
                           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
                             <div className="flex items-center gap-1">
                               <Clock className="w-4 h-4" />
@@ -254,16 +261,6 @@ export default function UpcomingEventsSection({
         )}
 
       </div>
-
-      {/* Lien "Voir tous les événements" si plus d'événements */}
-      {events.length >= maxEvents && (
-        <div className="text-center">
-          <button className="flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors mx-auto">
-            Voir tous les événements
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
 
       {/* Modal d'image */}
       {modalImage && (

@@ -9,6 +9,7 @@ interface Event {
   id: string;
   title: string;
   description: string | null;
+  modality: string | null;
   startDate: string;
   endDate: string | null;
   imageUrl: string | null;
@@ -32,6 +33,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    modality: '',
     startDate: '',
     endDate: '',
     imageUrl: '',
@@ -162,6 +164,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
     setFormData({
       title: event.title,
       description: event.description || '',
+      modality: event.modality || '',
       startDate: formatDateForInput(event.startDate),
       endDate: event.endDate ? formatDateForInput(event.endDate) : '',
       imageUrl: event.imageUrl || '',
@@ -176,6 +179,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
     setFormData({
       title: '',
       description: '',
+      modality: '',
       startDate: '',
       endDate: '',
       imageUrl: '',
@@ -313,6 +317,22 @@ export default function EventsManager({ establishmentId, isPremium, subscription
                   rows={3}
                   placeholder="Description de l'événement"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Modalité <span className="text-gray-500 text-sm">(optionnel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.modality}
+                  onChange={(e) => setFormData({...formData, modality: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Spécifiez les modalités de l'événement, ex: Lot à gagner, tenue à portée, boisson gratuite. etc..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Information complémentaire qui s'affichera en plus petit sous la description
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

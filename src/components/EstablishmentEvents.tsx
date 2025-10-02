@@ -9,6 +9,7 @@ interface Event {
   id: string;
   title: string;
   description?: string;
+  modality?: string;
   startDate: string;
   endDate?: string;
   price?: number;
@@ -125,6 +126,12 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
                 <Clock className="w-4 h-4 inline mr-1" />
                 {formatDate(event.startDate)} à {formatTime(event.startDate)}
               </p>
+              {event.description && (
+                <p className="text-sm text-gray-700 mb-2">{event.description}</p>
+              )}
+              {event.modality && (
+                <p className="text-xs text-gray-600 mb-2 italic">{event.modality}</p>
+              )}
               {event.location && (
                 <p className="text-sm text-gray-600 mb-1">
                   <MapPin className="w-4 h-4 inline mr-1" />

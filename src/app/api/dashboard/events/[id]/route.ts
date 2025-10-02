@@ -42,7 +42,7 @@ export async function PUT(
 
     const { id: eventId } = await params;
     const body = await request.json();
-    const { title, description, startDate, endDate, imageUrl, price, maxCapacity } = body;
+    const { title, description, modality, startDate, endDate, imageUrl, price, maxCapacity } = body;
 
     // Validation
     if (!title || !startDate) {
@@ -67,6 +67,7 @@ export async function PUT(
       data: {
         title,
         description,
+        modality,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         imageUrl,

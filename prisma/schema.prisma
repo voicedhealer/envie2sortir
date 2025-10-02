@@ -263,6 +263,7 @@ model Event {
   id             String       @id @default(cuid())
   title          String
   description    String?
+  modality       String?
   imageUrl       String?
   establishmentId String
   establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
