@@ -107,8 +107,28 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
           )}
           <button
             onClick={async () => {
-              await signOut({ callbackUrl: '/' });
-              setShowUserMenu(false);
+              try {
+                setShowUserMenu(false);
+                
+                // Appeler l'endpoint de déconnexion côté serveur
+                await fetch('/api/auth/logout', { method: 'POST' });
+                
+                // Déconnexion côté client avec redirection forcée
+                await signOut({ 
+                  callbackUrl: '/',
+                  redirect: true 
+                });
+                
+                // Forcer le rechargement de la page pour s'assurer que tout est nettoyé
+                setTimeout(() => {
+                  window.location.href = '/';
+                }, 1000);
+                
+              } catch (error) {
+                console.error('Erreur lors de la déconnexion:', error);
+                // En cas d'erreur, forcer la redirection
+                window.location.href = '/';
+              }
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >

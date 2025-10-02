@@ -13,12 +13,12 @@ export const authOptions = {
         password: { label: "Mot de passe", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Credentials manquantes');
-          return null;
-        }
-
         try {
+          if (!credentials?.email || !credentials?.password) {
+            console.log('❌ Credentials manquantes');
+            return null;
+          }
+
           console.log('🔐 Tentative de connexion pour:', credentials.email);
           
           // 1. Chercher d'abord dans les Users

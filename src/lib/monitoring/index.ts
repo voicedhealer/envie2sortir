@@ -22,7 +22,7 @@ export const MONITORING_CONFIG = {
   // Logging
   LOGGING: {
     LEVEL: process.env.NODE_ENV === 'production' ? 'INFO' : 'DEBUG',
-    MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB
+    MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
     MAX_FILES: 5,
     ENABLE_CONSOLE: true,
     ENABLE_FILE: process.env.NODE_ENV === 'production'

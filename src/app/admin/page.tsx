@@ -87,11 +87,20 @@ export default function AdminDashboard() {
   };
 
   const fetchSystemMetrics = async () => {
+    // Vérifier que la session est toujours valide
+    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+      return;
+    }
+
     try {
-      const response = await fetch("/api/monitoring/metrics");
+      const response = await fetch("/api/admin/metrics");
       if (response.ok) {
         const data = await response.json();
-        setMetrics(data);
+        setMetrics(data.system);
+        console.log("Métriques système chargées:", data);
+      } else if (response.status === 401 || response.status === 403) {
+        console.log('Session expirée, arrêt des requêtes métriques');
+        return;
       }
     } catch (error) {
       console.error("Erreur lors du chargement des métriques:", error);
@@ -111,6 +120,12 @@ export default function AdminDashboard() {
   };
 
   const fetchAllData = async () => {
+    // Vérifier que la session est toujours valide avant de faire les requêtes
+    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       await Promise.all([
         fetchDashboardStats(),

@@ -9,6 +9,7 @@ interface ImageUploadProps {
   onImageRemove?: () => void;
   establishmentId?: string;
   className?: string;
+  uploadType?: 'establishment' | 'event';
 }
 
 export default function ImageUpload({ 
@@ -16,7 +17,8 @@ export default function ImageUpload({
   onImageUpload, 
   onImageRemove,
   establishmentId,
-  className = '' 
+  className = '',
+  uploadType = 'establishment'
 }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -55,16 +57,23 @@ export default function ImageUpload({
     setUploadError(null);
 
     try {
-      if (!establishmentId) {
+      if (uploadType === 'establishment' && !establishmentId) {
         setUploadError('ID d\'établissement manquant. Veuillez recharger la page.');
         return;
       }
 
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('establishmentId', establishmentId);
+      
+      // Pour les images d'établissement, ajouter l'ID d'établissement
+      if (uploadType === 'establishment' && establishmentId) {
+        formData.append('establishmentId', establishmentId);
+      }
 
-      const response = await fetch('/api/upload/image', {
+      // Choisir l'API selon le type d'upload
+      const apiEndpoint = uploadType === 'event' ? '/api/upload/event-image' : '/api/upload/image';
+
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         body: formData,
       });

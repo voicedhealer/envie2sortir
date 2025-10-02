@@ -24,7 +24,7 @@ export const SECURITY_CONFIG = {
   // File Upload
   MAX_FILE_SIZES: {
     IMAGE: 5 * 1024 * 1024, // 5MB
-    DOCUMENT: 10 * 1024 * 1024 // 10MB
+    DOCUMENT: 20 * 1024 * 1024 // 20MB
   },
   
   // Allowed file types

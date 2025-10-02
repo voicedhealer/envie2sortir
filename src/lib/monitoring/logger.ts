@@ -50,7 +50,7 @@ export class StructuredLogger {
       enableFile: process.env.NODE_ENV === 'production',
       enableRemote: process.env.NODE_ENV === 'production',
       remoteEndpoint: process.env.LOGGING_ENDPOINT,
-      maxFileSize: 10 * 1024 * 1024, // 10MB
+      maxFileSize: 20 * 1024 * 1024, // 20MB
       maxFiles: 5,
       ...config
     };

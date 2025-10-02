@@ -43,7 +43,7 @@ export const IMAGE_VALIDATION: FileValidationOptions = {
 };
 
 export const DOCUMENT_VALIDATION: FileValidationOptions = {
-  maxSize: 10 * 1024 * 1024, // 10MB
+  maxSize: 20 * 1024 * 1024, // 20MB
   allowedTypes: ['application/pdf', 'text/plain'],
   allowedExtensions: ['pdf', 'txt']
 };

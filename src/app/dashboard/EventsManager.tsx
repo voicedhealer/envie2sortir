@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "@/lib/fake-toast";
 import { getSubscriptionDisplayInfo, getPremiumRequiredMessage } from "@/lib/subscription-utils";
+import ImageUpload from "@/components/ImageUpload";
 
 interface Event {
   id: string;
@@ -332,14 +333,15 @@ export default function EventsManager({ establishmentId, isPremium, subscription
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL de l'image
+                  Image de l'événement
                 </label>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({...formData, imageUrl: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="https://exemple.com/image.jpg"
+                <ImageUpload
+                  currentImageUrl={formData.imageUrl}
+                  onImageUpload={(imageUrl) => setFormData({...formData, imageUrl})}
+                  onImageRemove={() => setFormData({...formData, imageUrl: ''})}
+                  establishmentId={establishmentId}
+                  uploadType="event"
+                  className="w-full"
                 />
               </div>
 

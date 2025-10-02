@@ -25,22 +25,31 @@ export default function AdminLayout({
 
   // Récupérer le nombre de demandes en attente
   useEffect(() => {
-    if (session?.user.role === 'admin') {
+    if (session?.user.role === 'admin' && status === 'authenticated') {
       fetchPendingCounts();
       
       // Rafraîchir toutes les 30 secondes
       const interval = setInterval(fetchPendingCounts, 30000);
       return () => clearInterval(interval);
     }
-  }, [session]);
+  }, [session, status]);
 
   const fetchPendingCounts = async () => {
+    // Vérifier que la session est toujours valide
+    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+      return;
+    }
+
     try {
       const response = await fetch('/api/admin/pending-count');
       if (response.ok) {
         const data = await response.json();
         setPendingEstablishments(data.details?.establishments || 0);
         setPendingModifications(data.details?.professionalUpdates || 0);
+      } else if (response.status === 401 || response.status === 403) {
+        // Session expirée ou accès refusé, arrêter les requêtes
+        console.log('Session expirée, arrêt des requêtes API');
+        return;
       }
     } catch (error) {
       console.error('Erreur récupération compteurs:', error);
@@ -87,7 +96,7 @@ export default function AdminLayout({
                 >
                   Gérer les établissements
                   {pendingEstablishments > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
                       {pendingEstablishments}
                     </span>
                   )}
@@ -98,7 +107,7 @@ export default function AdminLayout({
                 >
                   Modifications professionnelles
                   {pendingModifications > 0 && (
-                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
+                    <span className="absolute -top-1 -right-1 inline-flex items-center justify-center px-1 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full min-w-[20px]">
                       {pendingModifications}
                     </span>
                   )}

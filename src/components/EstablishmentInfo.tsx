@@ -435,7 +435,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
               <div>
                 <p className="text-gray-900 font-medium">Adresse</p>
                 <p className="text-gray-600">{establishment.address}</p>
-                {establishment.city && (
+                {establishment.city && !establishment.address.includes(establishment.city) && (
                   <p className="text-gray-600">{establishment.city}</p>
                 )}
               </div>

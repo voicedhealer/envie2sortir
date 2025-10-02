@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, ChevronRight, Clock } from 'lucide-react';
 import EventCard from './EventCard';
+import ImageModal from './ImageModal';
 import { formatEventDate, isEventInProgress, isEventUpcoming } from '../lib/date-utils';
 
 interface Event {
@@ -13,6 +14,7 @@ interface Event {
   endDate?: string | null;
   price?: number | null;
   maxCapacity?: number | null;
+  imageUrl?: string | null;
 }
 
 interface UpcomingEventsSectionProps {
@@ -27,6 +29,7 @@ export default function UpcomingEventsSection({
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalImage, setModalImage] = useState<{ url: string; title: string } | null>(null);
 
   useEffect(() => {
     const fetchUpcomingEvents = async () => {
@@ -132,53 +135,74 @@ export default function UpcomingEventsSection({
 
         <div className="space-y-4">
           {events.map((event) => (
-            <div key={event.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-4 border border-yellow-200 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="p-2 bg-amber-100 rounded-lg">
-                  <Calendar className="w-5 h-5 text-amber-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
-                    <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
-                      À venir
-                    </span>
-                  </div>
-                  
-                  {event.description && (
-                    <p className="text-gray-700 mb-3 leading-relaxed">
-                      {event.description}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      <span className="font-medium">
-                        Début: {formatEventDate(event.startDate)}
-                      </span>
+            <div key={event.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm overflow-hidden">
+              <div className="flex">
+                {/* Image à gauche */}
+                <div className="w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0">
+                  {event.imageUrl ? (
+                    <img
+                      src={event.imageUrl}
+                      alt={event.title}
+                      className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity duration-200"
+                      onClick={() => setModalImage({ url: event.imageUrl!, title: event.title })}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
+                      <Calendar className="w-8 h-8 text-amber-600" />
                     </div>
-                    
-                    {event.endDate && (
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        <span className="font-medium">
-                          Fin: {formatEventDate(event.endDate)}
+                  )}
+                </div>
+
+                {/* Contenu à droite */}
+                <div className="flex-1 p-4 flex flex-col justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-amber-100 rounded-lg">
+                      <Calendar className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-gray-900">{event.title}</h3>
+                        <span className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">
+                          À venir
                         </span>
                       </div>
-                    )}
+                      
+                      {event.description && (
+                        <p className="text-gray-700 mb-3 leading-relaxed">
+                          {event.description}
+                        </p>
+                      )}
 
-                    {event.price && (
-                      <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
-                        {event.price}€
-                      </div>
-                    )}
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          <span className="font-medium">
+                            Début: {formatEventDate(event.startDate)}
+                          </span>
+                        </div>
+                        
+                        {event.endDate && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            <span className="font-medium">
+                              Fin: {formatEventDate(event.endDate)}
+                            </span>
+                          </div>
+                        )}
 
-                    {event.maxCapacity && (
-                      <div className="text-gray-500">
-                        Capacité: {event.maxCapacity} places
+                        {event.price && (
+                          <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold">
+                            {event.price}€
+                          </div>
+                        )}
+
+                        {event.maxCapacity && (
+                          <div className="text-gray-500">
+                            Capacité: {event.maxCapacity} places
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -195,6 +219,17 @@ export default function UpcomingEventsSection({
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
+      )}
+
+      {/* Modal d'image */}
+      {modalImage && (
+        <ImageModal
+          isOpen={!!modalImage}
+          onClose={() => setModalImage(null)}
+          imageUrl={modalImage.url}
+          alt={modalImage.title}
+          title={modalImage.title}
+        />
       )}
     </div>
   );

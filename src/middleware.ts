@@ -1,38 +1,15 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import { applySecurityMiddleware } from '@/lib/security';
-import { validateCSRFMiddleware } from '@/lib/csrf-middleware';
+import { applySecurityMiddleware } from "@/lib/security";
+import { validateCSRFMiddleware } from "@/lib/csrf-middleware";
 
 export default withAuth(
   async function middleware(req) {
     const { pathname } = req.nextUrl;
-    const token = req.nextauth.token;
 
-    // Protection du dashboard
-    if (pathname.startsWith('/dashboard')) {
-      if (!token) {
-        return NextResponse.redirect(new URL('/auth', req.url));
-      }
-
-      // Vérifier que l'utilisateur est un professionnel
-      if (token.role !== 'pro') {
-        return NextResponse.redirect(new URL('/', req.url));
-      }
-
-      // Note: La vérification de l'établissement se fera côté API
-      // Le middleware ne peut pas utiliser Prisma directement
-    }
-
-    // Protection des pages admin
-    if (pathname.startsWith('/admin')) {
-      if (!token || token.role !== 'admin') {
-        return NextResponse.redirect(new URL('/auth?error=AccessDenied', req.url));
-      }
-    }
-
-    // Protection de sécurité pour les APIs
-    if (pathname.startsWith('/api/')) {
-      // Validation CSRF
+    // Pour les autres routes, appliquer la sécurité
+    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
+      // Vérification CSRF
       const csrfCheck = await validateCSRFMiddleware(req);
       if (csrfCheck) {
         return csrfCheck;
@@ -77,7 +54,7 @@ export default withAuth(
 
         // Pour les autres pages, vérifier l'authentification
         return !!token;
-      },
+      }
     },
   }
 );
@@ -86,9 +63,6 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/admin/:path*',
-    '/etablissements/:path*/modifier',
-    '/api/professional/:path*',
-    '/api/dashboard/events/:path*',
-    '/api/etablissements/:path*'
+    '/api/:path*'
   ]
 };
