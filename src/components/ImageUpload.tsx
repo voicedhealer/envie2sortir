@@ -142,13 +142,14 @@ export default function ImageUpload({
             <Upload className="w-8 h-8 text-gray-400 mx-auto" />
             <div>
               <p className="text-sm font-medium text-gray-900">
-                {currentImageUrl ? 'Changer l\'image' : 'Ajouter une image'}
+                {currentImageUrl ? 'Changer l&apos;image' : 'Ajouter une image'}
               </p>
               <p className="text-xs text-gray-500">
                 JPG, PNG, WebP (max 5MB)
               </p>
             </div>
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
             >

@@ -159,7 +159,7 @@ export default function UpcomingEventsSection({
             {(() => {
               const mainEvent = events[0]; // Premier événement (le plus proche)
               return (
-                <div key={mainEvent.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-200 shadow-sm">
+                <div key={mainEvent.id} className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg border border-yellow-400 shadow-sm">
                   <div className="flex">
                     {/* Image à gauche */}
                     <div className="w-32 sm:w-40 h-40 sm:h-48 flex-shrink-0">

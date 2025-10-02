@@ -134,11 +134,36 @@ export default function EventsManager({ establishmentId, isPremium, subscription
   // Modifier un événement
   const handleEdit = (event: Event) => {
     setEditingEvent(event);
+    
+    // Fonction pour formater correctement les dates pour datetime-local
+    const formatDateForInput = (dateString: string) => {
+      try {
+        const date = new Date(dateString);
+        // S'assurer que la date est valide
+        if (isNaN(date.getTime())) {
+          console.error('Date invalide:', dateString);
+          return '';
+        }
+        
+        // Convertir en format datetime-local (YYYY-MM-DDTHH:MM)
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      } catch (error) {
+        console.error('Erreur lors du formatage de la date:', dateString, error);
+        return '';
+      }
+    };
+    
     setFormData({
       title: event.title,
       description: event.description || '',
-      startDate: event.startDate.split('T')[0] + 'T' + event.startDate.split('T')[1].substring(0, 5),
-      endDate: event.endDate ? event.endDate.split('T')[0] + 'T' + event.endDate.split('T')[1].substring(0, 5) : '',
+      startDate: formatDateForInput(event.startDate),
+      endDate: event.endDate ? formatDateForInput(event.endDate) : '',
       imageUrl: event.imageUrl || '',
       price: event.price ? event.price.toString() : '',
       maxCapacity: event.maxCapacity ? event.maxCapacity.toString() : ''
