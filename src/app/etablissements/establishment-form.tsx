@@ -174,6 +174,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               instagram: formData.instagram,
               facebook: formData.facebook,
               tiktok: formData.tiktok,
+              youtube: formData.youtube,
               priceMin: formData.priceMin,
               priceMax: formData.priceMax
             }}

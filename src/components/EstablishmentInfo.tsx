@@ -1,7 +1,7 @@
 "use client";
 
 import { Establishment } from '@prisma/client';
-import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
 import { useState } from 'react';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
@@ -599,7 +599,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       )}
 
       {/* Réseaux sociaux */}
-      {(establishment.instagram || establishment.facebook || establishment.tiktok) && (
+      {(establishment.instagram || establishment.facebook || establishment.tiktok || establishment.youtube) && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Users className="w-5 h-5 text-orange-500 mr-2" />
@@ -653,6 +653,23 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     className="text-gray-800 hover:text-black"
                   >
                     Suivre sur TikTok
+                  </a>
+                </div>
+              </div>
+            )}
+            
+            {establishment.youtube && (
+              <div className="flex items-center space-x-3">
+                <Youtube className="w-4 h-4 text-red-600" />
+                <div>
+                  <p className="text-gray-900 font-medium">YouTube</p>
+                  <a 
+                    href={establishment.youtube} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    Suivre sur YouTube
                   </a>
                 </div>
               </div>

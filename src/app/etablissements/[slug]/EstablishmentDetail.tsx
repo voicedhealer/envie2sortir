@@ -43,6 +43,7 @@ interface Establishment {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  youtube?: string;
   theForkLink?: string;
   uberEatsLink?: string;
   activities?: any;
@@ -95,6 +96,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     instagram: establishment.instagram || '',
     facebook: establishment.facebook || '',
     tiktok: establishment.tiktok || '',
+    youtube: establishment.youtube || '',
     prixMoyen: establishment.prixMoyen || 0,
     capaciteMax: establishment.capaciteMax || 0,
     accessibilite: establishment.accessibilite || false,
@@ -107,6 +109,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     instagram: establishment.instagram || '',
     facebook: establishment.facebook || '',
     tiktok: establishment.tiktok || '',
+    youtube: establishment.youtube || '',
   });
 
   // Cache pour le token CSRF
@@ -541,6 +544,18 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
                   value={socialsForm.tiktok}
                   onChange={handleSocialsChange}
                   placeholder="https://www.tiktok.com/@votrecompte"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">YouTube</label>
+                <input
+                  type="url"
+                  name="youtube"
+                  value={socialsForm.youtube}
+                  onChange={handleSocialsChange}
+                  placeholder="https://www.youtube.com/@votrechaine"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>

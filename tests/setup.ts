@@ -1,8 +1,11 @@
 // Configuration globale pour les tests Jest
 
 // Mock des modules Node.js si nécessaire
-global.TextEncoder = TextEncoder;
-global.TextDecoder = TextDecoder;
+if (typeof global.TextEncoder === 'undefined') {
+  const { TextEncoder, TextDecoder } = require('util');
+  global.TextEncoder = TextEncoder;
+  global.TextDecoder = TextDecoder;
+}
 
 // Configuration des timeouts
 jest.setTimeout(10000);

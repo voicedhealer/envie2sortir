@@ -147,6 +147,7 @@ model Establishment {
   createdAt             DateTime            @default(now())
   updatedAt             DateTime            @updatedAt
   tiktok                String?
+  youtube               String?
   imageUrl              String?
   priceMax              Float?
   priceMin              Float?

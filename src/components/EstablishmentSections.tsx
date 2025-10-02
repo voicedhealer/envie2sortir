@@ -16,6 +16,7 @@ interface EstablishmentSectionsProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    youtube?: string;
     // Champs hybrides
     accessibilityDetails?: any;
     detailedServices?: any;

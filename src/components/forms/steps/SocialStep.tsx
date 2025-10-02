@@ -4,6 +4,7 @@ interface SocialStepProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    youtube?: string;
     priceMin?: number;
     priceMax?: number;
   };
@@ -66,6 +67,17 @@ export default function SocialStep({
           onChange={(e) => onInputChange('tiktok', e.target.value)}
           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="https://www.tiktok.com/@votrepseudo"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium mb-2">YouTube</label>
+        <input
+          type="url"
+          value={formData.youtube || ''}
+          onChange={(e) => onInputChange('youtube', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="https://www.youtube.com/@votrechaine"
         />
       </div>
 

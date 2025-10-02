@@ -567,12 +567,12 @@ export default function EstablishmentCard({
             {/* 3ème ligne : Description courte */}
             {establishment.description && (
               <p className="text-gray-600 text-sm leading-relaxed">
-                {truncateText(establishment.description, 70)}
+                {truncateText(establishment.description, 65)}
               </p>
             )}
 
-            {/* 4ème ligne : Tags (max 2) */}
-            {establishment.matchedTags && establishment.matchedTags.length > 0 && (
+            {/* 4ème ligne : Tags (max 2) - MASQUÉS VISUELLEMENT mais logique conservée */}
+            {/* {establishment.matchedTags && establishment.matchedTags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {establishment.matchedTags.slice(0, 2).map((tag, index) => (
                   <span 
@@ -583,7 +583,7 @@ export default function EstablishmentCard({
                   </span>
                 ))}
               </div>
-            )}
+            )} */}
           </div>
 
           {/* Contenu en bas (adresse et prix) */}

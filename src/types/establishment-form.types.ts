@@ -40,6 +40,7 @@ export type ProfessionalData = {
   instagram?: string;
   facebook?: string;
   tiktok?: string;
+  youtube?: string;
   
   // Contact de l'établissement (différent du contact professionnel)
   phone?: string;
@@ -150,6 +151,7 @@ export type ExistingEstablishment = {
   instagram: string | null;
   facebook: string | null;
   tiktok: string | null;
+  youtube: string | null;
   activities: string[] | null;
   services: string[] | null;
   ambiance: string[] | null;
