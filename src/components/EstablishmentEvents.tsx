@@ -25,6 +25,7 @@ interface EstablishmentEventsProps {
 export default function EstablishmentEvents({ establishmentId, establishmentSlug }: EstablishmentEventsProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAllEvents, setShowAllEvents] = useState(false);
   const [establishmentInfo, setEstablishmentInfo] = useState<{
     name: string;
     address: string;
@@ -106,7 +107,7 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
       </h3>
       
       <div className="space-y-4">
-        {events.slice(0, 3).map((event) => (
+        {(showAllEvents ? events : events.slice(0, 3)).map((event) => (
           <div key={event.id} className="event-card">
             <div className="event-image">
               {event.imageUrl ? (
@@ -169,8 +170,14 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
 
       {events.length > 3 && (
         <div className="mt-4 text-center">
-          <button className="action-btn">
-            Voir tous les événements ({events.length})
+          <button 
+            onClick={() => setShowAllEvents(!showAllEvents)}
+            className="action-btn"
+          >
+            {showAllEvents 
+              ? `Voir moins d'événements` 
+              : `Voir tous les événements (${events.length})`
+            }
           </button>
         </div>
       )}
