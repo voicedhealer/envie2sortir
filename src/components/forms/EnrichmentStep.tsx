@@ -304,12 +304,12 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
               </div>
             </details>
 
-            {/* Formulaire hybride pour les informations complémentaires */}
+            {/* Formulaire d'enrichissement manuel pour les informations complémentaires */}
             <div className="mt-6">
               <HybridEnrichmentForm
                 initialData={hybridData}
                 onChange={setHybridData}
-                title="Complétez avec vos informations spécifiques"
+                title="Cochez les informations les plus pertinentes pour votre établissement"
               />
             </div>
 
@@ -324,10 +324,10 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
                 type="button"
                 onClick={() => {
                   if (enrichmentData) {
-                    // Combiner les données d'enrichissement automatique et les données hybrides
+                    // Combiner les données d'enrichissement automatique et les données manuelles
                     const combinedData = {
                       ...enrichmentData,
-                      // Ajouter les données hybrides
+                      // Ajouter les données d'enrichissement manuel
                       accessibilityDetails: hybridData.accessibilityDetails,
                       detailedServices: hybridData.detailedServices,
                       clienteleInfo: hybridData.clienteleInfo,

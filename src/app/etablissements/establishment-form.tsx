@@ -211,7 +211,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               uberEatsLink: formData.uberEatsLink,
               informationsPratiques: formData.informationsPratiques,
               envieTags: formData.envieTags,
-              // Données d'enrichissement hybride
+              // Données d'enrichissement manuel
               hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,

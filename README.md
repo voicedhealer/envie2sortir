@@ -1203,7 +1203,7 @@ sequenceDiagram
 **Flux de Données :**
 - **Synchronisation** : Session ↔ Database ↔ Frontend
 - **Validation** : Client-side + Server-side
-- **Enrichissement** : Données manuelles + automatiques
+- **Enrichissement** : Données automatiques + sélection manuelle des informations pertinentes
 - **Performance** : Cache, pagination, requêtes optimisées
 
 ## 🚀 Installation et Démarrage

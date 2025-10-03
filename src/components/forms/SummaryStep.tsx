@@ -54,7 +54,7 @@ export interface EstablishmentFormData {
   informationsPratiques?: string;
   envieTags?: string[];
   
-  // Données d'enrichissement hybride
+  // Données d'enrichissement manuel
   hybridAccessibilityDetails?: string;
   hybridDetailedServices?: string;
   hybridClienteleInfo?: string;
@@ -600,7 +600,7 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
             )}
           </div>
 
-          {/* Données d'enrichissement hybride */}
+          {/* Données d'enrichissement manuel */}
           {(data.hybridAccessibilityDetails || data.hybridDetailedServices || data.hybridClienteleInfo || 
             data.hybridDetailedPayments || data.hybridChildrenServices) && (
             <div className="mt-8 pt-6 border-t border-gray-200">

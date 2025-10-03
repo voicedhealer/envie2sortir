@@ -74,7 +74,7 @@ export default function HybridEnrichmentForm({
             {title}
           </h2>
           <p className="text-gray-600">
-            Complétez les informations manquantes ci-dessus pour améliorer votre visibilité.
+            Cochez les informations les plus pertinentes pour votre établissement. Ces détails aideront les clients à mieux vous trouver et vous choisir.
           </p>
         </div>
 
@@ -256,7 +256,7 @@ export default function HybridEnrichmentForm({
 
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h4 className="font-medium text-blue-900 mb-2">
-            💡 Pourquoi compléter ces informations ?
+            💡 Pourquoi sélectionner ces informations ?
           </h4>
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• <strong>Meilleure visibilité</strong> : Les clients trouvent plus facilement votre établissement</li>
