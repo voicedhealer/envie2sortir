@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
 
@@ -36,6 +36,12 @@ interface EstablishmentSectionsProps {
 
 export default function EstablishmentSections({ establishment, parkingOptions = [], healthOptions = [] }: EstablishmentSectionsProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('description');
+  const [isClient, setIsClient] = useState(false);
+
+  // Protection contre l'erreur d'hydratation
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -349,6 +355,11 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Protection contre l'erreur d'hydratation - ne pas rendre côté serveur
+  if (!isClient) {
+    return <div>Chargement...</div>;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
