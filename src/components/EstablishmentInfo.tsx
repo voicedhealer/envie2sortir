@@ -233,9 +233,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
       service.toLowerCase().includes('parking')
     ) || []),
-    ...(enrichmentData?.servicesArray?.filter((service: string) => 
-      service.toLowerCase().includes('parking')
-    ) || [])
+    ...(enrichmentData?.parking || [])
   ];
   
   // Combiner les services de santé
@@ -245,11 +243,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       service.toLowerCase().includes('sécurité') ||
       service.toLowerCase().includes('premiers secours')
     ) || []),
-    ...(enrichmentData?.servicesArray?.filter((service: string) => 
-      service.toLowerCase().includes('santé') || 
-      service.toLowerCase().includes('sécurité') ||
-      service.toLowerCase().includes('premiers secours')
-    ) || [])
+    ...(enrichmentData?.health || [])
   ];
   
   // Fallback: Utiliser les données classiques si les hybrides sont vides
