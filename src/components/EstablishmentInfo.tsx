@@ -279,6 +279,10 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   console.log('✅ accessibilityItems parsés:', finalAccessibilityItems);
   console.log('✅ paymentMethods parsés:', finalPaymentMethods);
   console.log('✅ detailedServices parsés:', detailedServices);
+  console.log('✅ smartEnrichmentData parsé:', smartEnrichmentData);
+  console.log('✅ enrichmentData parsé:', enrichmentData);
+  console.log('✅ parkingOptions:', parkingOptions);
+  console.log('✅ healthOptions:', healthOptions);
   
   // Fonction pour obtenir le jour actuel
   const getCurrentDay = () => {
