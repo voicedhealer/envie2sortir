@@ -176,6 +176,23 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
   // Traiter les informations pratiques Google Places
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
+  // Ajouter les données d'enrichissement aux services pour la catégorisation
+  const enrichmentServices = [
+    ...(smartEnrichmentData?.servicesArray || []),
+    ...(enrichmentData?.services || [])
+  ];
+  
+  // Ajouter les informations pratiques d'enrichissement
+  const enrichmentPracticalInfo = [
+    ...(smartEnrichmentData?.practicalInfo || [])
+  ];
+  
+  // Combiner tous les services (Google + enrichissement)
+  const allServicesCombined = [...allServices, ...enrichmentServices];
+  
+  // Combiner toutes les informations pratiques (Google + enrichissement)
+  const allPracticalInfo = [...informationsPratiques, ...enrichmentPracticalInfo];
+  
   // Logique de catégorisation intelligente des données Google Places
   const categorizeGooglePlacesData = () => {
     const categories = {
@@ -199,7 +216,7 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
     const seenItems = new Set<string>();
 
     // Catégoriser les services
-    allServices.forEach((service: string) => {
+    allServicesCombined.forEach((service: string) => {
       if (seenItems.has(service)) return; // Éviter les doublons
       seenItems.add(service);
       
@@ -248,7 +265,7 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
     });
 
     // Catégoriser les informations pratiques
-    informationsPratiques.forEach((info: string) => {
+    allPracticalInfo.forEach((info: string) => {
       if (seenItems.has(info)) return; // Éviter les doublons
       seenItems.add(info);
       
@@ -293,6 +310,26 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
       if (seenItems.has(item)) return;
       seenItems.add(item);
       categories.commodites.push(item);
+    });
+
+    // Intégrer les services d'enrichissement dans les commodités
+    enrichmentServices.forEach((service: string) => {
+      if (seenItems.has(service)) return;
+      seenItems.add(service);
+      
+      const serviceLower = service.toLowerCase();
+      
+      // Exclure les moyens de paiement et le parking (ils ont leurs propres sections)
+      if (serviceLower.includes('carte') || serviceLower.includes('paiement') || 
+          serviceLower.includes('nfc') || serviceLower.includes('titre') ||
+          serviceLower.includes('crédit') || serviceLower.includes('débit') ||
+          serviceLower.includes('espèces') || serviceLower.includes('chèque') ||
+          serviceLower.includes('parking')) {
+        return;
+      }
+      
+      // Ajouter aux commodités
+      categories.commodites.push(service);
     });
 
     return categories;
