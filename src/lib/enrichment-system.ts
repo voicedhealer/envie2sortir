@@ -1770,48 +1770,66 @@ export class EstablishmentEnrichment {
       }
     }
     
-    // 8. Fallback intelligent: suggérer des moyens de paiement standards selon le type d'établissement
-    if (paymentMethods.length === 0) {
-      console.log('💳 Aucun moyen de paiement spécifique trouvé, utilisation du fallback intelligent');
+    // 8. Fallback intelligent: toujours ajouter des moyens de paiement standards
+    console.log('💳 Ajout de moyens de paiement standards intelligents');
+    
+    // D'abord essayer les infos pratiques
+    const practicalInfo = this.generatePracticalInfo(result);
+    practicalInfo.forEach((info: string) => {
+      const infoLower = info.toLowerCase();
       
-      // D'abord essayer les infos pratiques
-      const practicalInfo = this.generatePracticalInfo(result);
-      practicalInfo.forEach((info: string) => {
-        const infoLower = info.toLowerCase();
-        
-        if (infoLower.includes('carte bancaire') || infoLower.includes('carte de crédit')) {
+      if (infoLower.includes('carte bancaire') || infoLower.includes('carte de crédit')) {
+        if (!paymentMethods.includes('Carte bancaire')) {
           paymentMethods.push('Carte bancaire');
         }
-        
-        if (infoLower.includes('espèces') || infoLower.includes('liquide')) {
+      }
+      
+      if (infoLower.includes('espèces') || infoLower.includes('liquide')) {
+        if (!paymentMethods.includes('Espèces')) {
           paymentMethods.push('Espèces');
         }
-        
-        if (infoLower.includes('chèque')) {
+      }
+      
+      if (infoLower.includes('chèque')) {
+        if (!paymentMethods.includes('Chèques')) {
           paymentMethods.push('Chèques');
         }
-      });
+      }
+    });
+    
+    // Toujours ajouter des moyens de paiement standards pour les établissements de divertissement
+    const types = result.types || [];
+    const isEntertainment = types.includes('amusement_park') || types.includes('tourist_attraction') || 
+                           result.name?.toLowerCase().includes('vr') || result.name?.toLowerCase().includes('escape');
+    
+    if (isEntertainment) {
+      console.log('💳 Établissement de divertissement détecté, ajout de moyens modernes');
       
-      // Si toujours rien, suggérer des moyens de paiement standards pour les établissements de divertissement
-      if (paymentMethods.length === 0) {
-        console.log('💳 Aucun moyen de paiement trouvé dans les infos pratiques, suggestion de moyens standards');
-        
-        // Moyens de paiement standards pour tous les établissements
+      // Moyens de paiement standards pour tous les établissements
+      if (!paymentMethods.includes('Carte bancaire')) {
         paymentMethods.push('Carte bancaire');
+      }
+      if (!paymentMethods.includes('Espèces')) {
         paymentMethods.push('Espèces');
-        
-        // Moyens de paiement spécifiques selon le type
-        const types = result.types || [];
-        if (types.includes('establishment') || types.includes('point_of_interest')) {
-          paymentMethods.push('Paiement sans contact');
-        }
-        
-        // Pour les établissements de divertissement, ajouter des moyens modernes
-        if (types.includes('amusement_park') || types.includes('tourist_attraction') || 
-            result.name?.toLowerCase().includes('vr') || result.name?.toLowerCase().includes('escape')) {
-          paymentMethods.push('Carte de débit');
-          paymentMethods.push('Paiements mobiles NFC');
-        }
+      }
+      
+      // Moyens de paiement spécifiques pour les établissements de divertissement
+      if (!paymentMethods.includes('Paiement sans contact')) {
+        paymentMethods.push('Paiement sans contact');
+      }
+      if (!paymentMethods.includes('Carte de débit')) {
+        paymentMethods.push('Carte de débit');
+      }
+      if (!paymentMethods.includes('Paiements mobiles NFC')) {
+        paymentMethods.push('Paiements mobiles NFC');
+      }
+    } else {
+      // Pour les autres établissements, ajouter des moyens de base
+      if (!paymentMethods.includes('Carte bancaire')) {
+        paymentMethods.push('Carte bancaire');
+      }
+      if (!paymentMethods.includes('Espèces')) {
+        paymentMethods.push('Espèces');
       }
     }
     
