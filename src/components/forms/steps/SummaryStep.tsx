@@ -62,6 +62,8 @@ export default function SummaryStepWrapper({
           photos: [],
           phone: formData.phone || '',
           email: formData.email || '',
+          whatsappPhone: formData.whatsappPhone,
+          messengerUrl: formData.messengerUrl,
           website: formData.website,
           instagram: formData.instagram,
           facebook: formData.facebook,
@@ -75,6 +77,7 @@ export default function SummaryStepWrapper({
           uberEatsLink: formData.uberEatsLink,
           informationsPratiques: formData.informationsPratiques,
           envieTags: formData.envieTags,
+          smartEnrichmentData: formData.enrichmentData,
           // Données d'enrichissement manuel
           hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
           hybridDetailedServices: formData.hybridDetailedServices,

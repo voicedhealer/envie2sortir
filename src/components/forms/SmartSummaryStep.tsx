@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { SmartEnrichmentData, EnrichmentPriority } from '@/lib/smart-enrichment-service';
+import { convertPaymentMethodsObjectToArray } from '@/lib/establishment-form.utils';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
@@ -47,6 +48,8 @@ export interface EstablishmentFormData {
   // Contact et réseaux sociaux
   phone: string;
   email: string;
+  whatsappPhone?: string;
+  messengerUrl?: string;
   website?: string;
   instagram?: string;
   facebook?: string;
@@ -164,10 +167,10 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
     <div className="space-y-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          🎯 Résumé intelligent de votre établissement
+          Résumé de l'inscription de votre établissement
         </h2>
         <p className="text-gray-600">
-          Voici un aperçu de toutes les informations qui seront affichées sur votre page publique
+          Voici un aperçu de toutes vos informations
         </p>
       </div>
 
@@ -267,11 +270,29 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone</label>
             <p className="text-gray-900">{data.phone || 'Non renseigné'}</p>
+            <p className="text-xs text-gray-500 mt-1">📞 Numéro fixe pour les appels</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
             <p className="text-gray-900">{data.email || 'Non renseigné'}</p>
+            <p className="text-xs text-gray-500 mt-1">✉️ Email visible par les clients</p>
           </div>
+          {data.whatsappPhone && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">WhatsApp</label>
+              <p className="text-gray-900">{data.whatsappPhone}</p>
+              <p className="text-xs text-gray-500 mt-1">📱 Numéro mobile pour que les clients vous contactent via WhatsApp</p>
+            </div>
+          )}
+          {data.messengerUrl && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Messenger (Facebook)</label>
+              <a href={data.messengerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                {data.messengerUrl}
+              </a>
+              <p className="text-xs text-gray-500 mt-1">💬 Lien vers votre page Facebook Messenger</p>
+            </div>
+          )}
           {data.website && (
             <div>
               <label className="block text-sm font-medium text-gray-500 mb-1">Site web</label>
@@ -364,7 +385,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             </h3>
           </div>
           <button
-            onClick={() => onEdit(4)}
+            onClick={() => onEdit(2)}
             className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
           >
             Modifier
@@ -372,8 +393,8 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
         <div className="flex flex-wrap gap-2">
           {/* Moyens de paiement du formulaire */}
-          {data.paymentMethods && data.paymentMethods.length > 0 ? (
-            data.paymentMethods.map((method, index) => (
+          {data.paymentMethods ? (
+            convertPaymentMethodsObjectToArray(data.paymentMethods).map((method, index) => (
               <span
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full"
@@ -410,7 +431,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           ) : null}
           
           {/* Message si aucun moyen de paiement */}
-          {(!data.paymentMethods || data.paymentMethods.length === 0) && 
+          {(!data.paymentMethods || convertPaymentMethodsObjectToArray(data.paymentMethods).length === 0) && 
            (!data.smartEnrichmentData?.paymentMethodsArray || data.smartEnrichmentData.paymentMethodsArray.length === 0) &&
            (!data.hybridDetailedPayments) && (
             <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
@@ -535,19 +556,31 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
 
       {/* Liens externes */}
       {(data.theForkLink || data.uberEatsLink) && (
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-            <span className="text-2xl mr-3">🔗</span>
-            Liens externes
-          </h3>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">🔗</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Liens externes
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(2)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
           <div className="flex space-x-4">
             {data.theForkLink && (
-              <a href={data.theForkLink} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-800">
+              <a href={data.theForkLink} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-800 font-medium">
                 🍴 TheFork
               </a>
             )}
             {data.uberEatsLink && (
-              <a href={data.uberEatsLink} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800">
+              <a href={data.uberEatsLink} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800 font-medium">
                 🚗 Uber Eats
               </a>
             )}

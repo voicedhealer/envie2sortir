@@ -210,6 +210,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
               // Données d'enrichissement
+              enrichmentData: enrichmentData,
               theForkLink: formData.theForkLink,
               uberEatsLink: formData.uberEatsLink,
               informationsPratiques: formData.informationsPratiques,
