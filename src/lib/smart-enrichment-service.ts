@@ -40,6 +40,27 @@ export interface SmartEnrichmentData extends EnrichmentData {
 
 export class SmartEnrichmentService {
   private establishmentTypeSuggestions = {
+    // Détection intelligente du type d'établissement
+    vr: {
+      recommended: [
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.95 },
+        { category: 'services', value: 'Sessions privées', confidence: 0.9 },
+        { category: 'services', value: 'Événements d\'entreprise', confidence: 0.8 },
+        { category: 'services', value: 'Anniversaires', confidence: 0.85 },
+        { category: 'services', value: 'Team building', confidence: 0.8 },
+        { category: 'payments', value: 'Carte bancaire', confidence: 0.95 },
+        { category: 'payments', value: 'Espèces', confidence: 0.9 },
+        { category: 'accessibility', value: 'Accessible PMR', confidence: 0.7 },
+        { category: 'children', value: 'Sessions enfants', confidence: 0.8 },
+        { category: 'children', value: 'Accompagnement parental', confidence: 0.75 }
+      ],
+      optional: [
+        { category: 'services', value: 'Location d\'équipements', confidence: 0.6 },
+        { category: 'services', value: 'Formation VR', confidence: 0.7 },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'accessibility', value: 'Casques adaptés', confidence: 0.6 }
+      ]
+    },
     restaurant: {
       recommended: [
         { category: 'services', value: 'Service de traiteur', confidence: 0.9 },
@@ -104,9 +125,61 @@ export class SmartEnrichmentService {
   };
 
   /**
+   * Détecte intelligemment le type d'établissement basé sur le nom et la description
+   */
+  detectEstablishmentType(googleData: EnrichmentData): string {
+    const name = googleData.name?.toLowerCase() || '';
+    const description = googleData.description?.toLowerCase() || '';
+    const activities = googleData.activities?.join(' ').toLowerCase() || '';
+    const specialties = googleData.specialties?.join(' ').toLowerCase() || '';
+    
+    const fullText = `${name} ${description} ${activities} ${specialties}`;
+    
+    // Détection VR (priorité haute - mots-clés spécifiques)
+    const vrKeywords = ['réalité virtuelle', 'virtual reality', 'escape game vr', 'jeu virtuel', 'simulation vr', 'immersion vr'];
+    if (vrKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'vr';
+    }
+    
+    // Détection VR par "vr" seul (mais pas dans "restaurant")
+    if (fullText.includes('vr') && !fullText.includes('restaurant') && !fullText.includes('bistrot') && !fullText.includes('brasserie')) {
+      return 'vr';
+    }
+    
+    // Détection restaurant
+    const restaurantKeywords = ['restaurant', 'bistrot', 'brasserie', 'café', 'bar', 'cuisine', 'menu', 'plat', 'manger'];
+    if (restaurantKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'restaurant';
+    }
+    
+    // Détection bar
+    const barKeywords = ['bar', 'pub', 'cocktail', 'boisson', 'alcool', 'happy hour'];
+    if (barKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'bar';
+    }
+    
+    // Détection spa
+    const spaKeywords = ['spa', 'massage', 'bien-être', 'relaxation', 'soin', 'beauté'];
+    if (spaKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'spa';
+    }
+    
+    // Détection hôtel
+    const hotelKeywords = ['hôtel', 'hotel', 'chambre', 'nuitée', 'hébergement', 'réception'];
+    if (hotelKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'hotel';
+    }
+    
+    // Par défaut, utiliser le type fourni ou 'other'
+    return googleData.establishmentType || 'other';
+  }
+
+  /**
    * Analyse les données Google et génère des suggestions intelligentes
    */
-  analyzeEnrichmentGaps(googleData: EnrichmentData, establishmentType: string): EnrichmentSuggestions {
+  analyzeEnrichmentGaps(googleData: EnrichmentData, establishmentType?: string): EnrichmentSuggestions {
+    // Détecter automatiquement le type si non fourni
+    const detectedType = establishmentType || this.detectEstablishmentType(googleData);
     const suggestions: EnrichmentSuggestions = {
       recommended: [],
       optional: [],
@@ -114,8 +187,8 @@ export class SmartEnrichmentService {
       alreadyFound: []
     };
 
-    // Récupérer les suggestions pour le type d'établissement
-    const typeSuggestions = this.establishmentTypeSuggestions[establishmentType as keyof typeof this.establishmentTypeSuggestions] || 
+    // Récupérer les suggestions pour le type d'établissement détecté
+    const typeSuggestions = this.establishmentTypeSuggestions[detectedType as keyof typeof this.establishmentTypeSuggestions] || 
                            this.establishmentTypeSuggestions.restaurant;
 
     // Analyser les données Google existantes
@@ -130,7 +203,7 @@ export class SmartEnrichmentService {
         confidence: suggestion.confidence,
         category: suggestion.category,
         value: suggestion.value,
-        reason: `Recommandé pour ${establishmentType}`
+        reason: `Recommandé pour ${detectedType}`
       };
 
       // Vérifier si déjà trouvé par Google
@@ -148,7 +221,7 @@ export class SmartEnrichmentService {
         confidence: suggestion.confidence,
         category: suggestion.category,
         value: suggestion.value,
-        reason: `Optionnel pour ${establishmentType}`
+        reason: `Optionnel pour ${detectedType}`
       };
 
       if (!this.isAlreadyFound(suggestion, googleServices, googlePayments, googleAccessibility)) {
@@ -168,9 +241,11 @@ export class SmartEnrichmentService {
   combineEnrichmentData(
     googleData: EnrichmentData, 
     manualData: any, 
-    establishmentType: string
+    establishmentType?: string
   ): SmartEnrichmentData {
-    const suggestions = this.analyzeEnrichmentGaps(googleData, establishmentType);
+    // Détecter automatiquement le type si non fourni
+    const detectedType = establishmentType || this.detectEstablishmentType(googleData);
+    const suggestions = this.analyzeEnrichmentGaps(googleData, detectedType);
     
     // Créer les données priorisées
     const prioritizedData = {
@@ -189,6 +264,7 @@ export class SmartEnrichmentService {
 
     return {
       ...googleData,
+      establishmentType: detectedType, // Mettre à jour le type détecté
       prioritizedData,
       enrichmentMetadata: {
         googleConfidence,
@@ -224,6 +300,16 @@ export class SmartEnrichmentService {
     if (data.establishmentType === 'hotel' && !this.hasParkingInfo(data)) {
       warnings.push('Hôtel sans informations de parking');
       suggestions.push('Précisez les options de parking disponibles');
+    }
+
+    if (data.establishmentType === 'vr' && !this.hasReservationInfo(data)) {
+      warnings.push('Établissement VR sans informations de réservation');
+      suggestions.push('Ajoutez "Réservations obligatoires"');
+    }
+
+    if (data.establishmentType === 'vr' && !this.hasPaymentMethods(data)) {
+      warnings.push('Établissement VR sans moyens de paiement spécifiés');
+      suggestions.push('Ajoutez au moins "Carte bancaire" et "Espèces"');
     }
 
     return {

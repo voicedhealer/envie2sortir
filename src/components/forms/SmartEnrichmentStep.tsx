@@ -72,12 +72,12 @@ export default function SmartEnrichmentStep({
       };
       setEnrichmentData(finalData);
       
-      // Générer les suggestions intelligentes
-      const smartSuggestions = smartEnrichmentService.analyzeEnrichmentGaps(finalData, establishmentType);
+      // Générer les suggestions intelligentes avec détection automatique du type
+      const smartSuggestions = smartEnrichmentService.analyzeEnrichmentGaps(finalData);
       setSuggestions(smartSuggestions);
       
-      // Créer les données intelligentes
-      const smartEnrichmentData = smartEnrichmentService.combineEnrichmentData(finalData, {}, establishmentType);
+      // Créer les données intelligentes avec détection automatique du type
+      const smartEnrichmentData = smartEnrichmentService.combineEnrichmentData(finalData, {});
       setSmartData(smartEnrichmentData);
       
       // Notifier le composant parent des nouvelles données
@@ -106,7 +106,7 @@ export default function SmartEnrichmentStep({
     const manualData = createManualDataFromSuggestions(selectedSuggestions, suggestions);
     
     // Combiner avec les données intelligentes
-    const finalSmartData = smartEnrichmentService.combineEnrichmentData(enrichmentData, manualData, establishmentType);
+    const finalSmartData = smartEnrichmentService.combineEnrichmentData(enrichmentData, manualData);
     
     // Valider la cohérence
     const validation = smartEnrichmentService.validateEnrichmentConsistency(finalSmartData);
@@ -329,7 +329,13 @@ export default function SmartEnrichmentStep({
                 <strong>Nom:</strong> {enrichmentData?.name}
               </div>
               <div>
-                <strong>Type:</strong> {enrichmentData?.establishmentType}
+                <strong>Type:</strong> 
+                <span className="ml-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  {smartData?.establishmentType || enrichmentData?.establishmentType}
+                  {smartData?.establishmentType !== enrichmentData?.establishmentType && (
+                    <span className="ml-1 text-green-600">✓ Détecté</span>
+                  )}
+                </span>
               </div>
               <div>
                 <strong>Note:</strong> {enrichmentData?.googleRating}/5
@@ -344,7 +350,7 @@ export default function SmartEnrichmentStep({
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
               <span className="text-xl mr-2">💡</span>
-              Suggestions personnalisées pour votre {establishmentType}
+              Suggestions personnalisées pour votre {smartData?.establishmentType || establishmentType}
             </h3>
             
             {/* Recommandations */}
