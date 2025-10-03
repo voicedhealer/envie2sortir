@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useMemo } from 'react';
 import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
-import { smartEnrichmentServiceV2, CombinedEnrichmentData, EnrichmentSuggestion } from '@/lib/smart-enrichment-service-v2';
+import { smartEnrichmentServiceV2, EnrichmentSuggestions } from '@/lib/smart-enrichment-service-v2';
 
 interface SmartEnrichmentStepV2Props {
   onEnrichmentComplete: (data: EnrichmentData) => void;
@@ -24,8 +24,8 @@ export default function SmartEnrichmentStepV2({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
-  const [smartData, setSmartData] = useState<CombinedEnrichmentData | null>(null);
-  const [suggestions, setSuggestions] = useState<any>(null);
+  const [smartData, setSmartData] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<EnrichmentSuggestions | null>(null);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Record<string, boolean>>({});
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -90,8 +90,7 @@ export default function SmartEnrichmentStepV2({
 
       // Appel réel à l'API Google
       console.log('🚀 Lancement de l\'enrichissement Google avec:', googleBusinessUrl);
-      const enrichmentService = new enrichmentSystem();
-      const googleData = await enrichmentService.triggerGoogleEnrichment(googleBusinessUrl);
+      const googleData = await enrichmentSystem.triggerGoogleEnrichment(googleBusinessUrl);
       
       // Ajouter les URLs optionnelles
       const finalData: EnrichmentData = {
@@ -131,7 +130,7 @@ export default function SmartEnrichmentStepV2({
     }));
   };
 
-  const createManualDataFromSuggestions = (selected: Record<string, boolean>, suggestions: any) => {
+  const createManualDataFromSuggestions = (selected: Record<string, boolean>, suggestions: EnrichmentSuggestions) => {
     const manualData: any = {};
     
     Object.entries(selected).forEach(([key, isSelected]) => {
@@ -151,7 +150,7 @@ export default function SmartEnrichmentStepV2({
     if (!enrichmentData || !smartData) return;
 
     // Créer les données manuelles basées sur les suggestions sélectionnées
-    const manualData = createManualDataFromSuggestions(selectedSuggestions, suggestions);
+    const manualData = suggestions ? createManualDataFromSuggestions(selectedSuggestions, suggestions) : {};
     
     // Combiner avec les données intelligentes
     const finalSmartData = smartEnrichmentServiceV2.combineEnrichmentData(enrichmentData, manualData);
@@ -428,7 +427,7 @@ export default function SmartEnrichmentStepV2({
               <div className="mb-6">
                 <h4 className="font-medium text-blue-900 mb-3">🔵 Recommandé</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {suggestions.recommended.map((suggestion, index) => {
+                  {suggestions.recommended.map((suggestion: any, index: number) => {
                     const suggestionKey = `${suggestion.category}-${suggestion.value}`;
                     return (
                       <label key={index} className="flex items-center space-x-3 p-3 bg-white rounded border hover:bg-gray-50 cursor-pointer">
@@ -457,7 +456,7 @@ export default function SmartEnrichmentStepV2({
               <div>
                 <h4 className="font-medium text-blue-900 mb-3">⚪ Optionnel</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {suggestions.optional.map((suggestion, index) => {
+                  {suggestions.optional.map((suggestion: any, index: number) => {
                     const suggestionKey = `${suggestion.category}-${suggestion.value}`;
                     return (
                       <label key={index} className="flex items-center space-x-3 p-3 bg-white rounded border hover:bg-gray-50 cursor-pointer">
