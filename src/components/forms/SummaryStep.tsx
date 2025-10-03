@@ -69,6 +69,9 @@ export interface EstablishmentFormData {
   hybridClienteleInfo?: string;
   hybridDetailedPayments?: string;
   hybridChildrenServices?: string;
+  
+  // Données d'enrichissement intelligent (depuis l'API Google)
+  smartEnrichmentData?: any;
 }
 
 // Props du composant
@@ -324,6 +327,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Moyens de paiement du formulaire */}
           {data.paymentMethods && data.paymentMethods.length > 0 ? (
             data.paymentMethods.map((method, index) => (
               <span
@@ -333,7 +337,38 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                 {method}
               </span>
             ))
-          ) : (
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement intelligent */}
+          {data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
+            data.smartEnrichmentData.paymentMethodsArray.map((method: string, index: number) => (
+              <span
+                key={`enrichment-${index}`}
+                className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+              >
+                {method} (Google)
+              </span>
+            ))
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement manuel */}
+          {data.hybridDetailedPayments ? (
+            Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
+              enabled ? (
+                <span
+                  key={`manual-${index}`}
+                  className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+                >
+                  {method} (Manuel)
+                </span>
+              ) : null
+            ))
+          ) : null}
+          
+          {/* Message si aucun moyen de paiement */}
+          {(!data.paymentMethods || data.paymentMethods.length === 0) && 
+           (!data.smartEnrichmentData?.paymentMethodsArray || data.smartEnrichmentData.paymentMethodsArray.length === 0) &&
+           (!data.hybridDetailedPayments) && (
             <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
           )}
         </div>
@@ -341,13 +376,25 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
 
       {/* Parking */}
       <ParkingInfo 
-        parkingOptions={data.parkingOptions || []} 
+        parkingOptions={[
+          ...(data.parkingOptions || []),
+          ...(data.smartEnrichmentData?.servicesArray?.filter((service: string) => 
+            service.toLowerCase().includes('parking')
+          ) || [])
+        ]} 
         className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
       />
 
       {/* Santé et sécurité */}
       <HealthInfo 
-        healthOptions={data.healthOptions || []} 
+        healthOptions={[
+          ...(data.healthOptions || []),
+          ...(data.smartEnrichmentData?.servicesArray?.filter((service: string) => 
+            service.toLowerCase().includes('santé') || 
+            service.toLowerCase().includes('sécurité') ||
+            service.toLowerCase().includes('premiers secours')
+          ) || [])
+        ]} 
         className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
       />
 

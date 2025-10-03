@@ -25,6 +25,17 @@ interface SummaryStepProps {
     tiktok?: string;
     accountPhone: string;
     accountEmail: string;
+    // Données d'enrichissement
+    theForkLink?: string;
+    uberEatsLink?: string;
+    informationsPratiques?: string;
+    envieTags?: string[];
+    // Données d'enrichissement manuel
+    hybridAccessibilityDetails?: string;
+    hybridDetailedServices?: string;
+    hybridClienteleInfo?: string;
+    hybridDetailedPayments?: string;
+    hybridChildrenServices?: string;
   };
   isEditMode: boolean;
   onEdit: (step: FormStep) => void;
@@ -58,6 +69,17 @@ export default function SummaryStepWrapper({
           // Ajout des contacts professionnels pour le résumé
           professionalPhone: formData.accountPhone,
           professionalEmail: formData.accountEmail,
+          // Données d'enrichissement
+          theForkLink: formData.theForkLink,
+          uberEatsLink: formData.uberEatsLink,
+          informationsPratiques: formData.informationsPratiques,
+          envieTags: formData.envieTags,
+          // Données d'enrichissement manuel
+          hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
+          hybridDetailedServices: formData.hybridDetailedServices,
+          hybridClienteleInfo: formData.hybridClienteleInfo,
+          hybridDetailedPayments: formData.hybridDetailedPayments,
+          hybridChildrenServices: formData.hybridChildrenServices
         }}
         onEdit={(step) => {
           onEdit(step as FormStep);
