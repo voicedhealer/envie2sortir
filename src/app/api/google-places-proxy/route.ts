@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
             console.log('✅ Données détaillées récupérées');
             console.log('🕐 Opening hours dans détails:', JSON.stringify(detailsData.result?.opening_hours, null, 2));
             console.log('♿ Accessibility dans détails:', detailsData.result?.wheelchair_accessible_entrance);
+            console.log('💬 Reviews dans détails:', detailsData.result?.reviews?.length || 0, 'avis trouvés');
+            console.log('💬 Premier avis:', detailsData.result?.reviews?.[0]?.text?.substring(0, 100) || 'Aucun avis');
             return NextResponse.json(detailsData);
           } else {
             console.error('❌ Erreur Place Details:', detailsData.status, detailsData.error_message);
