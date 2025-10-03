@@ -99,7 +99,8 @@ describe('SmartEnrichmentServiceV2', () => {
       const paymentSuggestions = suggestions.recommended.filter(s => s.category === 'payments');
       expect(paymentSuggestions.some(s => s.value.includes('Carte bancaire'))).toBe(true);
       expect(paymentSuggestions.some(s => s.value.includes('Espèces'))).toBe(true);
-      expect(paymentSuggestions.some(s => s.value.includes('Tickets restaurant'))).toBe(true);
+      // Tickets restaurant n'est plus obligatoire pour tous les établissements
+      expect(paymentSuggestions.some(s => s.value.includes('Tickets restaurant'))).toBe(false);
       
       const accessibilitySuggestions = suggestions.recommended.filter(s => s.category === 'accessibility');
       expect(accessibilitySuggestions.some(s => s.value.includes('Accessible PMR'))).toBe(true);

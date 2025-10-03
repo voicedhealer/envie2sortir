@@ -49,8 +49,7 @@ export class SmartEnrichmentServiceV2 {
   private mandatoryAmenities = {
     payments: [
       { value: 'Carte bancaire', confidence: 0.95 },
-      { value: 'Espèces', confidence: 0.9 },
-      { value: 'Tickets restaurant', confidence: 0.8 }
+      { value: 'Espèces', confidence: 0.9 }
     ],
     accessibility: [
       { value: 'Accessible PMR', confidence: 0.7 },
@@ -208,8 +207,17 @@ export class SmartEnrichmentServiceV2 {
       return true;
     }
     
-    // Vérifier dans les moyens de paiement
-    if (amenity.category === 'payments' && googlePayments.some(payment => payment.toLowerCase().includes(value) || value.includes(payment.toLowerCase()))) {
+    // Vérifier dans les moyens de paiement avec correspondance exacte
+    if (amenity.category === 'payments' && googlePayments.some(payment => {
+      const paymentLower = payment.toLowerCase();
+      return paymentLower === value || 
+             paymentLower.includes(value) || 
+             value.includes(paymentLower) ||
+             // Correspondances spécifiques
+             (value === 'carte bancaire' && (paymentLower.includes('carte') && paymentLower.includes('bancaire'))) ||
+             (value === 'espèces' && (paymentLower.includes('espèces') || paymentLower.includes('liquide'))) ||
+             (value === 'tickets restaurant' && paymentLower.includes('tickets'));
+    })) {
       return true;
     }
     
@@ -299,7 +307,7 @@ export class SmartEnrichmentServiceV2 {
     const googlePayments = this.extractGooglePayments(googleData);
     const googleAccessibility = this.extractGoogleAccessibility(googleData);
 
-    // 1. Ajouter les commodités obligatoires
+    // 1. Ajouter les commodités obligatoires (toujours les mêmes)
     Object.entries(this.mandatoryAmenities).forEach(([category, amenities]) => {
       amenities.forEach(amenity => {
         const priority: EnrichmentPriority = {
@@ -317,6 +325,29 @@ export class SmartEnrichmentServiceV2 {
         }
       });
     });
+
+    // 1.5. Ajouter les commodités obligatoires spécifiques à l'activité
+    if (detectedActivity === 'restaurant' || detectedActivity === 'cafe') {
+      const restaurantPayments = [
+        { value: 'Tickets restaurant', confidence: 0.8 }
+      ];
+      
+      restaurantPayments.forEach(amenity => {
+        const priority: EnrichmentPriority = {
+          source: 'suggested',
+          confidence: amenity.confidence,
+          category: 'payments',
+          value: amenity.value,
+          reason: 'Commodité obligatoire pour la restauration'
+        };
+
+        if (this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+          suggestions.alreadyFound.push(priority);
+        } else {
+          suggestions.recommended.push(priority);
+        }
+      });
+    }
 
     // 2. Ajouter les commodités spécifiques à l'activité
     const activityAmenities = this.activitySpecificAmenities[detectedActivity as keyof typeof this.activitySpecificAmenities];
