@@ -88,86 +88,37 @@ export default function SmartEnrichmentStepV2({
         return;
       }
 
-      // Simulation de l'enrichissement (remplacer par l'appel API réel)
-      const mockData: EnrichmentData = {
-        name: 'DreamAway Dijon - Réalité Virtuelle - VR - Escape Games VR',
-        establishmentType: 'other',
-        priceLevel: 2,
-        rating: 5.0,
-        website: 'https://dreamaway-dijon.com',
-        phone: '03 80 12 34 56',
-        address: '123 Rue de la VR, Dijon',
-        latitude: 47.3220,
-        longitude: 5.0415,
-        description: 'Centre de réalité virtuelle avec escape games et expériences immersives',
-        openingHours: ['Lundi: 14:00-22:00', 'Mardi: 14:00-22:00'],
-        hours: {},
-        practicalInfo: ['Équipements VR dernier cri', 'Sessions privées', 'WiFi gratuit'],
-        envieTags: ['vr', 'escape game', 'immersion'],
-        specialties: ['Réalité Virtuelle', 'Escape Games', 'Technologie'],
-        atmosphere: ['Moderne', 'Technologique', 'Innovant'],
-        servicesArray: ['Équipements VR', 'Sessions privées', 'WiFi gratuit', 'Parking'],
-        ambianceArray: ['Moderne', 'Technologique'],
-        activities: ['Réalité Virtuelle', 'Escape Games', 'Laser Game'],
-        paymentMethodsArray: ['Carte bancaire', 'Espèces', 'Tickets restaurant'],
-        informationsPratiques: ['Équipements VR', 'Sessions privées'],
-        googlePlaceId: 'ChIJVR123456',
-        googleBusinessUrl: googleBusinessUrl,
-        googleRating: 5.0,
-        googleReviewCount: 89,
-        theForkLink: theForkUrl || undefined,
-        uberEatsLink: uberEatsUrl || undefined,
-        accessibilityInfo: ['Accessible PMR', 'Toilettes handicapées'],
-        servicesAvailableInfo: ['Équipements VR', 'Sessions privées'],
-        pointsForts: ['Technologie VR', 'Équipements dernier cri'],
-        populairePour: ['Familles', 'Groupes', 'Entreprises'],
-        offres: ['Sessions privées', 'Événements d\'entreprise'],
-        servicesRestauration: [],
-        servicesGeneraux: ['Équipements VR', 'WiFi gratuit'],
-        paymentMethodsInfo: ['Carte bancaire', 'Espèces'],
-        accessibilityDetails: {
-          'Accessible PMR': true,
-          'Toilettes handicapées': true
-        },
-        detailedServices: {
-          'Équipements VR': 'Casques VR dernier cri',
-          'Sessions privées': 'Réservations obligatoires'
-        },
-        clienteleInfo: {
-          'Familles': true,
-          'Groupes': true,
-          'Entreprises': true
-        },
-        detailedPayments: {
-          'Carte bancaire': true,
-          'Espèces': true,
-          'Tickets restaurant': true
-        },
-        childrenServices: {
-          'Sessions enfants': true,
-          'Accompagnement parental': true
-        }
+      // Appel réel à l'API Google
+      console.log('🚀 Lancement de l\'enrichissement Google avec:', googleBusinessUrl);
+      const enrichmentService = new enrichmentSystem();
+      const googleData = await enrichmentService.triggerGoogleEnrichment(googleBusinessUrl);
+      
+      // Ajouter les URLs optionnelles
+      const finalData: EnrichmentData = {
+        ...googleData,
+        theForkLink: theForkUrl.trim() || googleData.theForkLink,
+        uberEatsLink: uberEatsUrl.trim() || googleData.uberEatsLink
       };
 
-      setEnrichmentData(mockData);
+      setEnrichmentData(finalData);
       
       // Générer les suggestions intelligentes avec détection automatique du type
-      const smartSuggestions = smartEnrichmentServiceV2.analyzeEnrichmentGaps(mockData);
+      const smartSuggestions = smartEnrichmentServiceV2.analyzeEnrichmentGaps(finalData);
       setSuggestions(smartSuggestions);
       
       // Créer les données intelligentes avec détection automatique du type
-      const smartEnrichmentData = smartEnrichmentServiceV2.combineEnrichmentData(mockData, {});
+      const smartEnrichmentData = smartEnrichmentServiceV2.combineEnrichmentData(finalData, {});
       setSmartData(smartEnrichmentData);
       
       // Notifier le composant parent des nouvelles données
       if (onEnrichmentDataChange) {
-        onEnrichmentDataChange(mockData);
+        onEnrichmentDataChange(finalData);
       }
 
       setShowSuggestions(true);
     } catch (err) {
-      setError('Erreur lors de l\'enrichissement. Veuillez réessayer.');
-      console.error('Enrichment error:', err);
+      console.error('Erreur enrichissement:', err);
+      setError(`Erreur lors de l'enrichissement: ${err instanceof Error ? err.message : 'Erreur inconnue'}`);
     } finally {
       setIsLoading(false);
     }

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
 import EnrichmentSections from '@/components/EnrichmentSections';
 import HybridEnrichmentForm, { HybridEnrichmentData } from './HybridEnrichmentForm';
-import SmartEnrichmentStep from './SmartEnrichmentStep';
+import SmartEnrichmentStepV2 from './SmartEnrichmentStepV2';
 
 interface EnrichmentStepProps {
   onEnrichmentComplete: (data: EnrichmentData) => void;
@@ -115,7 +115,7 @@ export default function EnrichmentStep({
     }
 
     // Vérifier que c'est bien une URL Uber Eats
-    const isUberEatsUrl = url.includes('ubereats.com') || url.includes('uber.com/fr/store');
+    const isUberEatsUrl = url.includes('ubereats.com');
     
     if (!isUberEatsUrl) {
       setUberEatsValid(false);
@@ -130,13 +130,12 @@ export default function EnrichmentStep({
     }
   };
 
-
   if (!isVisible) return null;
 
   // Utiliser l'enrichissement intelligent si activé
   if (useSmartEnrichment) {
     return (
-      <SmartEnrichmentStep
+      <SmartEnrichmentStepV2
         onEnrichmentComplete={onEnrichmentComplete}
         onSkip={onSkip}
         isVisible={isVisible}
@@ -149,34 +148,37 @@ export default function EnrichmentStep({
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <p className="text-gray-600 mt-2">
-          Gagnez du temps ! Ajoutez votre lien Google MAPS de votre établissement, pour pré-remplir automatiquement vos informations et optimiser votre visibilité.
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Enrichissement des données
+        </h2>
+        <p className="text-gray-600">
+          Ajoutez votre lien Google My Business pour récupérer automatiquement vos informations.
         </p>
       </div>
 
+      {/* Formulaire de saisie */}
       <div className="bg-gray-50 p-6 rounded-lg">
         <div className="space-y-4">
           <div>
-            <label htmlFor="google_business_url" className="block text-sm font-medium mb-2">
-              🔗 Lien Google Maps de votre établissement
-        </label>
-        <input
-          type="url"
-          id="google_business_url"
-          value={googleUrl}
+            <label className="block text-sm font-medium mb-2" htmlFor="google_url">
+              🔗 Lien Google My Business
+            </label>
+            <input
+              type="url"
+              id="google_url"
+              value={googleUrl}
               onChange={(e) => setGoogleUrl(e.target.value)}
-          placeholder="https://goo.gl/maps/votre-etablissement"
+              placeholder="https://goo.gl/maps/votre-etablissement"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-        />
+            />
             <p className="text-xs text-gray-500 mt-1">
-              Copiez-collez l'URL de votre établissement depuis Google Maps ou Google My Business
-        </p>
-      </div>
+              Copiez-collez l'URL de votre établissement depuis Google My Business
+            </p>
+          </div>
 
-          {/* Champ TheFork */}
           <div>
-            <label htmlFor="thefork_url" className="block text-sm font-medium mb-2">
-              🍴 Lien TheFork (recommandé)
+            <label className="block text-sm font-medium mb-2" htmlFor="thefork_url">
+              🍴 Lien TheFork (optionnel)
             </label>
             <input
               type="url"
@@ -187,34 +189,25 @@ export default function EnrichmentStep({
                 validateTheForkUrl(e.target.value);
               }}
               placeholder="https://www.thefork.fr/restaurant/votre-restaurant"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                theForkValid === false ? 'border-red-500' : 
-                theForkValid === true ? 'border-green-500' : 'border-gray-300'
-              }`}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
             />
             <div className="flex items-center mt-1">
               {theForkValid === true && (
-                <span className="text-xs text-green-600 flex items-center">
+                <span className="text-green-600 text-xs flex items-center">
                   ✅ URL TheFork valide
                 </span>
               )}
               {theForkValid === false && (
-                <span className="text-xs text-red-600 flex items-center">
-                  ❌ URL TheFork invalide (doit contenir thefork.com, thefork.fr ou lafourchette.com)
-                </span>
-              )}
-              {theForkValid === null && theForkUrl.trim() === '' && (
-                <span className="text-xs text-green-600">
-                  Permet aux clients de réserver directement une table
+                <span className="text-red-600 text-xs flex items-center">
+                  ❌ URL TheFork invalide
                 </span>
               )}
             </div>
           </div>
 
-          {/* Champ Uber Eats */}
           <div>
-            <label htmlFor="ubereats_url" className="block text-sm font-medium mb-2">
-              🚗 Lien Uber Eats (recommandé)
+            <label className="block text-sm font-medium mb-2" htmlFor="ubereats_url">
+              🚗 Lien Uber Eats (optionnel)
             </label>
             <input
               type="url"
@@ -225,126 +218,83 @@ export default function EnrichmentStep({
                 validateUberEatsUrl(e.target.value);
               }}
               placeholder="https://www.ubereats.com/fr/store/votre-restaurant"
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                uberEatsValid === false ? 'border-red-500' : 
-                uberEatsValid === true ? 'border-green-500' : 'border-gray-300'
-              }`}
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
             />
             <div className="flex items-center mt-1">
               {uberEatsValid === true && (
-                <span className="text-xs text-green-600 flex items-center">
+                <span className="text-green-600 text-xs flex items-center">
                   ✅ URL Uber Eats valide
                 </span>
               )}
               {uberEatsValid === false && (
-                <span className="text-xs text-red-600 flex items-center">
-                  ❌ URL Uber Eats invalide (doit contenir ubereats.com ou uber.com/fr/store)
-                </span>
-              )}
-              {uberEatsValid === null && uberEatsUrl.trim() === '' && (
-                <span className="text-xs text-blue-600">
-                  Permet aux clients de commander en livraison
+                <span className="text-red-600 text-xs flex items-center">
+                  ❌ URL Uber Eats invalide
                 </span>
               )}
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
           <button
-            type="button"
             onClick={handleGoogleEnrichment}
-            disabled={isLoading || !googleUrl.trim()}
+            disabled={!googleUrl.trim() || isLoading}
             className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
             {isLoading ? (
               <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                Récupération des informations...
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Enrichissement en cours...
               </>
             ) : (
-              '🚀 Lancer l\'enrichissement automatique'
+              '🚀 Lancer l\'enrichissement'
             )}
           </button>
         </div>
+      </div>
 
-        {/* État de chargement */}
-        {isLoading && (
-          <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <div className="flex items-center">
-              <div className="animate-spin w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
-              <span className="text-blue-800">Récupération des informations...</span>
+      {/* Affichage des données enrichies */}
+      {enrichmentData && (
+        <div className="space-y-6">
+          {/* Données récupérées automatiquement */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+              <span className="text-xl mr-2">✅</span>
+              Informations récupérées automatiquement
+            </h3>
+            <EnrichmentSections data={enrichmentData} />
           </div>
-        </div>
-      )}
 
-      {/* État d'erreur */}
-      {error && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <div className="flex items-center">
-              <span className="text-red-800">❌ {error}</span>
-          </div>
-          <button
-              type="button"
-            onClick={() => setError(null)}
-              className="mt-2 text-sm text-red-600 hover:text-red-800"
-          >
-            Fermer
-          </button>
-        </div>
-      )}
-
-        {/* État de succès */}
-        {enrichmentData && (
-          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-green-800">
-                ✅ Informations récupérées avec succès !
-              </h3>
-              <span className="text-sm text-green-600">
-                {enrichmentData.name}
-              </span>
-            </div>
+          {/* Formulaire d'enrichissement manuel */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4">
+              Formulaire d'enrichissement manuel pour les informations complémentaires
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Cochez les informations les plus pertinentes pour votre établissement. Ces détails aideront les clients à mieux vous trouver et vous choisir.
+            </p>
             
-            {/* Informations de base compactes */}
-            <div className="bg-white p-3 rounded border mb-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                <p><strong>Type:</strong> {enrichmentData.establishmentType}</p>
-                <p><strong>Prix:</strong> {'€'.repeat(enrichmentData.priceLevel)}</p>
-                <p><strong>Note:</strong> {enrichmentData.googleRating}/5</p>
-                <p><strong>Tags:</strong> {enrichmentData.envieTags.length}</p>
-              </div>
-            </div>
-
-            {/* Section collapsible pour les détails - Ouverte par défaut après enrichissement */}
-            <details className="bg-white rounded border" open={true}>
-              <summary className="p-3 cursor-pointer hover:bg-gray-50 font-medium text-gray-900">
-                📋 Voir toutes les informations détaillées ({enrichmentData.envieTags.length} commodités générés)
-              </summary>
-              <div className="p-4 border-t">
-                <EnrichmentSections 
-                  enrichmentData={enrichmentData} 
-                  readOnly={true} 
-                />
-              </div>
-            </details>
-
-            {/* Formulaire d'enrichissement manuel pour les informations complémentaires */}
-            <div className="mt-6">
-              <HybridEnrichmentForm
-                initialData={hybridData}
-                onChange={setHybridData}
-                title="Cochez les informations les plus pertinentes pour votre établissement"
-              />
-            </div>
-
-            {/* Message informatif */}
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800 mb-3">
-                💡 <strong>Les informations ont été récupérées !</strong> Vérifiez les détails ci-dessus, puis cliquez sur "Continuer" pour les intégrer.
-              </p>
-              
-              {/* Bouton pour continuer */}
+            <HybridEnrichmentForm
+              data={enrichmentData}
+              onDataChange={setHybridData}
+              title="Cochez les informations les plus pertinentes pour votre établissement"
+            />
+            
+            <div className="mt-6 flex justify-end space-x-4">
               <button
-                type="button"
+                onClick={onSkip}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Passer cette étape
+              </button>
+              <button
                 onClick={() => {
                   if (enrichmentData) {
                     // Combiner les données d'enrichissement automatique et les données manuelles
@@ -367,9 +317,8 @@ export default function EnrichmentStep({
               </button>
             </div>
           </div>
-        )}
-
-      </div>
+        </div>
+      )}
 
     </div>
   );
