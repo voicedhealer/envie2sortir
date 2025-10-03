@@ -202,30 +202,41 @@ export class SmartEnrichmentServiceV2 {
   private isAlreadyFound(amenity: any, googleServices: string[], googlePayments: string[], googleAccessibility: string[]): boolean {
     const value = amenity.value.toLowerCase();
     
+    console.log('🔍 Vérification doublon pour:', value, 'catégorie:', amenity.category);
+    console.log('🔍 Google payments:', googlePayments);
+    
     // Vérifier dans les services
     if (googleServices.some(service => service.toLowerCase().includes(value) || value.includes(service.toLowerCase()))) {
+      console.log('✅ Trouvé dans les services');
       return true;
     }
     
     // Vérifier dans les moyens de paiement avec correspondance exacte
     if (amenity.category === 'payments' && googlePayments.some(payment => {
       const paymentLower = payment.toLowerCase();
-      return paymentLower === value || 
+      const isMatch = paymentLower === value || 
              paymentLower.includes(value) || 
              value.includes(paymentLower) ||
              // Correspondances spécifiques
              (value === 'carte bancaire' && (paymentLower.includes('carte') && paymentLower.includes('bancaire'))) ||
              (value === 'espèces' && (paymentLower.includes('espèces') || paymentLower.includes('liquide'))) ||
              (value === 'tickets restaurant' && paymentLower.includes('tickets'));
+      
+      if (isMatch) {
+        console.log('✅ Trouvé dans les paiements:', payment);
+      }
+      return isMatch;
     })) {
       return true;
     }
     
     // Vérifier dans l'accessibilité
     if (amenity.category === 'accessibility' && googleAccessibility.some(access => access.toLowerCase().includes(value) || value.includes(access.toLowerCase()))) {
+      console.log('✅ Trouvé dans l\'accessibilité');
       return true;
     }
     
+    console.log('❌ Non trouvé');
     return false;
   }
 
@@ -307,7 +318,7 @@ export class SmartEnrichmentServiceV2 {
     const googlePayments = this.extractGooglePayments(googleData);
     const googleAccessibility = this.extractGoogleAccessibility(googleData);
 
-    // 1. Ajouter les commodités obligatoires (toujours les mêmes)
+    // 1. Ajouter les commodités obligatoires (seulement si pas déjà présentes)
     Object.entries(this.mandatoryAmenities).forEach(([category, amenities]) => {
       amenities.forEach(amenity => {
         const priority: EnrichmentPriority = {
@@ -319,8 +330,10 @@ export class SmartEnrichmentServiceV2 {
         };
 
         if (this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+          // Marquer comme déjà trouvé mais ne pas l'afficher dans les suggestions
           suggestions.alreadyFound.push(priority);
         } else {
+          // Seulement suggérer si pas déjà présent
           suggestions.recommended.push(priority);
         }
       });
