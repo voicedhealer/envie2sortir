@@ -97,6 +97,11 @@ export async function POST(request: NextRequest) {
       instagram: formData.get('instagram') as string || '',
       facebook: formData.get('facebook') as string || '',
       tiktok: formData.get('tiktok') as string || '',
+      youtube: formData.get('youtube') as string || '',
+      phone: formData.get('phone') as string || '',
+      whatsappPhone: formData.get('whatsappPhone') as string || '',
+      messengerUrl: formData.get('messengerUrl') as string || '',
+      email: formData.get('email') as string || '',
       priceMin: parseFloat(formData.get('priceMin') as string) || 0,
       priceMax: parseFloat(formData.get('priceMax') as string) || 0,
       informationsPratiques: (() => {

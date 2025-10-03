@@ -284,6 +284,9 @@ export async function PUT(
     if (body.instagram !== undefined) updateData.instagram = body.instagram;
     if (body.facebook !== undefined) updateData.facebook = body.facebook;
     if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
+    if (body.youtube !== undefined) updateData.youtube = body.youtube;
+    if (body.whatsappPhone !== undefined) updateData.whatsappPhone = body.whatsappPhone;
+    if (body.messengerUrl !== undefined) updateData.messengerUrl = body.messengerUrl;
     if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
     if (body.status !== undefined) updateData.status = body.status;
     if (body.priceMin !== undefined) updateData.priceMin = body.priceMin;

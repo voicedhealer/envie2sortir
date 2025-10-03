@@ -31,6 +31,8 @@ export default async function EstablishmentPage({
       latitude: true,
       longitude: true,
       phone: true,
+      whatsappPhone: true,
+      messengerUrl: true,
       email: true,
       website: true,
       instagram: true,
@@ -146,6 +148,10 @@ export default async function EstablishmentPage({
 
   // Debug: Afficher les données récupérées
   console.log('🔍 Debug page publique pour:', establishment.name);
+  console.log('📞 phone:', establishment.phone);
+  console.log('📱 whatsappPhone:', establishment.whatsappPhone);
+  console.log('💬 messengerUrl:', establishment.messengerUrl);
+  console.log('📧 email:', establishment.email);
   console.log('📊 accessibilityDetails:', establishment.accessibilityDetails);
   console.log('📊 detailedPayments:', establishment.detailedPayments);
   console.log('📊 detailedServices:', establishment.detailedServices);
