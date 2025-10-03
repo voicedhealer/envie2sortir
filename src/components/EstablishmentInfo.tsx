@@ -205,6 +205,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   
   // Debug: Afficher les données récupérées
   console.log('🔍 Debug EstablishmentInfo pour:', establishment.name);
+  console.log('🔍 EstablishmentInfo RENDU - Composant chargé');
   console.log('📊 accessibilityDetails brut:', establishment.accessibilityDetails);
   console.log('📊 detailedPayments brut:', establishment.detailedPayments);
   console.log('📊 detailedServices brut:', establishment.detailedServices);

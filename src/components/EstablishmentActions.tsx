@@ -25,6 +25,7 @@ interface EstablishmentActionsProps {
 }
 
 export default function EstablishmentActions({ establishment }: EstablishmentActionsProps) {
+  console.log('🔍 EstablishmentActions rendu pour:', establishment.name);
   const { data: session } = useSession();
   const { incrementClick } = useEstablishmentStats();
   const [isLiked, setIsLiked] = useState(false);
