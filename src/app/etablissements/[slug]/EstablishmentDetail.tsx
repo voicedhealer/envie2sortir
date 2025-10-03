@@ -15,6 +15,22 @@ import EventsSection from '@/components/EventsSection';
 import UpcomingEventsSection from '@/components/UpcomingEventsSection';
 import MapComponent from '@/app/carte/map-component';
 
+// Fonction pour parser les données hybrides JSON
+const parseHybridData = (jsonField: any): any => {
+  if (!jsonField) return null;
+  
+  if (typeof jsonField === 'string') {
+    try {
+      return JSON.parse(jsonField);
+    } catch (e) {
+      console.error('Erreur parsing JSON:', e);
+      return null;
+    }
+  }
+  
+  return jsonField;
+};
+
 // Types pour les données
 interface HoursData {
   [key: string]: {
@@ -111,6 +127,28 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     tiktok: establishment.tiktok || '',
     youtube: establishment.youtube || '',
   });
+
+  // Extraire les données d'enrichissement pour les passer à EstablishmentSections
+  const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
+  const enrichmentData = parseHybridData(establishment.enrichmentData);
+  
+  // Combiner les options de parking
+  const parkingOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('parking')
+    ) || []),
+    ...(enrichmentData?.parking || [])
+  ];
+  
+  // Combiner les services de santé
+  const healthOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('santé') || 
+      service.toLowerCase().includes('sécurité') ||
+      service.toLowerCase().includes('premiers secours')
+    ) || []),
+    ...(enrichmentData?.health || [])
+  ];
 
   // Cache pour le token CSRF
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
@@ -326,7 +364,11 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
             <EstablishmentActions establishment={establishment} />
 
             {/* Sections d'informations */}
-            <EstablishmentSections establishment={establishment} />
+            <EstablishmentSections 
+              establishment={establishment} 
+              parkingOptions={parkingOptions}
+              healthOptions={healthOptions}
+            />
 
             {/* Section événements */}
             <EstablishmentEvents 

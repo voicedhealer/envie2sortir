@@ -29,9 +29,12 @@ interface EstablishmentSectionsProps {
       poids: number;
     }>;
   };
+  // Données d'enrichissement
+  parkingOptions?: string[];
+  healthOptions?: string[];
 }
 
-export default function EstablishmentSections({ establishment }: EstablishmentSectionsProps) {
+export default function EstablishmentSections({ establishment, parkingOptions = [], healthOptions = [] }: EstablishmentSectionsProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('description');
 
   const toggleSection = (section: string) => {
@@ -450,7 +453,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       )}
 
       {/* Commodités */}
-      {categorizedData.commodites.length > 0 && (
+      {(categorizedData.commodites.length > 0 || parkingOptions.length > 0 || healthOptions.length > 0) && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             onClick={() => toggleSection('commodites')}
@@ -469,15 +472,114 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
           
           {expandedSection === 'commodites' && (
             <div className="px-6 pb-4 border-t border-gray-100">
-              <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categorizedData.commodites.map((commodite: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-700">{commodite}</span>
+              <div className="pt-4 space-y-6">
+                {/* Commodités générales */}
+                {categorizedData.commodites.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3">Équipements et services</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {categorizedData.commodites.map((commodite: string, index: number) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-gray-700">{commodite}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Stationnement */}
+                {parkingOptions.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => toggleSection('parking')}
+                      className="w-full flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-2 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">🅿️</span>
+                        <h4 className="text-sm font-medium text-gray-700">Stationnement</h4>
+                      </div>
+                      {expandedSection === 'parking' ? (
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </button>
+                    
+                    {expandedSection === 'parking' && (
+                      <div className="mt-2 pl-6">
+                        <div className="flex flex-wrap gap-2">
+                          {parkingOptions.map((option, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                            >
+                              {option}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Santé et sécurité */}
+                {healthOptions.length > 0 && (
+                  <div>
+                    <button
+                      onClick={() => toggleSection('health')}
+                      className="w-full flex items-center justify-between py-2 hover:bg-gray-50 rounded-lg px-2 transition-colors"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">🏥</span>
+                        <h4 className="text-sm font-medium text-gray-700">Santé et sécurité</h4>
+                      </div>
+                      {expandedSection === 'health' ? (
+                        <ChevronUp className="w-4 h-4 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      )}
+                    </button>
+                    
+                    {expandedSection === 'health' && (
+                      <div className="mt-2 pl-6 space-y-3">
+                        {/* Risques */}
+                        {healthOptions.filter(option => option.includes('⚠️')).length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-gray-600 mb-2">Informations importantes :</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {healthOptions.filter(option => option.includes('⚠️')).map((risk, index) => (
+                                <span
+                                  key={index}
+                                  className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-medium"
+                                >
+                                  {risk}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Solutions */}
+                        {healthOptions.filter(option => option.includes('✅')).length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-gray-600 mb-2">Mesures de sécurité :</h5>
+                            <div className="flex flex-wrap gap-2">
+                              {healthOptions.filter(option => option.includes('✅')).map((solution, index) => (
+                                <span
+                                  key={index}
+                                  className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                                >
+                                  {solution}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}

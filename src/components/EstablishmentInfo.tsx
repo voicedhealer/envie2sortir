@@ -3,8 +3,6 @@
 import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
 import { useState } from 'react';
-import ParkingInfo from './ParkingInfo';
-import HealthInfo from './HealthInfo';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
 const cleanUrlForDisplay = (url: string): string => {
@@ -613,17 +611,6 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         </div>
       )}
 
-      {/* Parking */}
-      <ParkingInfo 
-        parkingOptions={parkingOptions} 
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-      />
-
-      {/* Santé et sécurité */}
-      <HealthInfo 
-        healthOptions={healthOptions} 
-        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-      />
 
       {/* Informations pratiques */}
       {informationsPratiques.length > 0 && (
