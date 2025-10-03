@@ -3,6 +3,8 @@
 import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
 import { useState } from 'react';
+import ParkingInfo from './ParkingInfo';
+import HealthInfo from './HealthInfo';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
 const cleanUrlForDisplay = (url: string): string => {
@@ -214,6 +216,41 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const paymentMethods = getPaymentMethods(hybridPayments);
   const detailedServices = getDetailedServices(hybridServices);
   
+  // Extraire les données d'enrichissement intelligent
+  const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
+  const enrichmentData = parseHybridData(establishment.enrichmentData);
+  
+  // Combiner les moyens de paiement de toutes les sources
+  const allPaymentMethods = [
+    ...paymentMethods,
+    ...(smartEnrichmentData?.paymentMethodsArray || []),
+    ...(enrichmentData?.paymentMethodsArray || [])
+  ];
+  
+  // Combiner les services de parking
+  const parkingOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('parking')
+    ) || []),
+    ...(enrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('parking')
+    ) || [])
+  ];
+  
+  // Combiner les services de santé
+  const healthOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('santé') || 
+      service.toLowerCase().includes('sécurité') ||
+      service.toLowerCase().includes('premiers secours')
+    ) || []),
+    ...(enrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('santé') || 
+      service.toLowerCase().includes('sécurité') ||
+      service.toLowerCase().includes('premiers secours')
+    ) || [])
+  ];
+  
   // Fallback: Utiliser les données classiques si les hybrides sont vides
   const fallbackPaymentMethods = establishment.paymentMethods && typeof establishment.paymentMethods === 'object' 
     ? Object.keys(establishment.paymentMethods).filter(key => 
@@ -235,7 +272,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     : [];
   
   // Utiliser les données hybrides si disponibles, sinon les données classiques
-  const finalPaymentMethods = paymentMethods.length > 0 ? paymentMethods : fallbackPaymentMethods;
+  const finalPaymentMethods = allPaymentMethods.length > 0 ? allPaymentMethods : fallbackPaymentMethods;
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
   
   // Debug: Afficher les données parsées
@@ -576,6 +613,18 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           </div>
         </div>
       )}
+
+      {/* Parking */}
+      <ParkingInfo 
+        parkingOptions={parkingOptions} 
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+      />
+
+      {/* Santé et sécurité */}
+      <HealthInfo 
+        healthOptions={healthOptions} 
+        className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+      />
 
       {/* Informations pratiques */}
       {informationsPratiques.length > 0 && (
