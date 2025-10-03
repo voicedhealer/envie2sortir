@@ -2,6 +2,8 @@
 
 import React from 'react';
 import SmartSummaryStep from './SmartSummaryStep';
+import ParkingInfo from '../ParkingInfo';
+import HealthInfo from '../HealthInfo';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
@@ -29,6 +31,12 @@ export interface EstablishmentFormData {
   
   // Moyens de paiement
   paymentMethods: string[];
+  
+  // Parking
+  parkingOptions?: string[];
+  
+  // Santé et sécurité
+  healthOptions?: string[];
   
   // Tags de recherche
   tags: string[];
@@ -330,6 +338,18 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
           )}
         </div>
       </div>
+
+      {/* Parking */}
+      <ParkingInfo 
+        parkingOptions={data.parkingOptions || []} 
+        className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
+      />
+
+      {/* Santé et sécurité */}
+      <HealthInfo 
+        healthOptions={data.healthOptions || []} 
+        className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
+      />
 
       {/* Tags de recherche */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
