@@ -62,16 +62,46 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
     if (typeof jsonField === 'string') {
       try {
         return JSON.parse(jsonField);
-      } catch {
+      } catch (e) {
+        console.error('Erreur parsing JSON:', e);
         return null;
       }
     }
     
-    if (typeof jsonField === 'object') {
-      return jsonField;
+    return jsonField;
+  };
+
+  // Fonction générique pour parser les données hybrides JSON (pour les champs Google Places)
+  const parseGooglePlacesField = (field: any, fieldName: string): string[] => {
+    if (!field) return [];
+    
+    if (Array.isArray(field)) {
+      return field;
     }
     
-    return null;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    
+    if (typeof field === 'object') {
+      // Pour les services Google Places, chercher les clés communes
+      const commonKeys = ['service', 'services', 'amenity', 'amenities', 'feature', 'features'];
+      for (const key of commonKeys) {
+        if (field[key] && Array.isArray(field[key])) {
+          return field[key];
+        }
+      }
+      
+      // Si pas de clé commune, retourner les valeurs de l'objet
+      return Object.values(field).filter(value => typeof value === 'string');
+    }
+    
+    return [];
   };
 
   // Fonction pour extraire les éléments d'accessibilité des données hybrides
@@ -181,6 +211,10 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
   
   // Traiter les informations pratiques Google Places
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
+  
+  // Extraire les données d'enrichissement intelligent
+  const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
+  const enrichmentData = parseHybridData(establishment.enrichmentData);
   
   // Ajouter les données d'enrichissement aux services pour la catégorisation
   const enrichmentServices = [
