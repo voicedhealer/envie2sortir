@@ -6,6 +6,7 @@ import UpcomingEventsSection from './UpcomingEventsSection';
 
 interface EstablishmentSectionsProps {
   establishment: {
+    name?: string;
     slug: string;
     description?: string;
     activities?: any;
@@ -23,6 +24,8 @@ interface EstablishmentSectionsProps {
     clienteleInfo?: any;
     detailedPayments?: any;
     childrenServices?: any;
+    smartEnrichmentData?: any;
+    enrichmentData?: any;
     tags?: Array<{
       tag: string;
       typeTag: string;
@@ -168,41 +171,6 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
   // Utiliser les données hybrides si disponibles, sinon les données classiques
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
 
-  // Fonction robuste pour parser les données Google Places
-  const parseGooglePlacesField = (field: any, fieldName: string) => {
-    if (!field) return [];
-    
-    if (typeof field === 'string') {
-      try {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        console.warn(`⚠️ Erreur parsing ${fieldName}:`, error);
-        console.warn(`⚠️ Valeur reçue:`, field);
-        return [];
-      }
-    }
-    
-    if (Array.isArray(field)) {
-      return field;
-    }
-    
-    // Si c'est un objet, essayer d'extraire les données utiles
-    if (typeof field === 'object') {
-      // Pour les services Google Places, chercher les clés communes
-      const commonKeys = ['service', 'services', 'amenity', 'amenities', 'feature', 'features'];
-      for (const key of commonKeys) {
-        if (field[key] && Array.isArray(field[key])) {
-          return field[key];
-        }
-      }
-      
-      // Si pas de clé commune, retourner les valeurs de l'objet
-      return Object.values(field).filter(value => typeof value === 'string');
-    }
-    
-    return [];
-  };
 
   const activities = parseGooglePlacesField(establishment.activities, 'activities');
   const allServices = parseGooglePlacesField(establishment.services, 'services');
@@ -238,15 +206,13 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
     const categories = {
       // Services de restauration
       servicesRestauration: [] as string[],
-      // Services généraux
-      servicesGeneraux: [] as string[],
       // Ambiance et spécialités
       ambianceSpecialites: [] as string[],
       // Informations pratiques (Planning, Paiements, Enfants, Parking)
       informationsPratiques: [] as string[],
       // Clientèle cible
       clientele: [] as string[],
-      // Commodités et équipements
+      // Commodités et équipements (fusion des anciens services généraux)
       commodites: [] as string[],
       // Activités et événements
       activites: [] as string[]
@@ -262,11 +228,12 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
       
       const serviceLower = service.toLowerCase();
       
-      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      // ✨ Exclure les moyens de paiement et le parking (ils ont leurs propres sections dédiées)
       if (serviceLower.includes('carte') || serviceLower.includes('paiement') || 
           serviceLower.includes('nfc') || serviceLower.includes('titre') ||
           serviceLower.includes('crédit') || serviceLower.includes('débit') ||
-          serviceLower.includes('espèces') || serviceLower.includes('chèque')) {
+          serviceLower.includes('espèces') || serviceLower.includes('chèque') ||
+          serviceLower.includes('parking')) {
         return; // Ne pas ajouter aux commodités
       }
       
@@ -276,14 +243,7 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           serviceLower.includes('service à table') || serviceLower.includes('repas')) {
         categories.servicesRestauration.push(service);
       }
-      // Services généraux
-      else if (serviceLower.includes('toilettes') || serviceLower.includes('wifi') ||
-               serviceLower.includes('climatisation') || serviceLower.includes('chauffage') ||
-               serviceLower.includes('parking') || serviceLower.includes('terrasse')) {
-        categories.servicesGeneraux.push(service);
-      }
-
-      // Commodités
+      // Tout le reste va dans les commodités (fusion des anciens services généraux)
       else {
         categories.commodites.push(service);
       }
@@ -311,11 +271,12 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
       
       const infoLower = info.toLowerCase();
       
-      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      // ✨ Exclure les moyens de paiement et le parking (ils ont leurs propres sections dédiées)
       if (infoLower.includes('carte') || infoLower.includes('paiement') || 
           infoLower.includes('nfc') || infoLower.includes('titre') ||
           infoLower.includes('crédit') || infoLower.includes('débit') ||
-          infoLower.includes('espèces') || infoLower.includes('chèque')) {
+          infoLower.includes('espèces') || infoLower.includes('chèque') ||
+          infoLower.includes('parking')) {
         return; // Ne pas ajouter aux commodités
       }
       
@@ -326,13 +287,7 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           infoLower.includes('handicap')) {
         categories.informationsPratiques.push(info);
       }
-      // Services généraux
-      else if (infoLower.includes('wifi') || infoLower.includes('climatisation') ||
-               infoLower.includes('chauffage') || infoLower.includes('parking')) {
-        categories.servicesGeneraux.push(info);
-      }
-
-      // Commodités
+      // Tout le reste va dans les commodités (fusion des anciens services généraux)
       else {
         categories.commodites.push(info);
       }
@@ -462,40 +417,6 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
         </div>
       )}
 
-      {/* Services généraux */}
-      {categorizedData.servicesGeneraux.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <button
-            onClick={() => toggleSection('services-generaux')}
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Wrench className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Services généraux</h3>
-            </div>
-            {expandedSection === 'services-generaux' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          
-          {expandedSection === 'services-generaux' && (
-            <div className="px-6 pb-4 border-t border-gray-100">
-              <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categorizedData.servicesGeneraux.map((service: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-700">{service}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Ambiance & Spécialités */}
       {categorizedData.ambianceSpecialites.length > 0 && (

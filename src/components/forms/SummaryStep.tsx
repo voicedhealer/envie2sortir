@@ -28,6 +28,7 @@ export interface EstablishmentFormData {
   // Services et ambiance
   services: string[];
   ambiance: string[];
+  informationsPratiques?: string[];
   
   // Moyens de paiement
   paymentMethods: string[];
@@ -60,7 +61,6 @@ export interface EstablishmentFormData {
   // Données d'enrichissement
   theForkLink?: string;
   uberEatsLink?: string;
-  informationsPratiques?: string;
   envieTags?: string[];
   
   // Données d'enrichissement manuel
@@ -373,6 +373,38 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
           )}
         </div>
       </div>
+
+      {/* Informations pratiques */}
+      {data.informationsPratiques && data.informationsPratiques.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">ℹ️</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Informations pratiques
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(4)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.informationsPratiques.map((info, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+              >
+                {info}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Parking */}
       <ParkingInfo 

@@ -4,6 +4,7 @@ interface ServicesStepProps {
   formData: {
     services: string[];
     ambiance: string[];
+    informationsPratiques?: string[];
     hybridAccessibilityDetails?: any;
     hybridDetailedServices?: any;
     hybridClienteleInfo?: any;
@@ -92,8 +93,10 @@ export default function ServicesStep({
       <OrganizedServicesAmbianceManager
         services={formData.services || []}
         ambiance={formData.ambiance || []}
+        informationsPratiques={formData.informationsPratiques || []}
         onServicesChange={(services) => onInputChange('services', services)}
         onAmbianceChange={(ambiance) => onInputChange('ambiance', ambiance)}
+        onInformationsPratiquesChange={(informationsPratiques) => onInputChange('informationsPratiques', informationsPratiques)}
         isEditMode={isEditMode}
       />
     </div>

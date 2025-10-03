@@ -52,7 +52,7 @@ export interface EstablishmentFormData {
   // Données d'enrichissement
   theForkLink?: string;
   uberEatsLink?: string;
-  informationsPratiques?: string;
+  informationsPratiques?: string[];
   envieTags?: string[];
   
   // Données d'enrichissement manuel

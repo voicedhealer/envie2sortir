@@ -129,6 +129,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             formData={{
               services: formData.services,
               ambiance: formData.ambiance,
+              informationsPratiques: formData.informationsPratiques,
               hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,
