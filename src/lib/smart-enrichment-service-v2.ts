@@ -329,7 +329,10 @@ export class SmartEnrichmentServiceV2 {
           reason: 'Commodité obligatoire'
         };
 
-        if (this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+        // Créer un objet amenity avec la catégorie pour isAlreadyFound
+        const amenityWithCategory = { ...amenity, category };
+
+        if (this.isAlreadyFound(amenityWithCategory, googleServices, googlePayments, googleAccessibility)) {
           // Marquer comme déjà trouvé mais ne pas l'afficher dans les suggestions
           suggestions.alreadyFound.push(priority);
         } else {
