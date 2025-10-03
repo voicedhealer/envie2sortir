@@ -4,15 +4,25 @@ import { useState, useEffect } from 'react';
 import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
 import EnrichmentSections from '@/components/EnrichmentSections';
 import HybridEnrichmentForm, { HybridEnrichmentData } from './HybridEnrichmentForm';
+import SmartEnrichmentStep from './SmartEnrichmentStep';
 
 interface EnrichmentStepProps {
   onEnrichmentComplete: (data: EnrichmentData) => void;
   onSkip: () => void;
   isVisible: boolean;
   onEnrichmentDataChange?: (data: EnrichmentData | null) => void;
+  establishmentType?: string;
+  useSmartEnrichment?: boolean;
 }
 
-export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible, onEnrichmentDataChange }: EnrichmentStepProps) {
+export default function EnrichmentStep({ 
+  onEnrichmentComplete, 
+  onSkip, 
+  isVisible, 
+  onEnrichmentDataChange,
+  establishmentType = 'restaurant',
+  useSmartEnrichment = true
+}: EnrichmentStepProps) {
   const [googleUrl, setGoogleUrl] = useState('');
   const [theForkUrl, setTheForkUrl] = useState('');
   const [uberEatsUrl, setUberEatsUrl] = useState('');
@@ -122,6 +132,19 @@ export default function EnrichmentStep({ onEnrichmentComplete, onSkip, isVisible
 
 
   if (!isVisible) return null;
+
+  // Utiliser l'enrichissement intelligent si activé
+  if (useSmartEnrichment) {
+    return (
+      <SmartEnrichmentStep
+        onEnrichmentComplete={onEnrichmentComplete}
+        onSkip={onSkip}
+        isVisible={isVisible}
+        onEnrichmentDataChange={onEnrichmentDataChange}
+        establishmentType={establishmentType}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

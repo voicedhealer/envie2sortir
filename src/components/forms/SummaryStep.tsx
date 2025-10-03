@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import SmartSummaryStep from './SmartSummaryStep';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
@@ -66,6 +67,7 @@ export interface EstablishmentFormData {
 interface SummaryStepProps {
   data: EstablishmentFormData;
   onEdit: (step: number) => void;
+  useSmartSummary?: boolean;
 }
 
 // Configuration des étapes pour la navigation
@@ -90,7 +92,11 @@ const DAYS_LABELS = {
   sunday: 'Dimanche',
 };
 
-export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
+export default function SummaryStep({ data, onEdit, useSmartSummary = true }: SummaryStepProps) {
+  // Utiliser le résumé intelligent si activé
+  if (useSmartSummary) {
+    return <SmartSummaryStep data={data} onEdit={onEdit} />;
+  }
   // Fonction pour formater les horaires
   const formatHours = (hours: EstablishmentFormData['hours']) => {
     if (!hours || Object.keys(hours).length === 0) {

@@ -155,21 +155,24 @@ model Establishment {
   googlePlaceId         String?
   googleBusinessUrl     String?
   enriched              Boolean             @default(false)
-  enrichmentData        Json?
-  envieTags             Json?
-  priceLevel            Int?
-  googleRating          Float?
-  googleReviewCount     Int?
-  theForkLink           String?
-  uberEatsLink          String?
-  specialties           Json?
-  atmosphere            Json?
-  accessibility         Json?
-  accessibilityDetails  Json?
-  detailedServices      Json?
-  clienteleInfo         Json?
-  detailedPayments      Json?
-  childrenServices      Json?
+  
+  // Données d'enrichissement intelligent
+  smartEnrichmentData   Json?               // Données d'enrichissement intelligent avec priorisation
+  googleRating          Float?              // Note Google
+  googleReviewCount     Int?                // Nombre d'avis Google
+  envieTags             Json?               // Tags d'envie générés
+  theForkLink           String?             // Lien TheFork
+  uberEatsLink          String?             // Lien Uber Eats
+  enrichmentData        Json?               // Données d'enrichissement classiques
+  priceLevel            Int?                // Niveau de prix (1-4)
+  specialties           Json?               // Spécialités de l'établissement
+  atmosphere            Json?               // Ambiance de l'établissement
+  accessibility         Json?               // Détails d'accessibilité
+  accessibilityDetails  Json?               // Détails d'accessibilité manuels
+  detailedServices      Json?               // Services détaillés manuels
+  clienteleInfo         Json?               // Informations clientèle manuelles
+  detailedPayments      Json?               // Moyens de paiement détaillés manuels
+  childrenServices      Json?               // Services enfants manuels
   owner                 Professional        @relation(fields: [ownerId], references: [id])
   tags                  EtablissementTag[]
   events                Event[]
