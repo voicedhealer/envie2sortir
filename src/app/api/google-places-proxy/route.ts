@@ -60,10 +60,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Si c'est une recherche par coordonnées et qu'on a des résultats, faire un appel Details
-    if (placeId.includes(',') && data.results && data.results.length > 0) {
-      const firstResult = data.results[0];
+    if (placeId.includes(',')) {
+      console.log('🔍 Recherche par coordonnées détectée:', placeId);
+      console.log('📊 Nombre de résultats Text Search:', data.results?.length || 0);
       
-      if (firstResult.place_id) {
+      if (data.results && data.results.length > 0) {
+        const firstResult = data.results[0];
+        console.log('🎯 Premier résultat Text Search:', firstResult.name, firstResult.place_id);
+        
+        if (firstResult.place_id) {
         console.log('🔍 Place ID trouvé, appel API Details pour plus d\'infos:', firstResult.place_id);
         
         // Faire un appel Place Details pour obtenir toutes les informations
@@ -94,6 +99,11 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           console.error('❌ Erreur appel Details:', e);
         }
+        } else {
+          console.log('❌ Aucun Place ID trouvé dans le premier résultat');
+        }
+      } else {
+        console.log('❌ Aucun résultat Text Search trouvé');
       }
       
       // Fallback: retourner les données de base de Text Search
