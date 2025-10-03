@@ -395,6 +395,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
   }, []);
 
   const handleInputChange = (field: string, value: any) => {
+    // Debug: afficher les changements de champs du compte
+    if (field === 'accountFirstName' || field === 'accountLastName') {
+      console.log(`Hook - ${field} changé:`, value);
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Gestion spéciale pour le reset de la vérification téléphone

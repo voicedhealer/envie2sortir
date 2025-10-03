@@ -91,7 +91,17 @@ export default function ServicesStep({
       )}
 
       <OrganizedServicesAmbianceManager
-        services={formData.services || []}
+        services={(formData.services || []).filter(service => {
+          const serviceLower = service.toLowerCase();
+          // Exclure les moyens de paiement des services
+          return !serviceLower.includes('carte') && 
+                 !serviceLower.includes('paiement') && 
+                 !serviceLower.includes('nfc') && 
+                 !serviceLower.includes('pluxee') && 
+                 !serviceLower.includes('titre') &&
+                 !serviceLower.includes('crédit') &&
+                 !serviceLower.includes('débit');
+        })}
         ambiance={formData.ambiance || []}
         informationsPratiques={formData.informationsPratiques || []}
         onServicesChange={(services) => onInputChange('services', services)}

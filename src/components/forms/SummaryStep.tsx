@@ -7,6 +7,12 @@ import HealthInfo from '../HealthInfo';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
+  // Informations du compte professionnel
+  accountFirstName?: string;
+  accountLastName?: string;
+  accountEmail?: string;
+  accountPhone?: string;
+  
   // Informations générales
   establishmentName: string;
   description: string;

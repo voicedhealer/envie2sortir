@@ -118,7 +118,7 @@ export default function EnvieTagsInput({ onEnvieTagsGenerated, existingTags }: E
       </div>
       
       <p className="text-orange-700 mb-4">
-        Décrivez ce que vous proposez avec des phrases naturelles, comme le ferait un client pour vous chercher. Cela améliorera votre visibilité sur le moteur de recherche.
+        Etape importante! Décrivez ce que vous proposez avec des phrases naturelles, comme le ferait un client pour vous chercher. Cela améliorera considérablement votre visibilité sur le moteur de recherche.
       </p>
 
       {/* Champ de saisie des envies */}

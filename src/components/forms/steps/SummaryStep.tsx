@@ -59,14 +59,15 @@ export default function SummaryStepWrapper({
           ambiance: formData.ambiance,
           paymentMethods: formData.paymentMethods ? convertPaymentMethodsObjectToArray(formData.paymentMethods) : [],
           tags: formData.tags,
-          photos: [], // Les photos sont maintenant ajoutées sur la page pro
+          photos: [],
           phone: formData.phone || '',
           email: formData.email || '',
           website: formData.website,
           instagram: formData.instagram,
           facebook: formData.facebook,
           tiktok: formData.tiktok,
-          // Ajout des contacts professionnels pour le résumé
+          accountFirstName: formData.accountFirstName,
+          accountLastName: formData.accountLastName,
           professionalPhone: formData.accountPhone,
           professionalEmail: formData.accountEmail,
           // Données d'enrichissement

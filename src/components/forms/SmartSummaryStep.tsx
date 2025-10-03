@@ -5,6 +5,14 @@ import { SmartEnrichmentData, EnrichmentPriority } from '@/lib/smart-enrichment-
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
+  // Informations du compte professionnel
+  accountFirstName?: string;
+  accountLastName?: string;
+  accountEmail?: string;
+  accountPhone?: string;
+  professionalEmail?: string;
+  professionalPhone?: string;
+  
   // Informations générales
   establishmentName: string;
   description: string;
@@ -45,9 +53,6 @@ export interface EstablishmentFormData {
   tiktok?: string;
   youtube?: string;
   
-  // Contacts professionnels (pour le résumé)
-  professionalPhone?: string;
-  professionalEmail?: string;
   
   // Données d'enrichissement
   theForkLink?: string;
@@ -73,15 +78,25 @@ interface SmartSummaryStepProps {
 }
 
 export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps) {
-  const renderPriorityData = (priorities: EnrichmentPriority[], title: string, icon: string) => {
+  const renderPriorityData = (priorities: EnrichmentPriority[], title: string, icon: string, editStep?: number) => {
     if (!priorities || priorities.length === 0) return null;
 
     return (
       <div className="mb-6">
-        <h4 className="text-lg font-medium text-gray-900 mb-3 flex items-center space-x-2">
-          <span className="text-xl">{icon}</span>
-          <span>{title}</span>
-        </h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
+            <span className="text-xl">{icon}</span>
+            <span>{title}</span>
+          </h4>
+          {editStep && (
+            <button
+              onClick={() => onEdit(editStep)}
+              className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          )}
+        </div>
         <div className="space-y-2">
           {priorities.map((priority, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -156,34 +171,136 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </p>
       </div>
 
-      {/* Informations de base */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="text-2xl mr-3">🏢</span>
-          Informations générales
-        </h3>
+      {/* Informations générales */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">🏢</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Informations générales
+            </h3>
+          </div>
+          <button
+            onClick={() => onEdit(1)}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Modifier
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Nom de l'établissement</label>
-            <p className="text-gray-900 font-medium">{data.establishmentName}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Nom de l'établissement</label>
+            <p className="text-gray-900 font-medium">{data.establishmentName || 'Non renseigné'}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Description</label>
-            <p className="text-gray-900">{data.description}</p>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Adresse</label>
+            <p className="text-gray-900">{data.address || 'Non renseigné'}</p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Adresse</label>
-            <p className="text-gray-900">{data.address}</p>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-500 mb-1">Description</label>
+            <p className="text-gray-900 text-sm leading-relaxed">
+              {data.description || 'Aucune description fournie'}
+            </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Activités</label>
-            <div className="flex flex-wrap gap-2">
-              {data.activities.map((activity, index) => (
-                <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
-                  {activity}
-                </span>
-              ))}
+        </div>
+      </div>
+
+      {/* Identité du propriétaire */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">👤</span>
             </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Identité du propriétaire
+            </h3>
+          </div>
+          <button
+            onClick={() => onEdit(0)}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Modifier
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Prénom</label>
+            <p className="text-gray-900 font-medium">{(data as any).accountFirstName || 'Non renseigné'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Nom</label>
+            <p className="text-gray-900 font-medium">{(data as any).accountLastName || 'Non renseigné'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Email professionnel</label>
+            <p className="text-gray-900">{(data as any).professionalEmail || 'Non renseigné'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone professionnel</label>
+            <p className="text-gray-900">{(data as any).professionalPhone || 'Non renseigné'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact et réseaux sociaux */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">📞</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Contact et réseaux sociaux
+            </h3>
+          </div>
+          <button
+            onClick={() => onEdit(7)}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Modifier
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone</label>
+            <p className="text-gray-900">{data.phone || 'Non renseigné'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
+            <p className="text-gray-900">{data.email || 'Non renseigné'}</p>
+          </div>
+          {data.website && (
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Site web</label>
+              <a href={data.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                {data.website}
+              </a>
+            </div>
+          )}
+          <div className="flex flex-wrap gap-4">
+            {data.instagram && (
+              <a href={data.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800">
+                📷 Instagram
+              </a>
+            )}
+            {data.facebook && (
+              <a href={data.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
+                📘 Facebook
+              </a>
+            )}
+            {data.tiktok && (
+              <a href={data.tiktok} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800">
+                🎵 TikTok
+              </a>
+            )}
+            {data.youtube && (
+              <a href={data.youtube} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
+                📺 YouTube
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -204,33 +321,131 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             {renderPriorityData(
               data.smartEnrichmentData.prioritizedData.accessibility,
               'Accessibilité',
-              '♿'
+              '♿',
+              4
             )}
             {renderPriorityData(
               data.smartEnrichmentData.prioritizedData.services,
               'Services',
-              '🏪'
-            )}
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.payments,
-              'Moyens de paiement',
-              '💳'
+              '🏪',
+              4
             )}
             {renderPriorityData(
               data.smartEnrichmentData.prioritizedData.clientele,
               'Clientèle',
-              '👥'
+              '👥',
+              4
             )}
             {renderPriorityData(
               data.smartEnrichmentData.prioritizedData.children,
               'Services enfants',
-              '👶'
+              '👶',
+              4
             )}
             {renderPriorityData(
               data.smartEnrichmentData.prioritizedData.parking,
               'Parking',
-              '🅿️'
+              '🅿️',
+              4
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Moyens de paiement */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">💳</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Moyens de paiement
+            </h3>
+          </div>
+          <button
+            onClick={() => onEdit(4)}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Modifier
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {/* Moyens de paiement du formulaire */}
+          {data.paymentMethods && data.paymentMethods.length > 0 ? (
+            data.paymentMethods.map((method, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full"
+              >
+                {method}
+              </span>
+            ))
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement intelligent */}
+          {data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
+            data.smartEnrichmentData.paymentMethodsArray.map((method: string, index: number) => (
+              <span
+                key={`enrichment-${index}`}
+                className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+              >
+                {method} (Google)
+              </span>
+            ))
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement manuel */}
+          {data.hybridDetailedPayments ? (
+            Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
+              enabled ? (
+                <span
+                  key={`manual-${index}`}
+                  className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+                >
+                  {method} (Manuel)
+                </span>
+              ) : null
+            ))
+          ) : null}
+          
+          {/* Message si aucun moyen de paiement */}
+          {(!data.paymentMethods || data.paymentMethods.length === 0) && 
+           (!data.smartEnrichmentData?.paymentMethodsArray || data.smartEnrichmentData.paymentMethodsArray.length === 0) &&
+           (!data.hybridDetailedPayments) && (
+            <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
+          )}
+        </div>
+      </div>
+
+      {/* Informations pratiques */}
+      {data.informationsPratiques && data.informationsPratiques.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">ℹ️</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Informations pratiques
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(4)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.informationsPratiques.map((info, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+              >
+                {info}
+              </span>
+            ))}
           </div>
         </div>
       )}
@@ -318,84 +533,6 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
       </div>
 
-      {/* Moyens de paiement */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="text-2xl mr-3">💳</span>
-          Moyens de paiement
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {data.paymentMethods.map((method, index) => (
-            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              {method}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Tags de recherche */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="text-2xl mr-3">🏷️</span>
-          Tags de recherche
-        </h3>
-        <div className="flex flex-wrap gap-2">
-          {data.tags.map((tag, index) => (
-            <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Contact et réseaux sociaux */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-          <span className="text-2xl mr-3">📞</span>
-          Contact et réseaux sociaux
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Téléphone</label>
-            <p className="text-gray-900">{data.phone}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-500 mb-2">Email</label>
-            <p className="text-gray-900">{data.email}</p>
-          </div>
-          {data.website && (
-            <div>
-              <label className="block text-sm font-medium text-gray-500 mb-2">Site web</label>
-              <a href={data.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                {data.website}
-              </a>
-            </div>
-          )}
-          <div className="flex space-x-4">
-            {data.instagram && (
-              <a href={data.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800">
-                📷 Instagram
-              </a>
-            )}
-            {data.facebook && (
-              <a href={data.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                📘 Facebook
-              </a>
-            )}
-            {data.tiktok && (
-              <a href={data.tiktok} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800">
-                🎵 TikTok
-              </a>
-            )}
-            {data.youtube && (
-              <a href={data.youtube} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
-                📺 YouTube
-              </a>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Liens externes */}
       {(data.theForkLink || data.uberEatsLink) && (
         <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -414,6 +551,115 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 🚗 Uber Eats
               </a>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Horaires */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">🕐</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Horaires d'ouverture
+            </h3>
+          </div>
+          <button
+            onClick={() => onEdit(3)}
+            className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Modifier
+          </button>
+        </div>
+        <div className="space-y-2">
+          {data.hours && Object.keys(data.hours).length > 0 ? (
+            Object.entries(data.hours).map(([dayKey, dayData]) => {
+              const dayLabel = {
+                monday: 'Lundi',
+                tuesday: 'Mardi',
+                wednesday: 'Mercredi',
+                thursday: 'Jeudi',
+                friday: 'Vendredi',
+                saturday: 'Samedi',
+                sunday: 'Dimanche'
+              }[dayKey] || dayKey;
+              
+              return (
+                <div key={dayKey} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="font-medium text-gray-900">{dayLabel}</span>
+                  <span className="text-gray-600">
+                    {dayData.isOpen ? (
+                      dayData.slots.map(slot => `${slot.name || 'Sans nom'} (${slot.open}-${slot.close})`).join(', ')
+                    ) : (
+                      'Fermé'
+                    )}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <p className="text-gray-500 italic text-sm">Aucun horaire défini</p>
+          )}
+        </div>
+      </div>
+
+      {/* Tags */}
+      {data.tags && data.tags.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">🏷️</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Tags de recherche
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(5)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.tags.map((tag, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Abonnement */}
+      {(data as any).subscriptionPlan && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">💎</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Abonnement
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(6)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full">
+              {(data as any).subscriptionPlan}
+            </span>
           </div>
         </div>
       )}

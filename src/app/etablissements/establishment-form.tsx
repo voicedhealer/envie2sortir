@@ -205,6 +205,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               facebook: formData.facebook,
               tiktok: formData.tiktok,
               youtube: formData.youtube,
+              accountFirstName: formData.accountFirstName,
+              accountLastName: formData.accountLastName,
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
               // Données d'enrichissement
