@@ -430,6 +430,7 @@ export default function SmartEnrichmentStepV2({
                   {suggestions.recommended.map((suggestion: any, index: number) => {
                     const suggestionKey = `${suggestion.category}-${suggestion.value}`;
                     const isHealth = suggestion.category === 'health';
+                    const isParking = suggestion.category === 'parking';
                     const isWarning = suggestion.type === 'warning';
                     const isSolution = suggestion.type === 'solution';
                     
@@ -437,6 +438,7 @@ export default function SmartEnrichmentStepV2({
                       <label key={index} className={`flex items-center space-x-3 p-3 rounded border hover:bg-gray-50 cursor-pointer ${
                         isHealth && isWarning ? 'bg-red-50 border-red-200' :
                         isHealth && isSolution ? 'bg-green-50 border-green-200' :
+                        isParking ? 'bg-blue-50 border-blue-200' :
                         'bg-white border-gray-200'
                       }`}>
                         <input
@@ -449,6 +451,7 @@ export default function SmartEnrichmentStepV2({
                           <span className={`font-medium ${
                             isHealth && isWarning ? 'text-red-800' :
                             isHealth && isSolution ? 'text-green-800' :
+                            isParking ? 'text-blue-800' :
                             'text-gray-900'
                           }`}>
                             {suggestion.value}
@@ -456,6 +459,7 @@ export default function SmartEnrichmentStepV2({
                           <p className={`text-xs ${
                             isHealth && isWarning ? 'text-red-600' :
                             isHealth && isSolution ? 'text-green-600' :
+                            isParking ? 'text-blue-600' :
                             'text-gray-600'
                           }`}>
                             {suggestion.reason}
@@ -464,6 +468,7 @@ export default function SmartEnrichmentStepV2({
                         <span className={`text-xs font-medium ${
                           isHealth && isWarning ? 'text-red-600' :
                           isHealth && isSolution ? 'text-green-600' :
+                          isParking ? 'text-blue-600' :
                           'text-blue-600'
                         }`}>
                           {Math.round(suggestion.confidence * 100)}%

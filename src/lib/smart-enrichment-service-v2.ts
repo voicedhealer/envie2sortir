@@ -61,8 +61,15 @@ export class SmartEnrichmentServiceV2 {
       { value: 'Chauffage', confidence: 0.8 }
     ],
     services: [
-      { value: 'WiFi gratuit', confidence: 0.9 },
-      { value: 'Parking', confidence: 0.7 }
+      { value: 'WiFi gratuit', confidence: 0.9 }
+    ],
+    parking: [
+      { value: 'Parking gratuit', confidence: 0.8 },
+      { value: 'Parking payant', confidence: 0.7 },
+      { value: 'Parking privé', confidence: 0.6 },
+      { value: 'Parking couvert', confidence: 0.7 },
+      { value: 'Parking moto', confidence: 0.6 },
+      { value: 'Parking vélo', confidence: 0.6 }
     ],
     health: [
       { value: 'Premiers secours disponibles', confidence: 0.8 },
@@ -83,7 +90,9 @@ export class SmartEnrichmentServiceV2 {
         { category: 'health', value: '⚠️ Risque épileptique (lumières clignotantes)', confidence: 0.9, type: 'warning' },
         { category: 'health', value: '⚠️ Mal des transports virtuels possible', confidence: 0.8, type: 'warning' },
         { category: 'health', value: '✅ Casques désinfectés', confidence: 0.95, type: 'solution' },
-        { category: 'health', value: '✅ Pauses recommandées', confidence: 0.9, type: 'solution' }
+        { category: 'health', value: '✅ Pauses recommandées', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 }
       ],
       optional: [
         { category: 'services', value: 'Formation VR', confidence: 0.7 },
@@ -102,7 +111,9 @@ export class SmartEnrichmentServiceV2 {
         { category: 'health', value: '⚠️ Risque de claustrophobie', confidence: 0.9, type: 'warning' },
         { category: 'health', value: '⚠️ Stress/anxiété possible', confidence: 0.7, type: 'warning' },
         { category: 'health', value: '✅ Sortie de secours visible', confidence: 0.95, type: 'solution' },
-        { category: 'health', value: '✅ Personnel formé aux situations d\'urgence', confidence: 0.9, type: 'solution' }
+        { category: 'health', value: '✅ Personnel formé aux situations d\'urgence', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 }
       ],
       optional: [
         { category: 'services', value: 'Sessions privées', confidence: 0.7 },
@@ -120,7 +131,9 @@ export class SmartEnrichmentServiceV2 {
         { category: 'health', value: '⚠️ Effets lumineux intenses', confidence: 0.8, type: 'warning' },
         { category: 'health', value: '⚠️ Mouvements rapides', confidence: 0.7, type: 'warning' },
         { category: 'health', value: '✅ Lunettes de protection', confidence: 0.95, type: 'solution' },
-        { category: 'health', value: '✅ Zones de repos', confidence: 0.8, type: 'solution' }
+        { category: 'health', value: '✅ Zones de repos', confidence: 0.8, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking moto', confidence: 0.6 }
       ],
       optional: [
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
@@ -137,7 +150,10 @@ export class SmartEnrichmentServiceV2 {
         { category: 'health', value: '⚠️ Risque de chute', confidence: 0.8, type: 'warning' },
         { category: 'health', value: '⚠️ Chaussures de sécurité requises', confidence: 0.9, type: 'warning' },
         { category: 'health', value: '✅ Chaussures de bowling fournies', confidence: 0.95, type: 'solution' },
-        { category: 'health', value: '✅ Sol antidérapant', confidence: 0.9, type: 'solution' }
+        { category: 'health', value: '✅ Sol antidérapant', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 },
+        { category: 'parking', value: 'Parking privé', confidence: 0.6 }
       ],
       optional: [
         { category: 'services', value: 'Événements privés', confidence: 0.7 },
@@ -164,7 +180,10 @@ export class SmartEnrichmentServiceV2 {
         { category: 'health', value: '⚠️ Vitesse élevée', confidence: 0.9, type: 'warning' },
         { category: 'health', value: '⚠️ Risque de collision', confidence: 0.8, type: 'warning' },
         { category: 'health', value: '✅ Casques de sécurité obligatoires', confidence: 0.95, type: 'solution' },
-        { category: 'health', value: '✅ Piste sécurisée', confidence: 0.9, type: 'solution' }
+        { category: 'health', value: '✅ Piste sécurisée', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking moto', confidence: 0.6 },
+        { category: 'parking', value: 'Parking vélo', confidence: 0.6 }
       ],
       optional: [
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
@@ -292,6 +311,24 @@ export class SmartEnrichmentServiceV2 {
              (value.includes('lunettes') && serviceLower.includes('lunettes'));
     })) {
       console.log('✅ Trouvé dans les services (santé)');
+      return true;
+    }
+    
+    // Vérifier dans les services pour le parking
+    if (amenity.category === 'parking' && googleServices.some(service => {
+      const serviceLower = service.toLowerCase();
+      return serviceLower.includes(value) || 
+             value.includes(serviceLower) ||
+             // Correspondances spécifiques pour le parking
+             (value.includes('parking') && serviceLower.includes('parking')) ||
+             (value.includes('gratuit') && serviceLower.includes('gratuit')) ||
+             (value.includes('payant') && serviceLower.includes('payant')) ||
+             (value.includes('couvert') && serviceLower.includes('couvert')) ||
+             (value.includes('privé') && serviceLower.includes('privé')) ||
+             (value.includes('moto') && serviceLower.includes('moto')) ||
+             (value.includes('vélo') && serviceLower.includes('vélo'));
+    })) {
+      console.log('✅ Trouvé dans les services (parking)');
       return true;
     }
     
