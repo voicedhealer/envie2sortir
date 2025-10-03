@@ -1669,6 +1669,39 @@ export class EstablishmentEnrichment {
       if (result.payment_options.cash) paymentMethods.push('Espèces');
     }
     
+    // 1.1. Vérifier d'autres champs possibles pour les moyens de paiement
+    if (result.payment_methods) {
+      console.log('💳 payment_methods trouvé:', result.payment_methods);
+      if (Array.isArray(result.payment_methods)) {
+        result.payment_methods.forEach((method: string) => {
+          if (method.toLowerCase().includes('credit')) paymentMethods.push('Carte de crédit');
+          if (method.toLowerCase().includes('debit')) paymentMethods.push('Carte de débit');
+          if (method.toLowerCase().includes('cash')) paymentMethods.push('Espèces');
+          if (method.toLowerCase().includes('nfc')) paymentMethods.push('Paiement sans contact');
+        });
+      }
+    }
+    
+    // 1.2. Vérifier les champs d'amenities qui peuvent contenir des infos de paiement
+    if (result.amenities && Array.isArray(result.amenities)) {
+      console.log('💳 amenities trouvé:', result.amenities);
+      result.amenities.forEach((amenity: string) => {
+        const amenityLower = amenity.toLowerCase();
+        if (amenityLower.includes('credit card') || amenityLower.includes('carte de crédit')) {
+          paymentMethods.push('Carte de crédit');
+        }
+        if (amenityLower.includes('debit card') || amenityLower.includes('carte de débit')) {
+          paymentMethods.push('Carte de débit');
+        }
+        if (amenityLower.includes('cash') || amenityLower.includes('espèces')) {
+          paymentMethods.push('Espèces');
+        }
+        if (amenityLower.includes('nfc') || amenityLower.includes('sans contact')) {
+          paymentMethods.push('Paiement sans contact');
+        }
+      });
+    }
+    
     // 2. Vérifier les champs d'accessibilité qui peuvent contenir des infos de paiement
     if (result.accessibility_options) {
       console.log('💳 accessibility_options trouvé:', result.accessibility_options);
@@ -1737,9 +1770,11 @@ export class EstablishmentEnrichment {
       }
     }
     
-    // 8. Fallback: utiliser les infos pratiques si aucun moyen de paiement spécifique n'est trouvé
+    // 8. Fallback intelligent: suggérer des moyens de paiement standards selon le type d'établissement
     if (paymentMethods.length === 0) {
-      console.log('💳 Aucun moyen de paiement spécifique trouvé, utilisation du fallback');
+      console.log('💳 Aucun moyen de paiement spécifique trouvé, utilisation du fallback intelligent');
+      
+      // D'abord essayer les infos pratiques
       const practicalInfo = this.generatePracticalInfo(result);
       practicalInfo.forEach((info: string) => {
         const infoLower = info.toLowerCase();
@@ -1756,6 +1791,28 @@ export class EstablishmentEnrichment {
           paymentMethods.push('Chèques');
         }
       });
+      
+      // Si toujours rien, suggérer des moyens de paiement standards pour les établissements de divertissement
+      if (paymentMethods.length === 0) {
+        console.log('💳 Aucun moyen de paiement trouvé dans les infos pratiques, suggestion de moyens standards');
+        
+        // Moyens de paiement standards pour tous les établissements
+        paymentMethods.push('Carte bancaire');
+        paymentMethods.push('Espèces');
+        
+        // Moyens de paiement spécifiques selon le type
+        const types = result.types || [];
+        if (types.includes('establishment') || types.includes('point_of_interest')) {
+          paymentMethods.push('Paiement sans contact');
+        }
+        
+        // Pour les établissements de divertissement, ajouter des moyens modernes
+        if (types.includes('amusement_park') || types.includes('tourist_attraction') || 
+            result.name?.toLowerCase().includes('vr') || result.name?.toLowerCase().includes('escape')) {
+          paymentMethods.push('Carte de débit');
+          paymentMethods.push('Paiements mobiles NFC');
+        }
+      }
     }
     
     // Supprimer les doublons
