@@ -429,8 +429,16 @@ export default function SmartEnrichmentStepV2({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {suggestions.recommended.map((suggestion: any, index: number) => {
                     const suggestionKey = `${suggestion.category}-${suggestion.value}`;
+                    const isHealth = suggestion.category === 'health';
+                    const isWarning = suggestion.type === 'warning';
+                    const isSolution = suggestion.type === 'solution';
+                    
                     return (
-                      <label key={index} className="flex items-center space-x-3 p-3 bg-white rounded border hover:bg-gray-50 cursor-pointer">
+                      <label key={index} className={`flex items-center space-x-3 p-3 rounded border hover:bg-gray-50 cursor-pointer ${
+                        isHealth && isWarning ? 'bg-red-50 border-red-200' :
+                        isHealth && isSolution ? 'bg-green-50 border-green-200' :
+                        'bg-white border-gray-200'
+                      }`}>
                         <input
                           type="checkbox"
                           checked={selectedSuggestions[suggestionKey] || false}
@@ -438,10 +446,26 @@ export default function SmartEnrichmentStepV2({
                           className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
                         />
                         <div className="flex-1">
-                          <span className="font-medium">{suggestion.value}</span>
-                          <p className="text-xs text-gray-600">{suggestion.reason}</p>
+                          <span className={`font-medium ${
+                            isHealth && isWarning ? 'text-red-800' :
+                            isHealth && isSolution ? 'text-green-800' :
+                            'text-gray-900'
+                          }`}>
+                            {suggestion.value}
+                          </span>
+                          <p className={`text-xs ${
+                            isHealth && isWarning ? 'text-red-600' :
+                            isHealth && isSolution ? 'text-green-600' :
+                            'text-gray-600'
+                          }`}>
+                            {suggestion.reason}
+                          </p>
                         </div>
-                        <span className="text-xs text-blue-600 font-medium">
+                        <span className={`text-xs font-medium ${
+                          isHealth && isWarning ? 'text-red-600' :
+                          isHealth && isSolution ? 'text-green-600' :
+                          'text-blue-600'
+                        }`}>
                           {Math.round(suggestion.confidence * 100)}%
                         </span>
                       </label>

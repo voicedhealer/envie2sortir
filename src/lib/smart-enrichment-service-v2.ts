@@ -63,6 +63,10 @@ export class SmartEnrichmentServiceV2 {
     services: [
       { value: 'WiFi gratuit', confidence: 0.9 },
       { value: 'Parking', confidence: 0.7 }
+    ],
+    health: [
+      { value: 'Premiers secours disponibles', confidence: 0.8 },
+      { value: 'Personnel formé aux urgences', confidence: 0.7 }
     ]
   };
 
@@ -75,12 +79,17 @@ export class SmartEnrichmentServiceV2 {
         { category: 'services', value: 'Équipements dernier cri', confidence: 0.85 },
         { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.8 },
-        { category: 'children', value: 'Sessions enfants', confidence: 0.8 }
+        { category: 'children', value: 'Sessions enfants', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Risque épileptique (lumières clignotantes)', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Mal des transports virtuels possible', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Casques désinfectés', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Pauses recommandées', confidence: 0.9, type: 'solution' }
       ],
       optional: [
         { category: 'services', value: 'Formation VR', confidence: 0.7 },
         { category: 'services', value: 'Location d\'équipements', confidence: 0.6 },
-        { category: 'accessibility', value: 'Casques adaptés', confidence: 0.6 }
+        { category: 'accessibility', value: 'Casques adaptés', confidence: 0.6 },
+        { category: 'health', value: '✅ Lunettes de protection', confidence: 0.7, type: 'solution' }
       ]
     },
     escape_game: {
@@ -89,12 +98,17 @@ export class SmartEnrichmentServiceV2 {
         { category: 'services', value: 'Sessions d\'équipe', confidence: 0.9 },
         { category: 'services', value: 'Thèmes variés', confidence: 0.85 },
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.8 },
-        { category: 'children', value: 'Sessions enfants', confidence: 0.8 }
+        { category: 'children', value: 'Sessions enfants', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Risque de claustrophobie', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Stress/anxiété possible', confidence: 0.7, type: 'warning' },
+        { category: 'health', value: '✅ Sortie de secours visible', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Personnel formé aux situations d\'urgence', confidence: 0.9, type: 'solution' }
       ],
       optional: [
         { category: 'services', value: 'Sessions privées', confidence: 0.7 },
         { category: 'services', value: 'Anniversaires', confidence: 0.75 },
-        { category: 'services', value: 'Team building', confidence: 0.8 }
+        { category: 'services', value: 'Team building', confidence: 0.8 },
+        { category: 'health', value: '✅ Zones de repos disponibles', confidence: 0.6, type: 'solution' }
       ]
     },
     laser_game: {
@@ -102,11 +116,16 @@ export class SmartEnrichmentServiceV2 {
         { category: 'services', value: 'Équipements laser', confidence: 0.95 },
         { category: 'services', value: 'Sessions tactiques', confidence: 0.9 },
         { category: 'services', value: 'Équipes', confidence: 0.85 },
-        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 }
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
+        { category: 'health', value: '⚠️ Effets lumineux intenses', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '⚠️ Mouvements rapides', confidence: 0.7, type: 'warning' },
+        { category: 'health', value: '✅ Lunettes de protection', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Zones de repos', confidence: 0.8, type: 'solution' }
       ],
       optional: [
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
-        { category: 'services', value: 'Anniversaires', confidence: 0.75 }
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Équipements de sécurité', confidence: 0.6, type: 'solution' }
       ]
     },
     bowling: {
@@ -114,11 +133,16 @@ export class SmartEnrichmentServiceV2 {
         { category: 'services', value: 'Pistes de bowling', confidence: 0.95 },
         { category: 'services', value: 'Chaussures', confidence: 0.9 },
         { category: 'services', value: 'Snacks', confidence: 0.8 },
-        { category: 'services', value: 'Réservations', confidence: 0.85 }
+        { category: 'services', value: 'Réservations', confidence: 0.85 },
+        { category: 'health', value: '⚠️ Risque de chute', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '⚠️ Chaussures de sécurité requises', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '✅ Chaussures de bowling fournies', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Sol antidérapant', confidence: 0.9, type: 'solution' }
       ],
       optional: [
         { category: 'services', value: 'Événements privés', confidence: 0.7 },
-        { category: 'services', value: 'Anniversaires', confidence: 0.75 }
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Barrières de sécurité', confidence: 0.6, type: 'solution' }
       ]
     },
     billard_americain: {
@@ -136,11 +160,31 @@ export class SmartEnrichmentServiceV2 {
       recommended: [
         { category: 'services', value: 'Karts', confidence: 0.95 },
         { category: 'services', value: 'Casques', confidence: 0.9 },
-        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 }
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
+        { category: 'health', value: '⚠️ Vitesse élevée', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Risque de collision', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Casques de sécurité obligatoires', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Piste sécurisée', confidence: 0.9, type: 'solution' }
       ],
       optional: [
         { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
-        { category: 'services', value: 'Anniversaires', confidence: 0.75 }
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Formation sécurité', confidence: 0.6, type: 'solution' }
+      ]
+    },
+    bar_ambiance: {
+      recommended: [
+        { category: 'services', value: 'Boissons', confidence: 0.95 },
+        { category: 'services', value: 'Musique', confidence: 0.9 },
+        { category: 'services', value: 'Réservations', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Volume sonore élevé', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Exposition prolongée au bruit', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Bouchons d\'oreilles disponibles', confidence: 0.7, type: 'solution' },
+        { category: 'health', value: '✅ Zones calmes', confidence: 0.8, type: 'solution' }
+      ],
+      optional: [
+        { category: 'services', value: 'Événements privés', confidence: 0.7 },
+        { category: 'health', value: '✅ Limitation du volume', confidence: 0.6, type: 'solution' }
       ]
     }
   };
@@ -233,6 +277,21 @@ export class SmartEnrichmentServiceV2 {
     // Vérifier dans l'accessibilité
     if (amenity.category === 'accessibility' && googleAccessibility.some(access => access.toLowerCase().includes(value) || value.includes(access.toLowerCase()))) {
       console.log('✅ Trouvé dans l\'accessibilité');
+      return true;
+    }
+    
+    // Vérifier dans les services pour la santé (généralement dans les services généraux)
+    if (amenity.category === 'health' && googleServices.some(service => {
+      const serviceLower = service.toLowerCase();
+      return serviceLower.includes(value) || 
+             value.includes(serviceLower) ||
+             // Correspondances spécifiques pour la santé
+             (value.includes('premiers secours') && serviceLower.includes('secours')) ||
+             (value.includes('personnel formé') && serviceLower.includes('formé')) ||
+             (value.includes('casques') && serviceLower.includes('casques')) ||
+             (value.includes('lunettes') && serviceLower.includes('lunettes'));
+    })) {
+      console.log('✅ Trouvé dans les services (santé)');
       return true;
     }
     
