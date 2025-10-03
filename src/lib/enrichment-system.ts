@@ -1658,45 +1658,105 @@ export class EstablishmentEnrichment {
     
     const paymentMethods: string[] = [];
     
-    // === UTILISER UNIQUEMENT LES DONNÉES RÉELLES DE GOOGLE PLACES ===
+    // === UTILISER DIRECTEMENT LES DONNÉES BRUTES DE GOOGLE PLACES ===
     
-    // Moyens de paiement basés sur les infos pratiques (qui viennent des avis et types)
-    const practicalInfo = this.generatePracticalInfo(result);
-    practicalInfo.forEach((info: string) => {
-      const infoLower = info.toLowerCase();
+    // 1. Vérifier les champs spécifiques de Google Places pour les moyens de paiement
+    if (result.payment_options) {
+      console.log('💳 payment_options trouvé:', result.payment_options);
+      if (result.payment_options.credit_card) paymentMethods.push('Carte de crédit');
+      if (result.payment_options.debit_card) paymentMethods.push('Carte de débit');
+      if (result.payment_options.cash_only) paymentMethods.push('Espèces uniquement');
+      if (result.payment_options.cash) paymentMethods.push('Espèces');
+    }
+    
+    // 2. Vérifier les champs d'accessibilité qui peuvent contenir des infos de paiement
+    if (result.accessibility_options) {
+      console.log('💳 accessibility_options trouvé:', result.accessibility_options);
+      // Les options d'accessibilité peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 3. Vérifier les champs de services
+    if (result.services) {
+      console.log('💳 services trouvé:', result.services);
+      // Les services peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 4. Vérifier les champs d'amenities
+    if (result.amenities) {
+      console.log('💳 amenities trouvé:', result.amenities);
+      // Les amenities peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 5. Vérifier les champs d'editorial_summary
+    if (result.editorial_summary) {
+      console.log('💳 editorial_summary trouvé:', result.editorial_summary);
+      // Le résumé éditorial peut contenir des infos sur les moyens de paiement
+    }
+    
+    // 6. Vérifier les champs de current_opening_hours
+    if (result.current_opening_hours) {
+      console.log('💳 current_opening_hours trouvé:', result.current_opening_hours);
+      // Les horaires peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 7. Vérifier les champs de reviews pour des mentions de moyens de paiement
+    if (result.reviews && Array.isArray(result.reviews)) {
+      console.log('💳 reviews trouvées:', result.reviews.length);
+      const reviewText = result.reviews.map((review: any) => review.text || '').join(' ').toLowerCase();
       
-      if (infoLower.includes('carte bancaire') || infoLower.includes('carte de crédit')) {
+      // Rechercher des mentions spécifiques de moyens de paiement dans les avis
+      if (reviewText.includes('carte bancaire') || reviewText.includes('carte de crédit')) {
         paymentMethods.push('Carte bancaire');
       }
-      
-      if (infoLower.includes('espèces') || infoLower.includes('liquide')) {
+      if (reviewText.includes('carte de débit')) {
+        paymentMethods.push('Carte de débit');
+      }
+      if (reviewText.includes('espèces') || reviewText.includes('liquide')) {
         paymentMethods.push('Espèces');
       }
-      
-      if (infoLower.includes('chèque')) {
+      if (reviewText.includes('chèque')) {
         paymentMethods.push('Chèques');
       }
-      
-      if (infoLower.includes('nfc') || infoLower.includes('sans contact')) {
+      if (reviewText.includes('nfc') || reviewText.includes('sans contact')) {
         paymentMethods.push('Paiement sans contact');
       }
-      
-      if (infoLower.includes('ticket restaurant') || infoLower.includes('ticket resto')) {
+      if (reviewText.includes('ticket restaurant') || reviewText.includes('ticket resto')) {
         paymentMethods.push('Ticket restaurant');
       }
-      
-      if (infoLower.includes('paypal')) {
+      if (reviewText.includes('paypal')) {
         paymentMethods.push('PayPal');
       }
-      
-      if (infoLower.includes('apple pay')) {
+      if (reviewText.includes('apple pay')) {
         paymentMethods.push('Apple Pay');
       }
-      
-      if (infoLower.includes('google pay')) {
+      if (reviewText.includes('google pay')) {
         paymentMethods.push('Google Pay');
       }
-    });
+      if (reviewText.includes('paiements mobiles')) {
+        paymentMethods.push('Paiements mobiles NFC');
+      }
+    }
+    
+    // 8. Fallback: utiliser les infos pratiques si aucun moyen de paiement spécifique n'est trouvé
+    if (paymentMethods.length === 0) {
+      console.log('💳 Aucun moyen de paiement spécifique trouvé, utilisation du fallback');
+      const practicalInfo = this.generatePracticalInfo(result);
+      practicalInfo.forEach((info: string) => {
+        const infoLower = info.toLowerCase();
+        
+        if (infoLower.includes('carte bancaire') || infoLower.includes('carte de crédit')) {
+          paymentMethods.push('Carte bancaire');
+        }
+        
+        if (infoLower.includes('espèces') || infoLower.includes('liquide')) {
+          paymentMethods.push('Espèces');
+        }
+        
+        if (infoLower.includes('chèque')) {
+          paymentMethods.push('Chèques');
+        }
+      });
+    }
     
     // Supprimer les doublons
     const uniquePaymentMethods = [...new Set(paymentMethods)];
