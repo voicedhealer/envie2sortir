@@ -506,15 +506,17 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
                   </div>
                 )}
 
-                {/* Santé et sécurité */}
+                {/* Prévention d'usage */}
                 {healthOptions.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-                      <span className="text-lg mr-2">🏥</span>
-                      Santé et sécurité
+                      <span className="text-lg mr-2">ℹ️</span>
+                      Prévention d'usage
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {healthOptions.map((option, index) => {
+                        // Nettoyer le texte en enlevant les icônes
+                        const cleanOption = option.replace('⚠️ ', '').replace('✅ ', '');
                         const isWarning = option.includes('⚠️');
                         const isSolution = option.includes('✅');
                         return (
@@ -522,9 +524,9 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
                             <div className={`w-2 h-2 rounded-full ${
                               isWarning ? 'bg-orange-500' : 
                               isSolution ? 'bg-green-500' : 
-                              'bg-red-500'
+                              'bg-blue-500'
                             }`}></div>
-                            <span className="text-gray-700">{option}</span>
+                            <span className="text-gray-700">{cleanOption}</span>
                           </div>
                         );
                       })}
