@@ -1,0 +1,565 @@
+"use client";
+import React, { useState, useEffect, useMemo } from 'react';
+import { EnrichmentData, enrichmentSystem } from '@/lib/enrichment-system';
+import { smartEnrichmentServiceV2, CombinedEnrichmentData, EnrichmentSuggestion } from '@/lib/smart-enrichment-service-v2';
+
+interface SmartEnrichmentStepV2Props {
+  onEnrichmentComplete: (data: EnrichmentData) => void;
+  onSkip: () => void;
+  isVisible: boolean;
+  onEnrichmentDataChange?: (data: EnrichmentData | null) => void;
+  establishmentType: string;
+}
+
+export default function SmartEnrichmentStepV2({
+  onEnrichmentComplete,
+  onSkip,
+  isVisible,
+  onEnrichmentDataChange,
+  establishmentType,
+}: SmartEnrichmentStepV2Props) {
+  const [googleBusinessUrl, setGoogleBusinessUrl] = useState('');
+  const [theForkUrl, setTheForkUrl] = useState('');
+  const [uberEatsUrl, setUberEatsUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [enrichmentData, setEnrichmentData] = useState<EnrichmentData | null>(null);
+  const [smartData, setSmartData] = useState<CombinedEnrichmentData | null>(null);
+  const [suggestions, setSuggestions] = useState<any>(null);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Record<string, boolean>>({});
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Validation des URLs
+  const validateUrl = (url: string, type: 'google' | 'thefork' | 'ubereats'): string | null => {
+    if (!url.trim()) return null;
+    
+    try {
+      const urlObj = new URL(url);
+      
+      switch (type) {
+        case 'google':
+          if (!urlObj.hostname.includes('google.com') && !urlObj.hostname.includes('goo.gl')) {
+            return 'Veuillez saisir une URL Google Maps valide';
+          }
+          break;
+        case 'thefork':
+          if (!urlObj.hostname.includes('thefork.fr') && !urlObj.hostname.includes('thefork.com')) {
+            return 'Veuillez saisir une URL TheFork valide';
+          }
+          break;
+        case 'ubereats':
+          if (!urlObj.hostname.includes('ubereats.com')) {
+            return 'Veuillez saisir une URL Uber Eats valide';
+          }
+          break;
+      }
+      
+      return null;
+    } catch {
+      return 'URL invalide';
+    }
+  };
+
+  const handleEnrichment = async () => {
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      // Validation de l'URL Google
+      const googleError = validateUrl(googleBusinessUrl, 'google');
+      if (googleError) {
+        setError(googleError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Validation des URLs optionnelles
+      const theForkError = validateUrl(theForkUrl, 'thefork');
+      if (theForkError) {
+        setError(theForkError);
+        setIsLoading(false);
+        return;
+      }
+
+      const uberEatsError = validateUrl(uberEatsUrl, 'ubereats');
+      if (uberEatsError) {
+        setError(uberEatsError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Simulation de l'enrichissement (remplacer par l'appel API réel)
+      const mockData: EnrichmentData = {
+        name: 'DreamAway Dijon - Réalité Virtuelle - VR - Escape Games VR',
+        establishmentType: 'other',
+        priceLevel: 2,
+        rating: 5.0,
+        website: 'https://dreamaway-dijon.com',
+        phone: '03 80 12 34 56',
+        address: '123 Rue de la VR, Dijon',
+        latitude: 47.3220,
+        longitude: 5.0415,
+        description: 'Centre de réalité virtuelle avec escape games et expériences immersives',
+        openingHours: ['Lundi: 14:00-22:00', 'Mardi: 14:00-22:00'],
+        hours: {},
+        practicalInfo: ['Équipements VR dernier cri', 'Sessions privées', 'WiFi gratuit'],
+        envieTags: ['vr', 'escape game', 'immersion'],
+        specialties: ['Réalité Virtuelle', 'Escape Games', 'Technologie'],
+        atmosphere: ['Moderne', 'Technologique', 'Innovant'],
+        servicesArray: ['Équipements VR', 'Sessions privées', 'WiFi gratuit', 'Parking'],
+        ambianceArray: ['Moderne', 'Technologique'],
+        activities: ['Réalité Virtuelle', 'Escape Games', 'Laser Game'],
+        paymentMethodsArray: ['Carte bancaire', 'Espèces', 'Tickets restaurant'],
+        informationsPratiques: ['Équipements VR', 'Sessions privées'],
+        googlePlaceId: 'ChIJVR123456',
+        googleBusinessUrl: googleBusinessUrl,
+        googleRating: 5.0,
+        googleReviewCount: 89,
+        theForkLink: theForkUrl || undefined,
+        uberEatsLink: uberEatsUrl || undefined,
+        accessibilityInfo: ['Accessible PMR', 'Toilettes handicapées'],
+        servicesAvailableInfo: ['Équipements VR', 'Sessions privées'],
+        pointsForts: ['Technologie VR', 'Équipements dernier cri'],
+        populairePour: ['Familles', 'Groupes', 'Entreprises'],
+        offres: ['Sessions privées', 'Événements d\'entreprise'],
+        servicesRestauration: [],
+        servicesGeneraux: ['Équipements VR', 'WiFi gratuit'],
+        paymentMethodsInfo: ['Carte bancaire', 'Espèces'],
+        accessibilityDetails: {
+          'Accessible PMR': true,
+          'Toilettes handicapées': true
+        },
+        detailedServices: {
+          'Équipements VR': 'Casques VR dernier cri',
+          'Sessions privées': 'Réservations obligatoires'
+        },
+        clienteleInfo: {
+          'Familles': true,
+          'Groupes': true,
+          'Entreprises': true
+        },
+        detailedPayments: {
+          'Carte bancaire': true,
+          'Espèces': true,
+          'Tickets restaurant': true
+        },
+        childrenServices: {
+          'Sessions enfants': true,
+          'Accompagnement parental': true
+        }
+      };
+
+      setEnrichmentData(mockData);
+      
+      // Générer les suggestions intelligentes avec détection automatique du type
+      const smartSuggestions = smartEnrichmentServiceV2.analyzeEnrichmentGaps(mockData);
+      setSuggestions(smartSuggestions);
+      
+      // Créer les données intelligentes avec détection automatique du type
+      const smartEnrichmentData = smartEnrichmentServiceV2.combineEnrichmentData(mockData, {});
+      setSmartData(smartEnrichmentData);
+      
+      // Notifier le composant parent des nouvelles données
+      if (onEnrichmentDataChange) {
+        onEnrichmentDataChange(mockData);
+      }
+
+      setShowSuggestions(true);
+    } catch (err) {
+      setError('Erreur lors de l\'enrichissement. Veuillez réessayer.');
+      console.error('Enrichment error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSuggestionToggle = (suggestionKey: string, checked: boolean) => {
+    setSelectedSuggestions(prev => ({
+      ...prev,
+      [suggestionKey]: checked
+    }));
+  };
+
+  const createManualDataFromSuggestions = (selected: Record<string, boolean>, suggestions: any) => {
+    const manualData: any = {};
+    
+    Object.entries(selected).forEach(([key, isSelected]) => {
+      if (isSelected) {
+        const [category, value] = key.split('-');
+        if (!manualData[category]) {
+          manualData[category] = [];
+        }
+        manualData[category].push(value);
+      }
+    });
+    
+    return manualData;
+  };
+
+  const handleContinue = () => {
+    if (!enrichmentData || !smartData) return;
+
+    // Créer les données manuelles basées sur les suggestions sélectionnées
+    const manualData = createManualDataFromSuggestions(selectedSuggestions, suggestions);
+    
+    // Combiner avec les données intelligentes
+    const finalSmartData = smartEnrichmentServiceV2.combineEnrichmentData(enrichmentData, manualData);
+    
+    // Valider la cohérence
+    const validation = smartEnrichmentServiceV2.validateEnrichmentConsistency(finalSmartData);
+    
+    if (!validation.isValid) {
+      setError(`Données incohérentes: ${validation.warnings.join(', ')}`);
+      return;
+    }
+
+    // Continuer avec les données finales
+    onEnrichmentComplete(enrichmentData);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          🚀 Enrichissement intelligent
+        </h2>
+        <p className="text-gray-600">
+          Ajoutez votre lien Google Maps pour récupérer automatiquement vos informations et recevoir des suggestions personnalisées.
+        </p>
+      </div>
+
+      {/* Formulaire de saisie */}
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2" htmlFor="google_business_url">
+              🔗 Lien Google Maps de votre établissement
+            </label>
+            <input
+              type="url"
+              id="google_business_url"
+              value={googleBusinessUrl}
+              onChange={(e) => setGoogleBusinessUrl(e.target.value)}
+              placeholder="https://goo.gl/maps/votre-etablissement"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Copiez-collez l'URL de votre établissement depuis Google Maps ou Google My Business
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" htmlFor="thefork_url">
+              🍴 Lien TheFork (recommandé)
+            </label>
+            <input
+              type="url"
+              id="thefork_url"
+              value={theForkUrl}
+              onChange={(e) => setTheForkUrl(e.target.value)}
+              placeholder="https://www.thefork.fr/restaurant/votre-restaurant"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
+            />
+            <div className="flex items-center mt-1">
+              {/* Validation TheFork */}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2" htmlFor="ubereats_url">
+              🚗 Lien Uber Eats (recommandé)
+            </label>
+            <input
+              type="url"
+              id="ubereats_url"
+              value={uberEatsUrl}
+              onChange={(e) => setUberEatsUrl(e.target.value)}
+              placeholder="https://www.ubereats.com/fr/store/votre-restaurant"
+              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
+            />
+            <div className="flex items-center mt-1">
+              {/* Validation Uber Eats */}
+            </div>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+
+          <button
+            onClick={handleEnrichment}
+            disabled={!googleBusinessUrl.trim() || isLoading}
+            className="w-full px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            {isLoading ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Enrichissement en cours...
+              </>
+            ) : (
+              '🚀 Lancer l\'enrichissement intelligent'
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Résultats de l'enrichissement */}
+      {showSuggestions && enrichmentData && smartData && suggestions && (
+        <div className="space-y-6">
+          {/* Données récupérées automatiquement par Google */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center">
+              <span className="text-xl mr-2">✅</span>
+              Informations récupérées automatiquement par Google
+            </h3>
+            
+            {/* Métadonnées de base */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-6">
+              <div>
+                <strong>Nom:</strong> {enrichmentData?.name}
+              </div>
+              <div>
+                <strong>Type:</strong> 
+                <span className="ml-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                  {smartData?.establishmentType || enrichmentData?.establishmentType}
+                  {smartData?.establishmentType !== enrichmentData?.establishmentType && (
+                    <span className="ml-1 text-green-600">✓ Détecté</span>
+                  )}
+                </span>
+              </div>
+              <div>
+                <strong>Note:</strong> {enrichmentData?.googleRating}/5
+              </div>
+              <div>
+                <strong>Confiance:</strong> {Math.round(smartData.enrichmentMetadata.googleConfidence * 100)}%
+              </div>
+            </div>
+
+            {/* Données détaillées récupérées par Google */}
+            <div className="space-y-4">
+              {/* Services récupérés */}
+              {enrichmentData?.servicesArray && enrichmentData.servicesArray.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">🛠️</span>
+                    Services récupérés par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.servicesArray.map((service, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Moyens de paiement récupérés */}
+              {enrichmentData?.paymentMethodsArray && enrichmentData.paymentMethodsArray.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">💳</span>
+                    Moyens de paiement récupérés par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.paymentMethodsArray.map((payment, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {payment}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Accessibilité récupérée */}
+              {enrichmentData?.accessibilityInfo && enrichmentData.accessibilityInfo.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">♿</span>
+                    Accessibilité récupérée par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.accessibilityInfo.map((access, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {access}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Spécialités récupérées */}
+              {enrichmentData?.specialties && enrichmentData.specialties.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">⭐</span>
+                    Spécialités récupérées par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.specialties.map((specialty, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {specialty}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ambiance récupérée */}
+              {enrichmentData?.atmosphere && enrichmentData.atmosphere.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">🎭</span>
+                    Ambiance récupérée par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.atmosphere.map((ambiance, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {ambiance}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Informations pratiques récupérées */}
+              {enrichmentData?.practicalInfo && enrichmentData.practicalInfo.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">ℹ️</span>
+                    Informations pratiques récupérées par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.practicalInfo.map((info, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {info}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Clientèle récupérée */}
+              {enrichmentData?.populairePour && enrichmentData.populairePour.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <span className="mr-2">👥</span>
+                    Clientèle récupérée par Google
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {enrichmentData.populairePour.map((clientele, index) => (
+                      <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        {clientele}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Suggestions intelligentes */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center">
+              <span className="text-xl mr-2">💡</span>
+              Suggestions personnalisées pour votre {smartData?.establishmentType || establishmentType}
+            </h3>
+            
+            {/* Recommandations */}
+            {suggestions.recommended.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-blue-900 mb-3">🔵 Recommandé</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {suggestions.recommended.map((suggestion, index) => {
+                    const suggestionKey = `${suggestion.category}-${suggestion.value}`;
+                    return (
+                      <label key={index} className="flex items-center space-x-3 p-3 bg-white rounded border hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSuggestions[suggestionKey] || false}
+                          onChange={(e) => handleSuggestionToggle(suggestionKey, e.target.checked)}
+                          className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                        />
+                        <div className="flex-1">
+                          <span className="font-medium">{suggestion.value}</span>
+                          <p className="text-xs text-gray-600">{suggestion.reason}</p>
+                        </div>
+                        <span className="text-xs text-blue-600 font-medium">
+                          {Math.round(suggestion.confidence * 100)}%
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Optionnel */}
+            {suggestions.optional.length > 0 && (
+              <div>
+                <h4 className="font-medium text-blue-900 mb-3">⚪ Optionnel</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {suggestions.optional.map((suggestion, index) => {
+                    const suggestionKey = `${suggestion.category}-${suggestion.value}`;
+                    return (
+                      <label key={index} className="flex items-center space-x-3 p-3 bg-white rounded border hover:bg-gray-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedSuggestions[suggestionKey] || false}
+                          onChange={(e) => handleSuggestionToggle(suggestionKey, e.target.checked)}
+                          className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                        />
+                        <div className="flex-1">
+                          <span className="font-medium">{suggestion.value}</span>
+                          <p className="text-xs text-gray-600">{suggestion.reason}</p>
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {Math.round(suggestion.confidence * 100)}%
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-orange-800">Prêt à continuer ?</h3>
+                <p className="text-sm text-orange-700">
+                  {Object.values(selectedSuggestions).filter(Boolean).length} suggestions sélectionnées
+                </p>
+              </div>
+              <button
+                onClick={handleContinue}
+                className="px-6 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
+              >
+                ✅ Continuer avec ces informations
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bouton Skip */}
+      <div className="text-center">
+        <button
+          onClick={onSkip}
+          className="text-gray-500 hover:text-gray-700 text-sm underline"
+        >
+          Passer cette étape
+        </button>
+      </div>
+    </div>
+  );
+}
