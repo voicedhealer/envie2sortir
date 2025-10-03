@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         
         // Faire un appel Place Details pour obtenir toutes les informations
         // Utiliser des fields complets si non fournis (même liste que dans enrichment-system.ts)
-        const fieldsToUse = fields || 'name,types,price_level,rating,user_ratings_total,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code,reviews,photos,payment_options,payment_methods,amenities,accessibility_options,editorial_summary,current_opening_hours';
+        const fieldsToUse = fields || 'name,types,price_level,rating,user_ratings_total,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code,reviews,photos';
         
         console.log('🔍 Appel Place Details avec fields:', fieldsToUse);
         const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${firstResult.place_id}&fields=${fieldsToUse}&key=${apiKey}`;
