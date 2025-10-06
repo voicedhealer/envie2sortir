@@ -208,13 +208,13 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         console.log('👤 Chargement des données du professionnel:', establishment.owner);
         setFormData(prev => ({
           ...prev,
-          firstName: establishment.owner.firstName || "",
-          lastName: establishment.owner.lastName || "",
-          email: establishment.owner.email || "",
-          phone: establishment.owner.phone || "",
-          companyName: establishment.owner.companyName || "",
-          siret: establishment.owner.siret || "",
-          legalStatus: establishment.owner.legalStatus || ""
+          firstName: establishment.owner?.firstName || "",
+          lastName: establishment.owner?.lastName || "",
+          email: establishment.owner?.email || "",
+          phone: establishment.owner?.phone || "",
+          companyName: establishment.owner?.companyName || "",
+          siret: establishment.owner?.siret || "",
+          legalStatus: establishment.owner?.legalStatus || ""
         }));
       }
       
@@ -247,15 +247,15 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         tiktok: establishment.tiktok || "",
         youtube: establishment.youtube || "",
         activities: establishment.activities ? (typeof establishment.activities === 'string' ? JSON.parse(establishment.activities) : establishment.activities) : [],
-        paymentMethods: establishment.paymentMethods ? convertPaymentMethodsArrayToObject(typeof establishment.paymentMethods === 'string' ? JSON.parse(establishment.paymentMethods) : establishment.paymentMethods) : {},
+        paymentMethods: (establishment as any).paymentMethods ? convertPaymentMethodsArrayToObject(typeof (establishment as any).paymentMethods === 'string' ? JSON.parse((establishment as any).paymentMethods) : (establishment as any).paymentMethods) : {},
         horairesOuverture: establishment.horairesOuverture ? (typeof establishment.horairesOuverture === 'string' ? JSON.parse(establishment.horairesOuverture) : establishment.horairesOuverture) : {},
         prixMoyen: establishment.prixMoyen || "",
         capaciteMax: establishment.capaciteMax || "",
         accessibilite: establishment.accessibilite ? (typeof establishment.accessibilite === 'string' ? JSON.parse(establishment.accessibilite) : establishment.accessibilite) : {},
         parking: establishment.parking || false,
         terrasse: establishment.terrasse || false,
-        priceMin: establishment.priceMin || "",
-        priceMax: establishment.priceMax || ""
+        priceMin: typeof establishment.priceMin === 'number' ? establishment.priceMin : undefined,
+        priceMax: typeof establishment.priceMax === 'number' ? establishment.priceMax : undefined
       };
       
       setFormData(prev => ({ ...prev, ...newFormData }));
@@ -304,15 +304,15 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       
       // Charger les tags existants
       if (establishment.tags && Array.isArray(establishment.tags)) {
-        const existingTags = establishment.tags.map(t => t.tag);
+        const existingTags = establishment.tags.map((t: any) => t.tag);
         console.log("🏷️ Tags existants chargés:", existingTags);
         setFormData(prev => ({ ...prev, tags: existingTags }));
       }
       
       // Charger les envie tags existants
-      if (establishment.envieTags && Array.isArray(establishment.envieTags)) {
-        console.log("💭 Envie tags existants chargés:", establishment.envieTags);
-        setFormData(prev => ({ ...prev, envieTags: establishment.envieTags }));
+      if ((establishment as any).envieTags && Array.isArray((establishment as any).envieTags)) {
+        console.log("💭 Envie tags existants chargés:", (establishment as any).envieTags);
+        setFormData(prev => ({ ...prev, envieTags: (establishment as any).envieTags }));
       }      
       console.log('✅ Toutes les données chargées en mode édition');
     }

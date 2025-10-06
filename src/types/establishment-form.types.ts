@@ -1,4 +1,5 @@
-import { AddressData, HoursData } from '@/components/forms/AdresseStep';
+import { AddressData } from '@/components/forms/AdresseStep';
+import { HoursData } from '@/components/forms/OpeningHoursInput';
 import { EnrichmentData } from '@/lib/enrichment-system';
 
 // Types pour les données du formulaire professionnel
