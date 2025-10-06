@@ -10,6 +10,7 @@ interface ServicesStepProps {
     hybridClienteleInfo?: any;
     hybridDetailedPayments?: any;
     hybridChildrenServices?: any;
+    hybridParkingInfo?: any;
   };
   isEditMode: boolean;
   onInputChange: (field: string | number | symbol, value: any) => void;
@@ -37,7 +38,7 @@ export default function ServicesStep({
       {/* Affichage des données hybrides si elles existent */}
       {(formData.hybridAccessibilityDetails || formData.hybridDetailedServices || 
         formData.hybridClienteleInfo || formData.hybridDetailedPayments || 
-        formData.hybridChildrenServices) && (
+        formData.hybridChildrenServices || formData.hybridParkingInfo) && (
         <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-lg">
           <h3 className="text-lg font-semibold text-orange-800 mb-4 flex items-center">
             🌟 Informations détaillées récupérées
@@ -80,6 +81,14 @@ export default function ServicesStep({
                 <h4 className="font-medium text-gray-900 mb-2">👶 Services enfants</h4>
                 <p className="text-gray-600">
                   {Object.keys(formData.hybridChildrenServices).length} services configurés
+                </p>
+              </div>
+            )}
+            {formData.hybridParkingInfo && (
+              <div className="bg-white p-3 rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">🅿️ Informations parking</h4>
+                <p className="text-gray-600">
+                  {Object.keys(formData.hybridParkingInfo).length} options configurées
                 </p>
               </div>
             )}

@@ -134,7 +134,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,
               hybridDetailedPayments: formData.hybridDetailedPayments,
-              hybridChildrenServices: formData.hybridChildrenServices
+              hybridChildrenServices: formData.hybridChildrenServices,
+              hybridParkingInfo: formData.hybridParkingInfo
             }}
             isEditMode={isEditMode}
             onInputChange={(field: string | number | symbol, value: any) => handleInputChange(field as string, value)}

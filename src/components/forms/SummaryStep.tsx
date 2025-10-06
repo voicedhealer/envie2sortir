@@ -79,6 +79,7 @@ export interface EstablishmentFormData {
   hybridClienteleInfo?: string;
   hybridDetailedPayments?: string;
   hybridChildrenServices?: string;
+  hybridParkingInfo?: string;
   
   // Données d'enrichissement intelligent (depuis l'API Google)
   smartEnrichmentData?: any;

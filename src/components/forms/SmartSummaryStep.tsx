@@ -73,6 +73,7 @@ export interface EstablishmentFormData {
   hybridClienteleInfo?: string;
   hybridDetailedPayments?: string;
   hybridChildrenServices?: string;
+  hybridParkingInfo?: string;
   
   // Données d'enrichissement intelligent
   smartEnrichmentData?: SmartEnrichmentData;
@@ -717,20 +718,23 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
       )}
 
-      {/* Boutons d'action */}
-      <div className="flex justify-between pt-6 border-t border-gray-200">
-        <button
-          onClick={() => onEdit(0)}
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-        >
-          ← Modifier
-        </button>
-        <button
-          onClick={() => {/* Logique de soumission */}}
-          className="px-8 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium"
-        >
-          Publier l'établissement
-        </button>
+      {/* Boutons d'action simplifiés */}
+      <div className="flex justify-center pt-8 border-t border-gray-200">
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
+          <button
+            onClick={() => onEdit(0)}
+            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2"
+          >
+            <span>←</span>
+            <span>Modifier les informations</span>
+          </button>
+          <button
+            onClick={() => {/* Logique de soumission */}}
+            className="px-8 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors shadow-lg"
+          >
+            🚀 Créer l'établissement
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -641,6 +641,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       hybridClienteleInfo: enrichmentData.clienteleInfo,
       hybridDetailedPayments: enrichmentData.detailedPayments,
       hybridChildrenServices: enrichmentData.childrenServices,
+      hybridParkingInfo: enrichmentData.parkingInfo,
       
       enriched: true
     }));
@@ -714,9 +715,14 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 2:
+        // Étape d'enrichissement - pas de validation spécifique
         break;
       
       case 3:
+        // Validation des activités proposées - champ obligatoire
+        if (formData.activities.length === 0) {
+          newErrors.activities = "Veuillez sélectionner au moins une activité";
+        }
         if (!formData.establishmentName) newErrors.establishmentName = "Nom requis";
         if (!formData.address.street || !formData.address.postalCode || !formData.address.city) {
           newErrors.address = "Adresse complète requise (rue, code postal et ville)";
@@ -724,7 +730,6 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         if (!formData.address.latitude || !formData.address.longitude) {
           newErrors.address = "Géolocalisation requise pour valider l'adresse";
         }
-        if (formData.activities.length === 0) newErrors.activities = "Sélectionnez au moins une activité";
         break;
       
       case 4:
@@ -812,7 +817,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           detailedServices: formData.hybridDetailedServices,
           clienteleInfo: formData.hybridClienteleInfo,
           detailedPayments: formData.hybridDetailedPayments,
-          childrenServices: formData.hybridChildrenServices
+          childrenServices: formData.hybridChildrenServices,
+          parkingInfo: formData.hybridParkingInfo
         };
 
         const csrfToken = await getCSRFToken();

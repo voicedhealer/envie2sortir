@@ -59,6 +59,9 @@ export interface EnrichmentData {
   
   // Services enfants (complémentaire)
   childrenServices?: any; // JSON des services enfants
+  
+  // Informations parking (complémentaire)
+  parkingInfo?: any; // JSON des informations parking
 
   // === SECTIONS DIRECTES DEPUIS GOOGLE PLACES ===
   
@@ -1575,6 +1578,8 @@ export class EstablishmentEnrichment {
     console.log('🔧 Données Google Places reçues:', JSON.stringify(result, null, 2));
     
     const services: string[] = [];
+    const types = result.types || [];
+    const establishmentType = this.establishmentType;
     
     // === UTILISER TOUTES LES DONNÉES DÉTAILLÉES GÉNÉRÉES ===
     
@@ -1602,6 +1607,51 @@ export class EstablishmentEnrichment {
     const parking = this.extractParkingFromGoogle(result);
     services.push(...parking);
     
+    // === GÉNÉRATION INTELLIGENTE BASÉE SUR LE TYPE ===
+    
+    // Services par défaut selon le type d'établissement
+    if (establishmentType === 'escape_game') {
+      services.push('WiFi gratuit');
+      services.push('Climatisation');
+      services.push('Chauffage');
+      services.push('Toilettes');
+      services.push('Vestiaire');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+      services.push('Espace non-fumeurs');
+    } else if (establishmentType === 'restaurant') {
+      services.push('Service à table');
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Réservation recommandée');
+    } else if (establishmentType === 'bar') {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Terrasse');
+    } else if (establishmentType === 'vr_experience') {
+      services.push('WiFi gratuit');
+      services.push('Climatisation');
+      services.push('Toilettes');
+      services.push('Vestiaire');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+    } else if (establishmentType === 'karaoke') {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+    }
+    
+    // Services généraux pour tous les établissements
+    if (services.length === 0) {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+    }
+    
     // Supprimer les doublons
     const uniqueServices = [...new Set(services)];
     console.log('🔧 Services générés (toutes sections):', uniqueServices);
@@ -1613,6 +1663,7 @@ export class EstablishmentEnrichment {
     console.log('🎨 Données Google Places reçues:', JSON.stringify(result, null, 2));
     
     const ambiance: string[] = [];
+    const establishmentType = this.establishmentType;
     
     // === UTILISER TOUTES LES DONNÉES DÉTAILLÉES GÉNÉRÉES ===
     
@@ -1639,6 +1690,57 @@ export class EstablishmentEnrichment {
     // Enfants
     const enfants = this.extractEnfantsFromGoogle(result);
     ambiance.push(...enfants);
+    
+    // === GÉNÉRATION INTELLIGENTE BASÉE SUR LE TYPE ===
+    
+    // Ambiance par défaut selon le type d'établissement
+    if (establishmentType === 'escape_game') {
+      ambiance.push('Ambiance mystérieuse');
+      ambiance.push('Cadre immersif');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Grand choix d\'énigmes');
+      ambiance.push('Populaire pour les défis');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+      ambiance.push('Thé');
+    } else if (establishmentType === 'restaurant') {
+      ambiance.push('Ambiance chaleureuse');
+      ambiance.push('Cadre convivial');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les déjeuners');
+      ambiance.push('Populaire pour les dîners');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+    } else if (establishmentType === 'bar') {
+      ambiance.push('Ambiance festive');
+      ambiance.push('Cadre décontracté');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les soirées');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+      ambiance.push('Cocktails');
+    } else if (establishmentType === 'vr_experience') {
+      ambiance.push('Ambiance immersive');
+      ambiance.push('Cadre technologique');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les défis');
+      ambiance.push('Café');
+      ambiance.push('Thé');
+    } else if (establishmentType === 'karaoke') {
+      ambiance.push('Ambiance festive');
+      ambiance.push('Cadre convivial');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les soirées');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+    }
+    
+    // Ambiance générique pour tous les établissements
+    if (ambiance.length === 0) {
+      ambiance.push('Ambiance conviviale');
+      ambiance.push('Cadre agréable');
+      ambiance.push('Excellent pour les groupes');
+    }
     
     // Supprimer les doublons
     const uniqueAmbiance = [...new Set(ambiance)];
