@@ -18,6 +18,7 @@ export async function POST() {
         longitude: 5.041,
         category: "bar",
         status: "approved",
+        ownerId: "demo-owner-1",
       },
       {
         name: "Cinéma Lumière démo",
@@ -27,6 +28,7 @@ export async function POST() {
         longitude: 5.05,
         category: "cinema",
         status: "approved",
+        ownerId: "demo-owner-2",
       },
       {
         name: "Ristorante Bella Vita démo",
@@ -36,6 +38,7 @@ export async function POST() {
         longitude: 5.035,
         category: "restaurant",
         status: "pending",
+        ownerId: "demo-owner-3",
       },
     ] as const;
 

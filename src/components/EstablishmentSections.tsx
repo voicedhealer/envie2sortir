@@ -6,6 +6,7 @@ import UpcomingEventsSection from './UpcomingEventsSection';
 
 interface EstablishmentSectionsProps {
   establishment: {
+    name: string;
     slug: string;
     description?: string;
     activities?: any;

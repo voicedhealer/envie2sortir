@@ -23,8 +23,20 @@ interface SummaryStepProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    youtube?: string;
     accountPhone: string;
     accountEmail: string;
+    // Données d'enrichissement
+    theForkLink?: string;
+    uberEatsLink?: string;
+    informationsPratiques?: any;
+    envieTags?: any;
+    // Données d'enrichissement hybride
+    hybridAccessibilityDetails?: any;
+    hybridDetailedServices?: any;
+    hybridClienteleInfo?: any;
+    hybridDetailedPayments?: any;
+    hybridChildrenServices?: any;
   };
   isEditMode: boolean;
   onEdit: (step: FormStep) => void;
