@@ -273,7 +273,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
               <span className="text-xl">📞</span>
             </div>
             <h3 className="text-xl font-semibold text-gray-900">
-              Contact et réseaux sociaux
+              Contact et réseaux sociaux de l'établissement
             </h3>
           </div>
           <button
@@ -287,12 +287,12 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Téléphone</label>
             <p className="text-gray-900">{data.phone || 'Non renseigné'}</p>
-            <p className="text-xs text-gray-500 mt-1">📞 Numéro fixe pour les appels</p>
+            <p className="text-xs text-gray-500 mt-1"> Numéro fixe pour les appels</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-500 mb-1">Email</label>
             <p className="text-gray-900">{data.email || 'Non renseigné'}</p>
-            <p className="text-xs text-gray-500 mt-1">✉️ Email visible par les clients</p>
+            <p className="text-xs text-gray-500 mt-1">Email visible par les clients</p>
           </div>
           {data.whatsappPhone && (
             <div>
@@ -321,22 +321,22 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           <div className="flex flex-wrap gap-4">
             {data.instagram && (
               <a href={data.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800">
-                📷 Instagram
+                 Instagram
               </a>
             )}
             {data.facebook && (
               <a href={data.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                📘 Facebook
+                Facebook
               </a>
             )}
             {data.tiktok && (
               <a href={data.tiktok} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800">
-                🎵 TikTok
+                 TikTok
               </a>
             )}
             {data.youtube && (
               <a href={data.youtube} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
-                📺 YouTube
+                 YouTube
               </a>
             )}
           </div>
@@ -348,7 +348,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
             <span className="text-2xl mr-3">🧠</span>
-            Enrichissement intelligent
+            Enrichissement intelligent importé depuis Google
           </h3>
           
           {/* Métadonnées */}
@@ -432,7 +432,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 key={`enrichment-${index}`}
                 className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
               >
-                {method} (Google)
+                {method}
               </span>
             ))
           ) : null}
@@ -445,7 +445,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                   key={`manual-${index}`}
                   className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
                 >
-                  {method} (Manuel)
+                  {method}
                 </span>
               ) : null
             ))
@@ -494,7 +494,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
 
       {/* Données d'enrichissement manuel (fallback) */}
       {(data.hybridAccessibilityDetails || data.hybridDetailedServices || data.hybridClienteleInfo || 
-        data.hybridDetailedPayments || data.hybridChildrenServices) && !data.smartEnrichmentData && (
+        data.hybridDetailedPayments || data.hybridChildrenServices || data.hybridParkingInfo) && !data.smartEnrichmentData && (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
             <span className="text-2xl mr-3">✏️</span>
@@ -538,6 +538,14 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 <label className="block text-sm font-medium text-gray-500 mb-2">Services enfants</label>
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-gray-900 text-sm">{data.hybridChildrenServices}</p>
+                </div>
+              </div>
+            )}
+            {data.hybridParkingInfo && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-2">Informations parking</label>
+                <div className="bg-white rounded-lg p-3">
+                  <p className="text-gray-900 text-sm">{data.hybridParkingInfo}</p>
                 </div>
               </div>
             )}
@@ -718,24 +726,6 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
       )}
 
-      {/* Boutons d'action simplifiés */}
-      <div className="flex justify-center pt-8 border-t border-gray-200">
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          <button
-            onClick={() => onEdit(0)}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2"
-          >
-            <span>←</span>
-            <span>Modifier les informations</span>
-          </button>
-          <button
-            onClick={() => {/* Logique de soumission */}}
-            className="px-8 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors shadow-lg"
-          >
-            🚀 Créer l'établissement
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

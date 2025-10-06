@@ -163,8 +163,24 @@ export default function SmartEnrichmentStepV2({
       return;
     }
 
-    // Continuer avec les données finales
-    onEnrichmentComplete(enrichmentData);
+    // Créer les données d'enrichissement finales avec les suggestions manuelles
+    const enrichedDataWithManual = {
+      ...enrichmentData,
+      // Ajouter les données d'enrichissement manuel basées sur les suggestions
+      accessibilityDetails: manualData.accessibility ? manualData.accessibility.join(', ') : enrichmentData.accessibilityDetails,
+      detailedServices: manualData.services ? manualData.services.join(', ') : enrichmentData.detailedServices,
+      clienteleInfo: manualData.clientele ? manualData.clientele.join(', ') : enrichmentData.clienteleInfo,
+      detailedPayments: manualData.payments ? manualData.payments.join(', ') : enrichmentData.detailedPayments,
+      childrenServices: manualData.children ? manualData.children.join(', ') : enrichmentData.childrenServices,
+      parkingInfo: manualData.parking ? manualData.parking.join(', ') : enrichmentData.parkingInfo,
+      // Ajouter les données de santé et sécurité
+      healthOptions: manualData.health ? manualData.health : enrichmentData.healthOptions,
+      // Ajouter les données de parking
+      parkingOptions: manualData.parking ? manualData.parking : enrichmentData.parkingOptions,
+    };
+
+    // Continuer avec les données finales incluant les suggestions manuelles
+    onEnrichmentComplete(enrichedDataWithManual);
   };
 
   if (!isVisible) return null;

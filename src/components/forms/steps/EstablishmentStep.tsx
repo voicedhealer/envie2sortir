@@ -94,22 +94,6 @@ export default function EstablishmentStep({
         <p className="text-sm text-gray-600 mb-4">
           Ces informations seront visibles sur la page de l'établissement, elles serviront aux clients pour contacter l'établissement.
         </p>
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start">
-            <div className="text-orange-500 mr-3 mt-0.5">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-orange-900 mb-1">💡 Information importante</h4>
-              <p className="text-sm text-orange-800">
-                <strong>Recommandé :</strong> Renseignez au minimum le téléphone et l'email de votre établissement. 
-                Ces informations apparaîtront dans la fiche récapitulative pour validation par nos équipes.
-              </p>
-            </div>
-          </div>
-        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Téléphone de l'établissement */}
@@ -126,7 +110,7 @@ export default function EstablishmentStep({
               placeholder="04 78 90 12 34"
             />
             <p className="text-xs text-gray-500 mt-1">
-              📞 Numéro fixe pour les appels
+               Numéro fixe pour les appels
             </p>
           </div>
           
@@ -144,7 +128,7 @@ export default function EstablishmentStep({
               placeholder="06 12 34 56 78"
             />
             <p className="text-xs text-gray-500 mt-1">
-              📱 Numéro mobile pour WhatsApp
+               Numéro mobile pour WhatsApp
             </p>
           </div>
           
@@ -162,7 +146,7 @@ export default function EstablishmentStep({
               placeholder="https://m.me/votre-page-facebook"
             />
             <p className="text-xs text-gray-500 mt-1">
-              💬 Lien vers votre page Facebook Messenger
+              Lien vers votre page Facebook Messenger
             </p>
           </div>
           
@@ -180,7 +164,7 @@ export default function EstablishmentStep({
               placeholder="contact@votre-etablissement.com"
             />
             <p className="text-xs text-gray-500 mt-1">
-              ✉️ Email visible par les clients
+               Email visible par les clients
             </p>
           </div>
         </div>
