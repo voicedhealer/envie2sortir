@@ -130,6 +130,7 @@ export type ProfessionalData = {
   hybridClienteleInfo?: any;
   hybridDetailedPayments?: any;
   hybridChildrenServices?: any;
+  hybridParkingInfo?: any;
 };
 
 // Type pour un établissement existant (pour le mode édition)

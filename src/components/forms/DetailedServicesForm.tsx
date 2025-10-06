@@ -12,6 +12,7 @@ export interface DetailedServicesData {
   non_smoking: boolean;
   private_rooms: boolean;
   event_space: boolean;
+  first_aid_trained_staff: boolean;
 }
 
 interface DetailedServicesFormProps {
@@ -30,6 +31,7 @@ const defaultData: DetailedServicesData = {
   non_smoking: false,
   private_rooms: false,
   event_space: false,
+  first_aid_trained_staff: false,
 };
 
 export default function DetailedServicesForm({ 
@@ -96,6 +98,11 @@ export default function DetailedServicesForm({
       key: 'event_space' as const,
       label: 'Espace événementiel',
       icon: '🎉',
+    },
+    {
+      key: 'first_aid_trained_staff' as const,
+      label: 'Personnel formé aux premiers secours',
+      icon: '🚑',
     },
   ];
 

@@ -24,6 +24,8 @@ interface SummaryStepProps {
     facebook?: string;
     tiktok?: string;
     youtube?: string;
+    accountFirstName?: string;
+    accountLastName?: string;
     accountPhone: string;
     accountEmail: string;
     // Données d'enrichissement
@@ -37,6 +39,11 @@ interface SummaryStepProps {
     hybridClienteleInfo?: any;
     hybridDetailedPayments?: any;
     hybridChildrenServices?: any;
+    // Données d'enrichissement
+    enrichmentData?: any;
+    // Coordonnées GPS
+    latitude?: number;
+    longitude?: number;
   };
   isEditMode: boolean;
   onEdit: (step: FormStep) => void;
@@ -60,16 +67,31 @@ export default function SummaryStepWrapper({
           ambiance: formData.ambiance,
           paymentMethods: formData.paymentMethods ? convertPaymentMethodsObjectToArray(formData.paymentMethods) : [],
           tags: formData.tags,
-          photos: [], // Les photos sont maintenant ajoutées sur la page pro
+          photos: [],
           phone: formData.phone || '',
           email: formData.email || '',
+          whatsappPhone: formData.whatsappPhone,
+          messengerUrl: formData.messengerUrl,
           website: formData.website,
           instagram: formData.instagram,
           facebook: formData.facebook,
           tiktok: formData.tiktok,
-          // Ajout des contacts professionnels pour le résumé
+          accountFirstName: formData.accountFirstName,
+          accountLastName: formData.accountLastName,
           professionalPhone: formData.accountPhone,
           professionalEmail: formData.accountEmail,
+          // Données d'enrichissement
+          theForkLink: formData.theForkLink,
+          uberEatsLink: formData.uberEatsLink,
+          informationsPratiques: formData.informationsPratiques,
+          envieTags: formData.envieTags,
+          smartEnrichmentData: formData.enrichmentData,
+          // Données d'enrichissement manuel
+          hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
+          hybridDetailedServices: formData.hybridDetailedServices,
+          hybridClienteleInfo: formData.hybridClienteleInfo,
+          hybridDetailedPayments: formData.hybridDetailedPayments,
+          hybridChildrenServices: formData.hybridChildrenServices
         }}
         onEdit={(step) => {
           onEdit(step as FormStep);

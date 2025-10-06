@@ -99,7 +99,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const loadImages = async (retryCount = 0) => {
     try {
       // Vérifier l'authentification
-      if (status === 'loading') {
+      if (status === 'loading' || status === 'unauthenticated') {
         console.log('⏳ Session en cours de chargement...');
         return;
       }
@@ -136,7 +136,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         
         if (establishmentImages.length > 0) {
           // Extraire les URLs des images et les filtrer
-          const imageUrls = establishmentImages.map((img: any) => {
+          const imageUrls = establishmentImages.map((img: { url: string | { url?: string; path?: string } }) => {
             if (typeof img.url === 'string') {
               return img.url;
             } else if (img.url && typeof img.url === 'object') {
@@ -181,7 +181,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       const establishmentImages = establishmentData.establishment.images || [];
       
       if (establishmentImages.length > 0) {
-        const imageUrls = establishmentImages.map((img: any) => {
+        const imageUrls = establishmentImages.map((img: { url: string | { url?: string; path?: string } }) => {
           if (typeof img.url === 'string') {
             return img.url;
           } else if (img.url && typeof img.url === 'object') {
@@ -221,14 +221,6 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       }
     }
   }, [establishmentData, currentImageUrl]);
-  useEffect(() => {
-    if (establishmentData) {
-      const establishmentImages = establishmentData.establishment.images || [];
-      const imageUrls = establishmentImages.map((img: any) => img.url);
-      setImages(imageUrls);
-      console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
-    }
-  }, [establishmentData]);
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -308,7 +300,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           if (response.ok) {
             const data = await response.json();
             const establishmentImages = data.establishment.images || [];
-            const imageUrls = establishmentImages.map((img: any) => img.url);
+            const imageUrls = establishmentImages.map((img: { url: string }) => img.url);
             setImages(imageUrls);
             setEstablishmentData(data);
             console.log('🔄 Images rechargées après upload:', imageUrls);
@@ -471,7 +463,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       setIsLoading(true);
       
       // Trouver l'ID de l'image à supprimer
-      const imageToDelete = establishmentData?.establishment?.images?.find(img => img.url === imageUrl);
+      const imageToDelete = establishmentData?.establishment?.images?.find((img: { url: string; id: string }) => img.url === imageUrl);
       if (!imageToDelete) {
         throw new Error('Image non trouvée');
       }
@@ -511,7 +503,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
             if (response.ok) {
               const data = await response.json();
               const establishmentImages = data.establishment.images || [];
-              const imageUrls = establishmentImages.map((img: any) => img.url);
+              const imageUrls = establishmentImages.map((img: { url: string }) => img.url);
               setImages(imageUrls);
               console.log('🔄 Images rechargées après suppression:', imageUrls);
             }
@@ -583,46 +575,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Ajouter une image
         </h3>
-        
-        {/* Message informatif sur le format des images */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start">
-            <div className="text-blue-500 mr-3 mt-0.5">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-sm font-medium text-blue-900 mb-1">💡 Astuce sur les formats d'images</h4>
-              <p className="text-sm text-blue-800">
-                <strong>Photos en mode paysage</strong> (horizontales) : créent un effet de zoom immersif dans la galerie, idéal pour mettre en valeur l'ambiance.
-                <br />
-                <strong>Photos en mode portrait ou carré</strong> : s'affichent avec un effet plus doux.
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        {/* Avertissement si minimum non atteint */}
-        {!hasMinimumImages && (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
-            <div className="flex items-start">
-              <div className="text-orange-500 mr-3 mt-0.5">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-orange-900 mb-1">⚠️ Photos obligatoires</h4>
-                <p className="text-sm text-orange-800">
-                  Vous devez ajouter au minimum <strong>{minImages} photos</strong> pour votre établissement. 
-                  Actuellement : {images.length}/{minImages}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-        
+
         {canUploadMore ? (
           <ImageUpload 
             onImageUpload={handleImageUpload}
@@ -642,7 +595,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
             {subscription === 'STANDARD' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800 font-medium mb-2">
-                  💡 Passez au plan Premium pour uploader jusqu'à 5 images !
+                  💡 Passez au plan Premium pour uploader jusqu'à 5 images et un réel impact sur vos clients !
                 </p>
                 <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                   Voir les plans
@@ -655,9 +608,6 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         <div className="mt-4 text-sm text-gray-500">
           Images actuelles : {images.length}/{maxImages} 
           {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Standard)'}
-          {!hasMinimumImages && (
-            <span className="text-orange-600 font-medium"> - Minimum requis : {minImages}</span>
-          )}
         </div>
       </div>
 
@@ -758,15 +708,21 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
       {/* Aide */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">
-          💡 Conseils pour vos images
-        </h4>
-        <ul className="text-sm text-blue-800 space-y-1">
-          <li>• L'image principale sera affichée sur la vignette de recherche</li>
-          <li>• Formats acceptés : JPG, PNG, WebP (max 5MB)</li>
-          <li>• Recommandation : images en format paysage (16:9 ou 4:3)</li>
-          <li>• Vous pouvez changer l'image principale à tout moment</li>
-        </ul>
+        <div className="flex items-start">
+          <div className="text-blue-500 mr-3 mt-0.5">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-sm font-medium text-blue-900 mb-1">💡 Astuce sur les formats d'images</h4>
+            <p className="text-sm text-blue-800">
+              <strong>Photos en mode paysage</strong> (horizontales) : créent un effet de zoom immersif dans la galerie, idéal pour mettre en valeur l'ambiance, un plat ou un lieu.
+              <br />
+              <strong>Photos en mode portrait ou carré</strong> : s'affichent avec un effet plus doux et centré.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

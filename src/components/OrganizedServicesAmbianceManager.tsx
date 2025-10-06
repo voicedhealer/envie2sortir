@@ -5,20 +5,25 @@ import { useState } from 'react';
 interface OrganizedServicesAmbianceManagerProps {
   services: string[];
   ambiance: string[];
+  informationsPratiques?: string[];
   onServicesChange: (services: string[]) => void;
   onAmbianceChange: (ambiance: string[]) => void;
+  onInformationsPratiquesChange?: (informationsPratiques: string[]) => void;
   isEditMode?: boolean;
 }
 
 export default function OrganizedServicesAmbianceManager({
   services,
   ambiance,
+  informationsPratiques = [],
   onServicesChange,
   onAmbianceChange,
+  onInformationsPratiquesChange,
   isEditMode = false
 }: OrganizedServicesAmbianceManagerProps) {
   const [newService, setNewService] = useState('');
   const [newAmbiance, setNewAmbiance] = useState('');
+  const [newInfoPratique, setNewInfoPratique] = useState('');
 
   // Organiser les services par catégories
   const organizeServices = (servicesList: string[]) => {
@@ -90,12 +95,47 @@ export default function OrganizedServicesAmbianceManager({
     return categories;
   };
 
+  // Organiser les informations pratiques par catégories
+  const organizeInformationsPratiques = (infosList: string[]) => {
+    const categories = {
+      'ℹ️ Informations générales': [],
+      '♿ Accessibilité': [],
+      '👥 Groupes & Réservations': [],
+      '🚭 Espaces': [],
+      'Autres': []
+    };
+
+    infosList.forEach(info => {
+      const infoLower = info.toLowerCase();
+      
+      if (infoLower.includes('accessible') || infoLower.includes('fauteuil') || infoLower.includes('pmr') || infoLower.includes('handicap')) {
+        categories['♿ Accessibilité'].push(info);
+      } else if (infoLower.includes('groupe') || infoLower.includes('réservation') || infoLower.includes('recommandé')) {
+        categories['👥 Groupes & Réservations'].push(info);
+      } else if (infoLower.includes('non-fumeurs') || infoLower.includes('fumeur') || infoLower.includes('espace')) {
+        categories['🚭 Espaces'].push(info);
+      } else if (infoLower.includes('wifi') || infoLower.includes('climatisation') || infoLower.includes('chauffage') || infoLower.includes('toilettes') || infoLower.includes('vestiaire') || infoLower.includes('ascenseur')) {
+        categories['ℹ️ Informations générales'].push(info);
+      } else {
+        categories['Autres'].push(info);
+      }
+    });
+
+    return categories;
+  };
+
   const removeService = (serviceToRemove: string) => {
     onServicesChange(services.filter(service => service !== serviceToRemove));
   };
 
   const removeAmbiance = (ambianceToRemove: string) => {
     onAmbianceChange(ambiance.filter(item => item !== ambianceToRemove));
+  };
+
+  const removeInfoPratique = (infoToRemove: string) => {
+    if (onInformationsPratiquesChange) {
+      onInformationsPratiquesChange(informationsPratiques.filter(info => info !== infoToRemove));
+    }
   };
 
   const addService = () => {
@@ -112,8 +152,16 @@ export default function OrganizedServicesAmbianceManager({
     }
   };
 
+  const addInfoPratique = () => {
+    if (newInfoPratique.trim() && !informationsPratiques.includes(newInfoPratique.trim()) && onInformationsPratiquesChange) {
+      onInformationsPratiquesChange([...informationsPratiques, newInfoPratique.trim()]);
+      setNewInfoPratique('');
+    }
+  };
+
   const organizedServices = organizeServices(services);
   const organizedAmbiance = organizeAmbiance(ambiance);
+  const organizedInformationsPratiques = organizeInformationsPratiques(informationsPratiques);
 
   const renderCategory = (title: string, items: string[], onRemove: (item: string) => void, color: string) => {
     if (items.length === 0) return null;
@@ -223,6 +271,46 @@ export default function OrganizedServicesAmbianceManager({
           </button>
         </div>
       </div>
+
+      {/* Informations pratiques */}
+      {onInformationsPratiquesChange && (
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <span className="text-2xl mr-3">ℹ️</span>
+            <h2 className="text-xl font-bold text-orange-800">Informations pratiques</h2>
+          </div>
+          <p className="text-orange-700 mb-4">
+            Définissez les informations pratiques de votre établissement (ex: Parking gratuit et privé). Vous pouvez ajouter, supprimer ou modifier chaque élément.
+          </p>
+
+          <div className="space-y-4">
+            {Object.entries(organizedInformationsPratiques).map(([category, items]) => 
+              <div key={category}>
+                {renderCategory(category, items as string[], removeInfoPratique, 'bg-orange-100 text-orange-800 border-orange-300')}
+              </div>
+            )}
+          </div>
+
+          {/* Ajouter une information pratique */}
+          <div className="mt-6 flex gap-2">
+            <input
+              type="text"
+              value={newInfoPratique}
+              onChange={(e) => setNewInfoPratique(e.target.value)}
+              placeholder="Ajouter une information pratique..."
+              className="flex-1 px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              onKeyPress={(e) => e.key === 'Enter' && addInfoPratique()}
+            />
+            <button
+              type="button"
+              onClick={addInfoPratique}
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium"
+            >
+              Ajouter
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

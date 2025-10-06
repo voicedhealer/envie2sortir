@@ -203,6 +203,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   
   // Debug: Afficher les données récupérées
   console.log('🔍 Debug EstablishmentInfo pour:', establishment.name);
+  console.log('🔍 EstablishmentInfo RENDU - Composant chargé');
   console.log('📊 accessibilityDetails brut:', establishment.accessibilityDetails);
   console.log('📊 detailedPayments brut:', establishment.detailedPayments);
   console.log('📊 detailedServices brut:', establishment.detailedServices);
@@ -213,6 +214,35 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const accessibilityItems = getAccessibilityItems(hybridAccessibility);
   const paymentMethods = getPaymentMethods(hybridPayments);
   const detailedServices = getDetailedServices(hybridServices);
+  
+  // Extraire les données d'enrichissement intelligent
+  const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
+  const enrichmentData = parseHybridData(establishment.enrichmentData);
+  
+  // Combiner les moyens de paiement de toutes les sources
+  const allPaymentMethods = [
+    ...paymentMethods,
+    ...(smartEnrichmentData?.paymentMethodsArray || []),
+    ...(enrichmentData?.paymentMethodsArray || [])
+  ];
+  
+  // Combiner les services de parking
+  const parkingOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('parking')
+    ) || []),
+    ...(enrichmentData?.parking || [])
+  ];
+  
+  // Combiner les services de santé
+  const healthOptions = [
+    ...(smartEnrichmentData?.servicesArray?.filter((service: string) => 
+      service.toLowerCase().includes('santé') || 
+      service.toLowerCase().includes('sécurité') ||
+      service.toLowerCase().includes('premiers secours')
+    ) || []),
+    ...(enrichmentData?.health || [])
+  ];
   
   // Fallback: Utiliser les données classiques si les hybrides sont vides
   const fallbackPaymentMethods = establishment.paymentMethods && typeof establishment.paymentMethods === 'object' 
@@ -235,13 +265,17 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     : [];
   
   // Utiliser les données hybrides si disponibles, sinon les données classiques
-  const finalPaymentMethods = paymentMethods.length > 0 ? paymentMethods : fallbackPaymentMethods;
+  const finalPaymentMethods = allPaymentMethods.length > 0 ? allPaymentMethods : fallbackPaymentMethods;
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
   
   // Debug: Afficher les données parsées
   console.log('✅ accessibilityItems parsés:', finalAccessibilityItems);
   console.log('✅ paymentMethods parsés:', finalPaymentMethods);
   console.log('✅ detailedServices parsés:', detailedServices);
+  console.log('✅ smartEnrichmentData parsé:', smartEnrichmentData);
+  console.log('✅ enrichmentData parsé:', enrichmentData);
+  console.log('✅ parkingOptions:', parkingOptions);
+  console.log('✅ healthOptions:', healthOptions);
   
   // Fonction pour obtenir le jour actuel
   const getCurrentDay = () => {
@@ -576,6 +610,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           </div>
         </div>
       )}
+
 
       {/* Informations pratiques */}
       {informationsPratiques.length > 0 && (

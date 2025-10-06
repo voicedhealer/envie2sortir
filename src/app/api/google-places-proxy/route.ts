@@ -60,21 +60,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Si c'est une recherche par coordonnées et qu'on a des résultats, faire un appel Details
-    if (placeId.includes(',') && data.results && data.results.length > 0) {
-      const firstResult = data.results[0];
+    if (placeId.includes(',')) {
+      console.log('🔍 Recherche par coordonnées détectée:', placeId);
+      console.log('📊 Nombre de résultats Text Search:', data.results?.length || 0);
       
-      if (firstResult.place_id) {
+      if (data.results && data.results.length > 0) {
+        const firstResult = data.results[0];
+        console.log('🎯 Premier résultat Text Search:', firstResult.name, firstResult.place_id);
+        
+        if (firstResult.place_id) {
         console.log('🔍 Place ID trouvé, appel API Details pour plus d\'infos:', firstResult.place_id);
         
         // Faire un appel Place Details pour obtenir toutes les informations
         // Utiliser des fields complets si non fournis (même liste que dans enrichment-system.ts)
-        const fieldsToUse = fields || 'name,types,price_level,rating,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code';
+        const fieldsToUse = fields || 'name,types,price_level,rating,user_ratings_total,business_status,opening_hours,website,formatted_phone_number,formatted_address,geometry,wheelchair_accessible_entrance,takeout,delivery,dine_in,serves_lunch,serves_dinner,serves_beer,serves_wine,serves_vegetarian_food,editorial_summary,current_opening_hours,utc_offset,place_id,vicinity,address_components,adr_address,international_phone_number,plus_code,reviews,photos';
         
         console.log('🔍 Appel Place Details avec fields:', fieldsToUse);
         const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${firstResult.place_id}&fields=${fieldsToUse}&key=${apiKey}`;
         
         try {
+          console.log('🔍 URL Place Details:', detailsUrl);
           const detailsResponse = await fetch(detailsUrl);
+          console.log('📡 Status Place Details:', detailsResponse.status);
           const detailsData = await detailsResponse.json();
           
           console.log('📨 Réponse Place Details:', JSON.stringify(detailsData, null, 2));
@@ -83,6 +90,8 @@ export async function POST(request: NextRequest) {
             console.log('✅ Données détaillées récupérées');
             console.log('🕐 Opening hours dans détails:', JSON.stringify(detailsData.result?.opening_hours, null, 2));
             console.log('♿ Accessibility dans détails:', detailsData.result?.wheelchair_accessible_entrance);
+            console.log('💬 Reviews dans détails:', detailsData.result?.reviews?.length || 0, 'avis trouvés');
+            console.log('💬 Premier avis:', detailsData.result?.reviews?.[0]?.text?.substring(0, 100) || 'Aucun avis');
             return NextResponse.json(detailsData);
           } else {
             console.error('❌ Erreur Place Details:', detailsData.status, detailsData.error_message);
@@ -90,6 +99,11 @@ export async function POST(request: NextRequest) {
         } catch (e) {
           console.error('❌ Erreur appel Details:', e);
         }
+        } else {
+          console.log('❌ Aucun Place ID trouvé dans le premier résultat');
+        }
+      } else {
+        console.log('❌ Aucun résultat Text Search trouvé');
       }
       
       // Fallback: retourner les données de base de Text Search

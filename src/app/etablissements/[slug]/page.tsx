@@ -157,6 +157,10 @@ export default async function EstablishmentPage({
   console.log('📊 detailedServices:', establishment.detailedServices);
   console.log('📊 informationsPratiques:', establishment.informationsPratiques);
   console.log('📊 paymentMethods:', establishment.paymentMethods);
+  console.log('📊 smartEnrichmentData:', establishment.smartEnrichmentData);
+  console.log('📊 enrichmentData:', establishment.enrichmentData);
+  console.log('📊 specialties:', establishment.specialties);
+  console.log('📊 atmosphere:', establishment.atmosphere);
 
   // Déterminer la page de retour basée sur le referer ou les paramètres
   const getBackUrl = () => {

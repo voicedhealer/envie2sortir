@@ -197,7 +197,27 @@ const POPULAR_TAGS: Tag[] = [
   { id: 'gratuit', label: 'Gratuit', category: 'prix' },
   { id: 'promo', label: 'Promotions', category: 'prix' },
   { id: 'réduction', label: 'Réductions', category: 'prix' },
-  { id: 'offre', label: 'Offres spéciales', category: 'prix' }
+  { id: 'offre', label: 'Offres spéciales', category: 'prix' },
+
+  // ℹ️ Informations pratiques
+  { id: 'espace-non-fumeurs', label: 'Espace non-fumeurs', category: 'informations-pratiques' },
+  { id: 'réservation-recommandée', label: 'Réservation recommandée', category: 'informations-pratiques' },
+  { id: 'toilettes-pmr', label: 'Toilettes adaptées PMR', category: 'informations-pratiques' },
+  { id: 'idéal-groupes', label: 'Idéal pour les groupes', category: 'informations-pratiques' },
+  { id: 'accessible-pmr', label: 'Accessible PMR', category: 'informations-pratiques' },
+  { id: 'handicap', label: 'Handicap', category: 'informations-pratiques' },
+  { id: 'non-fumeurs', label: 'Non-fumeurs', category: 'informations-pratiques' },
+  { id: 'réservation', label: 'Réservation', category: 'informations-pratiques' },
+  { id: 'animaux-acceptés', label: 'Animaux acceptés', category: 'informations-pratiques' },
+  { id: 'vestiaire', label: 'Vestiaire', category: 'informations-pratiques' },
+  { id: 'ascenseur', label: 'Ascenseur', category: 'informations-pratiques' },
+  { id: 'climatisation', label: 'Climatisation', category: 'informations-pratiques' },
+  { id: 'chauffage', label: 'Chauffage', category: 'informations-pratiques' },
+  { id: 'wifi-gratuit', label: 'WiFi gratuit', category: 'informations-pratiques' },
+  { id: 'terrasse', label: 'Terrasse', category: 'informations-pratiques' },
+  { id: 'parking-gratuit', label: 'Parking gratuit', category: 'informations-pratiques' },
+  { id: 'parking-couvert', label: 'Parking couvert', category: 'informations-pratiques' },
+  { id: 'parking-privé', label: 'Parking privé', category: 'informations-pratiques' }
 ];
 
 // Fonction pour obtenir les suggestions basées sur les activités

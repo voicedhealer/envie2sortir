@@ -19,7 +19,7 @@ export interface SubscriptionFeatures {
  */
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeatures> = {
   STANDARD: {
-    minImages: 2,
+    minImages: 1,
     maxImages: 2,
     canCreateEvents: false,
     canUseAdvancedAnalytics: false,
@@ -27,7 +27,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeature
     canUsePrioritySupport: false,
   },
   PREMIUM: {
-    minImages: 2,
+    minImages: 1,
     maxImages: 5,
     canCreateEvents: true,
     canUseAdvancedAnalytics: true,

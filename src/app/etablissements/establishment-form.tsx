@@ -129,11 +129,13 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             formData={{
               services: formData.services,
               ambiance: formData.ambiance,
+              informationsPratiques: formData.informationsPratiques,
               hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,
               hybridDetailedPayments: formData.hybridDetailedPayments,
-              hybridChildrenServices: formData.hybridChildrenServices
+              hybridChildrenServices: formData.hybridChildrenServices,
+              hybridParkingInfo: formData.hybridParkingInfo
             }}
             isEditMode={isEditMode}
             onInputChange={(field: string | number | symbol, value: any) => handleInputChange(field as string, value)}
@@ -204,19 +206,25 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               facebook: formData.facebook,
               tiktok: formData.tiktok,
               youtube: formData.youtube,
+              accountFirstName: formData.accountFirstName,
+              accountLastName: formData.accountLastName,
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
               // Données d'enrichissement
+              enrichmentData: enrichmentData,
               theForkLink: formData.theForkLink,
               uberEatsLink: formData.uberEatsLink,
               informationsPratiques: formData.informationsPratiques,
               envieTags: formData.envieTags,
-              // Données d'enrichissement hybride
+              // Données d'enrichissement manuel
               hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,
               hybridDetailedPayments: formData.hybridDetailedPayments,
-              hybridChildrenServices: formData.hybridChildrenServices
+              hybridChildrenServices: formData.hybridChildrenServices,
+              // Coordonnées GPS
+              latitude: formData.address?.latitude,
+              longitude: formData.address?.longitude
             }}
             isEditMode={isEditMode}
             onEdit={(step) => {

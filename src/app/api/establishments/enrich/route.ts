@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
           ...(enrichmentData.practicalInfo || [])
         ].filter((item, index, arr) => arr.indexOf(item) === index), // Supprimer les doublons
         
-        // Enrichissement conditionnel : ne pas écraser les choix manuels existants
+        // Enrichissement conditionnel : ne pas écraser les choix d'enrichissement manuel existants
         detailedPayments: establishment.detailedPayments && Object.keys(establishment.detailedPayments).length > 0 
           ? establishment.detailedPayments  // Garder les choix manuels existants
           : enrichmentData.detailedPayments, // Appliquer l'enrichissement seulement si vide

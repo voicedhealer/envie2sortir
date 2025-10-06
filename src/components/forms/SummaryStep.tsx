@@ -1,14 +1,27 @@
 'use client';
 
 import React from 'react';
+import SmartSummaryStep from './SmartSummaryStep';
+import ParkingInfo from '../ParkingInfo';
+import HealthInfo from '../HealthInfo';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
+  // Informations du compte professionnel
+  accountFirstName?: string;
+  accountLastName?: string;
+  accountEmail?: string;
+  accountPhone?: string;
+  
   // Informations générales
   establishmentName: string;
   description: string;
   address: string;
   activities: string[];
+  
+  // Coordonnées GPS
+  latitude?: number;
+  longitude?: number;
   
   // Horaires
   hours: {
@@ -25,9 +38,16 @@ export interface EstablishmentFormData {
   // Services et ambiance
   services: string[];
   ambiance: string[];
+  informationsPratiques?: string[];
   
   // Moyens de paiement
   paymentMethods: string[];
+  
+  // Parking
+  parkingOptions?: string[];
+  
+  // Santé et sécurité
+  healthOptions?: string[];
   
   // Tags de recherche
   tags: string[];
@@ -51,21 +71,25 @@ export interface EstablishmentFormData {
   // Données d'enrichissement
   theForkLink?: string;
   uberEatsLink?: string;
-  informationsPratiques?: string;
   envieTags?: string[];
   
-  // Données d'enrichissement hybride
+  // Données d'enrichissement manuel
   hybridAccessibilityDetails?: string;
   hybridDetailedServices?: string;
   hybridClienteleInfo?: string;
   hybridDetailedPayments?: string;
   hybridChildrenServices?: string;
+  hybridParkingInfo?: string;
+  
+  // Données d'enrichissement intelligent (depuis l'API Google)
+  smartEnrichmentData?: any;
 }
 
 // Props du composant
 interface SummaryStepProps {
   data: EstablishmentFormData;
   onEdit: (step: number) => void;
+  useSmartSummary?: boolean;
 }
 
 // Configuration des étapes pour la navigation
@@ -90,7 +114,11 @@ const DAYS_LABELS = {
   sunday: 'Dimanche',
 };
 
-export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
+export default function SummaryStep({ data, onEdit, useSmartSummary = true }: SummaryStepProps) {
+  // Utiliser le résumé intelligent si activé
+  if (useSmartSummary) {
+    return <SmartSummaryStep data={data} onEdit={onEdit} />;
+  }
   // Fonction pour formater les horaires
   const formatHours = (hours: EstablishmentFormData['hours']) => {
     if (!hours || Object.keys(hours).length === 0) {
@@ -310,6 +338,7 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
+          {/* Moyens de paiement du formulaire */}
           {data.paymentMethods && data.paymentMethods.length > 0 ? (
             data.paymentMethods.map((method, index) => (
               <span
@@ -319,11 +348,98 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
                 {method}
               </span>
             ))
-          ) : (
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement intelligent */}
+          {data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
+            data.smartEnrichmentData.paymentMethodsArray.map((method: string, index: number) => (
+              <span
+                key={`enrichment-${index}`}
+                className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+              >
+                {method} (Google)
+              </span>
+            ))
+          ) : null}
+          
+          {/* Moyens de paiement d'enrichissement manuel */}
+          {data.hybridDetailedPayments ? (
+            Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
+              enabled ? (
+                <span
+                  key={`manual-${index}`}
+                  className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+                >
+                  {method} (Manuel)
+                </span>
+              ) : null
+            ))
+          ) : null}
+          
+          {/* Message si aucun moyen de paiement */}
+          {(!data.paymentMethods || data.paymentMethods.length === 0) && 
+           (!data.smartEnrichmentData?.paymentMethodsArray || data.smartEnrichmentData.paymentMethodsArray.length === 0) &&
+           (!data.hybridDetailedPayments) && (
             <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
           )}
         </div>
       </div>
+
+      {/* Informations pratiques */}
+      {data.informationsPratiques && data.informationsPratiques.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">ℹ️</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Informations pratiques
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(4)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.informationsPratiques.map((info, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+              >
+                {info}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Parking */}
+      <ParkingInfo 
+        parkingOptions={[
+          ...(data.parkingOptions || []),
+          ...(data.smartEnrichmentData?.servicesArray?.filter((service: string) => 
+            service.toLowerCase().includes('parking')
+          ) || [])
+        ]} 
+        className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
+      />
+
+      {/* Santé et sécurité */}
+      <HealthInfo 
+        healthOptions={[
+          ...(data.healthOptions || []),
+          ...(data.smartEnrichmentData?.servicesArray?.filter((service: string) => 
+            service.toLowerCase().includes('santé') || 
+            service.toLowerCase().includes('sécurité') ||
+            service.toLowerCase().includes('premiers secours')
+          ) || [])
+        ]} 
+        className="bg-white border border-gray-200 rounded-xl shadow-sm p-8"
+      />
 
       {/* Tags de recherche */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
@@ -600,7 +716,7 @@ export default function SummaryStep({ data, onEdit }: SummaryStepProps) {
             )}
           </div>
 
-          {/* Données d'enrichissement hybride */}
+          {/* Données d'enrichissement manuel */}
           {(data.hybridAccessibilityDetails || data.hybridDetailedServices || data.hybridClienteleInfo || 
             data.hybridDetailedPayments || data.hybridChildrenServices) && (
             <div className="mt-8 pt-6 border-t border-gray-200">

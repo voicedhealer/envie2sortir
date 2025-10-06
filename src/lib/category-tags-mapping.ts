@@ -436,6 +436,108 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     relatedTags: ["futuriste", "découverte", "original", "innovant"]
   },
 
+  // 👶 ENFANTS & FAMILLE - Activités et établissements pour enfants
+  trampoline_parc: {
+    primaryTags: ["trampoline", "parc", "enfants", "saut", "rebond"],
+    secondaryTags: ["famille", "loisir", "sport", "fun", "activité"],
+    relatedTags: ["enfants", "amusant", "énergique", "défoulement", "groupe"]
+  },
+  parc_loisirs_enfants: {
+    primaryTags: ["parc", "loisirs", "enfants", "jeux", "famille"],
+    secondaryTags: ["attractions", "manèges", "animations", "anniversaires", "groupe"],
+    relatedTags: ["enfants", "famille", "amusant", "coloré", "diversion"]
+  },
+  centre_aquatique: {
+    primaryTags: ["centre", "aquatique", "piscine", "enfants", "eau"],
+    secondaryTags: ["toboggans", "jeux", "eau", "apprentissage", "natation"],
+    relatedTags: ["rafraîchissant", "famille", "sport", "détente", "sécurisé"]
+  },
+  parc_aventure_enfants: {
+    primaryTags: ["parc", "aventure", "enfants", "accrobranche", "tyrolienne"],
+    secondaryTags: ["nature", "défi", "sécurisé", "moniteur", "famille"],
+    relatedTags: ["nature", "défi", "enfants", "sécurisé", "moniteur"]
+  },
+  ludotheque: {
+    primaryTags: ["ludothèque", "jeux", "enfants", "jouets", "bibliothèque"],
+    secondaryTags: ["prêt", "jeux", "société", "éducatif", "famille"],
+    relatedTags: ["éducatif", "calme", "intellectuel", "famille", "découverte"]
+  },
+  centre_loisirs_enfants: {
+    primaryTags: ["centre", "loisirs", "enfants", "activités", "garde"],
+    secondaryTags: ["mercredi", "vacances", "ateliers", "animations", "groupe"],
+    relatedTags: ["garde", "éducatif", "social", "divers", "encadré"]
+  },
+  ferme_pedagogique: {
+    primaryTags: ["ferme", "pédagogique", "animaux", "enfants", "nature"],
+    secondaryTags: ["découverte", "éducatif", "contact", "animaux", "famille"],
+    relatedTags: ["nature", "éducatif", "découverte", "famille", "authentique"]
+  },
+  musee_enfants: {
+    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
+    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
+    relatedTags: ["culturel", "éducatif", "interactif", "découverte", "intellectuel"]
+  },
+  parc_theme_enfants: {
+    primaryTags: ["parc", "thème", "enfants", "attractions", "spectacles"],
+    secondaryTags: ["personnages", "magie", "fantaisie", "anniversaires", "famille"],
+    relatedTags: ["magique", "fantaisie", "enfants", "spectacle", "mémorable"]
+  },
+  centre_sportif_enfants: {
+    primaryTags: ["centre", "sportif", "enfants", "gymnastique", "sport"],
+    secondaryTags: ["cours", "compétition", "entraînement", "moniteur", "groupe"],
+    relatedTags: ["sport", "discipline", "groupe", "entraînement", "compétition"]
+  },
+  atelier_creatif_enfants: {
+    primaryTags: ["atelier", "créatif", "enfants", "art", "manuel"],
+    secondaryTags: ["peinture", "bricolage", "création", "artistique", "groupe"],
+    relatedTags: ["créatif", "artistique", "manuel", "expression", "découverte"]
+  },
+  parc_jeux_interieur: {
+    primaryTags: ["parc", "jeux", "intérieur", "enfants", "aire"],
+    secondaryTags: ["toboggans", "tunnels", "balles", "sécurisé", "famille"],
+    relatedTags: ["intérieur", "sécurisé", "amusant", "famille", "défoulement"]
+  },
+  mini_golf: {
+    primaryTags: ["mini", "golf", "enfants", "famille", "loisir"],
+    secondaryTags: ["parcours", "balle", "club", "score", "compétition"],
+    relatedTags: ["précision", "famille", "calme", "technique", "loisir"]
+  },
+  parc_attractions_familial: {
+    primaryTags: ["parc", "attractions", "familial", "manèges", "loisir"],
+    secondaryTags: ["tous", "âges", "famille", "divers", "amusant"],
+    relatedTags: ["universel", "famille", "divers", "amusant", "mémorable"]
+  },
+  centre_anniversaires: {
+    primaryTags: ["centre", "anniversaires", "enfants", "fête", "organisation"],
+    secondaryTags: ["animation", "gâteau", "cadeaux", "groupe", "mémorable"],
+    relatedTags: ["fête", "célébration", "groupe", "mémorable", "spécial"]
+  },
+  parc_animalier: {
+    primaryTags: ["parc", "animalier", "animaux", "enfants", "nature"],
+    secondaryTags: ["découverte", "sauvage", "domestique", "famille", "éducatif"],
+    relatedTags: ["nature", "découverte", "éducatif", "famille", "authentique"]
+  },
+  parc_plage_enfants: {
+    primaryTags: ["parc", "plage", "enfants", "sable", "eau"],
+    secondaryTags: ["châteaux", "sable", "jeux", "eau", "famille"],
+    relatedTags: ["plage", "sable", "eau", "famille", "été"]
+  },
+  centre_equitation_enfants: {
+    primaryTags: ["centre", "équitation", "enfants", "cheval", "poney"],
+    secondaryTags: ["monte", "soins", "nature", "responsabilité", "famille"],
+    relatedTags: ["nature", "responsabilité", "sport", "animal", "découverte"]
+  },
+  parc_skate_enfants: {
+    primaryTags: ["parc", "skate", "enfants", "planche", "roues"],
+    secondaryTags: ["rampes", "tricks", "sécurité", "groupe", "sport"],
+    relatedTags: ["sport", "adrénaline", "groupe", "technique", "urbain"]
+  },
+  centre_cirque_enfants: {
+    primaryTags: ["centre", "cirque", "enfants", "acrobatie", "art"],
+    secondaryTags: ["jonglage", "équilibre", "souplesse", "spectacle", "groupe"],
+    relatedTags: ["artistique", "acrobatie", "spectacle", "groupe", "créatif"]
+  },
+
   // ❓ Autres
   autre: {
     primaryTags: ["autre", "activité", "spécialité", "unique"],
@@ -1152,6 +1254,168 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["futuriste", "découverte", "original", "innovant"]
   },
 
+  // 👶 ENFANTS & FAMILLE - Informations complètes
+  trampoline_parc: {
+    label: "Trampoline parc",
+    services: ["Trampolines géants", "Saut libre", "Parcours", "Sécurité", "Moniteurs"],
+    ambiance: ["Énergique", "Amusante", "Défoulement", "Groupe", "Familiale"],
+    primaryTags: ["trampoline", "parc", "enfants", "saut", "rebond"],
+    secondaryTags: ["famille", "loisir", "sport", "fun", "activité"],
+    relatedTags: ["enfants", "amusant", "énergique", "défoulement", "groupe"]
+  },
+  parc_loisirs_enfants: {
+    label: "Parc de loisirs enfants",
+    services: ["Manèges", "Attractions", "Animations", "Anniversaires", "Goûters"],
+    ambiance: ["Colorée", "Amusante", "Familiale", "Animée", "Diversifiée"],
+    primaryTags: ["parc", "loisirs", "enfants", "jeux", "famille"],
+    secondaryTags: ["attractions", "manèges", "animations", "anniversaires", "groupe"],
+    relatedTags: ["enfants", "famille", "amusant", "coloré", "diversion"]
+  },
+  centre_aquatique: {
+    label: "Centre aquatique",
+    services: ["Piscine", "Toboggans", "Jeux d'eau", "Cours de natation", "Espace détente"],
+    ambiance: ["Rafraîchissante", "Sécurisée", "Familiale", "Détendue", "Aquatique"],
+    primaryTags: ["centre", "aquatique", "piscine", "enfants", "eau"],
+    secondaryTags: ["toboggans", "jeux", "eau", "apprentissage", "natation"],
+    relatedTags: ["rafraîchissant", "famille", "sport", "détente", "sécurisé"]
+  },
+  parc_aventure_enfants: {
+    label: "Parc d'aventure enfants",
+    services: ["Accrobranche", "Tyroliennes", "Parcours sécurisés", "Moniteurs", "Équipement"],
+    ambiance: ["Aventure", "Nature", "Sécurisée", "Défi", "Familiale"],
+    primaryTags: ["parc", "aventure", "enfants", "accrobranche", "tyrolienne"],
+    secondaryTags: ["nature", "défi", "sécurisé", "moniteur", "famille"],
+    relatedTags: ["nature", "défi", "enfants", "sécurisé", "moniteur"]
+  },
+  ludotheque: {
+    label: "Ludothèque",
+    services: ["Prêt de jeux", "Espace de jeu", "Ateliers", "Jeux de société", "Jouets éducatifs"],
+    ambiance: ["Calme", "Éducative", "Intellectuelle", "Familiale", "Découverte"],
+    primaryTags: ["ludothèque", "jeux", "enfants", "jouets", "bibliothèque"],
+    secondaryTags: ["prêt", "jeux", "société", "éducatif", "famille"],
+    relatedTags: ["éducatif", "calme", "intellectuel", "famille", "découverte"]
+  },
+  centre_loisirs_enfants: {
+    label: "Centre de loisirs enfants",
+    services: ["Garde périscolaire", "Ateliers créatifs", "Sorties", "Animations", "Encadrement"],
+    ambiance: ["Éducative", "Sociale", "Diversifiée", "Encadrée", "Familiale"],
+    primaryTags: ["centre", "loisirs", "enfants", "activités", "garde"],
+    secondaryTags: ["mercredi", "vacances", "ateliers", "animations", "groupe"],
+    relatedTags: ["garde", "éducatif", "social", "divers", "encadré"]
+  },
+  ferme_pedagogique: {
+    label: "Ferme pédagogique",
+    services: ["Contact animaux", "Visites guidées", "Ateliers nature", "Découverte", "Goûters fermiers"],
+    ambiance: ["Naturelle", "Éducative", "Authentique", "Familiale", "Découverte"],
+    primaryTags: ["ferme", "pédagogique", "animaux", "enfants", "nature"],
+    secondaryTags: ["découverte", "éducatif", "contact", "animaux", "famille"],
+    relatedTags: ["nature", "éducatif", "découverte", "famille", "authentique"]
+  },
+  musee_enfants: {
+    label: "Musée enfants",
+    services: ["Expositions interactives", "Ateliers", "Jeux éducatifs", "Visites guidées", "Découverte"],
+    ambiance: ["Culturelle", "Éducative", "Interactive", "Intellectuelle", "Familiale"],
+    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
+    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
+    relatedTags: ["culturel", "éducatif", "interactif", "découverte", "intellectuel"]
+  },
+  parc_theme_enfants: {
+    label: "Parc à thème enfants",
+    services: ["Attractions thématiques", "Spectacles", "Personnages", "Anniversaires", "Boutiques"],
+    ambiance: ["Magique", "Fantaisiste", "Spectaculaire", "Mémorable", "Familiale"],
+    primaryTags: ["parc", "thème", "enfants", "attractions", "spectacles"],
+    secondaryTags: ["personnages", "magie", "fantaisie", "anniversaires", "famille"],
+    relatedTags: ["magique", "fantaisie", "enfants", "spectacle", "mémorable"]
+  },
+  centre_sportif_enfants: {
+    label: "Centre sportif enfants",
+    services: ["Cours de sport", "Entraînements", "Compétitions", "Moniteurs", "Équipements"],
+    ambiance: ["Sportive", "Disciplinée", "Groupe", "Compétitive", "Éducative"],
+    primaryTags: ["centre", "sportif", "enfants", "gymnastique", "sport"],
+    secondaryTags: ["cours", "compétition", "entraînement", "moniteur", "groupe"],
+    relatedTags: ["sport", "discipline", "groupe", "entraînement", "compétition"]
+  },
+  atelier_creatif_enfants: {
+    label: "Atelier créatif enfants",
+    services: ["Peinture", "Bricolage", "Créations artistiques", "Ateliers", "Matériel"],
+    ambiance: ["Créative", "Artistique", "Manuelle", "Expression", "Découverte"],
+    primaryTags: ["atelier", "créatif", "enfants", "art", "manuel"],
+    secondaryTags: ["peinture", "bricolage", "création", "artistique", "groupe"],
+    relatedTags: ["créatif", "artistique", "manuel", "expression", "découverte"]
+  },
+  parc_jeux_interieur: {
+    label: "Parc de jeux intérieur",
+    services: ["Aires de jeux", "Toboggans", "Tunnels", "Balles", "Sécurité"],
+    ambiance: ["Sécurisée", "Amusante", "Intérieure", "Familiale", "Défoulement"],
+    primaryTags: ["parc", "jeux", "intérieur", "enfants", "aire"],
+    secondaryTags: ["toboggans", "tunnels", "balles", "sécurisé", "famille"],
+    relatedTags: ["intérieur", "sécurisé", "amusant", "famille", "défoulement"]
+  },
+  mini_golf: {
+    label: "Mini-golf",
+    services: ["Parcours", "Clubs", "Balles", "Score", "Compétition"],
+    ambiance: ["Calme", "Précision", "Familiale", "Technique", "Loisir"],
+    primaryTags: ["mini", "golf", "enfants", "famille", "loisir"],
+    secondaryTags: ["parcours", "balle", "club", "score", "compétition"],
+    relatedTags: ["précision", "famille", "calme", "technique", "loisir"]
+  },
+  parc_attractions_familial: {
+    label: "Parc d'attractions familial",
+    services: ["Manèges tous âges", "Attractions", "Restaurants", "Boutiques", "Animations"],
+    ambiance: ["Universelle", "Familiale", "Diverse", "Amusante", "Mémorable"],
+    primaryTags: ["parc", "attractions", "familial", "manèges", "loisir"],
+    secondaryTags: ["tous", "âges", "famille", "divers", "amusant"],
+    relatedTags: ["universel", "famille", "divers", "amusant", "mémorable"]
+  },
+  centre_anniversaires: {
+    label: "Centre d'anniversaires",
+    services: ["Organisation fêtes", "Animation", "Gâteaux", "Cadeaux", "Décoration"],
+    ambiance: ["Festive", "Célébration", "Mémorable", "Spéciale", "Groupe"],
+    primaryTags: ["centre", "anniversaires", "enfants", "fête", "organisation"],
+    secondaryTags: ["animation", "gâteau", "cadeaux", "groupe", "mémorable"],
+    relatedTags: ["fête", "célébration", "groupe", "mémorable", "spécial"]
+  },
+  parc_animalier: {
+    label: "Parc animalier",
+    services: ["Visite animaux", "Nourrissage", "Spectacles", "Découverte", "Éducatif"],
+    ambiance: ["Naturelle", "Éducative", "Découverte", "Familiale", "Authentique"],
+    primaryTags: ["parc", "animalier", "animaux", "enfants", "nature"],
+    secondaryTags: ["découverte", "sauvage", "domestique", "famille", "éducatif"],
+    relatedTags: ["nature", "découverte", "éducatif", "famille", "authentique"]
+  },
+  parc_plage_enfants: {
+    label: "Parc de plage enfants",
+    services: ["Châteaux de sable", "Jeux d'eau", "Activités plage", "Sécurité", "Famille"],
+    ambiance: ["Plage", "Sable", "Eau", "Familiale", "Été"],
+    primaryTags: ["parc", "plage", "enfants", "sable", "eau"],
+    secondaryTags: ["châteaux", "sable", "jeux", "eau", "famille"],
+    relatedTags: ["plage", "sable", "eau", "famille", "été"]
+  },
+  centre_equitation_enfants: {
+    label: "Centre d'équitation enfants",
+    services: ["Monte poney", "Soins animaux", "Cours", "Nature", "Responsabilité"],
+    ambiance: ["Naturelle", "Responsable", "Sportive", "Animale", "Découverte"],
+    primaryTags: ["centre", "équitation", "enfants", "cheval", "poney"],
+    secondaryTags: ["monte", "soins", "nature", "responsabilité", "famille"],
+    relatedTags: ["nature", "responsabilité", "sport", "animal", "découverte"]
+  },
+  parc_skate_enfants: {
+    label: "Parc de skate enfants",
+    services: ["Rampes", "Tricks", "Sécurité", "Cours", "Équipement"],
+    ambiance: ["Sportive", "Adrénaline", "Groupe", "Technique", "Urbaine"],
+    primaryTags: ["parc", "skate", "enfants", "planche", "roues"],
+    secondaryTags: ["rampes", "tricks", "sécurité", "groupe", "sport"],
+    relatedTags: ["sport", "adrénaline", "groupe", "technique", "urbain"]
+  },
+  centre_cirque_enfants: {
+    label: "Centre de cirque enfants",
+    services: ["Acrobatie", "Jonglage", "Équilibre", "Spectacles", "Cours"],
+    ambiance: ["Artistique", "Acrobatique", "Spectaculaire", "Groupe", "Créative"],
+    primaryTags: ["centre", "cirque", "enfants", "acrobatie", "art"],
+    secondaryTags: ["jonglage", "équilibre", "souplesse", "spectacle", "groupe"],
+    relatedTags: ["artistique", "acrobatie", "spectacle", "groupe", "créatif"]
+  },
+
   // ❓ Autres
   autre: {
     label: "Autre activité",
@@ -1211,6 +1475,14 @@ export function getGroupedActivities() {
     "🎮 Escape Games": [
       "escape_game", "escape_game_horreur", "escape_game_aventure", "escape_game_mystere",
       "escape_game_sf", "escape_game_fantasy", "escape_game_familial"
+    ],
+    "👶 Enfants & Famille": [
+      "trampoline_parc", "parc_loisirs_enfants", "centre_aquatique", "parc_aventure_enfants",
+      "ludotheque", "centre_loisirs_enfants", "ferme_pedagogique", "musee_enfants",
+      "parc_theme_enfants", "centre_sportif_enfants", "atelier_creatif_enfants",
+      "parc_jeux_interieur", "mini_golf", "parc_attractions_familial", "centre_anniversaires",
+      "parc_animalier", "parc_plage_enfants", "centre_equitation_enfants", "parc_skate_enfants",
+      "centre_cirque_enfants"
     ],
     "❓ Autres": [
       "autre"

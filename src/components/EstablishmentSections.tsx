@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
 
@@ -24,16 +24,27 @@ interface EstablishmentSectionsProps {
     clienteleInfo?: any;
     detailedPayments?: any;
     childrenServices?: any;
+    smartEnrichmentData?: any;
+    enrichmentData?: any;
     tags?: Array<{
       tag: string;
       typeTag: string;
       poids: number;
     }>;
   };
+  // Données d'enrichissement
+  parkingOptions?: string[];
+  healthOptions?: string[];
 }
 
-export default function EstablishmentSections({ establishment }: EstablishmentSectionsProps) {
+export default function EstablishmentSections({ establishment, parkingOptions = [], healthOptions = [] }: EstablishmentSectionsProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>('description');
+  const [isClient, setIsClient] = useState(false);
+
+  // Protection contre l'erreur d'hydratation
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSection(expandedSection === section ? null : section);
@@ -54,16 +65,46 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     if (typeof jsonField === 'string') {
       try {
         return JSON.parse(jsonField);
-      } catch {
+      } catch (e) {
+        console.error('Erreur parsing JSON:', e);
         return null;
       }
     }
     
-    if (typeof jsonField === 'object') {
-      return jsonField;
+    return jsonField;
+  };
+
+  // Fonction générique pour parser les données hybrides JSON (pour les champs Google Places)
+  const parseGooglePlacesField = (field: any, fieldName: string): string[] => {
+    if (!field) return [];
+    
+    if (Array.isArray(field)) {
+      return field;
     }
     
-    return null;
+    if (typeof field === 'string') {
+      try {
+        const parsed = JSON.parse(field);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+    
+    if (typeof field === 'object') {
+      // Pour les services Google Places, chercher les clés communes
+      const commonKeys = ['service', 'services', 'amenity', 'amenities', 'feature', 'features'];
+      for (const key of commonKeys) {
+        if (field[key] && Array.isArray(field[key])) {
+          return field[key];
+        }
+      }
+      
+      // Si pas de clé commune, retourner les valeurs de l'objet
+      return Object.values(field).filter(value => typeof value === 'string');
+    }
+    
+    return [];
   };
 
   // Fonction pour extraire les éléments d'accessibilité des données hybrides
@@ -130,41 +171,6 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   // Utiliser les données hybrides si disponibles, sinon les données classiques
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
 
-  // Fonction robuste pour parser les données Google Places
-  const parseGooglePlacesField = (field: any, fieldName: string) => {
-    if (!field) return [];
-    
-    if (typeof field === 'string') {
-      try {
-        const parsed = JSON.parse(field);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (error) {
-        console.warn(`⚠️ Erreur parsing ${fieldName}:`, error);
-        console.warn(`⚠️ Valeur reçue:`, field);
-        return [];
-      }
-    }
-    
-    if (Array.isArray(field)) {
-      return field;
-    }
-    
-    // Si c'est un objet, essayer d'extraire les données utiles
-    if (typeof field === 'object') {
-      // Pour les services Google Places, chercher les clés communes
-      const commonKeys = ['service', 'services', 'amenity', 'amenities', 'feature', 'features'];
-      for (const key of commonKeys) {
-        if (field[key] && Array.isArray(field[key])) {
-          return field[key];
-        }
-      }
-      
-      // Si pas de clé commune, retourner les valeurs de l'objet
-      return Object.values(field).filter(value => typeof value === 'string');
-    }
-    
-    return [];
-  };
 
   const activities = parseGooglePlacesField(establishment.activities, 'activities');
   const allServices = parseGooglePlacesField(establishment.services, 'services');
@@ -174,20 +180,39 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
   // Traiter les informations pratiques Google Places
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
+  // Extraire les données d'enrichissement intelligent
+  const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
+  const enrichmentData = parseHybridData(establishment.enrichmentData);
+  
+  // Ajouter les données d'enrichissement aux services pour la catégorisation
+  const enrichmentServices = [
+    ...(smartEnrichmentData?.servicesArray || []),
+    ...(enrichmentData?.services || [])
+  ];
+  
+  // Ajouter les informations pratiques d'enrichissement
+  const enrichmentPracticalInfo = [
+    ...(smartEnrichmentData?.practicalInfo || [])
+  ];
+  
+  // Combiner tous les services (Google + enrichissement)
+  const allServicesCombined = [...allServices, ...enrichmentServices];
+  
+  // Combiner toutes les informations pratiques (Google + enrichissement)
+  const allPracticalInfo = [...informationsPratiques, ...enrichmentPracticalInfo];
+  
   // Logique de catégorisation intelligente des données Google Places
   const categorizeGooglePlacesData = () => {
     const categories = {
       // Services de restauration
       servicesRestauration: [] as string[],
-      // Services généraux
-      servicesGeneraux: [] as string[],
       // Ambiance et spécialités
       ambianceSpecialites: [] as string[],
       // Informations pratiques (Planning, Paiements, Enfants, Parking)
       informationsPratiques: [] as string[],
       // Clientèle cible
       clientele: [] as string[],
-      // Commodités et équipements
+      // Commodités et équipements (fusion des anciens services généraux)
       commodites: [] as string[],
       // Activités et événements
       activites: [] as string[]
@@ -197,17 +222,18 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     const seenItems = new Set<string>();
 
     // Catégoriser les services
-    allServices.forEach((service: string) => {
+    allServicesCombined.forEach((service: string) => {
       if (seenItems.has(service)) return; // Éviter les doublons
       seenItems.add(service);
       
       const serviceLower = service.toLowerCase();
       
-      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      // ✨ Exclure les moyens de paiement et le parking (ils ont leurs propres sections dédiées)
       if (serviceLower.includes('carte') || serviceLower.includes('paiement') || 
           serviceLower.includes('nfc') || serviceLower.includes('titre') ||
           serviceLower.includes('crédit') || serviceLower.includes('débit') ||
-          serviceLower.includes('espèces') || serviceLower.includes('chèque')) {
+          serviceLower.includes('espèces') || serviceLower.includes('chèque') ||
+          serviceLower.includes('parking')) {
         return; // Ne pas ajouter aux commodités
       }
       
@@ -217,14 +243,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
           serviceLower.includes('service à table') || serviceLower.includes('repas')) {
         categories.servicesRestauration.push(service);
       }
-      // Services généraux
-      else if (serviceLower.includes('toilettes') || serviceLower.includes('wifi') ||
-               serviceLower.includes('climatisation') || serviceLower.includes('chauffage') ||
-               serviceLower.includes('parking') || serviceLower.includes('terrasse')) {
-        categories.servicesGeneraux.push(service);
-      }
-
-      // Commodités
+      // Tout le reste va dans les commodités (fusion des anciens services généraux)
       else {
         categories.commodites.push(service);
       }
@@ -246,37 +265,24 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
     });
 
     // Catégoriser les informations pratiques
-    informationsPratiques.forEach((info: string) => {
+    allPracticalInfo.forEach((info: string) => {
       if (seenItems.has(info)) return; // Éviter les doublons
       seenItems.add(info);
       
       const infoLower = info.toLowerCase();
       
-      // ✨ Exclure les moyens de paiement (ils ont leur propre carte dédiée)
+      // ✨ Exclure les moyens de paiement et le parking (ils ont leurs propres sections dédiées)
       if (infoLower.includes('carte') || infoLower.includes('paiement') || 
           infoLower.includes('nfc') || infoLower.includes('titre') ||
           infoLower.includes('crédit') || infoLower.includes('débit') ||
-          infoLower.includes('espèces') || infoLower.includes('chèque')) {
+          infoLower.includes('espèces') || infoLower.includes('chèque') ||
+          infoLower.includes('parking')) {
         return; // Ne pas ajouter aux commodités
       }
       
-      // Informations pratiques spécifiques
-      if (infoLower.includes('espace non-fumeurs') || infoLower.includes('réservation recommandée') ||
-          infoLower.includes('toilettes adaptées pmr') || infoLower.includes('non-fumeurs') ||
-          infoLower.includes('réservation') || infoLower.includes('pmr') ||
-          infoLower.includes('handicap')) {
-        categories.informationsPratiques.push(info);
-      }
-      // Services généraux
-      else if (infoLower.includes('wifi') || infoLower.includes('climatisation') ||
-               infoLower.includes('chauffage') || infoLower.includes('parking')) {
-        categories.servicesGeneraux.push(info);
-      }
-
-      // Commodités
-      else {
-        categories.commodites.push(info);
-      }
+      // Toutes les informations pratiques vont dans la section "Informations pratiques"
+      // et ne sont PAS dupliquées dans les commodités
+      categories.informationsPratiques.push(info);
     });
 
     // Catégoriser les activités
@@ -291,6 +297,26 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       if (seenItems.has(item)) return;
       seenItems.add(item);
       categories.commodites.push(item);
+    });
+
+    // Intégrer les services d'enrichissement dans les commodités
+    enrichmentServices.forEach((service: string) => {
+      if (seenItems.has(service)) return;
+      seenItems.add(service);
+      
+      const serviceLower = service.toLowerCase();
+      
+      // Exclure les moyens de paiement et le parking (ils ont leurs propres sections)
+      if (serviceLower.includes('carte') || serviceLower.includes('paiement') || 
+          serviceLower.includes('nfc') || serviceLower.includes('titre') ||
+          serviceLower.includes('crédit') || serviceLower.includes('débit') ||
+          serviceLower.includes('espèces') || serviceLower.includes('chèque') ||
+          serviceLower.includes('parking')) {
+        return;
+      }
+      
+      // Ajouter aux commodités
+      categories.commodites.push(service);
     });
 
     return categories;
@@ -310,6 +336,11 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  // Protection contre l'erreur d'hydratation - ne pas rendre côté serveur
+  if (!isClient) {
+    return <div>Chargement...</div>;
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -378,40 +409,6 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
         </div>
       )}
 
-      {/* Services généraux */}
-      {categorizedData.servicesGeneraux.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <button
-            onClick={() => toggleSection('services-generaux')}
-            className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center space-x-3">
-              <Wrench className="w-5 h-5 text-orange-500" />
-              <h3 className="font-semibold text-gray-900">Services généraux</h3>
-            </div>
-            {expandedSection === 'services-generaux' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </button>
-          
-          {expandedSection === 'services-generaux' && (
-            <div className="px-6 pb-4 border-t border-gray-100">
-              <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categorizedData.servicesGeneraux.map((service: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-700">{service}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Ambiance & Spécialités */}
       {categorizedData.ambianceSpecialites.length > 0 && (
@@ -451,7 +448,7 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
       )}
 
       {/* Commodités */}
-      {categorizedData.commodites.length > 0 && (
+      {(categorizedData.commodites.length > 0 || parkingOptions.length > 0 || healthOptions.length > 0) && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             onClick={() => toggleSection('commodites')}
@@ -470,15 +467,70 @@ export default function EstablishmentSections({ establishment }: EstablishmentSe
           
           {expandedSection === 'commodites' && (
             <div className="px-6 pb-4 border-t border-gray-100">
-              <div className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categorizedData.commodites.map((commodite: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-gray-700">{commodite}</span>
+              <div className="pt-4 space-y-6">
+                {/* Commodités générales */}
+                {categorizedData.commodites.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <span className="text-lg mr-2">🔧</span>
+                      Équipements et services
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {categorizedData.commodites.map((commodite: string, index: number) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-gray-700">{commodite}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Stationnement */}
+                {parkingOptions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <span className="text-lg mr-2">🅿️</span>
+                      Stationnement
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {parkingOptions.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-gray-700">{option}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Prévention d'usage */}
+                {healthOptions.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <span className="text-lg mr-2">ℹ️</span>
+                      Prévention d'usage
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {healthOptions.map((option, index) => {
+                        // Nettoyer le texte en enlevant les icônes
+                        const cleanOption = option.replace('⚠️ ', '').replace('✅ ', '');
+                        const isWarning = option.includes('⚠️');
+                        const isSolution = option.includes('✅');
+                        return (
+                          <div key={index} className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              isWarning ? 'bg-orange-500' : 
+                              isSolution ? 'bg-green-500' : 
+                              'bg-blue-500'
+                            }`}></div>
+                            <span className="text-gray-700">{cleanOption}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

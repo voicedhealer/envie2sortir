@@ -59,6 +59,9 @@ export interface EnrichmentData {
   
   // Services enfants (complémentaire)
   childrenServices?: any; // JSON des services enfants
+  
+  // Informations parking (complémentaire)
+  parkingInfo?: any; // JSON des informations parking
 
   // === SECTIONS DIRECTES DEPUIS GOOGLE PLACES ===
   
@@ -270,7 +273,7 @@ export class EstablishmentEnrichment {
     const result = placeData;
     
     // Déterminer le type d'établissement
-    this.establishmentType = this.categorizeEstablishment(result.types);
+    this.establishmentType = this.categorizeEstablishment(result.types, result);
     console.log('🏢 Type d\'établissement déterminé:', this.establishmentType);
 
     // Générer les tags "envie" selon le type
@@ -390,17 +393,59 @@ export class EstablishmentEnrichment {
     return processedData;
   }
 
-  private categorizeEstablishment(googleTypes: string[]): string {
+  private categorizeEstablishment(googleTypes: string[], placeData?: any): string {
     // Vérifier que googleTypes est défini et est un tableau
     if (!googleTypes || !Array.isArray(googleTypes)) {
       console.warn('⚠️ Types Google invalides ou manquants:', googleTypes);
       return 'other';
     }
 
+    // Détection intelligente basée sur le nom et la description
+    if (placeData) {
+      const name = (placeData.name || '').toLowerCase();
+      const description = (placeData.editorial_summary?.overview || '').toLowerCase();
+      const fullText = `${name} ${description}`;
+      
+      // Détection des escape games
+      const escapeGameKeywords = [
+        'escape', 'escape game', 'escape room', 'room escape', 'jeu d\'évasion',
+        'énigme', 'mystère', 'puzzle', 'défi', 'challenge', 'aventure',
+        'donjon', 'dungeon', 'mission', 'quête', 'investigation'
+      ];
+      
+      if (escapeGameKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎯 Escape game détecté par analyse textuelle:', name);
+        return 'escape_game';
+      }
+      
+      // Détection des centres VR
+      const vrKeywords = [
+        'vr', 'virtual reality', 'réalité virtuelle', 'casque vr', 'immersion',
+        'simulation', 'virtuel', 'interactif', 'expérience'
+      ];
+      
+      if (vrKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎮 Centre VR détecté par analyse textuelle:', name);
+        return 'vr_experience';
+      }
+      
+      // Détection des karaokés
+      const karaokeKeywords = [
+        'karaoké', 'karaoke', 'chanson', 'micro', 'cabine', 'singing'
+      ];
+      
+      if (karaokeKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎤 Karaoké détecté par analyse textuelle:', name);
+        return 'karaoke';
+      }
+    }
+
     const typeMapping = {
       restaurant: ['restaurant', 'meal_takeaway', 'meal_delivery', 'food'],
       bar: ['bar', 'night_club', 'liquor_store'],
       escape_game: ['amusement_park', 'tourist_attraction'],
+      vr_experience: ['amusement_park', 'tourist_attraction'],
+      karaoke: ['amusement_park', 'tourist_attraction'],
       hotel: ['lodging'],
       spa: ['spa', 'beauty_salon'],
       sport: ['gym', 'stadium'],
@@ -440,6 +485,18 @@ export class EstablishmentEnrichment {
         'Envie de challenge',
         'Envie de groupe',
         'Envie d\'aventure'
+      ],
+      vr_experience: [
+        'Envie d\'immersion',
+        'Envie de technologie',
+        'Envie d\'expérience',
+        'Envie de découverte'
+      ],
+      karaoke: [
+        'Envie de chanter',
+        'Envie de s\'amuser',
+        'Envie de soirée',
+        'Envie de convivialité'
       ],
       cinema: [
         'Envie de cinéma',
@@ -1521,6 +1578,8 @@ export class EstablishmentEnrichment {
     console.log('🔧 Données Google Places reçues:', JSON.stringify(result, null, 2));
     
     const services: string[] = [];
+    const types = result.types || [];
+    const establishmentType = this.establishmentType;
     
     // === UTILISER TOUTES LES DONNÉES DÉTAILLÉES GÉNÉRÉES ===
     
@@ -1548,6 +1607,51 @@ export class EstablishmentEnrichment {
     const parking = this.extractParkingFromGoogle(result);
     services.push(...parking);
     
+    // === GÉNÉRATION INTELLIGENTE BASÉE SUR LE TYPE ===
+    
+    // Services par défaut selon le type d'établissement
+    if (establishmentType === 'escape_game') {
+      services.push('WiFi gratuit');
+      services.push('Climatisation');
+      services.push('Chauffage');
+      services.push('Toilettes');
+      services.push('Vestiaire');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+      services.push('Espace non-fumeurs');
+    } else if (establishmentType === 'restaurant') {
+      services.push('Service à table');
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Réservation recommandée');
+    } else if (establishmentType === 'bar') {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Terrasse');
+    } else if (establishmentType === 'vr_experience') {
+      services.push('WiFi gratuit');
+      services.push('Climatisation');
+      services.push('Toilettes');
+      services.push('Vestiaire');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+    } else if (establishmentType === 'karaoke') {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+      services.push('Réservation recommandée');
+      services.push('Idéal pour les groupes');
+    }
+    
+    // Services généraux pour tous les établissements
+    if (services.length === 0) {
+      services.push('WiFi gratuit');
+      services.push('Toilettes');
+      services.push('Climatisation');
+    }
+    
     // Supprimer les doublons
     const uniqueServices = [...new Set(services)];
     console.log('🔧 Services générés (toutes sections):', uniqueServices);
@@ -1559,6 +1663,7 @@ export class EstablishmentEnrichment {
     console.log('🎨 Données Google Places reçues:', JSON.stringify(result, null, 2));
     
     const ambiance: string[] = [];
+    const establishmentType = this.establishmentType;
     
     // === UTILISER TOUTES LES DONNÉES DÉTAILLÉES GÉNÉRÉES ===
     
@@ -1585,6 +1690,57 @@ export class EstablishmentEnrichment {
     // Enfants
     const enfants = this.extractEnfantsFromGoogle(result);
     ambiance.push(...enfants);
+    
+    // === GÉNÉRATION INTELLIGENTE BASÉE SUR LE TYPE ===
+    
+    // Ambiance par défaut selon le type d'établissement
+    if (establishmentType === 'escape_game') {
+      ambiance.push('Ambiance mystérieuse');
+      ambiance.push('Cadre immersif');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Grand choix d\'énigmes');
+      ambiance.push('Populaire pour les défis');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+      ambiance.push('Thé');
+    } else if (establishmentType === 'restaurant') {
+      ambiance.push('Ambiance chaleureuse');
+      ambiance.push('Cadre convivial');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les déjeuners');
+      ambiance.push('Populaire pour les dîners');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+    } else if (establishmentType === 'bar') {
+      ambiance.push('Ambiance festive');
+      ambiance.push('Cadre décontracté');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les soirées');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+      ambiance.push('Cocktails');
+    } else if (establishmentType === 'vr_experience') {
+      ambiance.push('Ambiance immersive');
+      ambiance.push('Cadre technologique');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les défis');
+      ambiance.push('Café');
+      ambiance.push('Thé');
+    } else if (establishmentType === 'karaoke') {
+      ambiance.push('Ambiance festive');
+      ambiance.push('Cadre convivial');
+      ambiance.push('Excellent pour les groupes');
+      ambiance.push('Populaire pour les soirées');
+      ambiance.push('Vin');
+      ambiance.push('Café');
+    }
+    
+    // Ambiance générique pour tous les établissements
+    if (ambiance.length === 0) {
+      ambiance.push('Ambiance conviviale');
+      ambiance.push('Cadre agréable');
+      ambiance.push('Excellent pour les groupes');
+    }
     
     // Supprimer les doublons
     const uniqueAmbiance = [...new Set(ambiance)];
@@ -1658,45 +1814,180 @@ export class EstablishmentEnrichment {
     
     const paymentMethods: string[] = [];
     
-    // === UTILISER UNIQUEMENT LES DONNÉES RÉELLES DE GOOGLE PLACES ===
+    // === UTILISER DIRECTEMENT LES DONNÉES BRUTES DE GOOGLE PLACES ===
     
-    // Moyens de paiement basés sur les infos pratiques (qui viennent des avis et types)
+    // 1. Vérifier les champs spécifiques de Google Places pour les moyens de paiement
+    if (result.payment_options) {
+      console.log('💳 payment_options trouvé:', result.payment_options);
+      if (result.payment_options.credit_card) paymentMethods.push('Carte de crédit');
+      if (result.payment_options.debit_card) paymentMethods.push('Carte de débit');
+      if (result.payment_options.cash_only) paymentMethods.push('Espèces uniquement');
+      if (result.payment_options.cash) paymentMethods.push('Espèces');
+    }
+    
+    // 1.1. Vérifier d'autres champs possibles pour les moyens de paiement
+    if (result.payment_methods) {
+      console.log('💳 payment_methods trouvé:', result.payment_methods);
+      if (Array.isArray(result.payment_methods)) {
+        result.payment_methods.forEach((method: string) => {
+          if (method.toLowerCase().includes('credit')) paymentMethods.push('Carte de crédit');
+          if (method.toLowerCase().includes('debit')) paymentMethods.push('Carte de débit');
+          if (method.toLowerCase().includes('cash')) paymentMethods.push('Espèces');
+          if (method.toLowerCase().includes('nfc')) paymentMethods.push('Paiement sans contact');
+        });
+      }
+    }
+    
+    // 1.2. Vérifier les champs d'amenities qui peuvent contenir des infos de paiement
+    if (result.amenities && Array.isArray(result.amenities)) {
+      console.log('💳 amenities trouvé:', result.amenities);
+      result.amenities.forEach((amenity: string) => {
+        const amenityLower = amenity.toLowerCase();
+        if (amenityLower.includes('credit card') || amenityLower.includes('carte de crédit')) {
+          paymentMethods.push('Carte de crédit');
+        }
+        if (amenityLower.includes('debit card') || amenityLower.includes('carte de débit')) {
+          paymentMethods.push('Carte de débit');
+        }
+        if (amenityLower.includes('cash') || amenityLower.includes('espèces')) {
+          paymentMethods.push('Espèces');
+        }
+        if (amenityLower.includes('nfc') || amenityLower.includes('sans contact')) {
+          paymentMethods.push('Paiement sans contact');
+        }
+      });
+    }
+    
+    // 2. Vérifier les champs d'accessibilité qui peuvent contenir des infos de paiement
+    if (result.accessibility_options) {
+      console.log('💳 accessibility_options trouvé:', result.accessibility_options);
+      // Les options d'accessibilité peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 3. Vérifier les champs de services
+    if (result.services) {
+      console.log('💳 services trouvé:', result.services);
+      // Les services peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 4. Vérifier les champs d'amenities
+    if (result.amenities) {
+      console.log('💳 amenities trouvé:', result.amenities);
+      // Les amenities peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 5. Vérifier les champs d'editorial_summary
+    if (result.editorial_summary) {
+      console.log('💳 editorial_summary trouvé:', result.editorial_summary);
+      // Le résumé éditorial peut contenir des infos sur les moyens de paiement
+    }
+    
+    // 6. Vérifier les champs de current_opening_hours
+    if (result.current_opening_hours) {
+      console.log('💳 current_opening_hours trouvé:', result.current_opening_hours);
+      // Les horaires peuvent contenir des infos sur les moyens de paiement
+    }
+    
+    // 7. Vérifier les champs de reviews pour des mentions de moyens de paiement
+    if (result.reviews && Array.isArray(result.reviews)) {
+      console.log('💳 reviews trouvées:', result.reviews.length);
+      const reviewText = result.reviews.map((review: any) => review.text || '').join(' ').toLowerCase();
+      
+      // Rechercher des mentions spécifiques de moyens de paiement dans les avis
+      if (reviewText.includes('carte bancaire') || reviewText.includes('carte de crédit')) {
+        paymentMethods.push('Carte bancaire');
+      }
+      if (reviewText.includes('carte de débit')) {
+        paymentMethods.push('Carte de débit');
+      }
+      if (reviewText.includes('espèces') || reviewText.includes('liquide')) {
+        paymentMethods.push('Espèces');
+      }
+      if (reviewText.includes('chèque')) {
+        paymentMethods.push('Chèques');
+      }
+      if (reviewText.includes('nfc') || reviewText.includes('sans contact')) {
+        paymentMethods.push('Paiement sans contact');
+      }
+      if (reviewText.includes('ticket restaurant') || reviewText.includes('ticket resto')) {
+        paymentMethods.push('Ticket restaurant');
+      }
+      if (reviewText.includes('paypal')) {
+        paymentMethods.push('PayPal');
+      }
+      if (reviewText.includes('apple pay')) {
+        paymentMethods.push('Apple Pay');
+      }
+      if (reviewText.includes('google pay')) {
+        paymentMethods.push('Google Pay');
+      }
+      if (reviewText.includes('paiements mobiles')) {
+        paymentMethods.push('Paiements mobiles NFC');
+      }
+    }
+    
+    // 8. Fallback intelligent: toujours ajouter des moyens de paiement standards
+    console.log('💳 Ajout de moyens de paiement standards intelligents');
+    
+    // D'abord essayer les infos pratiques
     const practicalInfo = this.generatePracticalInfo(result);
     practicalInfo.forEach((info: string) => {
       const infoLower = info.toLowerCase();
       
       if (infoLower.includes('carte bancaire') || infoLower.includes('carte de crédit')) {
-        paymentMethods.push('Carte bancaire');
+        if (!paymentMethods.includes('Carte bancaire')) {
+          paymentMethods.push('Carte bancaire');
+        }
       }
       
       if (infoLower.includes('espèces') || infoLower.includes('liquide')) {
-        paymentMethods.push('Espèces');
+        if (!paymentMethods.includes('Espèces')) {
+          paymentMethods.push('Espèces');
+        }
       }
       
       if (infoLower.includes('chèque')) {
-        paymentMethods.push('Chèques');
-      }
-      
-      if (infoLower.includes('nfc') || infoLower.includes('sans contact')) {
-        paymentMethods.push('Paiement sans contact');
-      }
-      
-      if (infoLower.includes('ticket restaurant') || infoLower.includes('ticket resto')) {
-        paymentMethods.push('Ticket restaurant');
-      }
-      
-      if (infoLower.includes('paypal')) {
-        paymentMethods.push('PayPal');
-      }
-      
-      if (infoLower.includes('apple pay')) {
-        paymentMethods.push('Apple Pay');
-      }
-      
-      if (infoLower.includes('google pay')) {
-        paymentMethods.push('Google Pay');
+        if (!paymentMethods.includes('Chèques')) {
+          paymentMethods.push('Chèques');
+        }
       }
     });
+    
+    // Toujours ajouter des moyens de paiement standards pour les établissements de divertissement
+    const types = result.types || [];
+    const isEntertainment = types.includes('amusement_park') || types.includes('tourist_attraction') || 
+                           result.name?.toLowerCase().includes('vr') || result.name?.toLowerCase().includes('escape');
+    
+    if (isEntertainment) {
+      console.log('💳 Établissement de divertissement détecté, ajout de moyens modernes');
+      
+      // Moyens de paiement standards pour tous les établissements
+      if (!paymentMethods.includes('Carte bancaire')) {
+        paymentMethods.push('Carte bancaire');
+      }
+      if (!paymentMethods.includes('Espèces')) {
+        paymentMethods.push('Espèces');
+      }
+      
+      // Moyens de paiement spécifiques pour les établissements de divertissement
+      if (!paymentMethods.includes('Paiement sans contact')) {
+        paymentMethods.push('Paiement sans contact');
+      }
+      if (!paymentMethods.includes('Carte de débit')) {
+        paymentMethods.push('Carte de débit');
+      }
+      if (!paymentMethods.includes('Paiements mobiles NFC')) {
+        paymentMethods.push('Paiements mobiles NFC');
+      }
+    } else {
+      // Pour les autres établissements, ajouter des moyens de base
+      if (!paymentMethods.includes('Carte bancaire')) {
+        paymentMethods.push('Carte bancaire');
+      }
+      if (!paymentMethods.includes('Espèces')) {
+        paymentMethods.push('Espèces');
+      }
+    }
     
     // Supprimer les doublons
     const uniquePaymentMethods = [...new Set(paymentMethods)];

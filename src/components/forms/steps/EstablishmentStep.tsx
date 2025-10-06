@@ -92,7 +92,7 @@ export default function EstablishmentStep({
           📞 Contact de l'établissement
         </h3>
         <p className="text-sm text-gray-600 mb-4">
-          Ces informations seront visibles par les clients (différentes de vos coordonnées professionnelles)
+          Ces informations seront visibles sur la page de l'établissement, elles serviront aux clients pour contacter l'établissement.
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -100,7 +100,7 @@ export default function EstablishmentStep({
           <div>
             <label className="block text-sm font-medium mb-2">
               Téléphone de l'établissement
-              <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+              <span className="text-xs text-orange-600 ml-1">(recommandé)</span>
             </label>
             <input
               type="tel"
@@ -110,7 +110,7 @@ export default function EstablishmentStep({
               placeholder="04 78 90 12 34"
             />
             <p className="text-xs text-gray-500 mt-1">
-              📞 Numéro fixe pour les appels
+               Numéro fixe pour les appels
             </p>
           </div>
           
@@ -128,7 +128,7 @@ export default function EstablishmentStep({
               placeholder="06 12 34 56 78"
             />
             <p className="text-xs text-gray-500 mt-1">
-              📱 Numéro mobile pour WhatsApp
+               Numéro mobile pour WhatsApp
             </p>
           </div>
           
@@ -146,7 +146,7 @@ export default function EstablishmentStep({
               placeholder="https://m.me/votre-page-facebook"
             />
             <p className="text-xs text-gray-500 mt-1">
-              💬 Lien vers votre page Facebook Messenger
+              Lien vers votre page Facebook Messenger
             </p>
           </div>
           
@@ -154,7 +154,7 @@ export default function EstablishmentStep({
           <div>
             <label className="block text-sm font-medium mb-2">
               Email de l'établissement
-              <span className="text-xs text-gray-500 ml-1">(optionnel)</span>
+              <span className="text-xs text-orange-600 ml-1">(recommandé)</span>
             </label>
             <input
               type="email"
@@ -164,7 +164,7 @@ export default function EstablishmentStep({
               placeholder="contact@votre-etablissement.com"
             />
             <p className="text-xs text-gray-500 mt-1">
-              ✉️ Email visible par les clients
+               Email visible par les clients
             </p>
           </div>
         </div>

@@ -4,11 +4,13 @@ interface ServicesStepProps {
   formData: {
     services: string[];
     ambiance: string[];
+    informationsPratiques?: string[];
     hybridAccessibilityDetails?: any;
     hybridDetailedServices?: any;
     hybridClienteleInfo?: any;
     hybridDetailedPayments?: any;
     hybridChildrenServices?: any;
+    hybridParkingInfo?: any;
   };
   isEditMode: boolean;
   onInputChange: (field: string | number | symbol, value: any) => void;
@@ -36,7 +38,7 @@ export default function ServicesStep({
       {/* Affichage des données hybrides si elles existent */}
       {(formData.hybridAccessibilityDetails || formData.hybridDetailedServices || 
         formData.hybridClienteleInfo || formData.hybridDetailedPayments || 
-        formData.hybridChildrenServices) && (
+        formData.hybridChildrenServices || formData.hybridParkingInfo) && (
         <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-lg">
           <h3 className="text-lg font-semibold text-orange-800 mb-4 flex items-center">
             🌟 Informations détaillées récupérées
@@ -82,6 +84,14 @@ export default function ServicesStep({
                 </p>
               </div>
             )}
+            {formData.hybridParkingInfo && (
+              <div className="bg-white p-3 rounded border">
+                <h4 className="font-medium text-gray-900 mb-2">🅿️ Informations parking</h4>
+                <p className="text-gray-600">
+                  {Object.keys(formData.hybridParkingInfo).length} options configurées
+                </p>
+              </div>
+            )}
           </div>
           <p className="text-sm text-orange-700 mt-3">
             💡 Ces informations détaillées ont été récupérées lors de l'enrichissement et seront intégrées à votre établissement.
@@ -90,10 +100,22 @@ export default function ServicesStep({
       )}
 
       <OrganizedServicesAmbianceManager
-        services={formData.services || []}
+        services={(formData.services || []).filter(service => {
+          const serviceLower = service.toLowerCase();
+          // Exclure les moyens de paiement des services
+          return !serviceLower.includes('carte') && 
+                 !serviceLower.includes('paiement') && 
+                 !serviceLower.includes('nfc') && 
+                 !serviceLower.includes('pluxee') && 
+                 !serviceLower.includes('titre') &&
+                 !serviceLower.includes('crédit') &&
+                 !serviceLower.includes('débit');
+        })}
         ambiance={formData.ambiance || []}
+        informationsPratiques={formData.informationsPratiques || []}
         onServicesChange={(services) => onInputChange('services', services)}
         onAmbianceChange={(ambiance) => onInputChange('ambiance', ambiance)}
+        onInformationsPratiquesChange={(informationsPratiques) => onInputChange('informationsPratiques', informationsPratiques)}
         isEditMode={isEditMode}
       />
     </div>

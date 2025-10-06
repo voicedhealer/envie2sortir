@@ -8,7 +8,7 @@ describe('Affichage des données d\'enrichissement - SummaryStep', () => {
       informationsPratiques: 'Restaurant avec terrasse et parking gratuit',
       envieTags: ['convivial', 'familial', 'romantique'],
       
-      // Données d'enrichissement hybride (saisies manuellement)
+      // Données d'enrichissement manuel (sélectionnées par l'utilisateur)
       hybridAccessibilityDetails: 'Établissement accessible aux personnes à mobilité réduite',
       hybridDetailedServices: 'Service de traiteur, événements privés, cours de cuisine',
       hybridClienteleInfo: 'Clientèle familiale et professionnelle, groupes acceptés',

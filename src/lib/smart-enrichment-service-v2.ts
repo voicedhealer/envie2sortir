@@ -1,0 +1,757 @@
+// Service d'enrichissement intelligent v2 - Cohérent avec les activités de la plateforme
+// Priorise et combine intelligemment les données automatiques et manuelles
+
+import { EnrichmentData } from './enrichment-system';
+
+export interface EnrichmentPriority {
+  source: 'google' | 'manual' | 'suggested';
+  confidence: number; // 0-1
+  category: string;
+  value: any;
+  reason?: string; // Pourquoi cette priorité
+}
+
+export interface EnrichmentSuggestions {
+  recommended: EnrichmentPriority[];
+  optional: EnrichmentPriority[];
+  toVerify: EnrichmentPriority[];
+  alreadyFound: EnrichmentPriority[];
+}
+
+export interface SmartEnrichmentData extends EnrichmentData {
+  // Données priorisées
+  prioritizedData: {
+    accessibility: EnrichmentPriority[];
+    services: EnrichmentPriority[];
+    payments: EnrichmentPriority[];
+    clientele: EnrichmentPriority[];
+    children: EnrichmentPriority[];
+    parking: EnrichmentPriority[];
+  };
+  
+  // Métadonnées
+  enrichmentMetadata: {
+    googleConfidence: number;
+    manualCompleteness: number;
+    totalSuggestions: number;
+    lastUpdated: Date;
+  };
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  suggestions: string[];
+}
+
+export class SmartEnrichmentServiceV2 {
+  // Commodités obligatoires (toujours proposées)
+  private mandatoryAmenities = {
+    payments: [
+      { value: 'Carte bancaire', confidence: 0.95 },
+      { value: 'Espèces', confidence: 0.9 }
+    ],
+    accessibility: [
+      { value: 'Accessible PMR', confidence: 0.7 },
+      { value: 'Toilettes handicapées', confidence: 0.6 }
+    ],
+    infrastructure: [
+      { value: 'Toilettes homme/femme', confidence: 0.9 },
+      { value: 'Climatisation', confidence: 0.8 },
+      { value: 'Chauffage', confidence: 0.8 }
+    ],
+    services: [
+      { value: 'WiFi gratuit', confidence: 0.9 }
+    ],
+    parking: [
+      { value: 'Parking gratuit', confidence: 0.8 },
+      { value: 'Parking payant', confidence: 0.7 },
+      { value: 'Parking privé', confidence: 0.6 },
+      { value: 'Parking couvert', confidence: 0.7 },
+      { value: 'Parking moto', confidence: 0.6 },
+      { value: 'Parking vélo', confidence: 0.6 }
+    ],
+    health: [
+      { value: 'Premiers secours disponibles', confidence: 0.8 },
+      { value: 'Personnel formé aux urgences', confidence: 0.7 }
+    ]
+  };
+
+  // Commodités spécifiques par activité de la plateforme
+  private activitySpecificAmenities = {
+    vr_experience: {
+      recommended: [
+        { category: 'services', value: 'Casques VR', confidence: 0.95 },
+        { category: 'services', value: 'Sessions privées', confidence: 0.9 },
+        { category: 'services', value: 'Équipements dernier cri', confidence: 0.85 },
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
+        { category: 'services', value: 'Événements d\'entreprise', confidence: 0.8 },
+        { category: 'children', value: 'Sessions enfants', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Risque épileptique (lumières clignotantes)', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Mal des transports virtuels possible', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Casques désinfectés', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Pauses recommandées', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 }
+      ],
+      optional: [
+        { category: 'services', value: 'Formation VR', confidence: 0.7 },
+        { category: 'services', value: 'Location d\'équipements', confidence: 0.6 },
+        { category: 'accessibility', value: 'Casques adaptés', confidence: 0.6 },
+        { category: 'health', value: '✅ Lunettes de protection', confidence: 0.7, type: 'solution' }
+      ]
+    },
+    escape_game: {
+      recommended: [
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.95 },
+        { category: 'services', value: 'Sessions d\'équipe', confidence: 0.9 },
+        { category: 'services', value: 'Thèmes variés', confidence: 0.85 },
+        { category: 'services', value: 'Événements d\'entreprise', confidence: 0.8 },
+        { category: 'children', value: 'Sessions enfants', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Risque de claustrophobie', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Stress/anxiété possible', confidence: 0.7, type: 'warning' },
+        { category: 'health', value: '✅ Sortie de secours visible', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Personnel formé aux situations d\'urgence', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 }
+      ],
+      optional: [
+        { category: 'services', value: 'Sessions privées', confidence: 0.7 },
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'services', value: 'Team building', confidence: 0.8 },
+        { category: 'health', value: '✅ Zones de repos disponibles', confidence: 0.6, type: 'solution' }
+      ]
+    },
+    laser_game: {
+      recommended: [
+        { category: 'services', value: 'Équipements laser', confidence: 0.95 },
+        { category: 'services', value: 'Sessions tactiques', confidence: 0.9 },
+        { category: 'services', value: 'Équipes', confidence: 0.85 },
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
+        { category: 'health', value: '⚠️ Effets lumineux intenses', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '⚠️ Mouvements rapides', confidence: 0.7, type: 'warning' },
+        { category: 'health', value: '✅ Lunettes de protection', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Zones de repos', confidence: 0.8, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking moto', confidence: 0.6 }
+      ],
+      optional: [
+        { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Équipements de sécurité', confidence: 0.6, type: 'solution' }
+      ]
+    },
+    bowling: {
+      recommended: [
+        { category: 'services', value: 'Pistes de bowling', confidence: 0.95 },
+        { category: 'services', value: 'Chaussures', confidence: 0.9 },
+        { category: 'services', value: 'Snacks', confidence: 0.8 },
+        { category: 'services', value: 'Réservations', confidence: 0.85 },
+        { category: 'health', value: '⚠️ Risque de chute', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '⚠️ Chaussures de sécurité requises', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '✅ Chaussures de bowling fournies', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Sol antidérapant', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking couvert', confidence: 0.7 },
+        { category: 'parking', value: 'Parking privé', confidence: 0.6 }
+      ],
+      optional: [
+        { category: 'services', value: 'Événements privés', confidence: 0.7 },
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Barrières de sécurité', confidence: 0.6, type: 'solution' }
+      ]
+    },
+    billard_americain: {
+      recommended: [
+        { category: 'services', value: 'Tables de billard', confidence: 0.95 },
+        { category: 'services', value: 'Queues', confidence: 0.9 },
+        { category: 'services', value: 'Snacks', confidence: 0.8 }
+      ],
+      optional: [
+        { category: 'services', value: 'Tournois', confidence: 0.7 },
+        { category: 'services', value: 'Cours', confidence: 0.6 }
+      ]
+    },
+    karting: {
+      recommended: [
+        { category: 'services', value: 'Karts', confidence: 0.95 },
+        { category: 'services', value: 'Casques', confidence: 0.9 },
+        { category: 'services', value: 'Réservations obligatoires', confidence: 0.9 },
+        { category: 'health', value: '⚠️ Vitesse élevée', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Risque de collision', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Casques de sécurité obligatoires', confidence: 0.95, type: 'solution' },
+        { category: 'health', value: '✅ Piste sécurisée', confidence: 0.9, type: 'solution' },
+        { category: 'parking', value: 'Parking gratuit', confidence: 0.8 },
+        { category: 'parking', value: 'Parking moto', confidence: 0.6 },
+        { category: 'parking', value: 'Parking vélo', confidence: 0.6 }
+      ],
+      optional: [
+        { category: 'services', value: 'Événements d\'entreprise', confidence: 0.7 },
+        { category: 'services', value: 'Anniversaires', confidence: 0.75 },
+        { category: 'health', value: '✅ Formation sécurité', confidence: 0.6, type: 'solution' }
+      ]
+    },
+    bar_ambiance: {
+      recommended: [
+        { category: 'services', value: 'Boissons', confidence: 0.95 },
+        { category: 'services', value: 'Musique', confidence: 0.9 },
+        { category: 'services', value: 'Réservations', confidence: 0.8 },
+        { category: 'health', value: '⚠️ Volume sonore élevé', confidence: 0.9, type: 'warning' },
+        { category: 'health', value: '⚠️ Exposition prolongée au bruit', confidence: 0.8, type: 'warning' },
+        { category: 'health', value: '✅ Bouchons d\'oreilles disponibles', confidence: 0.7, type: 'solution' },
+        { category: 'health', value: '✅ Zones calmes', confidence: 0.8, type: 'solution' }
+      ],
+      optional: [
+        { category: 'services', value: 'Événements privés', confidence: 0.7 },
+        { category: 'health', value: '✅ Limitation du volume', confidence: 0.6, type: 'solution' }
+      ]
+    }
+  };
+
+  /**
+   * Détecte intelligemment l'activité de l'établissement basé sur les données Google
+   */
+  detectActivity(googleData: EnrichmentData): string {
+    const name = googleData.name?.toLowerCase() || '';
+    const description = googleData.description?.toLowerCase() || '';
+    const activities = googleData.activities?.join(' ').toLowerCase() || '';
+    const specialties = googleData.specialties?.join(' ').toLowerCase() || '';
+    
+    const fullText = `${name} ${description} ${activities} ${specialties}`;
+    
+    // Détection VR Experience
+    const vrKeywords = ['réalité virtuelle', 'virtual reality', 'vr experience', 'casque vr', 'immersion vr'];
+    if (vrKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'vr_experience';
+    }
+    
+    // Détection Escape Game
+    const escapeKeywords = ['escape game', 'escape room', 'énigmes', 'salles thématiques'];
+    if (escapeKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'escape_game';
+    }
+    
+    // Détection Laser Game
+    const laserKeywords = ['laser game', 'laser tag', 'laser', 'tactique'];
+    if (laserKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'laser_game';
+    }
+    
+    // Détection Bowling
+    const bowlingKeywords = ['bowling', 'piste', 'quilles'];
+    if (bowlingKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'bowling';
+    }
+    
+    // Détection Billard
+    const billardKeywords = ['billard', 'pool', 'snooker'];
+    if (billardKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'billard_americain';
+    }
+    
+    // Détection Karting
+    const kartingKeywords = ['karting', 'kart', 'course', 'piste'];
+    if (kartingKeywords.some(keyword => fullText.includes(keyword))) {
+      return 'karting';
+    }
+    
+    // Par défaut, retourner 'autre' si aucune activité spécifique n'est détectée
+    return 'autre';
+  }
+
+  /**
+   * Vérifie si une commodité est déjà présente dans les données Google
+   */
+  private isAlreadyFound(amenity: any, googleServices: string[], googlePayments: string[], googleAccessibility: string[]): boolean {
+    const value = amenity.value.toLowerCase();
+    
+    console.log('🔍 Vérification doublon pour:', value, 'catégorie:', amenity.category);
+    console.log('🔍 Google payments:', googlePayments);
+    
+    // Vérifier dans les services
+    if (googleServices.some(service => service.toLowerCase().includes(value) || value.includes(service.toLowerCase()))) {
+      console.log('✅ Trouvé dans les services');
+      return true;
+    }
+    
+    // Vérifier dans les moyens de paiement avec correspondance exacte
+    if (amenity.category === 'payments' && googlePayments.some(payment => {
+      const paymentLower = payment.toLowerCase();
+      const isMatch = paymentLower === value || 
+             paymentLower.includes(value) || 
+             value.includes(paymentLower) ||
+             // Correspondances spécifiques
+             (value === 'carte bancaire' && (paymentLower.includes('carte') && paymentLower.includes('bancaire'))) ||
+             (value === 'espèces' && (paymentLower.includes('espèces') || paymentLower.includes('liquide'))) ||
+             (value === 'tickets restaurant' && paymentLower.includes('tickets'));
+      
+      if (isMatch) {
+        console.log('✅ Trouvé dans les paiements:', payment);
+      }
+      return isMatch;
+    })) {
+      return true;
+    }
+    
+    // Vérifier dans l'accessibilité
+    if (amenity.category === 'accessibility' && googleAccessibility.some(access => access.toLowerCase().includes(value) || value.includes(access.toLowerCase()))) {
+      console.log('✅ Trouvé dans l\'accessibilité');
+      return true;
+    }
+    
+    // Vérifier dans les services pour la santé (généralement dans les services généraux)
+    if (amenity.category === 'health' && googleServices.some(service => {
+      const serviceLower = service.toLowerCase();
+      return serviceLower.includes(value) || 
+             value.includes(serviceLower) ||
+             // Correspondances spécifiques pour la santé
+             (value.includes('premiers secours') && serviceLower.includes('secours')) ||
+             (value.includes('personnel formé') && serviceLower.includes('formé')) ||
+             (value.includes('casques') && serviceLower.includes('casques')) ||
+             (value.includes('lunettes') && serviceLower.includes('lunettes'));
+    })) {
+      console.log('✅ Trouvé dans les services (santé)');
+      return true;
+    }
+    
+    // Vérifier dans les services pour le parking
+    if (amenity.category === 'parking' && googleServices.some(service => {
+      const serviceLower = service.toLowerCase();
+      return serviceLower.includes(value) || 
+             value.includes(serviceLower) ||
+             // Correspondances spécifiques pour le parking
+             (value.includes('parking') && serviceLower.includes('parking')) ||
+             (value.includes('gratuit') && serviceLower.includes('gratuit')) ||
+             (value.includes('payant') && serviceLower.includes('payant')) ||
+             (value.includes('couvert') && serviceLower.includes('couvert')) ||
+             (value.includes('privé') && serviceLower.includes('privé')) ||
+             (value.includes('moto') && serviceLower.includes('moto')) ||
+             (value.includes('vélo') && serviceLower.includes('vélo'));
+    })) {
+      console.log('✅ Trouvé dans les services (parking)');
+      return true;
+    }
+    
+    console.log('❌ Non trouvé');
+    return false;
+  }
+
+  /**
+   * Extrait les services des données Google
+   */
+  private extractGoogleServices(googleData: EnrichmentData): string[] {
+    const services = [];
+    
+    if (googleData.servicesArray) {
+      services.push(...googleData.servicesArray);
+    }
+    
+    if (googleData.servicesAvailableInfo) {
+      services.push(...googleData.servicesAvailableInfo);
+    }
+    
+    if (googleData.detailedServices) {
+      services.push(...Object.values(googleData.detailedServices).flat());
+    }
+    
+    return services;
+  }
+
+  /**
+   * Extrait les moyens de paiement des données Google
+   */
+  private extractGooglePayments(googleData: EnrichmentData): string[] {
+    const payments = [];
+    
+    if (googleData.paymentMethodsArray) {
+      payments.push(...googleData.paymentMethodsArray);
+    }
+    
+    if (googleData.paymentMethodsInfo) {
+      payments.push(...googleData.paymentMethodsInfo);
+    }
+    
+    if (googleData.detailedPayments) {
+      payments.push(...Object.values(googleData.detailedPayments).flat());
+    }
+    
+    return payments;
+  }
+
+  /**
+   * Extrait les informations d'accessibilité des données Google
+   */
+  private extractGoogleAccessibility(googleData: EnrichmentData): string[] {
+    const accessibility = [];
+    
+    if (googleData.accessibilityInfo) {
+      accessibility.push(...googleData.accessibilityInfo);
+    }
+    
+    if (googleData.accessibilityDetails) {
+      accessibility.push(...Object.values(googleData.accessibilityDetails).flat());
+    }
+    
+    return accessibility;
+  }
+
+  /**
+   * Analyse les données Google et génère des suggestions intelligentes
+   */
+  analyzeEnrichmentGaps(googleData: EnrichmentData): EnrichmentSuggestions {
+    // Détecter l'activité de l'établissement
+    const detectedActivity = this.detectActivity(googleData);
+    
+    const suggestions: EnrichmentSuggestions = {
+      recommended: [],
+      optional: [],
+      toVerify: [],
+      alreadyFound: []
+    };
+
+    // Analyser les données Google existantes
+    const googleServices = this.extractGoogleServices(googleData);
+    const googlePayments = this.extractGooglePayments(googleData);
+    const googleAccessibility = this.extractGoogleAccessibility(googleData);
+
+    // 1. Ajouter les commodités obligatoires (seulement si pas déjà présentes)
+    Object.entries(this.mandatoryAmenities).forEach(([category, amenities]) => {
+      amenities.forEach(amenity => {
+        const priority: EnrichmentPriority = {
+          source: 'suggested',
+          confidence: amenity.confidence,
+          category: category,
+          value: amenity.value,
+          reason: 'Commodité obligatoire'
+        };
+
+        // Créer un objet amenity avec la catégorie pour isAlreadyFound
+        const amenityWithCategory = { ...amenity, category };
+
+        if (this.isAlreadyFound(amenityWithCategory, googleServices, googlePayments, googleAccessibility)) {
+          // Marquer comme déjà trouvé mais ne pas l'afficher dans les suggestions
+          suggestions.alreadyFound.push(priority);
+        } else {
+          // Seulement suggérer si pas déjà présent
+          suggestions.recommended.push(priority);
+        }
+      });
+    });
+
+    // 1.5. Ajouter les commodités obligatoires spécifiques à l'activité
+    if (detectedActivity === 'restaurant' || detectedActivity === 'cafe') {
+      const restaurantPayments = [
+        { value: 'Tickets restaurant', confidence: 0.8 }
+      ];
+      
+      restaurantPayments.forEach(amenity => {
+        const priority: EnrichmentPriority = {
+          source: 'suggested',
+          confidence: amenity.confidence,
+          category: 'payments',
+          value: amenity.value,
+          reason: 'Commodité obligatoire pour la restauration'
+        };
+
+        if (this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+          suggestions.alreadyFound.push(priority);
+        } else {
+          suggestions.recommended.push(priority);
+        }
+      });
+    }
+
+    // 2. Ajouter les commodités spécifiques à l'activité
+    const activityAmenities = this.activitySpecificAmenities[detectedActivity as keyof typeof this.activitySpecificAmenities];
+    if (activityAmenities) {
+      // Commodités recommandées pour l'activité
+      activityAmenities.recommended.forEach(amenity => {
+        const priority: EnrichmentPriority = {
+          source: 'suggested',
+          confidence: amenity.confidence,
+          category: amenity.category,
+          value: amenity.value,
+          reason: `Recommandé pour ${detectedActivity}`
+        };
+
+        if (this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+          suggestions.alreadyFound.push(priority);
+        } else {
+          suggestions.recommended.push(priority);
+        }
+      });
+
+      // Commodités optionnelles pour l'activité
+      activityAmenities.optional.forEach(amenity => {
+        const priority: EnrichmentPriority = {
+          source: 'suggested',
+          confidence: amenity.confidence,
+          category: amenity.category,
+          value: amenity.value,
+          reason: `Optionnel pour ${detectedActivity}`
+        };
+
+        if (!this.isAlreadyFound(amenity, googleServices, googlePayments, googleAccessibility)) {
+          suggestions.optional.push(priority);
+        }
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Combine intelligemment les données Google et manuelles
+   */
+  combineEnrichmentData(
+    googleData: EnrichmentData, 
+    manualData: any
+  ): SmartEnrichmentData {
+    // Détecter l'activité
+    const detectedActivity = this.detectActivity(googleData);
+    const suggestions = this.analyzeEnrichmentGaps(googleData);
+    
+    // Créer les données priorisées
+    const prioritizedData = {
+      accessibility: this.prioritizeAccessibilityData(googleData, manualData, suggestions),
+      services: this.prioritizeServicesData(googleData, manualData, suggestions),
+      payments: this.prioritizePaymentsData(googleData, manualData, suggestions),
+      clientele: this.prioritizeClienteleData(googleData, manualData, suggestions),
+      children: this.prioritizeChildrenData(googleData, manualData, suggestions),
+      parking: this.prioritizeParkingData(googleData, manualData, suggestions)
+    };
+
+    // Calculer les métadonnées
+    const googleConfidence = this.calculateGoogleConfidence(googleData);
+    const manualCompleteness = this.calculateManualCompleteness(manualData);
+    const totalSuggestions = suggestions.recommended.length + suggestions.optional.length;
+
+    return {
+      ...googleData,
+      establishmentType: detectedActivity, // Mettre à jour avec l'activité détectée
+      prioritizedData,
+      enrichmentMetadata: {
+        googleConfidence,
+        manualCompleteness,
+        totalSuggestions,
+        lastUpdated: new Date()
+      }
+    };
+  }
+
+  /**
+   * Valide la cohérence des données finales
+   */
+  validateEnrichmentConsistency(data: SmartEnrichmentData): ValidationResult {
+    const warnings: string[] = [];
+    const suggestions: string[] = [];
+
+    // Vérifications de cohérence
+    if (data.establishmentType === 'vr_experience' && !this.hasReservationInfo(data)) {
+      warnings.push('Établissement VR sans informations de réservation');
+      suggestions.push('Ajoutez "Réservations obligatoires"');
+    }
+
+    if (data.establishmentType === 'escape_game' && !this.hasReservationInfo(data)) {
+      warnings.push('Escape Game sans informations de réservation');
+      suggestions.push('Ajoutez "Réservations obligatoires"');
+    }
+
+    if (data.establishmentType === 'karting' && !this.hasReservationInfo(data)) {
+      warnings.push('Karting sans informations de réservation');
+      suggestions.push('Ajoutez "Réservations obligatoires"');
+    }
+
+    if (!this.hasPaymentMethods(data)) {
+      warnings.push('Établissement sans moyens de paiement spécifiés');
+      suggestions.push('Ajoutez au moins "Carte bancaire" et "Espèces"');
+    }
+
+    if (!this.hasAccessibilityInfo(data)) {
+      warnings.push('Établissement sans informations d\'accessibilité');
+      suggestions.push('Ajoutez "Accessible PMR"');
+    }
+
+    return {
+      isValid: warnings.length === 0,
+      warnings,
+      suggestions
+    };
+  }
+
+  // Méthodes utilitaires pour la validation
+  private hasReservationInfo(data: SmartEnrichmentData): boolean {
+    const services = data.prioritizedData.services.map(s => s.value.toLowerCase());
+    return services.some(service => 
+      service.includes('réservation') || 
+      service.includes('booking') ||
+      service.includes('obligatoire')
+    );
+  }
+
+  private hasPaymentMethods(data: SmartEnrichmentData): boolean {
+    const payments = data.prioritizedData.payments.map(p => p.value.toLowerCase());
+    return payments.some(payment => 
+      payment.includes('carte') || 
+      payment.includes('espèces') ||
+      payment.includes('ticket')
+    );
+  }
+
+  private hasAccessibilityInfo(data: SmartEnrichmentData): boolean {
+    const accessibility = data.prioritizedData.accessibility.map(a => a.value.toLowerCase());
+    return accessibility.some(access => 
+      access.includes('pmr') || 
+      access.includes('handicap') ||
+      access.includes('accessible')
+    );
+  }
+
+  // Méthodes de priorisation des données
+  private prioritizeAccessibilityData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les données Google existantes
+    if (googleData.accessibilityInfo) {
+      googleData.accessibilityInfo.forEach(info => {
+        priorities.push({
+          source: 'google',
+          confidence: 0.8,
+          category: 'accessibility',
+          value: info,
+          reason: 'Données Google'
+        });
+      });
+    }
+    
+    // Ajouter les suggestions sélectionnées
+    const selectedAccessibility = suggestions.recommended.filter(s => s.category === 'accessibility');
+    selectedAccessibility.forEach(suggestion => {
+      priorities.push({
+        ...suggestion,
+        source: 'manual'
+      });
+    });
+    
+    return priorities;
+  }
+
+  private prioritizeServicesData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les données Google existantes
+    if (googleData.servicesArray) {
+      googleData.servicesArray.forEach(service => {
+        priorities.push({
+          source: 'google',
+          confidence: 0.8,
+          category: 'services',
+          value: service,
+          reason: 'Données Google'
+        });
+      });
+    }
+    
+    // Ajouter les suggestions sélectionnées
+    const selectedServices = suggestions.recommended.filter(s => s.category === 'services');
+    selectedServices.forEach(suggestion => {
+      priorities.push({
+        ...suggestion,
+        source: 'manual'
+      });
+    });
+    
+    return priorities;
+  }
+
+  private prioritizePaymentsData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les données Google existantes
+    if (googleData.paymentMethodsArray) {
+      googleData.paymentMethodsArray.forEach(payment => {
+        priorities.push({
+          source: 'google',
+          confidence: 0.8,
+          category: 'payments',
+          value: payment,
+          reason: 'Données Google'
+        });
+      });
+    }
+    
+    // Ajouter les suggestions sélectionnées
+    const selectedPayments = suggestions.recommended.filter(s => s.category === 'payments');
+    selectedPayments.forEach(suggestion => {
+      priorities.push({
+        ...suggestion,
+        source: 'manual'
+      });
+    });
+    
+    return priorities;
+  }
+
+  private prioritizeClienteleData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les données Google existantes
+    if (googleData.populairePour) {
+      googleData.populairePour.forEach(clientele => {
+        priorities.push({
+          source: 'google',
+          confidence: 0.8,
+          category: 'clientele',
+          value: clientele,
+          reason: 'Données Google'
+        });
+      });
+    }
+    
+    return priorities;
+  }
+
+  private prioritizeChildrenData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les suggestions sélectionnées
+    const selectedChildren = suggestions.recommended.filter(s => s.category === 'children');
+    selectedChildren.forEach(suggestion => {
+      priorities.push({
+        ...suggestion,
+        source: 'manual'
+      });
+    });
+    
+    return priorities;
+  }
+
+  private prioritizeParkingData(googleData: EnrichmentData, manualData: any, suggestions: EnrichmentSuggestions): EnrichmentPriority[] {
+    const priorities: EnrichmentPriority[] = [];
+    
+    // Ajouter les suggestions sélectionnées
+    const selectedParking = suggestions.recommended.filter(s => s.category === 'services' && s.value.toLowerCase().includes('parking'));
+    selectedParking.forEach(suggestion => {
+      priorities.push({
+        ...suggestion,
+        category: 'parking',
+        source: 'manual'
+      });
+    });
+    
+    return priorities;
+  }
+
+  private calculateGoogleConfidence(googleData: EnrichmentData): number {
+    // Calculer la confiance des données Google
+    return 0.8;
+  }
+
+  private calculateManualCompleteness(manualData: any): number {
+    // Calculer la complétude des données manuelles
+    return 0.5;
+  }
+}
+
+// Instance singleton
+export const smartEnrichmentServiceV2 = new SmartEnrichmentServiceV2();
