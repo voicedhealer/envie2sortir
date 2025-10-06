@@ -244,6 +244,8 @@ export async function POST(request: NextRequest) {
           ambiance: establishmentData.ambiance, // Ambiance (JSON)
           paymentMethods: establishmentData.paymentMethods, // Moyens de paiement (JSON)
           horairesOuverture: establishmentData.hours, // Horaires d'ouverture (JSON)
+          phone: establishmentData.phone,
+          email: establishmentData.email,
           website: establishmentData.website,
           instagram: establishmentData.instagram,
           facebook: establishmentData.facebook,
