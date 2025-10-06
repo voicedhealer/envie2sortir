@@ -280,17 +280,9 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
         return; // Ne pas ajouter aux commodités
       }
       
-      // Informations pratiques spécifiques
-      if (infoLower.includes('espace non-fumeurs') || infoLower.includes('réservation recommandée') ||
-          infoLower.includes('toilettes adaptées pmr') || infoLower.includes('non-fumeurs') ||
-          infoLower.includes('réservation') || infoLower.includes('pmr') ||
-          infoLower.includes('handicap')) {
-        categories.informationsPratiques.push(info);
-      }
-      // Tout le reste va dans les commodités (fusion des anciens services généraux)
-      else {
-        categories.commodites.push(info);
-      }
+      // Toutes les informations pratiques vont dans la section "Informations pratiques"
+      // et ne sont PAS dupliquées dans les commodités
+      categories.informationsPratiques.push(info);
     });
 
     // Catégoriser les activités
