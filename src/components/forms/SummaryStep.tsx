@@ -19,6 +19,10 @@ export interface EstablishmentFormData {
   address: string;
   activities: string[];
   
+  // Coordonnées GPS
+  latitude?: number;
+  longitude?: number;
+  
   // Horaires
   hours: {
     [key: string]: {

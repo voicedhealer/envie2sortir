@@ -20,6 +20,10 @@ export interface EstablishmentFormData {
   address: string;
   activities: string[];
   
+  // Coordonnées GPS
+  latitude?: number;
+  longitude?: number;
+  
   // Horaires
   hours: {
     [key: string]: {
@@ -207,6 +211,18 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
               {data.description || 'Aucune description fournie'}
             </p>
           </div>
+          {(data.latitude && data.longitude) && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-500 mb-1">Coordonnées GPS</label>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <span>📍 Latitude: {data.latitude.toFixed(6)}</span>
+                <span>📍 Longitude: {data.longitude.toFixed(6)}</span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                  ✅ Géolocalisé
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -335,39 +351,43 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           </h3>
           
           {/* Métadonnées */}
-          {renderEnrichmentMetadata(data.smartEnrichmentData.enrichmentMetadata)}
+          {data.smartEnrichmentData.enrichmentMetadata && renderEnrichmentMetadata(data.smartEnrichmentData.enrichmentMetadata)}
           
           {/* Données priorisées */}
           <div className="space-y-6">
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.accessibility,
-              'Accessibilité',
-              '♿',
-              4
-            )}
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.services,
-              'Services',
-              '🏪',
-              4
-            )}
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.clientele,
-              'Clientèle',
-              '👥',
-              4
-            )}
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.children,
-              'Services enfants',
-              '👶',
-              4
-            )}
-            {renderPriorityData(
-              data.smartEnrichmentData.prioritizedData.parking,
-              'Parking',
-              '🅿️',
-              4
+            {data.smartEnrichmentData.prioritizedData && (
+              <>
+                {renderPriorityData(
+                  data.smartEnrichmentData.prioritizedData.accessibility,
+                  'Accessibilité',
+                  '♿',
+                  4
+                )}
+                {renderPriorityData(
+                  data.smartEnrichmentData.prioritizedData.services,
+                  'Services',
+                  '🏪',
+                  4
+                )}
+                {renderPriorityData(
+                  data.smartEnrichmentData.prioritizedData.clientele,
+                  'Clientèle',
+                  '👥',
+                  4
+                )}
+                {renderPriorityData(
+                  data.smartEnrichmentData.prioritizedData.children,
+                  'Services enfants',
+                  '👶',
+                  4
+                )}
+                {renderPriorityData(
+                  data.smartEnrichmentData.prioritizedData.parking,
+                  'Parking',
+                  '🅿️',
+                  4
+                )}
+              </>
             )}
           </div>
         </div>

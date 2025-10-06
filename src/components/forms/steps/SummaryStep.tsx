@@ -23,19 +23,27 @@ interface SummaryStepProps {
     instagram?: string;
     facebook?: string;
     tiktok?: string;
+    youtube?: string;
+    accountFirstName?: string;
+    accountLastName?: string;
     accountPhone: string;
     accountEmail: string;
     // Données d'enrichissement
     theForkLink?: string;
     uberEatsLink?: string;
-    informationsPratiques?: string;
+    informationsPratiques?: string[];
     envieTags?: string[];
+    // Données d'enrichissement
+    enrichmentData?: any;
     // Données d'enrichissement manuel
     hybridAccessibilityDetails?: string;
     hybridDetailedServices?: string;
     hybridClienteleInfo?: string;
     hybridDetailedPayments?: string;
     hybridChildrenServices?: string;
+    // Coordonnées GPS
+    latitude?: number;
+    longitude?: number;
   };
   isEditMode: boolean;
   onEdit: (step: FormStep) => void;

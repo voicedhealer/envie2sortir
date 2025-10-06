@@ -479,7 +479,10 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
                 {/* Commodités générales */}
                 {categorizedData.commodites.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Équipements et services</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                      <span className="text-lg mr-2">🔧</span>
+                      Équipements et services
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {categorizedData.commodites.map((commodite: string, index: number) => (
                         <div key={index} className="flex items-center space-x-2">

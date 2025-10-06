@@ -270,7 +270,7 @@ export class EstablishmentEnrichment {
     const result = placeData;
     
     // Déterminer le type d'établissement
-    this.establishmentType = this.categorizeEstablishment(result.types);
+    this.establishmentType = this.categorizeEstablishment(result.types, result);
     console.log('🏢 Type d\'établissement déterminé:', this.establishmentType);
 
     // Générer les tags "envie" selon le type
@@ -390,17 +390,59 @@ export class EstablishmentEnrichment {
     return processedData;
   }
 
-  private categorizeEstablishment(googleTypes: string[]): string {
+  private categorizeEstablishment(googleTypes: string[], placeData?: any): string {
     // Vérifier que googleTypes est défini et est un tableau
     if (!googleTypes || !Array.isArray(googleTypes)) {
       console.warn('⚠️ Types Google invalides ou manquants:', googleTypes);
       return 'other';
     }
 
+    // Détection intelligente basée sur le nom et la description
+    if (placeData) {
+      const name = (placeData.name || '').toLowerCase();
+      const description = (placeData.editorial_summary?.overview || '').toLowerCase();
+      const fullText = `${name} ${description}`;
+      
+      // Détection des escape games
+      const escapeGameKeywords = [
+        'escape', 'escape game', 'escape room', 'room escape', 'jeu d\'évasion',
+        'énigme', 'mystère', 'puzzle', 'défi', 'challenge', 'aventure',
+        'donjon', 'dungeon', 'mission', 'quête', 'investigation'
+      ];
+      
+      if (escapeGameKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎯 Escape game détecté par analyse textuelle:', name);
+        return 'escape_game';
+      }
+      
+      // Détection des centres VR
+      const vrKeywords = [
+        'vr', 'virtual reality', 'réalité virtuelle', 'casque vr', 'immersion',
+        'simulation', 'virtuel', 'interactif', 'expérience'
+      ];
+      
+      if (vrKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎮 Centre VR détecté par analyse textuelle:', name);
+        return 'vr_experience';
+      }
+      
+      // Détection des karaokés
+      const karaokeKeywords = [
+        'karaoké', 'karaoke', 'chanson', 'micro', 'cabine', 'singing'
+      ];
+      
+      if (karaokeKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎤 Karaoké détecté par analyse textuelle:', name);
+        return 'karaoke';
+      }
+    }
+
     const typeMapping = {
       restaurant: ['restaurant', 'meal_takeaway', 'meal_delivery', 'food'],
       bar: ['bar', 'night_club', 'liquor_store'],
       escape_game: ['amusement_park', 'tourist_attraction'],
+      vr_experience: ['amusement_park', 'tourist_attraction'],
+      karaoke: ['amusement_park', 'tourist_attraction'],
       hotel: ['lodging'],
       spa: ['spa', 'beauty_salon'],
       sport: ['gym', 'stadium'],
@@ -440,6 +482,18 @@ export class EstablishmentEnrichment {
         'Envie de challenge',
         'Envie de groupe',
         'Envie d\'aventure'
+      ],
+      vr_experience: [
+        'Envie d\'immersion',
+        'Envie de technologie',
+        'Envie d\'expérience',
+        'Envie de découverte'
+      ],
+      karaoke: [
+        'Envie de chanter',
+        'Envie de s\'amuser',
+        'Envie de soirée',
+        'Envie de convivialité'
       ],
       cinema: [
         'Envie de cinéma',

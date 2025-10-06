@@ -20,9 +20,15 @@ export async function GET(
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Récupérer les événements de l'établissement
+    // Récupérer les événements de l'établissement (seulement les événements à venir)
+    const now = new Date();
     const events = await prisma.event.findMany({
-      where: { establishmentId: establishment.id },
+      where: { 
+        establishmentId: establishment.id,
+        startDate: {
+          gt: now // Seulement les événements à venir
+        }
+      },
       select: {
         id: true,
         title: true,

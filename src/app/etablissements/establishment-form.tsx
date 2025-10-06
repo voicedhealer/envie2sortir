@@ -220,7 +220,10 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               hybridDetailedServices: formData.hybridDetailedServices,
               hybridClienteleInfo: formData.hybridClienteleInfo,
               hybridDetailedPayments: formData.hybridDetailedPayments,
-              hybridChildrenServices: formData.hybridChildrenServices
+              hybridChildrenServices: formData.hybridChildrenServices,
+              // Coordonnées GPS
+              latitude: formData.address?.latitude,
+              longitude: formData.address?.longitude
             }}
             isEditMode={isEditMode}
             onEdit={(step) => {
