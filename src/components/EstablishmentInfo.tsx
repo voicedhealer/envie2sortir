@@ -3,6 +3,7 @@
 import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
 import { useState } from 'react';
+import { useLinkTracking } from '@/hooks/useClickTracking';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
 const cleanUrlForDisplay = (url: string): string => {
@@ -193,6 +194,9 @@ function parseGooglePlacesField(field: any, fieldName: string): string[] {
 
 export default function EstablishmentInfo({ establishment }: EstablishmentInfoProps) {
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
+  
+  // Hook de tracking des liens
+  const { trackLinkClick } = useLinkTracking(establishment.id);
   
   // Parser les données hybrides
   const hybridAccessibility = parseHybridData(establishment.accessibilityDetails);
@@ -518,7 +522,11 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
               <Phone className="w-4 h-4 text-gray-400" />
               <div>
                 <p className="text-gray-900 font-medium">Téléphone</p>
-                <a href={`tel:${establishment.phone}`} className="text-orange-500 hover:text-orange-600">
+                <a 
+                  href={`tel:${establishment.phone}`} 
+                  className="text-orange-500 hover:text-orange-600"
+                  onClick={() => trackLinkClick('phone', 'Téléphone', 'phone')}
+                >
                   {establishment.phone}
                 </a>
               </div>
@@ -535,6 +543,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-orange-500 hover:text-orange-600"
+                  onClick={() => trackLinkClick('website', 'Site web', 'website')}
                 >
                   {cleanUrlForDisplay(establishment.website)}
                 </a>
@@ -632,6 +641,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-pink-600 hover:text-pink-700"
+                    onClick={() => trackLinkClick('instagram', 'Instagram', 'instagram')}
                   >
                     Suivre sur Instagram
                   </a>
@@ -649,6 +659,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700"
+                    onClick={() => trackLinkClick('facebook', 'Facebook', 'facebook')}
                   >
                     Suivre sur Facebook
                   </a>
@@ -666,6 +677,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-gray-800 hover:text-black"
+                    onClick={() => trackLinkClick('tiktok', 'TikTok', 'tiktok')}
                   >
                     Suivre sur TikTok
                   </a>
@@ -683,6 +695,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-red-600 hover:text-red-700"
+                    onClick={() => trackLinkClick('youtube', 'YouTube', 'youtube')}
                   >
                     Suivre sur YouTube
                   </a>
