@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon } from 'lucide-react';
 
 interface EstablishmentMainSectionsProps {
   establishment: {
@@ -40,31 +40,27 @@ function parseJsonField(field: any): string[] {
 const MAIN_SECTIONS = [
   {
     id: 'about',
-    title: 'À propos',
-    icon: <FileText className="w-5 h-5" />,
+    title: 'C\'est quoi ?',
+    icon: <SquareMousePointerIcon className="w-5 h-5" />,
     color: 'blue',
-    description: 'Histoire et description de l\'établissement'
   },
   {
     id: 'activities',
     title: 'Activités proposées',
     icon: <Lightbulb className="w-5 h-5" />,
     color: 'green',
-    description: 'Activités et expériences disponibles'
   },
   {
     id: 'amenities',
     title: 'Commodités',
     icon: <Wrench className="w-5 h-5" />,
     color: 'orange',
-    description: 'Équipements et services pratiques'
   },
   {
     id: 'ambiance',
     title: 'Ambiance & Spécialités',
     icon: <Palette className="w-5 h-5" />,
     color: 'purple',
-    description: 'Ambiance, spécialités et clientèle'
   }
 ];
 
@@ -227,7 +223,7 @@ export default function EstablishmentMainSections({ establishment, className = "
   return (
     <div className={`space-y-4 ${className}`}>
       {MAIN_SECTIONS.map((section) => {
-        const subSections = SUB_SECTIONS[section.id as keyof typeof SUB_SECTIONS];
+        const subSections = SUB_SECTIONS[section.id as keyof typeof SUB_SECTIONS] || [];
         const totalItems = subSections.reduce((sum, sub) => sum + sub.getData(establishment).length, 0);
         
         if (totalItems === 0) return null;
@@ -245,13 +241,9 @@ export default function EstablishmentMainSections({ establishment, className = "
                 </span>
                 <div>
                   <h3 className="font-semibold text-gray-900">{section.title}</h3>
-                  <p className="text-sm text-gray-500">{section.description}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500">
-                  {totalItems} {totalItems === 1 ? 'élément' : 'éléments'}
-                </span>
+              <div className="flex items-center">
                 {expandedSections.has(section.id) ? (
                   <ChevronUp className="w-5 h-5 text-gray-400" />
                 ) : (
@@ -279,7 +271,7 @@ export default function EstablishmentMainSections({ establishment, className = "
                         </div>
                         
                         {/* Liste des éléments */}
-                        <div className="ml-6 space-y-1">
+                        <div className={`ml-6 ${items.length >= 2 ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'space-y-1'}`}>
                           {items.map((item, index) => (
                             <div key={index} className="flex items-center space-x-2">
                               <div className={`w-2 h-2 rounded-full ${getBulletColor(subSection.color).replace('text-', 'bg-')}`}></div>
