@@ -119,6 +119,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>('');
   const [envieGeneratedTags, setEnvieGeneratedTags] = useState<string[]>([]);
   
   // État pour la vérification SMS
@@ -770,6 +771,13 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
 
   const handleSubmit = async () => {
     console.log('🚀 handleSubmit appelé, étape courante:', currentStep);
+    
+    // Protection contre les clics multiples
+    if (isSubmitting) {
+      console.log('⚠️ Soumission déjà en cours, requête ignorée');
+      return;
+    }
+    
     if (!validateStep(currentStep)) {
       console.log('❌ Validation échouée pour l\'étape:', currentStep);
       return;
@@ -777,6 +785,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     
     console.log('✅ Validation réussie, début de la soumission...');
     setIsSubmitting(true);
+    setSubmitError(''); // Réinitialiser l'erreur
     
     try {
       if (isEditMode && establishment) {
@@ -938,8 +947,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       }
       
     } catch (error) {
-      console.error('Erreur:', error);
-      alert(error instanceof Error ? error.message : `Erreur lors de ${isEditMode ? 'la modification' : 'l\'inscription'}`);
+      console.error('❌ Erreur lors de la soumission:', error);
+      const errorMessage = error instanceof Error ? error.message : `Erreur lors de ${isEditMode ? 'la modification' : 'l\'inscription'}`;
+      setSubmitError(errorMessage);
+      // Scroller vers le haut pour voir l'erreur
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setIsSubmitting(false);
     }
@@ -991,6 +1003,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     formData,
     errors,
     isSubmitting,
+    submitError,
     envieGeneratedTags,
     phoneVerification,
     showPhoneModal,

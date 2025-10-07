@@ -27,52 +27,97 @@ export async function POST(request: NextRequest) {
 
     // Fonction pour extraire city et postalCode de l'adresse complète
     const parseAddressComponents = (fullAddress: string) => {
-      if (!fullAddress) return { city: null, postalCode: null };
+      if (!fullAddress) {
+        console.log('⚠️ Adresse vide');
+        return { city: null, postalCode: null };
+      }
       
-      // Pattern pour extraire : "19 Rue du Garet, 69001 Lyon"
-      const match = fullAddress.match(/^(.+?),\s*(\d{5})\s+(.+)$/);
+      console.log('📍 Parsing de l\'adresse:', fullAddress);
+      
+      // Pattern 1 : "19 Rue du Garet, 69001 Lyon" (standard)
+      let match = fullAddress.match(/^(.+?),\s*(\d{5})\s+(.+)$/);
       if (match) {
+        console.log('✅ Pattern 1 réussi');
         return {
           city: match[3].trim(),
           postalCode: match[2].trim()
         };
       }
       
-      // Si le pattern ne correspond pas, essayer de séparer par virgule
-      const parts = fullAddress.split(',').map(p => p.trim());
-      if (parts.length >= 3) {
-        // Chercher le code postal (5 chiffres)
-        const postalCodeMatch = parts[1].match(/(\d{5})/);
-        if (postalCodeMatch) {
-          return {
-            city: parts[2],
-            postalCode: postalCodeMatch[1]
-          };
-        }
-      }
-      
-      // Fallback : essayer d'extraire depuis la fin de l'adresse
-      const postalCodeMatch = fullAddress.match(/(\d{5})\s+([^,]+)$/);
-      if (postalCodeMatch) {
+      // Pattern 2 : "19 Rue du Garet 69001 Lyon" (sans virgule)
+      match = fullAddress.match(/^(.+?)\s+(\d{5})\s+(.+)$/);
+      if (match) {
+        console.log('✅ Pattern 2 réussi');
         return {
-          city: postalCodeMatch[2].trim(),
-          postalCode: postalCodeMatch[1]
+          city: match[3].trim(),
+          postalCode: match[2].trim()
         };
       }
       
+      // Pattern 3 : Avec virgules multiples "19 Rue du Garet, 69001, Lyon"
+      const parts = fullAddress.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        // Chercher le code postal dans toutes les parties
+        for (let i = 0; i < parts.length; i++) {
+          const postalCodeMatch = parts[i].match(/(\d{5})/);
+          if (postalCodeMatch && i < parts.length - 1) {
+            console.log('✅ Pattern 3 réussi');
+            return {
+              city: parts[i + 1].trim(),
+              postalCode: postalCodeMatch[1]
+            };
+          }
+        }
+      }
+      
+      // Pattern 4 : Code postal à la fin "19 Rue du Garet Lyon 69001"
+      match = fullAddress.match(/^(.+?)\s+([A-Za-zÀ-ÿ\s-]+)\s+(\d{5})$/);
+      if (match) {
+        console.log('✅ Pattern 4 réussi');
+        return {
+          city: match[2].trim(),
+          postalCode: match[3].trim()
+        };
+      }
+      
+      // Fallback : Extraire n'importe quel code postal 5 chiffres
+      const postalCodeMatch = fullAddress.match(/(\d{5})/);
+      if (postalCodeMatch) {
+        // Chercher le nom de ville après le code postal
+        const afterPostalCode = fullAddress.split(postalCodeMatch[0])[1];
+        if (afterPostalCode) {
+          const cityMatch = afterPostalCode.match(/([A-Za-zÀ-ÿ\s-]+)/);
+          if (cityMatch) {
+            console.log('✅ Fallback réussi');
+            return {
+              city: cityMatch[1].trim(),
+              postalCode: postalCodeMatch[1]
+            };
+          }
+        }
+      }
+      
+      console.log('❌ Aucun pattern ne correspond');
       return { city: null, postalCode: null };
     };
 
-    const addressComponents = parseAddressComponents(formData.get('address') as string);
-    console.log('🔍 Parsing de l\'adresse:', {
-      fullAddress: formData.get('address'),
-      extracted: addressComponents
+    const fullAddress = formData.get('address') as string;
+    const addressComponents = parseAddressComponents(fullAddress);
+    console.log('🔍 Résultat du parsing:', {
+      fullAddress,
+      city: addressComponents.city,
+      postalCode: addressComponents.postalCode
     });
+    
+    // Avertir si le parsing a échoué
+    if (!addressComponents.city || !addressComponents.postalCode) {
+      console.warn('⚠️ Parsing de l\'adresse partiel ou échoué, city/postalCode seront null');
+    }
 
     const establishmentData = {
       name: formData.get('establishmentName') as string,
       description: formData.get('description') as string || '',
-      address: formData.get('address') as string,
+      address: fullAddress, // Adresse complète
       city: addressComponents.city,
       postalCode: addressComponents.postalCode,
       activities: JSON.parse(formData.get('activities') as string || '[]'),
@@ -195,14 +240,22 @@ export async function POST(request: NextRequest) {
         .replace(/-+/g, '-')
         .trim();
     };
-    // Géocoder l'adresse automatiquement
+    // Géocoder l'adresse automatiquement (non-bloquant)
     console.log('🌍 Géocodage de l\'adresse:', establishmentData.address);
-    const coordinates = await geocodeAddress(establishmentData.address);
+    let coordinates = null;
     
-    if (coordinates) {
-      console.log('✅ Coordonnées trouvées:', coordinates);
-    } else {
-      console.log('❌ Impossible de géocoder l\'adresse');
+    try {
+      coordinates = await geocodeAddress(establishmentData.address);
+      
+      if (coordinates) {
+        console.log('✅ Coordonnées GPS trouvées:', coordinates);
+      } else {
+        console.log('⚠️ Géocodage n\'a pas retourné de coordonnées, mais on continue');
+      }
+    } catch (geocodeError) {
+      console.warn('⚠️ Erreur lors du géocodage (non-bloquant):', geocodeError);
+      console.log('➡️  L\'établissement sera créé sans coordonnées GPS');
+      // On continue quand même, les coordonnées seront null
     }
 
     // Transaction pour créer professional + établissement ensemble
@@ -365,9 +418,23 @@ export async function POST(request: NextRequest) {
     // Gestion des erreurs spécifiques
     if (error instanceof Error) {
       console.error('❌ Error message:', error.message);
+      
+      // Vérifier les contraintes uniques spécifiques
       if (error.message.includes('Unique constraint')) {
+        // Vérifier quel champ pose problème
+        if (error.message.includes('siret')) {
+          return NextResponse.json({ 
+            error: 'Ce SIRET est déjà utilisé par un autre établissement. Si vous êtes le propriétaire, veuillez vous connecter à votre compte existant.' 
+          }, { status: 400 });
+        }
+        if (error.message.includes('email')) {
+          return NextResponse.json({ 
+            error: 'Cet email est déjà utilisé. Si vous avez déjà un compte, veuillez vous connecter.' 
+          }, { status: 400 });
+        }
+        // Message générique si on ne peut pas déterminer le champ
         return NextResponse.json({ 
-          error: 'SIRET ou email déjà utilisé' 
+          error: 'SIRET ou email déjà utilisé. Vérifiez vos informations ou connectez-vous si vous avez déjà un compte.' 
         }, { status: 400 });
       }
     }

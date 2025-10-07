@@ -306,14 +306,8 @@ export default function TagsSelector({
     <div className="space-y-6">
       {/* En-tête */}
       <div className="text-center">
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">
-          Comment les clients vous trouvent-ils ?
-        </h3>
-        <p className="text-gray-600">
-          Choisissez les mots-clés qui décrivent le mieux votre établissement
-        </p>
         <p className="text-sm text-blue-600 mt-2">
-          <Icons.Info /> Plus vous êtes précis, mieux vous serez trouvé !
+          <Icons.Info /> Gardez les tags suceptibles d'être utilisés dans la barre de recherche par nos utilisateurs, supprimer le superflu !
         </p>
       </div>
 
@@ -442,7 +436,6 @@ export default function TagsSelector({
           <li>• Choisissez des mots que vos clients utiliseraient pour vous chercher</li>
           <li>• Mélangez cuisine, ambiance, services et activités</li>
           <li>• Minimum 3 tags, maximum 15 tags</li>
-          <li>• Les tags personnalisés sont validés par notre équipe</li>
         </ul>
       </div>
     </div>

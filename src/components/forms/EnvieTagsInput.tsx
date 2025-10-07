@@ -118,7 +118,7 @@ export default function EnvieTagsInput({ onEnvieTagsGenerated, existingTags }: E
       </div>
       
       <p className="text-orange-700 mb-4">
-        Etape importante! Décrivez ce que vous proposez avec des phrases naturelles, comme le ferait un client pour vous chercher. Cela améliorera considérablement votre visibilité sur le moteur de recherche.
+      <span className="font-bold">Suggestion importante: "Décrivez vos menus, boissons, activités, en utilisant le thème l'envie de: "</span>.
       </p>
 
       {/* Champ de saisie des envies */}
@@ -176,8 +176,7 @@ export default function EnvieTagsInput({ onEnvieTagsGenerated, existingTags }: E
       <div className="mt-4 text-sm text-orange-600">
         <p className="font-medium mb-1">💡 Exemples :</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-1 text-xs">
-          <span>• "manger des nems" → Envie de manger des nems</span>
-          <span>• "boire un cocktail" → Envie de boire un cocktail</span>
+          <span>• → Envie de: manger un trio d'oeuf poché sauce époisses</span>
         </div>
       </div>
     </div>
