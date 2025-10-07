@@ -167,7 +167,7 @@ const SUB_SECTIONS = {
       color: 'purple',
       getData: (establishment: any) => {
         const ambiance = parseJsonField(establishment.ambiance);
-        // Exclure les éléments d'accessibilité et de clientèle qui ne sont pas de l'ambiance
+        // Exclure les éléments qui ne sont pas de l'ambiance (activités, clientèle, accessibilité)
         return ambiance.filter(item => 
           !item.toLowerCase().includes('accessible') &&
           !item.toLowerCase().includes('mobilité') &&
@@ -175,7 +175,11 @@ const SUB_SECTIONS = {
           !item.toLowerCase().includes('pmr') &&
           !item.toLowerCase().includes('groupes') &&
           !item.toLowerCase().includes('familles') &&
-          !item.toLowerCase().includes('couples')
+          !item.toLowerCase().includes('couples') &&
+          !item.toLowerCase().includes('escape game') &&
+          !item.toLowerCase().includes('réalité virtuelle') &&
+          !item.toLowerCase().includes('culture vr') &&
+          !item.toLowerCase().includes('action adrénaline')
         );
       }
     },
