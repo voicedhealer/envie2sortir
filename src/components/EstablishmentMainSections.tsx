@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper } from 'lucide-react';
+import { useSectionTracking } from '@/hooks/useClickTracking';
 
 interface EstablishmentMainSectionsProps {
   establishment: {
+    id?: string;
     name?: string;
     description?: string;
     services?: any;
@@ -299,13 +301,26 @@ function getBulletColor(color: string): string {
 
 export default function EstablishmentMainSections({ establishment, className = "" }: EstablishmentMainSectionsProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['about']));
+  
+  // Hook de tracking des sections
+  const { trackSectionOpen, trackSectionClose, trackSubsectionClick } = useSectionTracking(establishment.id || '');
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
+    const section = MAIN_SECTIONS.find(s => s.id === sectionId);
+    
     if (newExpanded.has(sectionId)) {
       newExpanded.delete(sectionId);
+      // Tracker la fermeture de section
+      if (section) {
+        trackSectionClose(sectionId, section.title);
+      }
     } else {
       newExpanded.add(sectionId);
+      // Tracker l'ouverture de section
+      if (section) {
+        trackSectionOpen(sectionId, section.title);
+      }
     }
     setExpandedSections(newExpanded);
   };
@@ -354,7 +369,10 @@ export default function EstablishmentMainSections({ establishment, className = "
                       <div key={subSection.id} className="space-y-2">
                         {/* En-tête de la sous-rubrique */}
                         {subSection.title && (
-                          <div className="flex items-center space-x-2">
+                          <div 
+                            className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors"
+                            onClick={() => trackSubsectionClick(subSection.id, subSection.title, section.id)}
+                          >
                             <span className={getBulletColor(subSection.color)}>
                               {subSection.icon}
                             </span>

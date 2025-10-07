@@ -185,6 +185,7 @@ model Establishment {
   favorites             UserFavorite[]
   likes                 UserLike[]
   adminActions          AdminAction[]
+  clickAnalytics        ClickAnalytics[]
 
   @@map("establishments")
 }
@@ -401,4 +402,36 @@ enum AdminActionType {
   DELETE          // Supprimer un établissement
   RESTORE         // Restaurer un établissement supprimé
   UPDATE          // Mise à jour d'informations
+}
+
+/// *
+/// * CLICK_ANALYTICS - Tracking des clics sur les pages publiques
+/// * Permet aux pros premium de voir les statistiques d'engagement
+/// * Données anonymisées pour respecter la vie privée
+model ClickAnalytics {
+  id             String   @id @default(cuid())
+  establishmentId String
+  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  // Type d'élément cliqué
+  elementType    String   // 'section', 'subsection', 'link', 'button', 'image'
+  elementId      String   // ID de l'élément (ex: 'ambiance', 'instagram', 'favorite')
+  elementName    String?  // Nom affiché (ex: 'Ambiance & Spécialités', 'Instagram')
+  
+  // Contexte de l'action
+  action         String   // 'open', 'close', 'click', 'hover'
+  sectionContext String?  // Section parente (ex: 'commodites')
+  
+  // Métadonnées
+  userAgent      String?  // User agent du navigateur
+  referrer       String?  // Page d'origine
+  timestamp      DateTime @default(now())
+  
+  // Données géographiques (optionnelles)
+  country        String?
+  city           String?
+  
+  @@map("click_analytics")
+  @@index([establishmentId, elementType])
+  @@index([timestamp])
 }

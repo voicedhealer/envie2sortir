@@ -5,6 +5,7 @@ import EstablishmentMainSections from './EstablishmentMainSections';
 
 interface EstablishmentSectionsProps {
   establishment: {
+    id: string;
     name: string;
     slug: string;
     description?: string;
@@ -59,6 +60,7 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
       {/* 4 sections principales avec sous-rubriques organisées */}
       <EstablishmentMainSections
         establishment={{
+          id: establishment.id,
           name: establishment.name,
           description: establishment.description,
           services: establishment.services,
