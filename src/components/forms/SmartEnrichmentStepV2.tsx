@@ -226,7 +226,21 @@ export default function SmartEnrichmentStepV2({
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
             />
             <div className="flex items-center mt-1">
-              {/* Validation TheFork */}
+              {theForkUrl && (
+                <div className="flex items-center">
+                  {validateUrl(theForkUrl, 'thefork') ? (
+                    <span className="text-red-500 text-xs flex items-center">
+                      <span className="mr-1">❌</span>
+                      {validateUrl(theForkUrl, 'thefork')}
+                    </span>
+                  ) : (
+                    <span className="text-green-500 text-xs flex items-center">
+                      <span className="mr-1">✅</span>
+                      URL TheFork valide
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -243,7 +257,21 @@ export default function SmartEnrichmentStepV2({
               className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent border-gray-300"
             />
             <div className="flex items-center mt-1">
-              {/* Validation Uber Eats */}
+              {uberEatsUrl && (
+                <div className="flex items-center">
+                  {validateUrl(uberEatsUrl, 'ubereats') ? (
+                    <span className="text-red-500 text-xs flex items-center">
+                      <span className="mr-1">❌</span>
+                      {validateUrl(uberEatsUrl, 'ubereats')}
+                    </span>
+                  ) : (
+                    <span className="text-green-500 text-xs flex items-center">
+                      <span className="mr-1">✅</span>
+                      URL Uber Eats valide
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
