@@ -89,10 +89,6 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
                 <User className="w-4 h-4 mr-3" />
                 Mon compte
               </Link>
-              <Link href="/mon-compte" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
-                <Heart className="w-4 h-4 mr-3" />
-                Mes favoris
-              </Link>
             </>
           )}
           {(session.user.userType === 'professional' || session.user.role === 'pro') && (
