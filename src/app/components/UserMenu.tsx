@@ -2,13 +2,14 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
-import { User, LogOut, Settings, Heart } from "lucide-react";
+import { User, LogOut, Settings, Heart, BarChart3, Building2, History, FileText, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
 export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
   const { data: session, status } = useSession();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAdminSubmenu, setShowAdminSubmenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -22,6 +23,7 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+        setShowAdminSubmenu(false);
       }
     };
 
@@ -100,10 +102,43 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
             </Link>
           )}
           {session.user.role === 'admin' && (
-            <Link href="/admin" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
-              <Settings className="w-4 h-4 mr-3" />
-              Admin
-            </Link>
+            <div className="relative">
+              <button
+                onClick={() => setShowAdminSubmenu(!showAdminSubmenu)}
+                className="flex items-center justify-between w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <div className="flex items-center">
+                  <Settings className="w-4 h-4 mr-3" />
+                  Admin
+                </div>
+                <ChevronRight className={`w-4 h-4 transition-transform ${showAdminSubmenu ? 'rotate-90' : ''}`} />
+              </button>
+              
+              {showAdminSubmenu && (
+                <div className="ml-4 mt-1 space-y-1">
+                  <Link href="/admin" className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
+                    <Building2 className="w-4 h-4 mr-3" />
+                    Dashboard
+                  </Link>
+                  <Link href="/admin/etablissements" className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
+                    <Building2 className="w-4 h-4 mr-3" />
+                    Gérer les établissements
+                  </Link>
+                  <Link href="/admin/analytics" className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
+                    <BarChart3 className="w-4 h-4 mr-3" />
+                    Analytics
+                  </Link>
+                  <Link href="/admin/modifications" className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
+                    <FileText className="w-4 h-4 mr-3" />
+                    Modifications
+                  </Link>
+                  <Link href="/admin/historique" className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
+                    <History className="w-4 h-4 mr-3" />
+                    Historique
+                  </Link>
+                </div>
+              )}
+            </div>
           )}
           <button
             onClick={async () => {
