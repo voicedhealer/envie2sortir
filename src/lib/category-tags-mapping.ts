@@ -538,6 +538,13 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     relatedTags: ["artistique", "acrobatie", "spectacle", "groupe", "créatif"]
   },
 
+  // 🎪 Parcs de loisir indoor
+  parc_loisir_indoor: {
+    primaryTags: ["parc", "loisir", "indoor", "jeux", "famille", "enfants"],
+    secondaryTags: ["ludique", "intérieur", "centre", "espace", "salle", "factory"],
+    relatedTags: ["divertissement", "amusement", "convivial", "groupe", "fun"]
+  },
+
   // ❓ Autres
   autre: {
     primaryTags: ["autre", "activité", "spécialité", "unique"],

@@ -188,9 +188,6 @@ export default function SmartEnrichmentStepV2({
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          🚀 Enrichissement intelligent
-        </h2>
         <p className="text-gray-600">
           Ajoutez votre lien Google Maps pour récupérer automatiquement vos informations et recevoir des suggestions personnalisées.
         </p>
@@ -294,8 +291,8 @@ export default function SmartEnrichmentStepV2({
               <div>
                 <strong>Type:</strong> 
                 <span className="ml-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                  {smartData?.establishmentType || enrichmentData?.establishmentType}
-                  {smartData?.establishmentType !== enrichmentData?.establishmentType && (
+                  {enrichmentData?.establishmentType || smartData?.establishmentType}
+                  {enrichmentData?.establishmentType && enrichmentData.establishmentType !== 'autre' && (
                     <span className="ml-1 text-green-600">✓ Détecté</span>
                   )}
                 </span>

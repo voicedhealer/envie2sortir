@@ -310,6 +310,23 @@ model Image {
   @@map("images")
 }
 
+// Base de données d'apprentissage pour la détection des types d'établissements
+model EstablishmentLearningPattern {
+  id                String   @id @default(cuid())
+  name              String   // Nom de l'établissement
+  detectedType      String   // Type détecté automatiquement
+  correctedType     String?  // Type corrigé manuellement (si différent)
+  googleTypes       String   // Types Google Places (JSON string)
+  keywords          String   // Mots-clés extraits du nom/description (JSON string)
+  confidence        Float    // Niveau de confiance (0-1)
+  isCorrected       Boolean  @default(false) // Si le type a été corrigé manuellement
+  correctedBy       String?  // ID de l'utilisateur qui a corrigé
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("establishment_learning_patterns")
+}
+
 model Pricing {
   id             String       @id @default(cuid())
   name           String

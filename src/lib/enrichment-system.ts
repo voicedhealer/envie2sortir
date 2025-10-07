@@ -273,8 +273,26 @@ export class EstablishmentEnrichment {
     const result = placeData;
     
     // Déterminer le type d'établissement
-    this.establishmentType = this.categorizeEstablishment(result.types, result);
+    this.establishmentType = await this.categorizeEstablishment(result.types, result);
     console.log('🏢 Type d\'établissement déterminé:', this.establishmentType);
+    
+    // Sauvegarder le pattern d'apprentissage via API
+    try {
+      const keywords = this.extractKeywords(`${result.name} ${result.editorial_summary?.overview || ''}`);
+      await fetch('/api/establishments/save-pattern', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: result.name,
+          detectedType: this.establishmentType,
+          googleTypes: result.types || [],
+          keywords,
+          confidence: 0.8
+        })
+      });
+    } catch (error) {
+      console.warn('⚠️ Erreur sauvegarde pattern d\'apprentissage:', error);
+    }
 
     // Générer les tags "envie" selon le type
     const envieTags = this.generateEnvieTags(result);
@@ -393,18 +411,51 @@ export class EstablishmentEnrichment {
     return processedData;
   }
 
-  private categorizeEstablishment(googleTypes: string[], placeData?: any): string {
+  private async categorizeEstablishment(googleTypes: string[], placeData?: any): Promise<string> {
     // Vérifier que googleTypes est défini et est un tableau
     if (!googleTypes || !Array.isArray(googleTypes)) {
       console.warn('⚠️ Types Google invalides ou manquants:', googleTypes);
       return 'other';
     }
 
-    // Détection intelligente basée sur le nom et la description
+    const name = placeData?.name || '';
+    const description = placeData?.editorial_summary?.overview || '';
+    
+    // 1. D'abord, essayer l'apprentissage intelligent via API
+    try {
+      const response = await fetch('/api/establishments/suggest-type', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, googleTypes, description })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const suggestions = data.suggestions || [];
+        
+        if (suggestions.length > 0 && suggestions[0].confidence > 0.6) {
+          console.log('🧠 Type suggéré par apprentissage:', suggestions[0].type, `(${Math.round(suggestions[0].confidence * 100)}%)`);
+          return suggestions[0].type;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Erreur apprentissage, utilisation de la détection classique:', error);
+    }
+
+    // 2. Détection classique basée sur les mots-clés
     if (placeData) {
-      const name = (placeData.name || '').toLowerCase();
-      const description = (placeData.editorial_summary?.overview || '').toLowerCase();
-      const fullText = `${name} ${description}`;
+      const fullText = `${name} ${description}`.toLowerCase();
+      
+      // Détection des parcs de loisir indoor
+      const parcLoisirKeywords = [
+        'parc', 'loisir', 'indoor', 'intérieur', 'jeux', 'games', 'factory',
+        'ludique', 'famille', 'enfants', 'centre', 'espace', 'salle'
+      ];
+      
+      if (parcLoisirKeywords.some(keyword => fullText.includes(keyword))) {
+        console.log('🎪 Parc de loisir indoor détecté:', name);
+        return 'parc_loisir_indoor';
+      }
       
       // Détection des escape games
       const escapeGameKeywords = [
@@ -953,7 +1004,7 @@ export class EstablishmentEnrichment {
     
     // Services basés sur la note (établissements bien notés)
     if (rating >= 4.0) {
-      practicalInfo.push('Chèques acceptés');
+      // Note: "Chèques" est déjà géré dans les moyens de paiement, pas besoin de le dupliquer ici
     }
     
     // Services basés sur les types spécifiques
@@ -1595,17 +1646,13 @@ export class EstablishmentEnrichment {
     const servicesInfo = this.extractServicesFromGoogle(result);
     services.push(...servicesInfo);
     
-    // Accessibilité
-    const accessibilityInfo = this.extractAccessibilityFromGoogle(result);
-    services.push(...accessibilityInfo);
-    
-    // Paiements
-    const paiements = this.extractPaiementsFromGoogle(result);
-    services.push(...paiements);
-    
     // Parking
     const parking = this.extractParkingFromGoogle(result);
     services.push(...parking);
+    
+    // DÉDUPLIQUER les services (sans accessibilité et paiements qui ont leurs propres sections)
+    const uniqueServices = this.removeDuplicates(services);
+    console.log('🔧 Services uniques après déduplication:', uniqueServices);
     
     // === GÉNÉRATION INTELLIGENTE BASÉE SUR LE TYPE ===
     
@@ -1653,9 +1700,63 @@ export class EstablishmentEnrichment {
     }
     
     // Supprimer les doublons
-    const uniqueServices = [...new Set(services)];
-    console.log('🔧 Services générés (toutes sections):', uniqueServices);
-    return uniqueServices;
+    const finalServices = this.removeDuplicates(uniqueServices);
+    console.log('🔧 Services générés (toutes sections):', finalServices);
+    return finalServices;
+  }
+
+  private removeDuplicates(items: string[]): string[] {
+    console.log('🔄 removeDuplicates - Suppression des doublons');
+    console.log('🔄 Items avant déduplication:', items);
+    
+    const unique = [...new Set(items)];
+    console.log('🔄 Items après déduplication:', unique);
+    
+    return unique;
+  }
+
+  /**
+   * Extrait les mots-clés d'un texte
+   */
+  private extractKeywords(text: string): string[] {
+    const keywords: string[] = [];
+    const words = text.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2);
+
+    // Mots-clés spécifiques aux types d'établissements
+    const typeKeywords = {
+      'parc_loisir_indoor': ['parc', 'loisir', 'indoor', 'intérieur', 'jeux', 'games', 'factory', 'ludique', 'famille', 'enfants'],
+      'escape_game': ['escape', 'room', 'énigme', 'mystère', 'puzzle', 'défi', 'challenge', 'aventure', 'donjon'],
+      'vr_experience': ['vr', 'virtual', 'réalité', 'virtuelle', 'casque', 'immersion', 'simulation'],
+      'karaoke': ['karaoké', 'karaoke', 'chanson', 'micro', 'cabine', 'singing'],
+      'restaurant': ['restaurant', 'resto', 'cuisine', 'manger', 'repas', 'table'],
+      'bar': ['bar', 'boisson', 'alcool', 'cocktail', 'bière', 'vin'],
+      'cinema': ['cinéma', 'cinema', 'film', 'movie', 'salle', 'projection']
+    };
+
+    // Vérifier chaque catégorie
+    for (const [type, keywords] of Object.entries(typeKeywords)) {
+      if (keywords.some(keyword => text.includes(keyword))) {
+        keywords.push(...keywords.filter(keyword => text.includes(keyword)));
+      }
+    }
+
+    // Ajouter les mots fréquents
+    const wordCount: { [key: string]: number } = {};
+    words.forEach(word => {
+      wordCount[word] = (wordCount[word] || 0) + 1;
+    });
+
+    // Ajouter les mots qui apparaissent plus d'une fois
+    Object.entries(wordCount).forEach(([word, count]) => {
+      if (count > 1 && word.length > 3) {
+        keywords.push(word);
+      }
+    });
+
+    return [...new Set(keywords)]; // Supprimer les doublons
   }
 
   private generateAmbianceArray(result: any): string[] {

@@ -4,7 +4,7 @@ export async function geocodeAddress(address: string): Promise<{ latitude: numbe
     console.log('🌍 Géocodage de l\'adresse:', address);
     
     // Utiliser l'API de géocodage interne
-    const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/geocode?address=${encodeURIComponent(address)}`);
+    const response = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
     
     if (!response.ok) {
       console.error('❌ Erreur API géocodage:', response.status, response.statusText);

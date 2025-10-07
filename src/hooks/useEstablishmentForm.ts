@@ -862,9 +862,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             formDataToSend.append('address', fullAddress);
             
             if (addressData.latitude !== undefined) {
+              console.log('📍 Latitude:', addressData.latitude, 'Type:', typeof addressData.latitude);
               formDataToSend.append('latitude', addressData.latitude.toString());
             }
             if (addressData.longitude !== undefined) {
+              console.log('📍 Longitude:', addressData.longitude, 'Type:', typeof addressData.longitude);
               formDataToSend.append('longitude', addressData.longitude.toString());
             }
           } else if (key.startsWith('hybrid') && typeof value === 'object' && value !== null) {
@@ -877,6 +879,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         });
         
         console.log('📤 FormData construit, envoi vers API...');
+        console.log('📤 Données FormData:');
+        for (const [key, value] of formDataToSend.entries()) {
+          console.log(`  ${key}:`, value);
+        }
+        
         const response = await fetch('/api/professional-registration', {
           method: 'POST',
           body: formDataToSend,
