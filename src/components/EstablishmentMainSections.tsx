@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper } from 'lucide-react';
 
 interface EstablishmentMainSectionsProps {
   establishment: {
@@ -163,9 +163,18 @@ const SUB_SECTIONS = {
     {
       id: 'atmosphere',
       title: 'Ambiance',
-      icon: <Palette className="w-4 h-4" />,
+      icon: <PartyPopper className="w-4 h-4" />,
       color: 'purple',
-      getData: (establishment: any) => parseJsonField(establishment.ambiance)
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        // Exclure les éléments d'accessibilité qui ne sont pas de l'ambiance
+        return ambiance.filter(item => 
+          !item.toLowerCase().includes('accessible') &&
+          !item.toLowerCase().includes('mobilité') &&
+          !item.toLowerCase().includes('handicap') &&
+          !item.toLowerCase().includes('pmr')
+        );
+      }
     },
     {
       id: 'specialties',
