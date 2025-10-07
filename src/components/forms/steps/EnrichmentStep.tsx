@@ -1,6 +1,5 @@
 import EnrichmentStep from '@/components/forms/EnrichmentStep';
 import { EnrichmentData } from '@/lib/enrichment-system';
-import { organizeTagsByCategory } from '@/lib/establishment-categories';
 
 interface EnrichmentStepProps {
   onEnrichmentComplete: (data: EnrichmentData) => void;
@@ -14,30 +13,10 @@ export default function EnrichmentStepWrapper({
   onEnrichmentDataChange
 }: EnrichmentStepProps) {
   
-  // Fonction pour organiser les données d'enrichissement selon les nouvelles catégories
+  // Fonction pour traiter les données d'enrichissement
   const handleEnrichmentComplete = (data: EnrichmentData) => {
-    // Organiser les données selon les nouvelles catégories
-    const allTags = [
-      ...(data.services || []),
-      ...(data.ambiance || []),
-      ...(data.specialties || []),
-      ...(data.activities || []),
-      ...(data.clientele || []),
-      ...(data.informationsPratiques || [])
-    ];
-
-    const organizedData = organizeTagsByCategory(allTags);
-    
-    // Créer un objet d'enrichissement organisé
-    const organizedEnrichmentData = {
-      ...data,
-      organizedCategories: organizedData,
-      totalTags: allTags.length,
-      categoriesCount: Object.keys(organizedData).length
-    };
-
-    console.log('📊 Données d\'enrichissement organisées:', organizedEnrichmentData);
-    onEnrichmentComplete(organizedEnrichmentData);
+    console.log('📊 Données d\'enrichissement:', data);
+    onEnrichmentComplete(data);
   };
 
   return (
@@ -48,7 +27,6 @@ export default function EnrichmentStepWrapper({
         </h2>
         <p className="text-gray-600 mt-2">
           Décrivez votre établissement et ses caractéristiques principales.
-          Les données seront automatiquement organisées en catégories cohérentes.
         </p>
       </div>
       
