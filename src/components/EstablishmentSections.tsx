@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
-import EstablishmentCategorySection from './EstablishmentCategorySection';
-import { organizeTagsByCategory } from '@/lib/establishment-categories';
+import EstablishmentGroupedSection from './EstablishmentGroupedSection';
 
 interface EstablishmentSectionsProps {
   establishment: {
@@ -646,26 +645,20 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
         </div>
       )}
 
-      {/* Sections harmonisées par catégories */}
-      {(() => {
-        // Organiser les tags par catégories harmonisées
-        const organizedTags = organizeTagsByCategory([
-          ...allServicesCombined,
-          ...ambiance,
-          ...allPracticalInfo,
-          ...activities
-        ]);
-
-        return Object.entries(organizedTags).map(([categoryId, items]) => (
-          <EstablishmentCategorySection
-            key={categoryId}
-            categoryId={categoryId}
-            items={items}
-            isCollapsible={true}
-            showCount={true}
-          />
-        ));
-      })()}
+      {/* Section groupée utilisant les champs Prisma existants */}
+      <EstablishmentGroupedSection
+        establishment={{
+          services: establishment.services,
+          ambiance: establishment.ambiance,
+          specialties: establishment.specialties,
+          atmosphere: establishment.atmosphere,
+          detailedServices: establishment.detailedServices,
+          clienteleInfo: establishment.clienteleInfo,
+          informationsPratiques: establishment.informationsPratiques,
+          activities: establishment.activities
+        }}
+        establishmentType={establishment.activities?.[0] || 'restaurant'}
+      />
 
       {/* Les réseaux sociaux sont affichés dans EstablishmentInfo.tsx */}
     </div>
