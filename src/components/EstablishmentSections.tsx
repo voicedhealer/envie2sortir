@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
+import EstablishmentCategorySection from './EstablishmentCategorySection';
+import { organizeTagsByCategory } from '@/lib/establishment-categories';
 
 interface EstablishmentSectionsProps {
   establishment: {
@@ -643,6 +645,27 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           )}
         </div>
       )}
+
+      {/* Sections harmonisées par catégories */}
+      {(() => {
+        // Organiser les tags par catégories harmonisées
+        const organizedTags = organizeTagsByCategory([
+          ...allServicesCombined,
+          ...ambiance,
+          ...allPracticalInfo,
+          ...activities
+        ]);
+
+        return Object.entries(organizedTags).map(([categoryId, items]) => (
+          <EstablishmentCategorySection
+            key={categoryId}
+            categoryId={categoryId}
+            items={items}
+            isCollapsible={true}
+            showCount={true}
+          />
+        ));
+      })()}
 
       {/* Les réseaux sociaux sont affichés dans EstablishmentInfo.tsx */}
     </div>
