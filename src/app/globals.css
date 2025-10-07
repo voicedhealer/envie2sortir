@@ -127,15 +127,24 @@
   transition: max-height 0.3s ease-in;
 }
 
-/* Effet de focus pour les inputs */
+/* Correction globale pour éviter les doubles bordures sur tous les inputs */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: #ff751f !important;
+}
+
+/* Effet de focus pour les inputs - désactivé pour éviter les doubles bordures */
 .input-focus {
   transition: all 0.2s ease;
 }
 
-.input-focus:focus {
+/* .input-focus:focus {
   transform: scale(1.02);
   box-shadow: 0 0 0 3px rgba(255, 117, 31, 0.1);
-}
+} */
 
 /* Animation pour les icônes de statut */
 .status-indicator {
