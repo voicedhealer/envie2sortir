@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronUp, Tag, Utensils, Wrench, Palette, FileText, Users, Clock, CreditCard, Baby, Lightbulb } from 'lucide-react';
 import UpcomingEventsSection from './UpcomingEventsSection';
-import EstablishmentGroupedSection from './EstablishmentGroupedSection';
+import EstablishmentMainSections from './EstablishmentMainSections';
 
 interface EstablishmentSectionsProps {
   establishment: {
@@ -645,9 +645,11 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
         </div>
       )}
 
-      {/* Section groupée utilisant les champs Prisma existants */}
-      <EstablishmentGroupedSection
+      {/* 4 sections principales avec sous-rubriques organisées */}
+      <EstablishmentMainSections
         establishment={{
+          name: establishment.name,
+          description: establishment.description,
           services: establishment.services,
           ambiance: establishment.ambiance,
           specialties: establishment.specialties,
@@ -655,9 +657,12 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           detailedServices: establishment.detailedServices,
           clienteleInfo: establishment.clienteleInfo,
           informationsPratiques: establishment.informationsPratiques,
-          activities: establishment.activities
+          activities: establishment.activities,
+          paymentMethods: establishment.paymentMethods,
+          accessibilite: establishment.accessibilite,
+          parking: establishment.parking,
+          terrasse: establishment.terrasse
         }}
-        establishmentType={establishment.activities?.[0] || 'restaurant'}
       />
 
       {/* Les réseaux sociaux sont affichés dans EstablishmentInfo.tsx */}

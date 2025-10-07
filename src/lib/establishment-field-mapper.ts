@@ -240,7 +240,7 @@ export function getSuggestedTagsForType(establishmentType: EstablishmentType): R
       activities: ['Cours', 'Ateliers', 'Retraites', 'Événements bien-être']
     },
     shopping: {
-      services: 'Vente', 'Conseil', 'Personnalisation', 'Livraison'],
+      services: ['Vente', 'Conseil', 'Personnalisation', 'Livraison'],
       ambiance: ['Ambiance moderne', 'Chic', 'Décontractée', 'Professionnelle'],
       specialties: ['Mode', 'Accessoires', 'Décoration', 'Technologie'],
       atmosphere: ['Élégant', 'Moderne', 'Minimaliste', 'Coloré'],

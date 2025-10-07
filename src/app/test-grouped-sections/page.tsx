@@ -1,4 +1,4 @@
-import EstablishmentGroupedSection from '@/components/EstablishmentGroupedSection';
+import EstablishmentMainSections from '@/components/EstablishmentMainSections';
 
 export default function TestGroupedSectionsPage() {
   // Données de test pour différents types d'établissements
@@ -6,41 +6,53 @@ export default function TestGroupedSectionsPage() {
     {
       id: 'restaurant',
       name: 'Restaurant Test',
+      description: 'Un restaurant italien authentique au cœur de la ville, proposant des plats traditionnels dans une ambiance chaleureuse et familiale.',
       activities: ['restaurant_italien'],
       services: ['Déjeuner', 'Dîner', 'Service à table', 'Livraison'],
       ambiance: ['Ambiance décontractée', 'Romantique', 'Familial'],
       specialties: ['Pizza', 'Pâtes', 'Vins italiens'],
       atmosphere: ['Cosy', 'Moderne', 'Authentique'],
-      detailedServices: ['WiFi', 'Terrasse', 'Parking', 'Climatisation'],
+      detailedServices: ['WiFi gratuit', 'Climatisation', 'Chauffage', 'Toilettes'],
       clienteleInfo: ['Groupes', 'Familles', 'Couples'],
       informationsPratiques: ['Réservation recommandée', 'Espace non-fumeurs'],
-      activities: ['Anniversaire', 'Mariage', 'Événements privés']
+      paymentMethods: ['Carte bancaire', 'Espèces', 'Ticket Restaurant'],
+      accessibilite: true,
+      parking: true,
+      terrasse: true
     },
     {
-      id: 'bar',
-      name: 'Bar Test',
-      activities: ['bar_cocktails'],
-      services: ['Cocktails', 'Boissons', 'Snacks', 'Happy Hour'],
-      ambiance: ['Ambiance décontractée', 'Festif', 'Branché'],
-      specialties: ['Cocktails', 'Whisky', 'Champagne'],
-      atmosphere: ['Cosy', 'Vintage', 'Industriel'],
-      detailedServices: ['WiFi', 'Terrasse', 'Parking'],
-      clienteleInfo: ['Groupes', 'Couples', 'Étudiants'],
-      informationsPratiques: ['Réservation recommandée', 'Animaux acceptés'],
-      activities: ['Concerts', 'DJ', 'Karaoké']
+      id: 'vr-center',
+      name: 'DreamAway VR Center',
+      description: 'Centre de réalité virtuelle proposant des expériences immersives uniques pour tous les âges.',
+      activities: ['VR Experience', 'Escape Game VR', 'Simulation'],
+      services: ['Séances VR', 'Équipements', 'Encadrement'],
+      ambiance: ['Futuriste', 'Immersif', 'Technologique'],
+      specialties: ['Réalité virtuelle', 'Simulations', 'Jeux immersifs'],
+      atmosphere: ['Moderne', 'Coloré', 'Énergique'],
+      detailedServices: ['Casques VR', 'WiFi gratuit', 'Climatisation', 'Vestiaires'],
+      clienteleInfo: ['Groupes', 'Familles', 'Adolescents', 'Adultes'],
+      informationsPratiques: ['Réservation obligatoire', 'Casques désinfectés', 'Pauses recommandées'],
+      paymentMethods: ['Carte bancaire', 'Espèces'],
+      accessibilite: true,
+      parking: true,
+      terrasse: false
     },
     {
       id: 'bowling',
       name: 'Bowling Test',
-      activities: ['bowling'],
+      description: 'Centre de bowling moderne avec 12 pistes, snack-bar et espace détente.',
+      activities: ['Bowling', 'Snack-bar', 'Boissons'],
       services: ['Bowling', 'Équipements', 'Encadrement'],
       ambiance: ['Ambiance décontractée', 'Festif', 'Familial'],
       specialties: ['Bowling', 'Snack-bar', 'Boissons'],
       atmosphere: ['Moderne', 'Coloré', 'Énergique'],
-      detailedServices: ['Parking', 'Vestiaires', 'WiFi'],
+      detailedServices: ['Parking gratuit', 'Vestiaires', 'WiFi', 'Snack-bar'],
       clienteleInfo: ['Groupes', 'Familles', 'Enfants'],
       informationsPratiques: ['Réservation obligatoire', 'Équipements fournis'],
-      activities: ['Anniversaire', 'Team Building', 'Compétitions']
+      paymentMethods: ['Carte bancaire', 'Espèces'],
+      accessibilite: true,
+      parking: true,
+      terrasse: false
     }
   ];
 
@@ -61,9 +73,8 @@ export default function TestGroupedSectionsPage() {
             <h2 className="text-xl font-semibold text-gray-800">
               {establishment.name} ({establishment.activities[0]})
             </h2>
-            <EstablishmentGroupedSection
+            <EstablishmentMainSections
               establishment={establishment}
-              establishmentType={establishment.activities[0]}
             />
           </div>
         ))}
