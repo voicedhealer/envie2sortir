@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Globe } from "lucide-react";
+import { Instagram, Facebook, Globe, BarChart3 } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
 import MenuManager from "@/components/dashboard/MenuManager";
+import ClickAnalyticsDashboard from "@/components/analytics/ClickAnalyticsDashboard";
 
 interface User {
   id: string;
@@ -63,7 +64,7 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'parametres'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'analytics' | 'parametres'>('overview');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -155,6 +156,22 @@ export default function DashboardContent({ user, establishment, professional }: 
               }`}
             >
               Mes menus
+              {establishment.subscription === 'PREMIUM' && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  Premium
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === 'analytics'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 mr-1" />
+              Analytics
               {establishment.subscription === 'PREMIUM' && (
                 <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
                   Premium
@@ -433,6 +450,22 @@ export default function DashboardContent({ user, establishment, professional }: 
           establishmentId={establishment.id} 
           isPremium={establishment.subscription === 'PREMIUM'}
         />
+      ) : activeTab === 'analytics' ? (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <BarChart3 className="w-6 h-6 text-blue-600" />
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Analytics de votre établissement</h2>
+                <p className="text-sm text-gray-600">Découvrez comment vos clients interagissent avec votre page</p>
+              </div>
+            </div>
+          </div>
+          <ClickAnalyticsDashboard 
+            establishmentId={establishment.id} 
+            period="30d"
+          />
+        </div>
       ) : (
         <ParametresManager 
           professional={professional}

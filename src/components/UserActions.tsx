@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Heart, MessageSquare, Star } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
+import { useClickTracking } from '@/hooks/useClickTracking';
 
 interface UserActionsProps {
   establishmentId: string;
@@ -19,6 +20,7 @@ export default function UserActions({
   avgRating 
 }: UserActionsProps) {
   const { data: session } = useSession();
+  const { trackClick } = useClickTracking(establishmentId);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
@@ -76,6 +78,14 @@ export default function UserActions({
             if (deleteResponse.ok) {
               setIsFavorite(false);
               toast.success('Retiré des favoris');
+              // Tracker l'action
+              trackClick({
+                elementType: 'button',
+                elementId: 'favorite',
+                elementName: 'Retirer des favoris',
+                action: 'click',
+                sectionContext: 'user_actions',
+              });
             }
           }
         }
@@ -92,6 +102,14 @@ export default function UserActions({
         if (response.ok) {
           setIsFavorite(true);
           toast.success('Ajouté aux favoris');
+          // Tracker l'action
+          trackClick({
+            elementType: 'button',
+            elementId: 'favorite',
+            elementName: 'Ajouter aux favoris',
+            action: 'click',
+            sectionContext: 'user_actions',
+          });
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
           toast.error(errorData.error || 'Erreur lors de l\'ajout aux favoris');
@@ -137,6 +155,14 @@ export default function UserActions({
         setComment('');
         setRating(0);
         setShowCommentForm(false);
+        // Tracker l'action
+        trackClick({
+          elementType: 'button',
+          elementId: 'submit-comment',
+          elementName: 'Soumettre un avis',
+          action: 'click',
+          sectionContext: 'user_actions',
+        });
         // Recharger la page pour voir le nouvel avis
         window.location.reload();
       } else {

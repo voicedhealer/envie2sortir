@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useClickTracking } from '@/hooks/useClickTracking';
 
 interface PhotoGalleryProps {
   images: Array<{ url: string; isMain?: boolean }> | string[];
   establishmentName: string;
+  establishmentId?: string;
 }
 
-export default function PhotoGallery({ images, establishmentName }: PhotoGalleryProps) {
+export default function PhotoGallery({ images, establishmentName, establishmentId }: PhotoGalleryProps) {
+  // Hook de tracking
+  const { trackClick } = useClickTracking(establishmentId || '');
+  
   // Si moins de 2 images, ne pas afficher la galerie
   if (!images || images.length < 2) {
     return null;
@@ -29,6 +34,19 @@ export default function PhotoGallery({ images, establishmentName }: PhotoGallery
 
   // Initialiser avec l'image principale active
   const [activeIndex, setActiveIndex] = useState<number>(defaultActiveIndex);
+  
+  // Fonction pour tracker le clic sur une image
+  const handleImageClick = (index: number) => {
+    if (establishmentId) {
+      trackClick({
+        elementType: 'image',
+        elementId: `gallery-image-${index}`,
+        elementName: `Image ${index + 1} de la galerie`,
+        action: 'click',
+        sectionContext: 'photo_gallery',
+      });
+    }
+  };
 
   return (
     <div className="photo-gallery-container">
@@ -38,6 +56,7 @@ export default function PhotoGallery({ images, establishmentName }: PhotoGallery
           className={`gallery_item ${activeIndex === index ? 'gallery_item_active' : ''}`}
           onMouseEnter={() => setActiveIndex(index)}
           onMouseLeave={() => setActiveIndex(defaultActiveIndex)}
+          onClick={() => handleImageClick(index)}
         >
           <Image
             src={image.url}
