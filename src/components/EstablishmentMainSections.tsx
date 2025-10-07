@@ -177,7 +177,15 @@ const SUB_SECTIONS = {
         
         const enrichmentHealth = establishment.enrichmentData?.health || [];
         
-        return [...smartHealth, ...enrichmentHealth];
+        // Nettoyer les icônes d'alerte et de validation pour un affichage neutre
+        const allHealth = [...smartHealth, ...enrichmentHealth];
+        return allHealth.map(item => 
+          item.replace(/⚠️\s*/g, '')
+              .replace(/✅\s*/g, '')
+              .replace(/🛡️\s*/g, '')
+              .replace(/🏥\s*/g, '')
+              .trim()
+        ).filter(item => item.length > 0);
       }
     }
   ],
