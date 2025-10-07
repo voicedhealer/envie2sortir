@@ -38,6 +38,35 @@ function parseJsonField(field: any): string[] {
   return Array.isArray(field) ? field : [];
 }
 
+// Fonction pour formater automatiquement le texte descriptif
+function formatDescriptionText(text: string): string[] {
+  if (!text) return [];
+  
+  // Nettoyer le texte
+  let cleanText = text.trim();
+  
+  // Diviser en phrases (points, exclamations, questions)
+  const sentences = cleanText
+    .split(/(?<=[.!?])\s+/)
+    .filter(sentence => sentence.trim().length > 0);
+  
+  // Grouper les phrases en paragraphes (3-4 phrases par paragraphe)
+  const paragraphs: string[] = [];
+  let currentParagraph: string[] = [];
+  
+  for (let i = 0; i < sentences.length; i++) {
+    currentParagraph.push(sentences[i]);
+    
+    // Créer un paragraphe tous les 3-4 phrases ou à la fin
+    if (currentParagraph.length >= 3 || i === sentences.length - 1) {
+      paragraphs.push(currentParagraph.join(' '));
+      currentParagraph = [];
+    }
+  }
+  
+  return paragraphs;
+}
+
 // Configuration des 4 sections principales
 const MAIN_SECTIONS = [
   {
@@ -66,15 +95,29 @@ const MAIN_SECTIONS = [
   }
 ];
 
+// Interface pour les sous-rubriques
+interface SubSection {
+  id: string;
+  title: string;
+  icon: React.ReactElement;
+  color: string;
+  getData: (establishment: any) => string[];
+  isFormatted?: boolean;
+}
+
 // Configuration des sous-rubriques pour chaque section
-const SUB_SECTIONS = {
+const SUB_SECTIONS: Record<string, SubSection[]> = {
   about: [
     {
       id: 'description',
       title: 'Description',
       icon: <FileText className="w-4 h-4" />,
       color: 'blue',
-      getData: (establishment: any) => establishment.description ? [establishment.description] : []
+      getData: (establishment: any) => {
+        if (!establishment.description) return [];
+        return formatDescriptionText(establishment.description);
+      },
+      isFormatted: true // Indicateur pour le rendu spécial
     }
   ],
   activities: [
@@ -318,14 +361,28 @@ export default function EstablishmentMainSections({ establishment, className = "
                         </div>
                         
                         {/* Liste des éléments */}
-                        <div className={`ml-6 ${items.length >= 2 ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'space-y-1'}`}>
-                          {items.map((item, index) => (
-                            <div key={index} className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${getBulletColor(subSection.color).replace('text-', 'bg-')}`}></div>
-                              <span className="text-gray-700">{item}</span>
+                        {subSection.isFormatted ? (
+                          // Rendu spécial pour la description formatée
+                          <div className="ml-6 max-w-prose">
+                            <div className="space-y-4">
+                              {items.map((paragraph, index) => (
+                                <p key={index} className="text-gray-700 leading-relaxed text-base font-sans">
+                                  {paragraph}
+                                </p>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                          </div>
+                        ) : (
+                          // Rendu normal pour les autres sections
+                          <div className={`ml-6 ${items.length >= 2 ? 'grid grid-cols-2 gap-x-4 gap-y-1' : 'space-y-1'}`}>
+                            {items.map((item, index) => (
+                              <div key={index} className="flex items-center space-x-2">
+                                <div className={`w-2 h-2 rounded-full ${getBulletColor(subSection.color).replace('text-', 'bg-')}`}></div>
+                                <span className="text-gray-700">{item}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
