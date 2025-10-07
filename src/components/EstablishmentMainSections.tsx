@@ -191,7 +191,17 @@ const SUB_SECTIONS = {
       title: 'Clientèles',
       icon: <Users className="w-4 h-4" />,
       color: 'blue',
-      getData: (establishment: any) => parseJsonField(establishment.clienteleInfo)
+      getData: (establishment: any) => {
+        const clientele = parseJsonField(establishment.clienteleInfo);
+        const ambiance = parseJsonField(establishment.ambiance);
+        
+        // Exclure les éléments qui sont déjà dans "Ambiance"
+        return clientele.filter(item => 
+          !ambiance.some(ambianceItem => 
+            ambianceItem.toLowerCase() === item.toLowerCase()
+          )
+        );
+      }
     },
     {
       id: 'payment',
