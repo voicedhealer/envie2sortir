@@ -612,26 +612,6 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       )}
 
 
-      {/* Informations pratiques */}
-      {informationsPratiques.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Coffee className="w-5 h-5 text-orange-500 mr-2" />
-            Informations pratiques
-          </h3>
-          
-          <div className="flex flex-wrap gap-2">
-            {informationsPratiques.map((info, index) => (
-              <span 
-                key={index}
-                className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-              >
-                {info}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Réseaux sociaux */}
       {(establishment.instagram || establishment.facebook || establishment.tiktok || establishment.youtube) && (
