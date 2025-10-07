@@ -99,7 +99,7 @@ const MAIN_SECTIONS = [
 interface SubSection {
   id: string;
   title: string;
-  icon: React.ReactElement;
+  icon: React.ReactElement | null;
   color: string;
   getData: (establishment: any) => string[];
   isFormatted?: boolean;
@@ -110,8 +110,8 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
   about: [
     {
       id: 'description',
-      title: 'Description',
-      icon: <FileText className="w-4 h-4" />,
+      title: '',
+      icon: null,
       color: 'blue',
       getData: (establishment: any) => {
         if (!establishment.description) return [];
@@ -353,17 +353,19 @@ export default function EstablishmentMainSections({ establishment, className = "
                     return (
                       <div key={subSection.id} className="space-y-2">
                         {/* En-tête de la sous-rubrique */}
-                        <div className="flex items-center space-x-2">
-                          <span className={getBulletColor(subSection.color)}>
-                            {subSection.icon}
-                          </span>
-                          <h4 className="font-medium text-gray-900">{subSection.title}</h4>
-                        </div>
+                        {subSection.title && (
+                          <div className="flex items-center space-x-2">
+                            <span className={getBulletColor(subSection.color)}>
+                              {subSection.icon}
+                            </span>
+                            <h4 className="font-medium text-gray-900">{subSection.title}</h4>
+                          </div>
+                        )}
                         
                         {/* Liste des éléments */}
                         {subSection.isFormatted ? (
                           // Rendu spécial pour la description formatée
-                          <div className="ml-6 max-w-prose">
+                          <div className={`${subSection.title ? 'ml-6' : ''} max-w-prose`}>
                             <div className="space-y-4">
                               {items.map((paragraph, index) => (
                                 <p key={index} className="text-gray-700 leading-relaxed text-base font-sans">
