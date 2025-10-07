@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BarChart3, Building2, TrendingUp, Users, Eye } from 'lucide-react';
@@ -16,12 +16,15 @@ interface EstablishmentDetails {
   lastActivity: string;
 }
 
-export default function EstablishmentAnalyticsPage({ params }: { params: { establishmentId: string } }) {
+export default function EstablishmentAnalyticsPage({ params }: { params: Promise<{ establishmentId: string }> }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [establishment, setEstablishment] = useState<EstablishmentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Déballer les params avec React.use()
+  const { establishmentId } = use(params);
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -47,7 +50,7 @@ export default function EstablishmentAnalyticsPage({ params }: { params: { estab
         }
         
         const establishments = await response.json();
-        const establishmentData = establishments.find((est: EstablishmentDetails) => est.id === params.establishmentId);
+        const establishmentData = establishments.find((est: EstablishmentDetails) => est.id === establishmentId);
         
         if (!establishmentData) {
           throw new Error('Establishment not found');
@@ -62,7 +65,7 @@ export default function EstablishmentAnalyticsPage({ params }: { params: { estab
     };
 
     fetchEstablishmentDetails();
-  }, [session, status, router, params.establishmentId]);
+  }, [session, status, router, establishmentId]);
 
   if (status === 'loading' || loading) {
     return (
