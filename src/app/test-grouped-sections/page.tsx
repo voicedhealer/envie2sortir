@@ -81,14 +81,14 @@ export default function TestGroupedSectionsPage() {
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">
-            ✨ Avantages du nouveau système
+            ✨ Nouveau système de sections
           </h3>
           <ul className="text-blue-800 space-y-1">
-            <li>• <strong>Structure cohérente</strong> : Une section principale avec des sous-sections thématiques</li>
-            <li>• <strong>Utilisation des champs Prisma</strong> : Respect de l'architecture existante</li>
-            <li>• <strong>Support multi-activités</strong> : Restaurants, bars, bowling, etc.</li>
-            <li>• <strong>Adaptation automatique</strong> : Les titres s'adaptent au type d'établissement</li>
-            <li>• <strong>Interface harmonisée</strong> : Design cohérent avec l'existant</li>
+            <li>• <strong>4 sections principales</strong> : Maximum 4 sections fermantes</li>
+            <li>• <strong>Sous-rubriques organisées</strong> : Avec icônes et listes colorées</li>
+            <li>• <strong>Listes sur 2 colonnes</strong> : Quand il y a au moins 2 éléments</li>
+            <li>• <strong>Interface épurée</strong> : Design cohérent et allégé</li>
+            <li>• <strong>Architecture Prisma</strong> : Utilise les champs existants</li>
           </ul>
         </div>
       </div>

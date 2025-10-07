@@ -78,7 +78,7 @@ const SUB_SECTIONS = {
   activities: [
     {
       id: 'main-activities',
-      title: 'Activités principales',
+      title: 'Envie de :',
       icon: <Gamepad2 className="w-4 h-4" />,
       color: 'green',
       getData: (establishment: any) => parseJsonField(establishment.activities)
@@ -179,7 +179,7 @@ const SUB_SECTIONS = {
     },
     {
       id: 'clientele',
-      title: 'Clientèle cible',
+      title: 'Clientèles',
       icon: <Users className="w-4 h-4" />,
       color: 'blue',
       getData: (establishment: any) => parseJsonField(establishment.clienteleInfo)
