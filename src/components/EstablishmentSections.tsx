@@ -72,7 +72,9 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           paymentMethods: establishment.paymentMethods,
           accessibilite: establishment.accessibilite,
           parking: establishment.parking,
-          terrasse: establishment.terrasse
+          terrasse: establishment.terrasse,
+          smartEnrichmentData: establishment.smartEnrichmentData,
+          enrichmentData: establishment.enrichmentData
         }}
       />
 

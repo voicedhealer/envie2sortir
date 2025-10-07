@@ -19,6 +19,8 @@ interface EstablishmentMainSectionsProps {
     accessibilite?: boolean;
     parking?: boolean;
     terrasse?: boolean;
+    smartEnrichmentData?: any;
+    enrichmentData?: any;
   };
   className?: string;
 }
@@ -157,6 +159,26 @@ const SUB_SECTIONS = {
       icon: <Info className="w-4 h-4" />,
       color: 'gray',
       getData: (establishment: any) => parseJsonField(establishment.informationsPratiques)
+    },
+    {
+      id: 'health',
+      title: 'Santé et sécurité',
+      icon: <Shield className="w-4 h-4" />,
+      color: 'red',
+      getData: (establishment: any) => {
+        // Récupérer les données de santé depuis smartEnrichmentData et enrichmentData
+        const smartHealth = establishment.smartEnrichmentData?.servicesArray?.filter((service: string) => 
+          service.toLowerCase().includes('santé') || 
+          service.toLowerCase().includes('sécurité') ||
+          service.toLowerCase().includes('premiers secours') ||
+          service.toLowerCase().includes('⚠️') ||
+          service.toLowerCase().includes('✅')
+        ) || [];
+        
+        const enrichmentHealth = establishment.enrichmentData?.health || [];
+        
+        return [...smartHealth, ...enrichmentHealth];
+      }
     }
   ],
   ambiance: [
@@ -218,7 +240,8 @@ function getBulletColor(color: string): string {
     orange: 'text-orange-500',
     purple: 'text-purple-500',
     pink: 'text-pink-500',
-    gray: 'text-gray-500'
+    gray: 'text-gray-500',
+    red: 'text-red-500'
   };
   return colors[color as keyof typeof colors] || 'text-gray-500';
 }
