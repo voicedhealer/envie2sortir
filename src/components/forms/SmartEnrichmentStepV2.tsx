@@ -131,18 +131,31 @@ export default function SmartEnrichmentStepV2({
   };
 
   const createManualDataFromSuggestions = (selected: Record<string, boolean>, suggestions: EnrichmentSuggestions) => {
-    const manualData: any = {};
+    const manualData: any = {
+      servicesArray: [],
+      ambianceArray: [],
+      informationsPratiques: []
+    };
+    
+    console.log('🔧 CRÉATION DONNÉES MANUELLES - Suggestions sélectionnées:', selected);
     
     Object.entries(selected).forEach(([key, isSelected]) => {
       if (isSelected) {
         const [category, value] = key.split('-');
-        if (!manualData[category]) {
-          manualData[category] = [];
+        console.log('🔧 Ajout suggestion:', { category, value, key });
+        
+        // Mapper les catégories vers les champs du formulaire
+        if (category === 'services' || category === 'parking' || category === 'accessibility') {
+          manualData.servicesArray.push(value);
+        } else if (category === 'clientele' || category === 'ambiance') {
+          manualData.ambianceArray.push(value);
+        } else if (category === 'payments' || category === 'health') {
+          manualData.informationsPratiques.push(value);
         }
-        manualData[category].push(value);
       }
     });
     
+    console.log('🔧 Données manuelles créées:', manualData);
     return manualData;
   };
 
@@ -166,17 +179,10 @@ export default function SmartEnrichmentStepV2({
     // Créer les données d'enrichissement finales avec les suggestions manuelles
     const enrichedDataWithManual = {
       ...enrichmentData,
-      // Ajouter les données d'enrichissement manuel basées sur les suggestions
-      accessibilityDetails: manualData.accessibility ? manualData.accessibility.join(', ') : enrichmentData.accessibilityDetails,
-      detailedServices: manualData.services ? manualData.services.join(', ') : enrichmentData.detailedServices,
-      clienteleInfo: manualData.clientele ? manualData.clientele.join(', ') : enrichmentData.clienteleInfo,
-      detailedPayments: manualData.payments ? manualData.payments.join(', ') : enrichmentData.detailedPayments,
-      childrenServices: manualData.children ? manualData.children.join(', ') : enrichmentData.childrenServices,
-      parkingInfo: manualData.parking ? manualData.parking.join(', ') : enrichmentData.parkingInfo,
-      // Ajouter les données de santé et sécurité
-      healthOptions: manualData.health ? manualData.health : enrichmentData.healthOptions,
-      // Ajouter les données de parking
-      parkingOptions: manualData.parking ? manualData.parking : enrichmentData.parkingOptions,
+      // ✅ CORRECTION : Utiliser les nouveaux champs du formulaire
+      servicesArray: [...(enrichmentData.servicesArray || []), ...(manualData.servicesArray || [])],
+      ambianceArray: [...(enrichmentData.ambianceArray || []), ...(manualData.ambianceArray || [])],
+      informationsPratiques: [...(enrichmentData.informationsPratiques || []), ...(manualData.informationsPratiques || [])],
     };
 
     // Continuer avec les données finales incluant les suggestions manuelles

@@ -354,6 +354,12 @@ export class SmartEnrichmentServiceV2 {
       services.push(...Object.values(googleData.detailedServices).flat());
     }
     
+    // Ajouter les informations pratiques qui peuvent contenir des services
+    if (googleData.informationsPratiques) {
+      services.push(...googleData.informationsPratiques);
+    }
+    
+    console.log('🔍 Services Google extraits:', services);
     return services;
   }
 
@@ -375,6 +381,17 @@ export class SmartEnrichmentServiceV2 {
       payments.push(...Object.values(googleData.detailedPayments).flat());
     }
     
+    // Ajouter les informations pratiques qui peuvent contenir des moyens de paiement
+    if (googleData.informationsPratiques) {
+      googleData.informationsPratiques.forEach(info => {
+        if (info.toLowerCase().includes('carte') || info.toLowerCase().includes('paiement') || 
+            info.toLowerCase().includes('espèces') || info.toLowerCase().includes('chèque')) {
+          payments.push(info);
+        }
+      });
+    }
+    
+    console.log('🔍 Paiements Google extraits:', payments);
     return payments;
   }
 
@@ -392,6 +409,17 @@ export class SmartEnrichmentServiceV2 {
       accessibility.push(...Object.values(googleData.accessibilityDetails).flat());
     }
     
+    // Ajouter les informations pratiques qui peuvent contenir des infos d'accessibilité
+    if (googleData.informationsPratiques) {
+      googleData.informationsPratiques.forEach(info => {
+        if (info.toLowerCase().includes('accessible') || info.toLowerCase().includes('handicap') || 
+            info.toLowerCase().includes('pmr') || info.toLowerCase().includes('fauteuil')) {
+          accessibility.push(info);
+        }
+      });
+    }
+    
+    console.log('🔍 Accessibilité Google extraite:', accessibility);
     return accessibility;
   }
 
@@ -401,6 +429,9 @@ export class SmartEnrichmentServiceV2 {
   analyzeEnrichmentGaps(googleData: EnrichmentData): EnrichmentSuggestions {
     // Détecter l'activité de l'établissement
     const detectedActivity = this.detectActivity(googleData);
+    
+    console.log('🧠 Analyse des gaps - Activité détectée:', detectedActivity);
+    console.log('🧠 Données Google reçues:', googleData);
     
     const suggestions: EnrichmentSuggestions = {
       recommended: [],
@@ -413,6 +444,8 @@ export class SmartEnrichmentServiceV2 {
     const googleServices = this.extractGoogleServices(googleData);
     const googlePayments = this.extractGooglePayments(googleData);
     const googleAccessibility = this.extractGoogleAccessibility(googleData);
+    
+    console.log('🧠 Données extraites - Services:', googleServices.length, 'Paiements:', googlePayments.length, 'Accessibilité:', googleAccessibility.length);
 
     // 1. Ajouter les commodités obligatoires (seulement si pas déjà présentes)
     Object.entries(this.mandatoryAmenities).forEach(([category, amenities]) => {
@@ -497,6 +530,7 @@ export class SmartEnrichmentServiceV2 {
       });
     }
 
+    console.log('🧠 Suggestions générées - Recommandées:', suggestions.recommended.length, 'Optionnelles:', suggestions.optional.length, 'Déjà trouvées:', suggestions.alreadyFound.length);
     return suggestions;
   }
 

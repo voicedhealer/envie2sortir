@@ -1,4 +1,4 @@
-import OrganizedServicesAmbianceManager from '@/components/OrganizedServicesAmbianceManager';
+import UnifiedServicesAmbianceManager from '@/components/UnifiedServicesAmbianceManager';
 
 interface ServicesStepProps {
   formData: {
@@ -21,6 +21,19 @@ export default function ServicesStep({
   isEditMode,
   onInputChange
 }: ServicesStepProps) {
+  // 🔍 DIAGNOSTIC - Logs pour voir les données sources
+  console.log('🔍 DIAGNOSTIC - Services:', formData.services);
+  console.log('🔍 DIAGNOSTIC - Ambiance:', formData.ambiance);
+  console.log('🔍 DIAGNOSTIC - Informations pratiques:', formData.informationsPratiques);
+  console.log('🔍 DIAGNOSTIC - Toutes les données hybrides:', {
+    hybridAccessibilityDetails: formData.hybridAccessibilityDetails,
+    hybridDetailedServices: formData.hybridDetailedServices,
+    hybridClienteleInfo: formData.hybridClienteleInfo,
+    hybridDetailedPayments: formData.hybridDetailedPayments,
+    hybridChildrenServices: formData.hybridChildrenServices,
+    hybridParkingInfo: formData.hybridParkingInfo
+  });
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -35,8 +48,8 @@ export default function ServicesStep({
         </p>
       </div>
 
-      {/* Affichage des données hybrides si elles existent */}
-      {(formData.hybridAccessibilityDetails || formData.hybridDetailedServices || 
+      {/* Affichage des données hybrides si elles existent - MASQUÉ */}
+      {false && (formData.hybridAccessibilityDetails || formData.hybridDetailedServices || 
         formData.hybridClienteleInfo || formData.hybridDetailedPayments || 
         formData.hybridChildrenServices || formData.hybridParkingInfo) && (
         <div className="mb-8 p-4 bg-orange-50 border border-orange-200 rounded-lg">
@@ -99,24 +112,15 @@ export default function ServicesStep({
         </div>
       )}
 
-      <OrganizedServicesAmbianceManager
-        services={(formData.services || []).filter(service => {
-          const serviceLower = service.toLowerCase();
-          // Exclure les moyens de paiement des services
-          return !serviceLower.includes('carte') && 
-                 !serviceLower.includes('paiement') && 
-                 !serviceLower.includes('nfc') && 
-                 !serviceLower.includes('pluxee') && 
-                 !serviceLower.includes('titre') &&
-                 !serviceLower.includes('crédit') &&
-                 !serviceLower.includes('débit');
-        })}
+      <UnifiedServicesAmbianceManager
+        services={formData.services || []}
         ambiance={formData.ambiance || []}
         informationsPratiques={formData.informationsPratiques || []}
         onServicesChange={(services) => onInputChange('services', services)}
         onAmbianceChange={(ambiance) => onInputChange('ambiance', ambiance)}
         onInformationsPratiquesChange={(informationsPratiques) => onInputChange('informationsPratiques', informationsPratiques)}
         isEditMode={isEditMode}
+        establishmentType="restaurant" // TODO: Récupérer le type d'établissement depuis les données
       />
     </div>
   );
