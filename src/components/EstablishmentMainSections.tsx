@@ -167,12 +167,15 @@ const SUB_SECTIONS = {
       color: 'purple',
       getData: (establishment: any) => {
         const ambiance = parseJsonField(establishment.ambiance);
-        // Exclure les éléments d'accessibilité qui ne sont pas de l'ambiance
+        // Exclure les éléments d'accessibilité et de clientèle qui ne sont pas de l'ambiance
         return ambiance.filter(item => 
           !item.toLowerCase().includes('accessible') &&
           !item.toLowerCase().includes('mobilité') &&
           !item.toLowerCase().includes('handicap') &&
-          !item.toLowerCase().includes('pmr')
+          !item.toLowerCase().includes('pmr') &&
+          !item.toLowerCase().includes('groupes') &&
+          !item.toLowerCase().includes('familles') &&
+          !item.toLowerCase().includes('couples')
         );
       }
     },
