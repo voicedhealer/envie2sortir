@@ -414,7 +414,11 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       {establishment.horairesOuverture && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
-            onClick={() => setIsHoursExpanded(!isHoursExpanded)}
+            onClick={() => {
+              setIsHoursExpanded(!isHoursExpanded);
+              // ✅ AJOUT : Tracking des horaires
+              trackLinkClick('horaires', 'Horaires d\'ouverture', 'website');
+            }}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center space-x-3">

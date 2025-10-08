@@ -107,7 +107,7 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
           
           <div className="bg-purple-50 rounded-lg p-4">
             <div className="text-2xl font-bold text-purple-600">
-              {Math.round(data.totalClicks / 30)}/jour
+              {Math.round(data.totalClicks / (period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365))}/jour
             </div>
             <div className="text-sm text-purple-800">Moyenne quotidienne</div>
           </div>
@@ -141,6 +141,9 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
       {/* Top 10 des éléments les plus cliqués */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-4">Top 10 des éléments les plus populaires</h4>
+        <div className="mb-4 text-sm text-gray-600">
+          <p>Classement des éléments les plus consultés par vos visiteurs.</p>
+        </div>
         <div className="space-y-2">
           {data.topElements.slice(0, 10).map((element, index) => (
             <div key={element.elementId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -153,7 +156,11 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
                     {element.elementName || element.elementId}
                   </div>
                   <div className="text-sm text-gray-500">
-                    {element.elementType} • {element.elementId}
+                    {element.elementType === 'schedule' ? 'Horaires' : 
+                     element.elementType === 'section' ? 'Section' :
+                     element.elementType === 'link' ? 'Lien' :
+                     element.elementType === 'button' ? 'Bouton' :
+                     element.elementType} • {element.elementId}
                   </div>
                 </div>
               </div>
@@ -168,6 +175,10 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
       {/* Graphique temporel */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h4 className="text-lg font-semibold text-gray-900 mb-4">Évolution des interactions</h4>
+        <div className="mb-4 text-sm text-gray-600">
+          <p>Ce graphique montre l'évolution du nombre d'interactions par jour.</p>
+          <p>Les interactions incluent : ouverture de sections, clics sur liens, consultation d'horaires, etc.</p>
+        </div>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data.dailyStats}>
             <CartesianGrid strokeDasharray="3 3" />
@@ -175,12 +186,20 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
               dataKey="date" 
               tickFormatter={(value) => new Date(value).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
             />
-            <YAxis />
+            <YAxis 
+              domain={[0, 'dataMax + 1']}
+              tickFormatter={(value) => Math.round(value)}
+            />
             <Tooltip 
-              labelFormatter={(value) => new Date(value).toLocaleDateString('fr-FR')}
+              labelFormatter={(value) => new Date(value).toLocaleDateString('fr-FR', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
               formatter={(value) => [value, 'Interactions']}
             />
-            <Bar dataKey="clicks" fill="#3B82F6" />
+            <Bar dataKey="clicks" fill="#3B82F6" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

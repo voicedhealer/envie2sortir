@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth-config";
 
 /**
  * API pour incrémenter les statistiques d'un établissement
@@ -28,7 +30,7 @@ export async function POST(
     // Vérifier que l'établissement existe
     const establishment = await prisma.establishment.findUnique({
       where: { id },
-      select: { id: true, name: true, status: true }
+      select: { id: true, name: true, status: true, ownerId: true }
     });
 
     if (!establishment) {
@@ -36,6 +38,23 @@ export async function POST(
         { error: "Établissement non trouvé" },
         { status: 404 }
       );
+    }
+
+    // ✅ CORRECTION : Vérifier si c'est le propriétaire qui consulte
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id === establishment.ownerId) {
+      console.log('🔒 Vue/click du propriétaire ignorée pour:', establishment.name);
+      return NextResponse.json({
+        success: true,
+        action,
+        message: "Statistique non comptabilisée (propriétaire)",
+        establishment: {
+          id: establishment.id,
+          name: establishment.name,
+          viewsCount: 0, // Ne pas révéler les vraies statistiques
+          clicksCount: 0
+        }
+      });
     }
 
     // Note: On permet l'incrémentation même pour les établissements en attente
