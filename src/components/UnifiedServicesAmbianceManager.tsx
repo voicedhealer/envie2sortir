@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, X, Edit3, Save, X as CloseIcon } from 'lucide-react';
-import { MAIN_CATEGORIES, organizeItemsByCategories, getSmartSuggestions } from '@/lib/unified-categories';
+import { MAIN_CATEGORIES, organizeItemsByCategories, getSmartSuggestions, categorizeItem } from '@/lib/unified-categories';
 
 interface UnifiedServicesAmbianceManagerProps {
   services: string[];
@@ -35,11 +35,59 @@ export default function UnifiedServicesAmbianceManager({
   console.log('🧠 RAW DATA - Ambiance:', ambiance);
   console.log('🧠 RAW DATA - Informations pratiques:', informationsPratiques);
 
-  // Combiner tous les items
+
+  // Combiner tous les items avec leurs catégories d'origine
   const allItems = [...services, ...ambiance, ...informationsPratiques];
   console.log('🧠 RAW DATA - Tous les items combinés:', allItems);
   
-  const organizedItems = organizeItemsByCategories(allItems);
+  // ✅ FONCTION PERSONNALISÉE : Organiser en respectant les rubriques choisies
+  const organizeItemsByUserChoice = (items: string[]): Record<string, Record<string, string[]>> => {
+    const organized: Record<string, Record<string, string[]>> = {};
+    
+    // Initialiser la structure
+    Object.keys(MAIN_CATEGORIES).forEach(mainCat => {
+      organized[mainCat] = {};
+      Object.keys(MAIN_CATEGORIES[mainCat as keyof typeof MAIN_CATEGORIES].subCategories).forEach(subCat => {
+        organized[mainCat][subCat] = [];
+      });
+    });
+    
+    // Organiser chaque item
+    items.forEach(item => {
+      // Vérifier si l'item a un marqueur de rubrique
+      const rubriqueMatch = item.match(/^(.+)\|([^|]+)$/);
+      
+      if (rubriqueMatch) {
+        // Format: "item|rubrique" - respecter le choix de l'utilisateur
+        const cleanItem = rubriqueMatch[1];
+        const rubrique = rubriqueMatch[2];
+        
+        // Déterminer la section principale
+        let mainSection = 'ambiance-specialites'; // par défaut
+        
+        if (services.includes(item)) {
+          mainSection = 'equipements-services';
+        } else if (informationsPratiques.includes(item)) {
+          mainSection = 'informations-pratiques';
+        }
+        
+        // Ajouter dans la rubrique choisie par l'utilisateur
+        if (organized[mainSection] && organized[mainSection][rubrique]) {
+          organized[mainSection][rubrique].push(cleanItem);
+        }
+      } else {
+        // Format ancien : utiliser la catégorisation automatique
+        const { mainCategory, subCategory } = categorizeItem(item);
+        if (organized[mainCategory] && organized[mainCategory][subCategory]) {
+          organized[mainCategory][subCategory].push(item);
+        }
+      }
+    });
+    
+    return organized;
+  };
+
+  const organizedItems = organizeItemsByUserChoice(allItems);
   console.log('🧠 RAW DATA - Items organisés par catégories:', organizedItems);
   
   const smartSuggestions = getSmartSuggestions(allItems, establishmentType);
@@ -58,16 +106,24 @@ export default function UnifiedServicesAmbianceManager({
     const trimmedItem = item.trim();
     if (!trimmedItem) return;
 
-    // Déterminer dans quel array ajouter l'item
+    console.log('➕ AJOUT - Section:', section, 'SubSection:', subSection, 'Item:', trimmedItem);
+
+    // ✅ SOLUTION : Stocker avec un marqueur pour respecter la rubrique choisie
+    // Format: "item|subSection" pour conserver la rubrique d'origine
+    const itemWithSubSection = `${trimmedItem}|${subSection}`;
+
     if (section === 'ambiance-specialites') {
-      const newAmbiance = [...ambiance, trimmedItem];
+      const newAmbiance = [...ambiance, itemWithSubSection];
       onAmbianceChange(newAmbiance);
+      console.log('➕ Ajouté à ambiance avec rubrique:', itemWithSubSection);
     } else if (section === 'equipements-services') {
-      const newServices = [...services, trimmedItem];
+      const newServices = [...services, itemWithSubSection];
       onServicesChange(newServices);
+      console.log('➕ Ajouté à services avec rubrique:', itemWithSubSection);
     } else if (section === 'informations-pratiques') {
-      const newInfos = [...informationsPratiques, trimmedItem];
+      const newInfos = [...informationsPratiques, itemWithSubSection];
       onInformationsPratiquesChange?.(newInfos);
+      console.log('➕ Ajouté à informations pratiques avec rubrique:', itemWithSubSection);
     }
 
     setNewItem(null);
@@ -76,28 +132,45 @@ export default function UnifiedServicesAmbianceManager({
   const removeItem = (section: string, subSection: string, item: string) => {
     console.log('🗑️ SUPPRESSION - Item:', item, 'Section:', section, 'SubSection:', subSection);
     
-    // ✅ CORRECTION : Retirer l'item de TOUS les arrays où il existe
-    // Car un même item peut être présent dans plusieurs arrays (services ET ambiance)
+    // ✅ SOLUTION : Chercher l'item avec ou sans marqueur de rubrique
+    const expectedItem = `${item}|${subSection}`;
+    let found = false;
     
-    // Retirer de services si présent
-    if (services.includes(item)) {
-      const newServices = services.filter(s => s !== item);
-      onServicesChange(newServices);
-      console.log('🗑️ Retiré de services:', item);
-    }
-    
-    // Retirer de ambiance si présent
-    if (ambiance.includes(item)) {
-      const newAmbiance = ambiance.filter(a => a !== item);
+    // Chercher dans ambiance (avec et sans marqueur)
+    const ambianceItem = ambiance.find(a => a === item || a === expectedItem);
+    if (ambianceItem) {
+      const beforeCount = ambiance.length;
+      const newAmbiance = ambiance.filter(a => a !== ambianceItem);
+      const afterCount = newAmbiance.length;
       onAmbianceChange(newAmbiance);
-      console.log('🗑️ Retiré de ambiance:', item);
+      console.log('🗑️ Retiré de ambiance:', ambianceItem, `(${beforeCount} -> ${afterCount} éléments)`);
+      found = true;
     }
     
-    // Retirer de informationsPratiques si présent
-    if (informationsPratiques.includes(item)) {
-      const newInfos = informationsPratiques.filter(i => i !== item);
+    // Chercher dans services (avec et sans marqueur)
+    const serviceItem = services.find(s => s === item || s === expectedItem);
+    if (serviceItem) {
+      const beforeCount = services.length;
+      const newServices = services.filter(s => s !== serviceItem);
+      const afterCount = newServices.length;
+      onServicesChange(newServices);
+      console.log('🗑️ Retiré de services:', serviceItem, `(${beforeCount} -> ${afterCount} éléments)`);
+      found = true;
+    }
+    
+    // Chercher dans informationsPratiques (avec et sans marqueur)
+    const infosItem = informationsPratiques.find(i => i === item || i === expectedItem);
+    if (infosItem) {
+      const beforeCount = informationsPratiques.length;
+      const newInfos = informationsPratiques.filter(i => i !== infosItem);
+      const afterCount = newInfos.length;
       onInformationsPratiquesChange?.(newInfos);
-      console.log('🗑️ Retiré de informationsPratiques:', item);
+      console.log('🗑️ Retiré de informationsPratiques:', infosItem, `(${beforeCount} -> ${afterCount} éléments)`);
+      found = true;
+    }
+    
+    if (!found) {
+      console.log('⚠️ Item non trouvé dans aucun array:', item);
     }
   };
 
@@ -108,8 +181,35 @@ export default function UnifiedServicesAmbianceManager({
   const saveEdit = (newValue: string) => {
     if (!editingItem || !newValue.trim()) return;
 
-    // Retirer l'ancien item et ajouter le nouveau
-    removeItem(editingItem.section, editingItem.subSection, editingItem.item);
+    console.log('✏️ MODIFICATION - Item:', editingItem.item, 'Nouvelle valeur:', newValue.trim());
+
+    // ✅ SOLUTION : Supprimer l'ancien item (avec ou sans marqueur) et ajouter le nouveau
+    const expectedOldItem = `${editingItem.item}|${editingItem.subSection}`;
+    
+    if (editingItem.section === 'ambiance-specialites') {
+      const oldItem = ambiance.find(a => a === editingItem.item || a === expectedOldItem);
+      if (oldItem) {
+        const newAmbiance = ambiance.filter(a => a !== oldItem);
+        onAmbianceChange(newAmbiance);
+        console.log('🗑️ Modifié dans ambiance:', oldItem, '->', newValue.trim());
+      }
+    } else if (editingItem.section === 'equipements-services') {
+      const oldItem = services.find(s => s === editingItem.item || s === expectedOldItem);
+      if (oldItem) {
+        const newServices = services.filter(s => s !== oldItem);
+        onServicesChange(newServices);
+        console.log('🗑️ Modifié dans services:', oldItem, '->', newValue.trim());
+      }
+    } else if (editingItem.section === 'informations-pratiques') {
+      const oldItem = informationsPratiques.find(i => i === editingItem.item || i === expectedOldItem);
+      if (oldItem) {
+        const newInfos = informationsPratiques.filter(i => i !== oldItem);
+        onInformationsPratiquesChange?.(newInfos);
+        console.log('🗑️ Modifié dans informationsPratiques:', oldItem, '->', newValue.trim());
+      }
+    }
+    
+    // Ajouter le nouvel item
     addItem(editingItem.section, editingItem.subSection, newValue.trim());
     
     setEditingItem(null);
@@ -309,76 +409,3 @@ export default function UnifiedServicesAmbianceManager({
   );
 }
 
-// Fonction helper pour catégoriser un item (importée depuis unified-categories)
-function categorizeItem(item: string): { mainCategory: string; subCategory: string } {
-  const itemLower = item.toLowerCase();
-  
-  // Ambiance & Spécialités
-  if (itemLower.includes('ambiance') || itemLower.includes('cadre') || itemLower.includes('chaleureux') || 
-      itemLower.includes('convivial') || itemLower.includes('décontracté') || itemLower.includes('romantique')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'ambiance' };
-  }
-  
-  if (itemLower.includes('excellent') || itemLower.includes('grand choix') || itemLower.includes('café') || 
-      itemLower.includes('thé') || itemLower.includes('spécialité')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'points-forts' };
-  }
-  
-  if (itemLower.includes('déjeuner') || itemLower.includes('dîner') || itemLower.includes('solo') || 
-      itemLower.includes('famille') || itemLower.includes('couple')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'populaire-pour' };
-  }
-  
-  if (itemLower.includes('alcool') || itemLower.includes('bière') || itemLower.includes('cocktail') || 
-      itemLower.includes('vin') || itemLower.includes('végétarien') || itemLower.includes('sain') || 
-      itemLower.includes('portion')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'offres' };
-  }
-  
-  if (itemLower.includes('étudiant') || itemLower.includes('groupe') || itemLower.includes('touriste') || 
-      itemLower.includes('famille') || itemLower.includes('couple')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'clientele' };
-  }
-  
-  if (itemLower.includes('enfant') || itemLower.includes('menu enfant') || itemLower.includes('famille')) {
-    return { mainCategory: 'ambiance-specialites', subCategory: 'enfants' };
-  }
-  
-  // Équipements & Services
-  if (itemLower.includes('livraison') || itemLower.includes('emporter') || itemLower.includes('sur place') || 
-      itemLower.includes('service') || itemLower.includes('wifi') || itemLower.includes('climatisation') || 
-      itemLower.includes('chauffage') || itemLower.includes('toilettes')) {
-    return { mainCategory: 'equipements-services', subCategory: 'services' };
-  }
-  
-  if (itemLower.includes('accessible') || itemLower.includes('fauteuil') || itemLower.includes('pmr') || 
-      itemLower.includes('handicap')) {
-    return { mainCategory: 'equipements-services', subCategory: 'accessibility' };
-  }
-  
-  if (itemLower.includes('parking')) {
-    return { mainCategory: 'equipements-services', subCategory: 'parking' };
-  }
-  
-  if (itemLower.includes('premiers secours') || itemLower.includes('personnel formé') || 
-      itemLower.includes('casques') || itemLower.includes('lunettes') || itemLower.includes('santé')) {
-    return { mainCategory: 'equipements-services', subCategory: 'health' };
-  }
-  
-  // Informations pratiques
-  if (itemLower.includes('réservation') || itemLower.includes('groupe') || itemLower.includes('booking')) {
-    return { mainCategory: 'informations-pratiques', subCategory: 'groupes-reservations' };
-  }
-  
-  if (itemLower.includes('espace') || itemLower.includes('terrasse') || itemLower.includes('salon')) {
-    return { mainCategory: 'informations-pratiques', subCategory: 'espaces' };
-  }
-  
-  // Par défaut, mettre dans "Autres" de la catégorie appropriée
-  if (itemLower.includes('carte') || itemLower.includes('paiement') || itemLower.includes('nfc') || 
-      itemLower.includes('pluxee') || itemLower.includes('titre')) {
-    return { mainCategory: 'equipements-services', subCategory: 'services' };
-  }
-  
-  return { mainCategory: 'ambiance-specialites', subCategory: 'ambiance' };
-}

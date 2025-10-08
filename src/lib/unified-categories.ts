@@ -64,7 +64,9 @@ export function categorizeItem(item: string): { mainCategory: string; subCategor
   
   if (itemLower.includes('alcool') || itemLower.includes('bière') || itemLower.includes('cocktail') || 
       itemLower.includes('vin') || itemLower.includes('végétarien') || itemLower.includes('sain') || 
-      itemLower.includes('portion')) {
+      itemLower.includes('portion') || itemLower.includes('halal') || itemLower.includes('casher') ||
+      itemLower.includes('bio') || itemLower.includes('sans gluten') || itemLower.includes('vegan') ||
+      itemLower.includes('plats') || itemLower.includes('menu') || itemLower.includes('spécialités')) {
     return { mainCategory: 'ambiance-specialites', subCategory: 'offres' };
   }
   
@@ -118,21 +120,26 @@ export function categorizeItem(item: string): { mainCategory: string; subCategor
 
 // Normaliser les items pour éviter les doublons de variantes
 function normalizeItem(item: string): string {
-  const itemLower = item.toLowerCase();
+  // Extraire le préfixe et le contenu si présent
+  const prefixMatch = item.match(/^(\[[^\]]+\])?(.+)$/);
+  const prefix = prefixMatch?.[1] || '';
+  const content = prefixMatch?.[2] || item;
+  
+  const itemLower = content.toLowerCase();
   
   // Normaliser les variantes avec "disponible"
-  if (itemLower.includes('livraison disponible')) return 'Livraison';
-  if (itemLower.includes('vente à emporter disponible')) return 'Vente à emporter';
-  if (itemLower.includes('repas sur place disponible')) return 'Repas sur place';
-  if (itemLower.includes('service à table disponible')) return 'Service à table';
+  if (itemLower.includes('livraison disponible')) return prefix + 'Livraison';
+  if (itemLower.includes('vente à emporter disponible')) return prefix + 'Vente à emporter';
+  if (itemLower.includes('repas sur place disponible')) return prefix + 'Repas sur place';
+  if (itemLower.includes('service à table disponible')) return prefix + 'Service à table';
   
   // Normaliser les variantes avec "accepté"
-  if (itemLower.includes('carte bancaire acceptée')) return 'Carte bancaire';
-  if (itemLower.includes('espèces acceptées')) return 'Espèces';
+  if (itemLower.includes('carte bancaire acceptée')) return prefix + 'Carte bancaire';
+  if (itemLower.includes('espèces acceptées')) return prefix + 'Espèces';
   
   // Normaliser les variantes avec "gratuit"
-  if (itemLower.includes('wifi gratuit')) return 'WiFi';
-  if (itemLower.includes('parking gratuit')) return 'Parking';
+  if (itemLower.includes('wifi gratuit')) return prefix + 'WiFi';
+  if (itemLower.includes('parking gratuit')) return prefix + 'Parking';
   
   return item; // Retourner l'item original si pas de normalisation
 }
@@ -161,6 +168,72 @@ export function organizeItemsByCategories(items: string[]): Record<string, Recor
       // Vérifier qu'on n'ajoute pas déjà cet item dans cette sous-catégorie
       if (!organized[mainCategory][subCategory].includes(item)) {
         organized[mainCategory][subCategory].push(item);
+      }
+    }
+  });
+  
+  return organized;
+}
+
+// ✅ NOUVELLE FONCTION : Organiser en respectant le contexte d'origine
+export function organizeItemsByCategoriesWithContext(
+  items: string[], 
+  context: { services: string[]; ambiance: string[]; informationsPratiques: string[] }
+): Record<string, Record<string, string[]>> {
+  const organized: Record<string, Record<string, string[]>> = {};
+  
+  // Initialiser la structure
+  Object.keys(MAIN_CATEGORIES).forEach(mainCat => {
+    organized[mainCat] = {};
+    Object.keys(MAIN_CATEGORIES[mainCat as keyof typeof MAIN_CATEGORIES].subCategories).forEach(subCat => {
+      organized[mainCat][subCat] = [];
+    });
+  });
+  
+  // Normaliser ET dédupliquer les items
+  const normalizedItems = items.map(normalizeItem);
+  const uniqueItems = [...new Set(normalizedItems)];
+  
+  // ✅ CORRECTION : Respecter le contexte d'origine et les préfixes
+  uniqueItems.forEach(item => {
+    // Vérifier si l'item a un préfixe de sous-catégorie
+    const prefixMatch = item.match(/^\[([^\]]+)\](.+)$/);
+    let subCategory: string;
+    let cleanItem: string;
+    
+    if (prefixMatch) {
+      // L'item a un préfixe, utiliser la sous-catégorie spécifiée
+      subCategory = prefixMatch[1];
+      cleanItem = prefixMatch[2];
+    } else {
+      // Pas de préfixe, utiliser la catégorisation automatique
+      const categorized = categorizeItem(item);
+      subCategory = categorized.subCategory;
+      cleanItem = item;
+    }
+    
+    let mainCategory: string;
+    
+    // Si l'item vient de services, le mettre dans equipements-services
+    if (context.services.includes(item)) {
+      mainCategory = 'equipements-services';
+    }
+    // Si l'item vient de informationsPratiques, le mettre dans informations-pratiques
+    else if (context.informationsPratiques.includes(item)) {
+      mainCategory = 'informations-pratiques';
+    }
+    // Si l'item vient de ambiance, garder la catégorisation automatique mais forcer ambiance-specialites
+    else if (context.ambiance.includes(item)) {
+      mainCategory = 'ambiance-specialites';
+    } else {
+      // Fallback sur la catégorisation automatique
+      const categorized = categorizeItem(item);
+      mainCategory = categorized.mainCategory;
+    }
+    
+    if (organized[mainCategory] && organized[mainCategory][subCategory]) {
+      if (!organized[mainCategory][subCategory].includes(cleanItem)) {
+        organized[mainCategory][subCategory].push(cleanItem);
       }
     }
   });

@@ -40,6 +40,12 @@ function parseJsonField(field: any): string[] {
   return Array.isArray(field) ? field : [];
 }
 
+// ✅ FONCTION POUR NETTOYER LES MARQUEURS DE RUBRIQUE
+function cleanItemDisplay(item: string): string {
+  // Enlever les marqueurs de rubrique (ex: "Déjeuner|populaire-pour" -> "Déjeuner")
+  return item.replace(/\|[^|]*$/, '');
+}
+
 // Fonction pour formater automatiquement le texte descriptif
 function formatDescriptionText(text: string): string[] {
   if (!text) return [];
@@ -326,12 +332,49 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       icon: <CreditCard className="w-4 h-4" />,
       color: 'green',
       getData: (establishment: any) => {
+        // ✅ CORRECTION : Utiliser la même logique que EstablishmentInfo.tsx
         const ambiance = parseJsonField(establishment.ambiance);
         const paymentMethods = parseJsonField(establishment.paymentMethods);
         
+        // Parser les moyens de paiement depuis l'objet JSON structuré
+        const structuredPayments = (() => {
+          if (!establishment.paymentMethods) return [];
+          
+          // Si c'est déjà un objet (format JSON)
+          if (typeof establishment.paymentMethods === 'object' && !Array.isArray(establishment.paymentMethods)) {
+            const paymentObj = establishment.paymentMethods as any;
+            
+            // Convertir les clés en libellés lisibles
+            const paymentLabels: { [key: string]: string } = {
+              creditCards: 'Cartes de crédit',
+              debitCards: 'Cartes de débit',
+              cash: 'Espèces',
+              cashOnly: 'Espèces uniquement',
+              nfc: 'Paiements mobiles NFC',
+              mobilePayments: 'Paiements mobiles',
+              contactlessPayments: 'Paiements sans contact',
+              mealVouchers: 'Titres restaurant',
+              restaurantVouchers: 'Titres restaurant',
+              pluxee: 'Pluxee',
+              checks: 'Chèques'
+            };
+            
+            return Object.entries(paymentObj)
+              .filter(([key, value]) => value === true)
+              .map(([key]) => paymentLabels[key] || key);
+          }
+          
+          // Si c'est un array de strings
+          if (Array.isArray(establishment.paymentMethods)) {
+            return establishment.paymentMethods;
+          }
+          
+          return [];
+        })();
+        
         // Extraire les moyens de paiement du champ ambiance mélangé
         const ambiancePayments = ambiance.filter(item => {
-          const itemLower = item.toLowerCase();
+          const itemLower = cleanItemDisplay(item).toLowerCase();
           return (
             itemLower.includes('carte') ||
             itemLower.includes('espèces') ||
@@ -342,7 +385,8 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
           );
         });
         
-        return [...paymentMethods, ...ambiancePayments];
+        // Combiner toutes les sources
+        return [...structuredPayments, ...paymentMethods, ...ambiancePayments];
       }
     }
   ]
@@ -461,7 +505,7 @@ export default function EstablishmentMainSections({ establishment, className = "
                             {items.map((item, index) => (
                               <div key={index} className="flex items-center space-x-2">
                                 <div className={`w-2 h-2 rounded-full ${getBulletColor(subSection.color).replace('text-', 'bg-')}`}></div>
-                                <span className="text-gray-700">{item}</span>
+                                <span className="text-gray-700">{cleanItemDisplay(item)}</span>
                               </div>
                             ))}
                           </div>

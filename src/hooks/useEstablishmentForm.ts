@@ -725,11 +725,20 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           newErrors.activities = "Veuillez sélectionner au moins une activité";
         }
         if (!formData.establishmentName) newErrors.establishmentName = "Nom requis";
-        if (!formData.address.street || !formData.address.postalCode || !formData.address.city) {
-          newErrors.address = "Adresse complète requise (rue, code postal et ville)";
-        }
-        if (!formData.address.latitude || !formData.address.longitude) {
-          newErrors.address = "Géolocalisation requise pour valider l'adresse";
+        // ✅ CORRECTION : Validation flexible - soit adresse complète, soit coordonnées GPS
+        const hasFullAddress = !!(
+          formData.address.street?.trim() && 
+          formData.address.postalCode?.trim() && 
+          formData.address.city?.trim()
+        );
+        
+        const hasCoordinates = !!(
+          formData.address.latitude && 
+          formData.address.longitude
+        );
+        
+        if (!hasFullAddress && !hasCoordinates) {
+          newErrors.address = "Adresse complète requise (rue, code postal et ville) OU coordonnées GPS";
         }
         break;
       

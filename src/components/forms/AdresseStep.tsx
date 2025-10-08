@@ -56,13 +56,19 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
   // Vérifier la validation de l'adresse
   useEffect(() => {
     if (onValidationChangeRef.current) {
-      const isValid = !!(
+      // Validation flexible : soit adresse complète, soit coordonnées GPS
+      const hasFullAddress = !!(
         value.street?.trim() && 
         value.postalCode?.trim() && 
-        value.city?.trim() && 
+        value.city?.trim()
+      );
+      
+      const hasCoordinates = !!(
         value.latitude && 
         value.longitude
       );
+      
+      const isValid = hasFullAddress || hasCoordinates;
       
       // Ne pas appeler le callback si la validation n'a pas changé
       if (lastValidationRef.current !== isValid) {
@@ -76,6 +82,8 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
           city: value.city,
           latitude: value.latitude,
           longitude: value.longitude,
+          hasFullAddress,
+          hasCoordinates,
           isValid
         });
       }
@@ -88,21 +96,38 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       return;
     }
 
-    // Vérifier que l'adresse contient un numéro pour éviter la confusion
+    // ✅ MODIFICATION : Permettre les adresses sans numéro (ZAC, centres commerciaux, etc.)
+    // Vérifier que l'adresse contient un numéro OU un nom spécifique (ZAC, Centre, etc.)
     const hasNumber = /\d/.test(street.trim());
-    if (!hasNumber) {
-      setGeocodeError("⚠️ Ajoutez le numéro de rue pour éviter la confusion avec d'autres établissements");
+    const hasSpecificName = /\b(zac|centre|commercial|zone|parking|gare|aéroport|université|hôpital|mairie)\b/i.test(street.trim());
+    
+    if (!hasNumber && !hasSpecificName) {
+      setGeocodeError("⚠️ Ajoutez le numéro de rue ou un nom spécifique (ex: ZAC, Centre commercial) pour éviter la confusion");
       return;
     }
 
-    const fullAddress = `${street.trim()}, ${postalCode.trim()} ${city.trim()}`;
+    // ✅ CORRECTION : Construire l'adresse complète sans duplication
+    const fullAddress = [street.trim(), postalCode.trim(), city.trim()].filter(Boolean).join(', ').trim();
     
     setIsGeocoding(true);
     setGeocodeError(null);
 
     try {
-      const response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
-      const result = await response.json();
+      // ✅ AMÉLIORATION : Essayer d'abord l'adresse complète, puis une version simplifiée
+      let response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
+      let result = await response.json();
+
+      // Si l'adresse complète ne fonctionne pas, essayer une version simplifiée
+      if (!result.success && result.error === "Adresse non trouvée") {
+        console.log(`🔄 Tentative avec adresse simplifiée...`);
+        const simplifiedAddress = `${postalCode.trim()} ${city.trim()}`;
+        response = await fetch(`/api/geocode?address=${encodeURIComponent(simplifiedAddress)}`);
+        result = await response.json();
+        
+        if (result.success && result.data) {
+          console.log(`✅ Géocodage réussi avec adresse simplifiée: ${result.data.latitude}, ${result.data.longitude}`);
+        }
+      }
 
       if (result.success && result.data) {
         // Mise à jour des coordonnées
@@ -195,6 +220,24 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     }
   };
 
+  // Fonction pour gérer le changement de l'adresse complète
+  const handleFullAddressChange = (fullAddress: string) => {
+    // Déclencher l'autocomplete si l'adresse contient au moins 3 caractères
+    if (fullAddress.length >= 3) {
+      fetchSuggestions(fullAddress);
+    }
+    
+    // Pour l'instant, on stocke l'adresse complète dans le champ street
+    // Le géocodage se fera via les suggestions ou manuellement
+    const updatedAddress = { ...value, street: fullAddress };
+    onChange(updatedAddress);
+    
+    // Nettoyer les erreurs
+    if (geocodeError) {
+      setGeocodeError(null);
+    }
+  };
+
   // Sélection d'une suggestion - CORRECTION : Préserver le numéro utilisateur
   const handleSuggestionSelect = (suggestion: Suggestion) => {
     const address = suggestion.address || {};
@@ -224,8 +267,11 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     const latitude = suggestion.lat ? parseFloat(suggestion.lat) : undefined;
     const longitude = suggestion.lon ? parseFloat(suggestion.lon) : undefined;
 
+    // ✅ CORRECTION : Créer l'adresse complète sans duplication
+    const fullAddress = [street, postalCode, city].filter(Boolean).join(', ').trim();
+
     const newAddress: AddressData = {
-      street,
+      street: fullAddress, // Stocker l'adresse complète dans le champ street
       postalCode,
       city,
       latitude,
@@ -251,16 +297,16 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       <div>
         <label className="block text-sm font-medium mb-2">Adresse de l'établissement *</label>
         
-        {/* Champ Rue et numéro */}
+        {/* Champ Adresse complète */}
         <div className="relative mb-3">
           <input
             type="text"
             value={value.street || ''}
-            onChange={(e) => handleFieldChange('street', e.target.value)}
+            onChange={(e) => handleFullAddressChange(e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? 'border-red-500' : 'border-gray-300'
+              error && !(value.latitude && value.longitude) ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Ex : 15 rue du Cap Vert"
+            placeholder="Ex : 15 rue des envies, 75000 Paris"
           />
           
           {/* Suggestions d'autocomplete */}
@@ -317,52 +363,100 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
           )}
         </div>
 
-        {/* Champ Code postal */}
-        <div className="mb-3">
-          <input
-            type="text"
-            value={value.postalCode || ''}
-            onChange={(e) => handleFieldChange('postalCode', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Ex : 21800"
-            maxLength={5}
-          />
-        </div>
-
-        {/* Champ Ville */}
-        <div className="mb-3">
-          <input
-            type="text"
-            value={value.city || ''}
-            onChange={(e) => handleFieldChange('city', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? 'border-red-500' : 'border-gray-300'
-            }`}
-            placeholder="Ex : Quetigny"
-          />
-        </div>
-
-        {/* Message d'aide */}
-        <div className="flex items-start space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-blue-500 text-sm">ℹ️</span>
-          <p className="text-sm text-blue-700">
-            Pourquoi ? Pour afficher précisément votre établissement sur la carte et aider vos clients à le trouver.
-          </p>
-        </div>
-
-        {/* Affichage des coordonnées géocodées */}
-        {(value.latitude && value.longitude) && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <span className="text-green-500">📍</span>
-              <span className="text-sm text-green-700 font-medium">
-                Coordonnées détectées : {value.latitude.toFixed(6)}, {value.longitude.toFixed(6)}
-              </span>
+        {/* Champs de coordonnées GPS modifiables */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium mb-3">
+            📍 Coordonnées GPS (optionnel)
+          </label>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Champ Latitude */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Latitude</label>
+              <input
+                type="number"
+                step="any"
+                value={value.latitude || ''}
+                onChange={(e) => {
+                  const latitude = e.target.value ? parseFloat(e.target.value) : undefined;
+                  onChange({
+                    ...value,
+                    latitude
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ex: 47.302780"
+              />
+            </div>
+            
+            {/* Champ Longitude */}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Longitude</label>
+              <input
+                type="number"
+                step="any"
+                value={value.longitude || ''}
+                onChange={(e) => {
+                  const longitude = e.target.value ? parseFloat(e.target.value) : undefined;
+                  onChange({
+                    ...value,
+                    longitude
+                  });
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ex: 5.114379"
+              />
             </div>
           </div>
-        )}
+          
+          {/* Message de validation des coordonnées */}
+          {(value.latitude && value.longitude) && (
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <span className="text-green-500">✅</span>
+                <span className="text-sm text-green-700 font-medium">
+                  Coordonnées GPS validées ! L'adresse est considérée comme complète.
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Message d'aide pour Google Maps */}
+          <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <span className="text-blue-500 text-sm">💡</span>
+              <div className="text-xs text-blue-700 flex-1">
+                <p className="font-medium mb-1">Comment récupérer les coordonnées depuis Google Maps :</p>
+                <ol className="list-decimal list-inside space-y-1 mb-3">
+                  <li>Ouvrez Google Maps</li>
+                  <li>Recherchez votre adresse</li>
+                  <li>Clic droit sur l'emplacement exact</li>
+                  <li>Sélectionnez "Plus d'infos sur cet endroit"</li>
+                  <li>Copiez les coordonnées affichées</li>
+                  <li>Cliquez pour vérifier</li>
+                </ol>
+                
+                {/* Bouton intégré dans les instructions */}
+                {(value.latitude && value.longitude) && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Ouvrir Google Maps avec les coordonnées
+                        const mapsUrl = `https://www.google.com/maps?q=${value.latitude},${value.longitude}`;
+                        window.open(mapsUrl, '_blank');
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                    >
+                      <span>🗺️</span>
+                      <span>Voir sur Google Maps</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Message d'erreur de géocodage */}
         {geocodeError && (
@@ -385,7 +479,7 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
         )}
 
         {/* Message d'erreur général */}
-        {error && (
+        {error && !(value.latitude && value.longitude) && (
           <p className="text-red-500 text-sm mt-1">{error}</p>
         )}
       </div>

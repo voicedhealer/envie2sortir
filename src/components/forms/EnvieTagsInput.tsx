@@ -17,60 +17,19 @@ export default function EnvieTagsInput({ onEnvieTagsGenerated, existingTags }: E
 
   /**
    * Génère des tags à partir d'une envie saisie
+   * ✅ MODIFICATION : Ne génère que la phrase "Envie de..." sans tags automatiques supplémentaires
    */
   const generateTagsFromEnvie = (envie: string): string[] => {
     const envieClean = envie.toLowerCase().trim();
     const tags: string[] = [];
 
-    // Ajouter le tag principal "Envie de..."
+    // ✅ AJOUTER SEULEMENT le tag principal "Envie de..."
     if (envieClean) {
       tags.push(`Envie de ${envieClean}`);
     }
 
-    // Extraction de mots-clés spécifiques
-    const keywords = {
-      // Cuisine
-      'manger': ['restaurant', 'cuisine', 'gastronomie'],
-      'boire': ['bar', 'boisson', 'cocktail'],
-      'pizza': ['italien', 'pizza', 'convivial'],
-      'sushi': ['japonais', 'sushi', 'raffinement'],
-      'burger': ['américain', 'rapide', 'décontracté'],
-      'cocktail': ['bar', 'soirée', 'ambiance'],
-      'café': ['café', 'pause', 'détente'],
-      'vin': ['bar à vin', 'dégustation', 'raffinement'],
-      
-      // Ambiance
-      'romantique': ['romantique', 'couple', 'intime'],
-      'soirée': ['soirée', 'festif', 'ambiance'],
-      'détente': ['détente', 'calme', 'relaxation'],
-      'famille': ['familial', 'enfants', 'convivial'],
-      'groupe': ['groupe', 'amis', 'convivial'],
-      'luxe': ['luxe', 'prestige', 'standing'],
-      
-      // Activités
-      'bowling': ['bowling', 'jeu', 'groupe'],
-      'cinéma': ['cinéma', 'culture', 'détente'],
-      'sport': ['sport', 'activité', 'groupe'],
-      'jeu': ['jeu', 'amusement', 'groupe'],
-      'escape': ['escape game', 'défi', 'équipe'],
-      
-      // Moments
-      'déjeuner': ['déjeuner', 'midi', 'rapide'],
-      'dîner': ['dîner', 'soirée', 'gastronomie'],
-      'brunch': ['brunch', 'weekend', 'détente'],
-      'petit-déjeuner': ['petit-déjeuner', 'matin', 'café']
-    };
-
-    // Rechercher des mots-clés dans l'envie
-    Object.entries(keywords).forEach(([keyword, relatedTags]) => {
-      if (envieClean.includes(keyword)) {
-        relatedTags.forEach(tag => {
-          if (!tags.includes(tag)) {
-            tags.push(tag);
-          }
-        });
-      }
-    });
+    // ❌ SUPPRIMÉ : Toute la logique de génération automatique de tags supplémentaires
+    // (restaurant, cuisine, gastronomie, etc.)
 
     return tags;
   };

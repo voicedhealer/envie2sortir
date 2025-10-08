@@ -36,6 +36,12 @@ const parseHybridData = (jsonField: any): any => {
   return null;
 };
 
+// ✅ FONCTION POUR NETTOYER LES MARQUEURS DE RUBRIQUE
+const cleanItemDisplay = (item: string): string => {
+  // Enlever les marqueurs de rubrique (ex: "Déjeuner|populaire-pour" -> "Déjeuner")
+  return item.replace(/\|[^|]*$/, '');
+};
+
 // Fonction pour extraire les éléments d'accessibilité des données hybrides
 const getAccessibilityItems = (accessibilityDetails: any): string[] => {
   const items: string[] = [];
@@ -249,15 +255,41 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     ...(enrichmentData?.health || [])
   ];
   
-  // Fallback: Utiliser les données classiques si les hybrides sont vides
-  const fallbackPaymentMethods = establishment.paymentMethods && typeof establishment.paymentMethods === 'object' 
-    ? Object.keys(establishment.paymentMethods).filter(key => 
-        establishment.paymentMethods && 
-        typeof establishment.paymentMethods === 'object' && 
-        'JsonObject' in establishment.paymentMethods &&
-        (establishment.paymentMethods as any)[key] === true
-      )
-    : [];
+  // ✅ CORRECTION : Utiliser les données classiques si les hybrides sont vides
+  const fallbackPaymentMethods = (() => {
+    if (!establishment.paymentMethods) return [];
+    
+    // Si c'est déjà un objet (format JSON)
+    if (typeof establishment.paymentMethods === 'object' && !Array.isArray(establishment.paymentMethods)) {
+      const paymentObj = establishment.paymentMethods as any;
+      
+      // Convertir les clés en libellés lisibles
+      const paymentLabels: { [key: string]: string } = {
+        creditCards: 'Cartes de crédit',
+        debitCards: 'Cartes de débit',
+        cash: 'Espèces',
+        cashOnly: 'Espèces uniquement',
+        nfc: 'Paiements mobiles NFC',
+        mobilePayments: 'Paiements mobiles',
+        contactlessPayments: 'Paiements sans contact',
+        mealVouchers: 'Titres restaurant',
+        restaurantVouchers: 'Titres restaurant',
+        pluxee: 'Pluxee',
+        checks: 'Chèques'
+      };
+      
+      return Object.entries(paymentObj)
+        .filter(([key, value]) => value === true)
+        .map(([key]) => paymentLabels[key] || key);
+    }
+    
+    // Si c'est un array de strings
+    if (Array.isArray(establishment.paymentMethods)) {
+      return establishment.paymentMethods;
+    }
+    
+    return [];
+  })();
   
   const fallbackAccessibilityItems = establishment.services && Array.isArray(establishment.services)
     ? establishment.services.filter(service => 
@@ -395,10 +427,10 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const ambiance = parseGooglePlacesField(establishment.ambiance, 'ambiance');
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
-  // Extraire les moyens de paiement des services et informations pratiques
+  // ✅ AMÉLIORATION : Extraire les moyens de paiement des services et informations pratiques
   const allData = [...services, ...informationsPratiques];
   const traditionalPayments = allData.filter(item => {
-    const itemLower = item.toLowerCase();
+    const itemLower = cleanItemDisplay(item).toLowerCase(); // Nettoyer avant de filtrer
     return itemLower.includes('carte') || itemLower.includes('paiement') ||
            itemLower.includes('nfc') || itemLower.includes('pluxee') ||
            itemLower.includes('titre restaurant') || itemLower.includes('titres restaurant') ||
@@ -621,7 +653,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 key={index}
                 className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
               >
-                {paiement}
+                {cleanItemDisplay(paiement)}
               </span>
             ))}
           </div>
