@@ -3,7 +3,7 @@
 import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
 import { useState } from 'react';
-import { useLinkTracking } from '@/hooks/useClickTracking';
+import { useLinkTracking, useScheduleTracking } from '@/hooks/useClickTracking';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
 const cleanUrlForDisplay = (url: string): string => {
@@ -197,6 +197,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   
   // Hook de tracking des liens
   const { trackLinkClick } = useLinkTracking(establishment.id);
+  const { trackScheduleView, trackScheduleExpand } = useScheduleTracking(establishment.id);
   
   // Parser les données hybrides
   const hybridAccessibility = parseHybridData(establishment.accessibilityDetails);
@@ -416,8 +417,11 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
           <button
             onClick={() => {
               setIsHoursExpanded(!isHoursExpanded);
-              // ✅ AJOUT : Tracking des horaires
-              trackLinkClick('horaires', 'Horaires d\'ouverture', 'website');
+              // ✅ AJOUT : Tracking détaillé des horaires
+              trackScheduleView('opening_hours');
+              if (!isHoursExpanded) {
+                trackScheduleExpand();
+              }
             }}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
           >

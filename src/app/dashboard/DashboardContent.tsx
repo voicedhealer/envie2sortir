@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Globe, BarChart3 } from "lucide-react";
+import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
 import MenuManager from "@/components/dashboard/MenuManager";
 import ClickAnalyticsDashboard from "@/components/analytics/ClickAnalyticsDashboard";
+import DetailedAnalyticsDashboard from "@/components/analytics/DetailedAnalyticsDashboard";
 
 interface User {
   id: string;
@@ -65,6 +66,7 @@ interface DashboardContentProps {
 
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'analytics' | 'parametres'>('overview');
+  const [analyticsViewMode, setAnalyticsViewMode] = useState<'overview' | 'detailed'>('overview');
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -452,19 +454,64 @@ export default function DashboardContent({ user, establishment, professional }: 
         />
       ) : activeTab === 'analytics' ? (
         <div className="space-y-6">
+          {/* En-tête Analytics avec boutons de basculement */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <BarChart3 className="w-6 h-6 text-blue-600" />
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Analytics de votre établissement</h2>
-                <p className="text-sm text-gray-600">Découvrez comment vos clients interagissent avec votre page</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">Analytics de votre établissement</h2>
+                  <p className="text-sm text-gray-600">Découvrez comment vos clients interagissent avec votre page</p>
+                </div>
+              </div>
+              
+              {/* Boutons de basculement */}
+              <div className="flex items-center space-x-4">
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setAnalyticsViewMode('overview')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      analyticsViewMode === 'overview'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 inline mr-2" />
+                    Vue d'ensemble
+                  </button>
+                  <button
+                    onClick={() => setAnalyticsViewMode('detailed')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      analyticsViewMode === 'detailed'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4 inline mr-2" />
+                    Vue détaillée
+                  </button>
+                </div>
+                
+                <div className="flex items-center text-sm text-gray-500">
+                  <Eye className="w-4 h-4 mr-1" />
+                  Données en temps réel
+                </div>
               </div>
             </div>
           </div>
-          <ClickAnalyticsDashboard 
-            establishmentId={establishment.id} 
-            period="30d"
-          />
+          
+          {/* Contenu selon la vue sélectionnée */}
+          {analyticsViewMode === 'overview' ? (
+            <ClickAnalyticsDashboard 
+              establishmentId={establishment.id} 
+              period="30d"
+            />
+          ) : (
+            <DetailedAnalyticsDashboard 
+              establishmentId={establishment.id} 
+              period="30d"
+            />
+          )}
         </div>
       ) : (
         <ParametresManager 

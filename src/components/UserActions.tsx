@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { Heart, MessageSquare, Star } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
-import { useClickTracking } from '@/hooks/useClickTracking';
+import { useClickTracking, useContactTracking } from '@/hooks/useClickTracking';
 
 interface UserActionsProps {
   establishmentId: string;
@@ -21,6 +21,7 @@ export default function UserActions({
 }: UserActionsProps) {
   const { data: session } = useSession();
   const { trackClick } = useClickTracking(establishmentId);
+  const { trackContactClick } = useContactTracking(establishmentId);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);

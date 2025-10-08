@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { useClickTracking } from '@/hooks/useClickTracking';
+import { useClickTracking, useGalleryTracking } from '@/hooks/useClickTracking';
 
 interface PhotoGalleryProps {
   images: Array<{ url: string; isMain?: boolean }> | string[];
@@ -13,6 +13,7 @@ interface PhotoGalleryProps {
 export default function PhotoGallery({ images, establishmentName, establishmentId }: PhotoGalleryProps) {
   // Hook de tracking
   const { trackClick } = useClickTracking(establishmentId || '');
+  const { trackImageView } = useGalleryTracking(establishmentId || '');
   
   // Si moins de 2 images, ne pas afficher la galerie
   if (!images || images.length < 2) {
@@ -38,6 +39,8 @@ export default function PhotoGallery({ images, establishmentName, establishmentI
   // Fonction pour tracker le clic sur une image
   const handleImageClick = (index: number) => {
     if (establishmentId) {
+      // Tracking détaillé de la galerie
+      trackImageView(index, galleryImages.length);
       trackClick({
         elementType: 'image',
         elementId: `gallery-image-${index}`,

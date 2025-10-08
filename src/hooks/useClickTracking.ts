@@ -4,17 +4,26 @@ import { useCallback } from 'react';
 
 interface ClickTrackingData {
   establishmentId: string;
-  elementType: 'section' | 'subsection' | 'link' | 'button' | 'image';
+  elementType: 'section' | 'subsection' | 'link' | 'button' | 'image' | 'schedule' | 'gallery' | 'contact';
   elementId: string;
   elementName?: string;
-  action: 'open' | 'close' | 'click' | 'hover';
+  action: 'open' | 'close' | 'click' | 'hover' | 'view' | 'expand';
   sectionContext?: string;
+  // ✅ AJOUT : Données temporelles précises
+  hour?: number; // Heure de l'interaction (0-23)
+  dayOfWeek?: string; // Jour de la semaine
+  timeSlot?: string; // Créneau horaire (ex: "14h-15h")
 }
 
 // Hook pour tracker les clics et interactions
 export function useClickTracking(establishmentId: string) {
   const trackClick = useCallback(async (data: Omit<ClickTrackingData, 'establishmentId'>) => {
     try {
+      const now = new Date();
+      const hour = now.getHours();
+      const dayOfWeek = now.toLocaleDateString('fr-FR', { weekday: 'long' });
+      const timeSlot = `${hour}h-${hour + 1}h`;
+      
       // Envoyer les données de tracking de manière asynchrone
       await fetch('/api/analytics/track', {
         method: 'POST',
@@ -24,9 +33,12 @@ export function useClickTracking(establishmentId: string) {
         body: JSON.stringify({
           establishmentId,
           ...data,
+          hour,
+          dayOfWeek,
+          timeSlot,
           userAgent: navigator.userAgent,
           referrer: document.referrer,
-          timestamp: new Date().toISOString(),
+          timestamp: now.toISOString(),
         }),
       });
     } catch (error) {
@@ -92,4 +104,65 @@ export function useLinkTracking(establishmentId: string) {
   }, [trackClick]);
 
   return { trackLinkClick };
+}
+
+// ✅ NOUVEAU : Hook pour tracker les horaires
+export function useScheduleTracking(establishmentId: string) {
+  const { trackClick } = useClickTracking(establishmentId);
+
+  const trackScheduleView = useCallback((scheduleType: 'opening_hours' | 'events' | 'special_hours') => {
+    trackClick({
+      elementType: 'schedule',
+      elementId: scheduleType,
+      elementName: 'Horaires d\'ouverture',
+      action: 'view',
+      sectionContext: 'schedule',
+    });
+  }, [trackClick]);
+
+  const trackScheduleExpand = useCallback(() => {
+    trackClick({
+      elementType: 'schedule',
+      elementId: 'opening_hours',
+      elementName: 'Horaires d\'ouverture',
+      action: 'expand',
+      sectionContext: 'schedule',
+    });
+  }, [trackClick]);
+
+  return { trackScheduleView, trackScheduleExpand };
+}
+
+// ✅ NOUVEAU : Hook pour tracker la galerie photos
+export function useGalleryTracking(establishmentId: string) {
+  const { trackClick } = useClickTracking(establishmentId);
+
+  const trackImageView = useCallback((imageIndex: number, totalImages: number) => {
+    trackClick({
+      elementType: 'gallery',
+      elementId: `image_${imageIndex}`,
+      elementName: `Image ${imageIndex + 1}/${totalImages}`,
+      action: 'view',
+      sectionContext: 'gallery',
+    });
+  }, [trackClick]);
+
+  return { trackImageView };
+}
+
+// ✅ NOUVEAU : Hook pour tracker les contacts
+export function useContactTracking(establishmentId: string) {
+  const { trackClick } = useClickTracking(establishmentId);
+
+  const trackContactClick = useCallback((contactType: 'phone' | 'whatsapp' | 'email' | 'website') => {
+    trackClick({
+      elementType: 'contact',
+      elementId: contactType,
+      elementName: `Contact ${contactType}`,
+      action: 'click',
+      sectionContext: 'contact',
+    });
+  }, [trackClick]);
+
+  return { trackContactClick };
 }

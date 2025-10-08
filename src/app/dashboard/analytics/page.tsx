@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import ClickAnalyticsDashboard from '@/components/analytics/ClickAnalyticsDashboard';
+import DetailedAnalyticsDashboard from '@/components/analytics/DetailedAnalyticsDashboard';
 import { BarChart3, TrendingUp, Users, Eye } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<'overview' | 'detailed'>('overview');
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -85,6 +87,32 @@ export default function AnalyticsPage() {
               </div>
               
               <div className="flex items-center space-x-4">
+                {/* Toggle entre vue d'ensemble et vue détaillée */}
+                <div className="flex bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('overview')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      viewMode === 'overview'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4 inline mr-2" />
+                    Vue d'ensemble
+                  </button>
+                  <button
+                    onClick={() => setViewMode('detailed')}
+                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      viewMode === 'detailed'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <TrendingUp className="w-4 h-4 inline mr-2" />
+                    Vue détaillée
+                  </button>
+                </div>
+                
                 <div className="flex items-center text-sm text-gray-500">
                   <Eye className="w-4 h-4 mr-1" />
                   Données en temps réel
@@ -97,10 +125,17 @@ export default function AnalyticsPage() {
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ClickAnalyticsDashboard 
-          establishmentId={establishmentId} 
-          period="30d"
-        />
+        {viewMode === 'overview' ? (
+          <ClickAnalyticsDashboard 
+            establishmentId={establishmentId} 
+            period="30d"
+          />
+        ) : (
+          <DetailedAnalyticsDashboard 
+            establishmentId={establishmentId} 
+            period="30d"
+          />
+        )}
       </div>
     </div>
   );

@@ -431,7 +431,13 @@ model ClickAnalytics {
   country        String?
   city           String?
   
+  // ✅ AJOUT : Données temporelles précises
+  hour           Int?              // Heure de l'interaction (0-23)
+  dayOfWeek      String?           // Jour de la semaine (lundi, mardi, etc.)
+  timeSlot       String?           // Créneau horaire (ex: "14h-15h")
+  
   @@map("click_analytics")
   @@index([establishmentId, elementType])
   @@index([timestamp])
+  @@index([hour, dayOfWeek])       // Index pour requêtes temporelles
 }
