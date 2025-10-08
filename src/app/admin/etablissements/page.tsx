@@ -36,6 +36,7 @@ interface Establishment {
   lastModifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  activities: string[] | null; // ✅ AJOUT : Type d'établissement
   owner: Professional;
   _count: {
     images: number;
@@ -548,6 +549,22 @@ export default function AdminEstablishmentsPage() {
                         <p className="mt-1 text-sm text-gray-900">
                           {formatDate(selectedEstablishment.owner.createdAt)}
                         </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Activité de l'établissement</label>
+                        <div className="mt-1">
+                          {selectedEstablishment.activities && Array.isArray(selectedEstablishment.activities) && selectedEstablishment.activities.length > 0 ? (
+                            <div className="flex flex-wrap gap-2">
+                              {selectedEstablishment.activities.map((activity: string, index: number) => (
+                                <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {activity}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 italic">Non renseigné</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

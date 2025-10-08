@@ -242,20 +242,23 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       color: 'purple',
       getData: (establishment: any) => {
         const ambiance = parseJsonField(establishment.ambiance);
-        // Exclure les éléments qui ne sont pas de l'ambiance (activités, clientèle, accessibilité)
-        return ambiance.filter(item => 
-          !item.toLowerCase().includes('accessible') &&
-          !item.toLowerCase().includes('mobilité') &&
-          !item.toLowerCase().includes('handicap') &&
-          !item.toLowerCase().includes('pmr') &&
-          !item.toLowerCase().includes('groupes') &&
-          !item.toLowerCase().includes('familles') &&
-          !item.toLowerCase().includes('couples') &&
-          !item.toLowerCase().includes('escape game') &&
-          !item.toLowerCase().includes('réalité virtuelle') &&
-          !item.toLowerCase().includes('culture vr') &&
-          !item.toLowerCase().includes('action adrénaline')
-        );
+        // Filtrer pour garder uniquement les éléments d'ambiance
+        return ambiance.filter(item => {
+          const itemLower = item.toLowerCase();
+          return (
+            itemLower.includes('ambiance') ||
+            itemLower.includes('convivial') ||
+            itemLower.includes('festif') ||
+            itemLower.includes('décontracté') ||
+            itemLower.includes('chaleureux') ||
+            itemLower.includes('cosy') ||
+            itemLower.includes('cadre') ||
+            itemLower.includes('atmosphère') ||
+            itemLower.includes('décontractée') ||
+            itemLower.includes('mystérieuse') ||
+            itemLower.includes('immersif')
+          ) && !itemLower.includes('accessible') && !itemLower.includes('groupes');
+        });
       }
     },
     {
@@ -263,24 +266,84 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       title: 'Spécialités',
       icon: <Utensils className="w-4 h-4" />,
       color: 'orange',
-      getData: (establishment: any) => [
-        ...parseJsonField(establishment.specialties),
-        ...parseJsonField(establishment.atmosphere)
-      ]
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        const specialties = parseJsonField(establishment.specialties);
+        const atmosphere = parseJsonField(establishment.atmosphere);
+        
+        // Extraire les spécialités du champ ambiance mélangé
+        const ambianceSpecialties = ambiance.filter(item => {
+          const itemLower = item.toLowerCase();
+          return (
+            itemLower.includes('cuisine') ||
+            itemLower.includes('végétarien') ||
+            itemLower.includes('sain') ||
+            itemLower.includes('qualité') ||
+            itemLower.includes('boisson') ||
+            itemLower.includes('alcool') ||
+            itemLower.includes('vin') ||
+            itemLower.includes('bière') ||
+            itemLower.includes('cocktail') ||
+            itemLower.includes('apéritif') ||
+            itemLower.includes('spiritueux') ||
+            itemLower.includes('déjeuner') ||
+            itemLower.includes('dîner')
+          );
+        });
+        
+        return [...specialties, ...atmosphere, ...ambianceSpecialties];
+      }
     },
     {
       id: 'clientele',
       title: 'Clientèles',
       icon: <Users className="w-4 h-4" />,
       color: 'blue',
-      getData: (establishment: any) => parseJsonField(establishment.clienteleInfo)
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        const clienteleInfo = parseJsonField(establishment.clienteleInfo);
+        
+        // Extraire les informations clientèle du champ ambiance mélangé
+        const ambianceClientele = ambiance.filter(item => {
+          const itemLower = item.toLowerCase();
+          return (
+            itemLower.includes('groupes') ||
+            itemLower.includes('familles') ||
+            itemLower.includes('couples') ||
+            itemLower.includes('enfants') ||
+            itemLower.includes('jeunes') ||
+            itemLower.includes('populaire pour') ||
+            itemLower.includes('convient aux')
+          );
+        });
+        
+        return [...clienteleInfo, ...ambianceClientele];
+      }
     },
     {
       id: 'payment',
       title: 'Moyens de paiement',
       icon: <CreditCard className="w-4 h-4" />,
       color: 'green',
-      getData: (establishment: any) => parseJsonField(establishment.paymentMethods)
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        const paymentMethods = parseJsonField(establishment.paymentMethods);
+        
+        // Extraire les moyens de paiement du champ ambiance mélangé
+        const ambiancePayments = ambiance.filter(item => {
+          const itemLower = item.toLowerCase();
+          return (
+            itemLower.includes('carte') ||
+            itemLower.includes('espèces') ||
+            itemLower.includes('paiement') ||
+            itemLower.includes('nfc') ||
+            itemLower.includes('pluxee') ||
+            itemLower.includes('titre restaurant')
+          );
+        });
+        
+        return [...paymentMethods, ...ambiancePayments];
+      }
     }
   ]
 };

@@ -212,6 +212,21 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
               {data.description || 'Aucune description fournie'}
             </p>
           </div>
+          {data.activities && data.activities.length > 0 && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-500 mb-1">Activités de l'établissement</label>
+              <div className="flex flex-wrap gap-2">
+                {data.activities.map((activity, index) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
+                  >
+                    {activity}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {(data.latitude && data.longitude) && (
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-500 mb-1">Coordonnées GPS</label>

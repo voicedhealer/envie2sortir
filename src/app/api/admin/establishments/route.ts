@@ -53,6 +53,7 @@ export async function GET(request: NextRequest) {
         lastModifiedAt: true,
         createdAt: true,
         updatedAt: true,
+        activities: true, // ✅ AJOUT : Type d'établissement
         owner: {
           select: {
             id: true,

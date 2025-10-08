@@ -63,6 +63,12 @@ export async function POST(request: NextRequest) {
         atmosphere: enrichmentData.atmosphere || [],
         accessibility: enrichmentData.accessibility || [],
         
+        // ✅ CORRECTION : Sauvegarder les données organisées dans les bons champs
+        services: enrichmentData.servicesArray || [],
+        ambiance: enrichmentData.ambianceArray || [],
+        paymentMethods: enrichmentData.paymentMethodsArray || [],
+        clienteleInfo: enrichmentData.clientele || [],
+        
         // Marquer comme enrichi
         enriched: true,
         
