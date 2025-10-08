@@ -133,22 +133,33 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Statistiques temporelles (clics par jour)
-    const dailyStats = await prisma.clickAnalytics.groupBy({
-      by: ['timestamp'],
+    // Statistiques temporelles (clics par heure de la journée)
+    const hourlyData = await prisma.clickAnalytics.findMany({
       where: {
         establishmentId,
         timestamp: {
           gte: startDate,
         },
       },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        timestamp: 'asc',
+      select: {
+        timestamp: true,
       },
     });
+
+    // Grouper par heure de la journée (0-23)
+    const hourlyStatsMap = new Map<number, number>();
+    
+    hourlyData.forEach(click => {
+      const hour = click.timestamp.getHours();
+      hourlyStatsMap.set(hour, (hourlyStatsMap.get(hour) || 0) + 1);
+    });
+
+    // Créer le tableau des heures avec toutes les heures de 0 à 23
+    const hourlyStats = Array.from({ length: 24 }, (_, hour) => ({
+      hour,
+      clicks: hourlyStatsMap.get(hour) || 0,
+      hourLabel: `${hour.toString().padStart(2, '0')}h`,
+    }));
 
     return NextResponse.json({
       period,
@@ -156,10 +167,7 @@ export async function GET(request: NextRequest) {
       totalClicks: stats.reduce((sum, stat) => sum + stat._count.id, 0),
       topElements: stats.slice(0, 10),
       statsByType,
-      dailyStats: dailyStats.map(stat => ({
-        date: stat.timestamp.toISOString().split('T')[0],
-        clicks: stat._count.id,
-      })),
+      hourlyStats,
     });
   } catch (error) {
     console.error('Analytics retrieval error:', error);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Establishment } from '@prisma/client';
-import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { MapPin, Phone, Globe, Clock, Star, Users, Car, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube, CheckCircle, AlertCircle, Info } from 'lucide-react';
 import { useState } from 'react';
 import { SmartEnrichmentData, EnrichmentPriority } from '@/lib/smart-enrichment-service';
 
@@ -86,7 +86,6 @@ export default function SmartEstablishmentInfo({ establishment }: SmartEstablish
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     services: false,
     accessibility: false,
-    payments: false,
     children: false,
     parking: false,
     contact: false
@@ -249,36 +248,6 @@ export default function SmartEstablishmentInfo({ establishment }: SmartEstablish
         )}
       </div>
 
-      {/* Moyens de paiement */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <button
-          onClick={() => toggleSection('payments')}
-          className="w-full flex items-center justify-between text-left"
-        >
-          <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-            <CreditCard className="w-6 h-6 mr-3 text-green-500" />
-            Moyens de paiement
-          </h2>
-          {expandedSections.payments ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-        </button>
-        
-        {expandedSections.payments && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            {smartData ? (
-              renderPrioritySection(
-                smartData.prioritizedData.payments,
-                'Moyens de paiement',
-                <CreditCard className="w-5 h-5" />,
-                "Aucun moyen de paiement spécifié"
-              )
-            ) : (
-              <div className="text-gray-500 text-sm">
-                Aucune information de paiement disponible
-              </div>
-            )}
-          </div>
-        )}
-      </div>
 
       {/* Services enfants */}
       <div className="bg-white rounded-lg shadow-lg p-6">

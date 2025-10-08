@@ -230,12 +230,13 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const smartEnrichmentData = parseHybridData(establishment.smartEnrichmentData);
   const enrichmentData = parseHybridData(establishment.enrichmentData);
   
-  // Combiner les moyens de paiement de toutes les sources
+  // Combiner les moyens de paiement de toutes les sources et supprimer les doublons
   const allPaymentMethods = [
     ...paymentMethods,
     ...(smartEnrichmentData?.paymentMethodsArray || []),
     ...(enrichmentData?.paymentMethodsArray || [])
   ];
+  const uniquePaymentMethods = [...new Set(allPaymentMethods)];
   
   // Combiner les services de parking
   const parkingOptions = [
@@ -302,7 +303,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     : [];
   
   // Utiliser les données hybrides si disponibles, sinon les données classiques
-  const finalPaymentMethods = allPaymentMethods.length > 0 ? allPaymentMethods : fallbackPaymentMethods;
+  const finalPaymentMethods = uniquePaymentMethods.length > 0 ? uniquePaymentMethods : fallbackPaymentMethods;
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
   
   // Debug: Afficher les données parsées

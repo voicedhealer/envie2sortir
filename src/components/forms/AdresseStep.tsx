@@ -96,38 +96,21 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       return;
     }
 
-    // ✅ MODIFICATION : Permettre les adresses sans numéro (ZAC, centres commerciaux, etc.)
-    // Vérifier que l'adresse contient un numéro OU un nom spécifique (ZAC, Centre, etc.)
+    // Vérifier que l'adresse contient un numéro pour éviter la confusion
     const hasNumber = /\d/.test(street.trim());
-    const hasSpecificName = /\b(zac|centre|commercial|zone|parking|gare|aéroport|université|hôpital|mairie)\b/i.test(street.trim());
-    
-    if (!hasNumber && !hasSpecificName) {
-      setGeocodeError("⚠️ Ajoutez le numéro de rue ou un nom spécifique (ex: ZAC, Centre commercial) pour éviter la confusion");
+    if (!hasNumber) {
+      setGeocodeError("⚠️ Ajoutez le numéro de rue pour éviter la confusion avec d'autres établissements");
       return;
     }
 
-    // ✅ CORRECTION : Construire l'adresse complète sans duplication
-    const fullAddress = [street.trim(), postalCode.trim(), city.trim()].filter(Boolean).join(', ').trim();
+    const fullAddress = `${street.trim()}, ${postalCode.trim()} ${city.trim()}`;
     
     setIsGeocoding(true);
     setGeocodeError(null);
 
     try {
-      // ✅ AMÉLIORATION : Essayer d'abord l'adresse complète, puis une version simplifiée
-      let response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
-      let result = await response.json();
-
-      // Si l'adresse complète ne fonctionne pas, essayer une version simplifiée
-      if (!result.success && result.error === "Adresse non trouvée") {
-        console.log(`🔄 Tentative avec adresse simplifiée...`);
-        const simplifiedAddress = `${postalCode.trim()} ${city.trim()}`;
-        response = await fetch(`/api/geocode?address=${encodeURIComponent(simplifiedAddress)}`);
-        result = await response.json();
-        
-        if (result.success && result.data) {
-          console.log(`✅ Géocodage réussi avec adresse simplifiée: ${result.data.latitude}, ${result.data.longitude}`);
-        }
-      }
+      const response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
+      const result = await response.json();
 
       if (result.success && result.data) {
         // Mise à jour des coordonnées
@@ -267,8 +250,8 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     const latitude = suggestion.lat ? parseFloat(suggestion.lat) : undefined;
     const longitude = suggestion.lon ? parseFloat(suggestion.lon) : undefined;
 
-    // ✅ CORRECTION : Créer l'adresse complète sans duplication
-    const fullAddress = [street, postalCode, city].filter(Boolean).join(', ').trim();
+    // Créer l'adresse complète formatée pour le champ unique
+    const fullAddress = `${street}${street && postalCode ? ', ' : ''}${postalCode}${postalCode && city ? ' ' : ''}${city}`.trim();
 
     const newAddress: AddressData = {
       street: fullAddress, // Stocker l'adresse complète dans le champ street

@@ -102,10 +102,7 @@ export default function AdminAnalyticsPage() {
               </div>
               
               <div className="flex items-center space-x-4">
-                <div className="flex items-center text-sm text-gray-500">
-                  <Eye className="w-4 h-4 mr-1" />
-                  {establishments.length} établissements
-                </div>
+                {/* Espace réservé pour d'autres éléments futurs */}
               </div>
             </div>
           </div>
@@ -183,65 +180,89 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
 
-            {/* Liste des établissements */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            {/* Tableau des établissements */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Détails par établissement
                 </h3>
               </div>
               
-              <div className="divide-y divide-gray-200">
-                {establishments.map((establishment) => (
-                  <div key={establishment.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  {/* En-têtes du tableau */}
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Établissement
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total clics
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Élément populaire
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Dernière activité
+                      </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  
+                  {/* Corps du tableau */}
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {establishments.map((establishment) => (
+                      <tr key={establishment.id} className="hover:bg-gray-50">
+                        {/* Nom de l'établissement */}
+                        <td className="px-6 py-4">
                           <div>
-                            <h4 className="text-lg font-medium text-gray-900">
+                            <h4 className="text-sm font-medium text-gray-900">
                               {establishment.name}
                             </h4>
-                            <p className="text-sm text-gray-500">
-                              /{establishment.slug}
-                            </p>
                           </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-6">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Total clics</p>
-                          <p className="text-lg font-semibold text-gray-900">
+                        </td>
+                        
+                        {/* Total clics */}
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-lg font-semibold text-gray-900">
                             {establishment.totalClicks}
-                          </p>
-                        </div>
+                          </span>
+                        </td>
                         
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Élément populaire</p>
-                          <p className="text-sm font-medium text-gray-900">
-                            {establishment.topElement} ({establishment.topElementClicks})
-                          </p>
-                        </div>
+                        {/* Élément populaire */}
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-900">
+                              {establishment.topElement}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              ({establishment.topElementClicks} clics)
+                            </span>
+                          </div>
+                        </td>
                         
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500">Dernière activité</p>
-                          <p className="text-sm text-gray-900">
+                        {/* Dernière activité */}
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm text-gray-900">
                             {new Date(establishment.lastActivity).toLocaleDateString('fr-FR')}
-                          </p>
-                        </div>
+                          </span>
+                        </td>
                         
-                        <div>
+                        {/* Actions */}
+                        <td className="px-6 py-4 text-center">
                           <button
                             onClick={() => router.push(`/admin/analytics/${establishment.id}`)}
-                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+                            className="bg-blue-600 text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                           >
                             Voir détails
                           </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

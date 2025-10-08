@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, CreditCard, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper } from 'lucide-react';
 import { useSectionTracking } from '@/hooks/useClickTracking';
 
 interface EstablishmentMainSectionsProps {
@@ -23,6 +23,10 @@ interface EstablishmentMainSectionsProps {
     terrasse?: boolean;
     smartEnrichmentData?: any;
     enrichmentData?: any;
+    // ✅ AJOUT : Propriétés pour les données d'enrichissement
+    accessibilityDetails?: any;
+    detailedPayments?: any;
+    childrenServices?: any;
   };
   className?: string;
 }
@@ -324,69 +328,6 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
         });
         
         return [...clienteleInfo, ...ambianceClientele];
-      }
-    },
-    {
-      id: 'payment',
-      title: 'Moyens de paiement',
-      icon: <CreditCard className="w-4 h-4" />,
-      color: 'green',
-      getData: (establishment: any) => {
-        // ✅ CORRECTION : Utiliser la même logique que EstablishmentInfo.tsx
-        const ambiance = parseJsonField(establishment.ambiance);
-        const paymentMethods = parseJsonField(establishment.paymentMethods);
-        
-        // Parser les moyens de paiement depuis l'objet JSON structuré
-        const structuredPayments = (() => {
-          if (!establishment.paymentMethods) return [];
-          
-          // Si c'est déjà un objet (format JSON)
-          if (typeof establishment.paymentMethods === 'object' && !Array.isArray(establishment.paymentMethods)) {
-            const paymentObj = establishment.paymentMethods as any;
-            
-            // Convertir les clés en libellés lisibles
-            const paymentLabels: { [key: string]: string } = {
-              creditCards: 'Cartes de crédit',
-              debitCards: 'Cartes de débit',
-              cash: 'Espèces',
-              cashOnly: 'Espèces uniquement',
-              nfc: 'Paiements mobiles NFC',
-              mobilePayments: 'Paiements mobiles',
-              contactlessPayments: 'Paiements sans contact',
-              mealVouchers: 'Titres restaurant',
-              restaurantVouchers: 'Titres restaurant',
-              pluxee: 'Pluxee',
-              checks: 'Chèques'
-            };
-            
-            return Object.entries(paymentObj)
-              .filter(([key, value]) => value === true)
-              .map(([key]) => paymentLabels[key] || key);
-          }
-          
-          // Si c'est un array de strings
-          if (Array.isArray(establishment.paymentMethods)) {
-            return establishment.paymentMethods;
-          }
-          
-          return [];
-        })();
-        
-        // Extraire les moyens de paiement du champ ambiance mélangé
-        const ambiancePayments = ambiance.filter(item => {
-          const itemLower = cleanItemDisplay(item).toLowerCase();
-          return (
-            itemLower.includes('carte') ||
-            itemLower.includes('espèces') ||
-            itemLower.includes('paiement') ||
-            itemLower.includes('nfc') ||
-            itemLower.includes('pluxee') ||
-            itemLower.includes('titre restaurant')
-          );
-        });
-        
-        // Combiner toutes les sources
-        return [...structuredPayments, ...paymentMethods, ...ambiancePayments];
       }
     }
   ]
