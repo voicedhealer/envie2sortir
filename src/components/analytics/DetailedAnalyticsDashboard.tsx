@@ -185,26 +185,47 @@ export default function DetailedAnalyticsDashboard({
           <p>Répartition des interactions par heure de la journée.</p>
           <p>Identifiez vos créneaux de forte affluence pour optimiser votre présence.</p>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data.hourlyStats}>
-            <CartesianGrid strokeDasharray="3 3" />
+        <ResponsiveContainer width="100%" height={350}>
+          <LineChart data={data.hourlyStats} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
             <XAxis 
               dataKey="timeSlot" 
               tickFormatter={(value) => value}
+              tick={{ fill: '#374151', fontSize: 12 }}
+              axisLine={{ stroke: '#D1D5DB' }}
+              tickLine={{ stroke: '#D1D5DB' }}
             />
             <YAxis 
               domain={[0, 'dataMax + 1']}
-              tickFormatter={(value) => Math.round(value)}
+              tickFormatter={(value) => Math.round(value).toString()}
+              tick={{ fill: '#374151', fontSize: 12 }}
+              axisLine={{ stroke: '#D1D5DB' }}
+              tickLine={{ stroke: '#D1D5DB' }}
             />
             <Tooltip 
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #E5E7EB',
+                borderRadius: '8px',
+                color: '#374151',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+              labelStyle={{ color: '#374151' }}
               labelFormatter={(value, payload) => {
                 const data = payload?.[0]?.payload;
                 return `${data?.timeSlot} • ${data?.interactions} interactions • ${data?.visitors} visiteurs`;
               }}
-              formatter={(value, name) => [value, name === 'interactions' ? 'Interactions' : 'Visiteurs']}
+              formatter={(value, name) => [String(value), name === 'interactions' ? 'Interactions' : 'Visiteurs']}
             />
-            <Bar dataKey="interactions" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-          </BarChart>
+            <Line 
+              type="monotone" 
+              dataKey="interactions" 
+              stroke="#3B82F6" 
+              strokeWidth={3}
+              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
+              activeDot={{ r: 8, stroke: '#3B82F6', strokeWidth: 2, fill: '#ffffff' }}
+            />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 
@@ -248,15 +269,35 @@ export default function DetailedAnalyticsDashboard({
         <div className="mb-4 text-sm text-gray-600">
           <p>Quelles sections de votre page intéressent le plus vos visiteurs ?</p>
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data.popularSections} layout="horizontal">
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="sectionName" type="category" width={120} />
+        <ResponsiveContainer width="100%" height={350}>
+          <BarChart data={data.popularSections} layout="horizontal" margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
+            <XAxis 
+              type="number" 
+              tick={{ fill: '#374151', fontSize: 12 }}
+              axisLine={{ stroke: '#D1D5DB' }}
+              tickLine={{ stroke: '#D1D5DB' }}
+            />
+            <YAxis 
+              dataKey="sectionName" 
+              type="category" 
+              width={120}
+              tick={{ fill: '#374151', fontSize: 12 }}
+              axisLine={{ stroke: '#D1D5DB' }}
+              tickLine={{ stroke: '#D1D5DB' }}
+            />
             <Tooltip 
+              contentStyle={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #E5E7EB',
+                borderRadius: '8px',
+                color: '#374151',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+              }}
+              labelStyle={{ color: '#374151' }}
               formatter={(value, name) => [value, name === 'openCount' ? 'Ouvertures' : 'Visiteurs uniques']}
             />
-            <Bar dataKey="openCount" fill="#10B981" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="openCount" fill="#3B82F6" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -286,19 +327,36 @@ export default function DetailedAnalyticsDashboard({
               <div className="text-sm text-purple-800">Heure de pointe</div>
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data.scheduleStats.peakHours}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="timeSlot" />
-              <YAxis />
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={data.scheduleStats.peakHours} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
+              <XAxis 
+                dataKey="timeSlot" 
+                tick={{ fill: '#374151', fontSize: 12 }}
+                axisLine={{ stroke: '#D1D5DB' }}
+                tickLine={{ stroke: '#D1D5DB' }}
+              />
+              <YAxis 
+                tick={{ fill: '#374151', fontSize: 12 }}
+                axisLine={{ stroke: '#D1D5DB' }}
+                tickLine={{ stroke: '#D1D5DB' }}
+              />
               <Tooltip 
+                contentStyle={{
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  color: '#374151',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
+                labelStyle={{ color: '#374151' }}
                 labelFormatter={(value, payload) => {
                   const data = payload?.[0]?.payload;
                   return `${data?.timeSlot} • ${data?.views} consultations`;
                 }}
                 formatter={(value) => [value, 'Consultations']}
               />
-              <Bar dataKey="views" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="views" fill="#3B82F6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
