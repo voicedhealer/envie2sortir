@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import Link from "next/link";
+import AuthModal from "@/components/AuthModal";
 
 // Types pour les établissements
 type Establishment = {
@@ -15,6 +16,20 @@ type Establishment = {
   activities?: any;
   imageUrl?: string;
   status: string;
+  avgRating?: number | null;
+  googleRating?: number | null;
+  prixMoyen?: number | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  events?: Array<{
+    title: string;
+    startDate: Date | string;
+    endDate?: Date | string | null;
+  }>;
+  comments?: Array<{
+    content: string;
+    rating: number;
+  }>;
 };
 
 // Props pour le composant carte
@@ -28,28 +43,53 @@ interface MapComponentProps {
 declare global {
   interface Window {
     L: any;
+    mapFavoriteHandlers?: {
+      favorites: Set<string>;
+      isAuthenticated: boolean;
+      checkFavorites(): Promise<void>;
+      toggleFavorite(establishmentId: string, heartElement: HTMLElement): Promise<void>;
+    };
   }
 }
 
 export default function MapComponent({ establishments, searchCenter, searchRadius, context = 'homepage' }: MapComponentProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null); // Référence pour la carte
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Optimisation : éviter les re-renders inutiles
   const memoizedEstablishments = useMemo(() => establishments, [establishments.length, establishments.map(e => e.id).join(',')]);
   const memoizedSearchCenter = useMemo(() => searchCenter, [searchCenter?.lat, searchCenter?.lng]);
   const memoizedSearchRadius = useMemo(() => searchRadius, [searchRadius]);
 
-  // 🎛️ RÉGLAGES FACILES -
+  // Écouter les événements d'authentification depuis la carte
+  useEffect(() => {
+    const handleAuthRequired = () => {
+      setShowAuthModal(true);
+    };
+    window.addEventListener('map-auth-required', handleAuthRequired);
+    return () => window.removeEventListener('map-auth-required', handleAuthRequired);
+  }, []);
+
+  const handleAuthConfirm = () => {
+    setShowAuthModal(false);
+    window.location.href = '/auth?redirect=/carte';
+  };
+
+  const handleAuthClose = () => {
+    setShowAuthModal(false);
+  };
+
+  // 🎛️ RÉGLAGES FACILES - Design inspiré de TheFork
   const POPUP_CONFIG = {
-    // Base de calcul (en pixels)
-    baseWidth: 200,
-    baseImageHeight: 80,
+    // Base de calcul (en pixels) - Design premium
+    baseWidth: 240,
+    baseImageHeight: 140,
     
     // Multiplicateurs par contexte
     multipliers: {
-      'homepage': { width: 1.1, image: 0.9 },      // Légèrement plus grand
-      'establishment-detail': { width: 0.9, image: 1.1 }  // Plus compact
+      'homepage': { width: 1.0, image: 1.0 },      // Standard
+      'establishment-detail': { width: 0.9, image: 1.1 }  // Légèrement plus compact
     }
   };
 
@@ -76,6 +116,164 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
         link.rel = "stylesheet";
         link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
         document.head.appendChild(link);
+
+        // CSS personnalisé pour les popups style TheFork avec icône cœur
+        const customStyle = document.createElement("style");
+        customStyle.innerHTML = `
+          /* Style de la popup */
+          .leaflet-popup-content-wrapper {
+            padding: 0 !important;
+            border-radius: 12px !important;
+            overflow: hidden;
+          }
+          .leaflet-popup-content {
+            margin: 0 !important;
+          }
+          /* Cacher le bouton de fermeture par défaut de Leaflet */
+          .leaflet-popup-close-button {
+            display: none !important;
+          }
+          .leaflet-popup-tip-container {
+            margin-top: -1px;
+          }
+          /* Style du cœur like - version discrète */
+          .popup-heart-icon {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(4px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            transition: all 0.2s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+          }
+          .popup-heart-icon:hover {
+            background: rgba(255, 255, 255, 1);
+            transform: scale(1.1);
+          }
+          .popup-heart-icon svg {
+            width: 16px;
+            height: 16px;
+            stroke: #ef4444;
+            stroke-width: 2;
+            transition: fill 0.2s;
+          }
+          .popup-heart-icon.is-favorite svg {
+            fill: #ef4444;
+          }
+          .popup-heart-icon.is-loading {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
+        `;
+        document.head.appendChild(customStyle);
+
+        // Ajouter les fonctions globales pour gérer les favoris depuis les popups
+        if (!window.mapFavoriteHandlers) {
+          window.mapFavoriteHandlers = {
+            favorites: new Set<string>(), // Set des IDs en favoris
+            isAuthenticated: false,
+            
+            async checkFavorites() {
+              try {
+                const response = await fetch('/api/user/favorites');
+                if (response.ok) {
+                  const data = await response.json();
+                  this.favorites = new Set(data.favorites.map((fav: any) => fav.establishment.id));
+                  this.isAuthenticated = true;
+                } else if (response.status === 401 || response.status === 403) {
+                  // Utilisateur non authentifié - c'est normal, ne pas afficher d'erreur
+                  this.isAuthenticated = false;
+                  this.favorites = new Set();
+                }
+              } catch (error) {
+                // Erreur réseau ou autre - ne pas afficher en console (non critique)
+                this.isAuthenticated = false;
+                this.favorites = new Set();
+              }
+            },
+            
+            async toggleFavorite(establishmentId: string, heartElement: HTMLElement) {
+              // Éviter les clics multiples
+              if (heartElement.classList.contains('is-loading')) {
+                return;
+              }
+              
+              // Désactiver pendant le chargement
+              heartElement.classList.add('is-loading');
+              
+              // Vérifier si l'utilisateur est authentifié
+              if (!this.isAuthenticated) {
+                heartElement.classList.remove('is-loading');
+                // Déclencher l'événement pour ouvrir le modal React
+                window.dispatchEvent(new Event('map-auth-required'));
+                return;
+              }
+              
+              const isFavorite = this.favorites.has(establishmentId);
+              
+              try {
+                if (isFavorite) {
+                  // Retirer des favoris
+                  const response = await fetch('/api/user/favorites');
+                  if (response.ok) {
+                    const data = await response.json();
+                    const favorite = data.favorites.find((fav: any) => fav.establishment.id === establishmentId);
+                    
+                    if (favorite) {
+                      const deleteResponse = await fetch('/api/user/favorites/' + favorite.id, {
+                        method: 'DELETE'
+                      });
+                      
+                      if (deleteResponse.ok) {
+                        this.favorites.delete(establishmentId);
+                        heartElement.classList.remove('is-favorite');
+                        console.log('✅ Retiré des favoris');
+                      }
+                    }
+                  } else if (response.status === 401 || response.status === 403) {
+                    alert('Vous devez être connecté pour gérer vos favoris.');
+                    this.isAuthenticated = false;
+                  }
+                } else {
+                  // Ajouter aux favoris
+                  const response = await fetch('/api/user/favorites', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ establishmentId })
+                  });
+                  
+                  if (response.ok) {
+                    this.favorites.add(establishmentId);
+                    heartElement.classList.add('is-favorite');
+                    console.log('✅ Ajouté aux favoris');
+                  } else if (response.status === 401 || response.status === 403) {
+                    alert('Vous devez être connecté pour ajouter des favoris.');
+                    this.isAuthenticated = false;
+                  } else {
+                    const error = await response.json();
+                    alert('Une erreur est survenue: ' + (error.error || 'Erreur inconnue'));
+                  }
+                }
+              } catch (error) {
+                alert('Erreur de connexion. Veuillez réessayer.');
+                console.error('Erreur lors de la gestion des favoris:', error);
+              } finally {
+                heartElement.classList.remove('is-loading');
+              }
+            }
+          };
+          
+          // Charger les favoris au démarrage (silencieusement)
+          window.mapFavoriteHandlers.checkFavorites();
+        }
 
         // JS Leaflet
         const script = document.createElement("script");
@@ -152,10 +350,30 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
         // Vérifier que l'établissement a des coordonnées
         if (!establishment.latitude || !establishment.longitude) return;
 
-        // Extraire les activités pour l'affichage
+        // Formater les activités pour un affichage élégant
+        const formatActivity = (activity: string): string => {
+          const activityMap: Record<string, string> = {
+            'bar_bières': 'Bar à bières',
+            'bar_ambiance': 'Bar ambiance',
+            'restaurant': 'Restaurant',
+            'restaurant_familial': 'Restaurant familial',
+            'tacos_mexicain': 'Tacos mexicain',
+            'burger': 'Burger',
+            'pizzeria': 'Pizzeria',
+            'karaoké': 'Karaoké',
+            'escape_game': 'Escape Game',
+            'vr_gaming': 'Réalité Virtuelle',
+            'parc_jeux': 'Parc de jeux'
+          };
+          return activityMap[activity] || activity.replace(/_/g, ' ');
+        };
+        
         let activitiesText = '';
         if (establishment.activities && Array.isArray(establishment.activities)) {
-          activitiesText = establishment.activities.join(', ');
+          activitiesText = establishment.activities
+            .map(activity => formatActivity(activity))
+            .slice(0, 2) // Limiter à 2 activités max
+            .join(' • ');
         }
 
         // Créer un marqueur personnalisé avec l'icône PNG
@@ -170,27 +388,98 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
           iconAnchor: [12, 24]
         });
 
+        // Calculer la note à afficher (priorité à avgRating, puis googleRating)
+        const rating = establishment.avgRating || establishment.googleRating;
+        let displayRating = null;
+        if (rating) {
+          // Si la note est sur 10, on la garde telle quelle. Si elle est sur 5, on la multiplie par 2
+          displayRating = rating > 5 ? (rating / 2).toFixed(1) : (rating * 2).toFixed(1);
+        }
+        console.log('📊 Note pour', establishment.name, '- avgRating:', establishment.avgRating, 'googleRating:', establishment.googleRating, 'displayRating:', displayRating);
+        
+        // Formater le prix
+        let priceText = '';
+        if (establishment.prixMoyen) {
+          priceText = `Prix moyen ${Math.round(establishment.prixMoyen)}€`;
+        } else if (establishment.priceMin && establishment.priceMax) {
+          priceText = `${Math.round(establishment.priceMin)}-${Math.round(establishment.priceMax)}€`;
+        } else if (establishment.priceMin) {
+          priceText = `À partir de ${Math.round(establishment.priceMin)}€`;
+        }
+        
+        // Vérifier si un événement est en cours ou à venir
+        const upcomingEvent = establishment.events?.[0];
+        let eventBadge = '';
+        if (upcomingEvent) {
+          const now = new Date();
+          const startDate = new Date(upcomingEvent.startDate);
+          const endDate = upcomingEvent.endDate ? new Date(upcomingEvent.endDate) : null;
+          
+          if (endDate && now >= startDate && now <= endDate) {
+            // Événement en cours
+            eventBadge = `<div class="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background-color: #FFEB3B; color: #000000;">🎉 ${upcomingEvent.title}</div>`;
+          } else if (now < startDate) {
+            // Événement à venir
+            const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysText = daysUntil <= 7 ? ` dans ${daysUntil}j` : '';
+            eventBadge = `<div class="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background-color: #FFEB3B; color: #000000;">📅 ${upcomingEvent.title}${daysText}</div>`;
+          }
+        }
+        
+        // Récupérer un avis client si disponible
+        const customerReview = establishment.comments?.[0];
+        let reviewText = '';
+        if (customerReview && customerReview.content) {
+          const truncatedReview = customerReview.content.length > 60 
+            ? customerReview.content.substring(0, 60) + '...' 
+            : customerReview.content;
+          reviewText = `<p class="text-xs text-gray-600 italic mb-2">"${truncatedReview}"</p>`;
+        }
+
         const marker = window.L.marker([establishment.latitude, establishment.longitude], {
           icon: establishmentIcon
         })
           .addTo(map)
           .bindPopup(`
-            <div class="p-3" style="min-width: ${popupSize.minWidth}; max-width: ${popupSize.maxWidth};">
+            <div style="min-width: ${popupSize.minWidth}; max-width: ${popupSize.maxWidth}; position: relative;">
               ${establishment.imageUrl ? `
-                <div class="mb-3 w-full bg-gray-100 rounded-lg overflow-hidden" style="height: ${popupSize.imageHeight};">
-                  <img src="${establishment.imageUrl}" alt="${establishment.name}" class="w-full h-full object-cover">
+                <div style="position: relative; width: 100%; height: ${popupSize.imageHeight}; background-color: #f3f4f6;">
+                  <img src="${establishment.imageUrl}" alt="${establishment.name}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                  <div 
+                    class="popup-heart-icon ${window.mapFavoriteHandlers?.favorites.has(establishment.id) ? 'is-favorite' : ''}" 
+                    data-establishment-id="${establishment.id}"
+                    onclick="event.stopPropagation(); window.mapFavoriteHandlers?.toggleFavorite('${establishment.id}', this);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                  </div>
                 </div>
-              ` : `
-                <div class="mb-3 w-full bg-gray-100 rounded-lg flex items-center justify-center" style="height: ${popupSize.imageHeight};">
-                  <span class="text-gray-400 text-sm">Aucune image</span>
+              ` : ''}
+              
+              <div class="p-3">
+                <div class="flex items-start justify-between mb-1">
+                  <h3 class="font-bold text-base text-gray-900 leading-tight flex-1">${establishment.name}</h3>
+                  ${displayRating ? `
+                    <div class="ml-2 px-2 py-1 rounded-md text-sm font-bold flex-shrink-0" style="background-color: #f97316; color: white;">
+                      ${displayRating}
+                    </div>
+                  ` : ''}
                 </div>
-              `}
-              <h3 class="font-bold text-lg text-gray-900 mb-1">${establishment.name}</h3>
-              <p class="text-sm text-gray-600 mb-2">${establishment.address}${establishment.city ? `, ${establishment.city}` : ''}</p>
-              <p class="text-xs text-gray-500 mb-2">${activitiesText} • ${establishment.status}</p>
-              <a href="/etablissements/${establishment.slug}?from=carte" class="inline-flex items-center text-orange-600 hover:text-orange-700 font-medium text-sm">
-                Voir détails →
-              </a>
+                
+                <p class="text-xs text-gray-600 mb-2">
+                  ${activitiesText}${priceText ? ` • ${priceText}` : ''}
+                </p>
+                
+                ${eventBadge}
+                
+                ${reviewText}
+                
+                <p class="text-xs text-gray-500 mb-3">📍 ${establishment.city || establishment.address}</p>
+                
+                <a href="/etablissements/${establishment.slug}?from=carte" class="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold text-sm">
+                  En savoir plus →
+                </a>
+              </div>
             </div>
           `);
       });
@@ -227,5 +516,14 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
     };
   }, [memoizedEstablishments, memoizedSearchCenter, memoizedSearchRadius, context]);
 
-  return <div ref={mapRef} className="w-full h-full" />;
+  return (
+    <>
+      <div ref={mapRef} className="w-full h-full" />
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={handleAuthClose}
+        onConfirm={handleAuthConfirm}
+      />
+    </>
+  );
 }
