@@ -24,6 +24,7 @@ interface AnalyticsData {
   }>;
 }
 
+
 interface ClickAnalyticsDashboardProps {
   establishmentId: string;
   period?: '7d' | '30d' | '90d' | '1y';
@@ -294,7 +295,7 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
             <XAxis 
               type="number"
               domain={[0, 'dataMax']}
-              tickFormatter={(value) => Math.round(value)}
+              tickFormatter={(value) => Math.round(value).toString()}
             />
             <YAxis 
               type="category" 

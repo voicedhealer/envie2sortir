@@ -236,10 +236,33 @@ export default function EnvieSearchBar() {
   };
 
   /**
+   * Track la recherche dans les analytics
+   */
+  const trackSearch = async (searchTerm: string, searchedCity?: string) => {
+    try {
+      await fetch('/api/analytics/search/track', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          searchTerm: searchTerm.trim(),
+          resultCount: 0, // Sera mis à jour sur la page de résultats
+          searchedCity: searchedCity,
+          city: cityValue !== "Autour de moi" ? cityValue : undefined,
+        }),
+      });
+    } catch (error) {
+      console.error('Error tracking search:', error);
+      // Ne pas bloquer l'utilisateur en cas d'erreur de tracking
+    }
+  };
+
+  /**
    * Gère la soumission du formulaire de recherche
    * Valide les données et navigue vers la page de résultats
    */
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation : vérification que l'envie est renseignée
@@ -247,6 +270,9 @@ export default function EnvieSearchBar() {
       alert("Veuillez décrire votre envie !");
       return;
     }
+
+    // Track la recherche (non-bloquant)
+    trackSearch(inputValue, cityValue !== "Autour de moi" ? cityValue : undefined);
 
     // Construction des paramètres URL pour la recherche
     const params = new URLSearchParams();

@@ -441,3 +441,36 @@ model ClickAnalytics {
   @@index([timestamp])
   @@index([hour, dayOfWeek])       // Index pour requêtes temporelles
 }
+
+/// * SEARCH ANALYTICS - Analytics des recherches utilisateurs
+/// * Capture les termes de recherche "envie de :"
+/// * Track les clics post-recherche pour mesurer la conversion
+/// * Identifie les opportunités (recherches sans résultats)
+model SearchAnalytics {
+  id             String   @id @default(cuid())
+  
+  // Terme de recherche
+  searchTerm     String   // Le mot-clé recherché (ex: "karaoké", "restaurant")
+  
+  // Résultats de la recherche
+  resultCount    Int      @default(0)  // Nombre de résultats trouvés
+  
+  // Établissement cliqué (si applicable)
+  clickedEstablishmentId    String?
+  clickedEstablishmentName  String?
+  
+  // Métadonnées
+  userAgent      String?  // User agent du navigateur
+  referrer       String?  // Page d'origine
+  timestamp      DateTime @default(now())
+  
+  // Données géographiques
+  country        String?
+  city           String?  // Ville de l'utilisateur
+  searchedCity   String?  // Ville recherchée (si précisée)
+  
+  @@map("search_analytics")
+  @@index([searchTerm])
+  @@index([timestamp])
+  @@index([clickedEstablishmentId])
+}

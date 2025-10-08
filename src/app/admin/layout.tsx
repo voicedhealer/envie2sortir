@@ -10,6 +10,7 @@ import {
   FileText, 
   History, 
   BarChart3, 
+  Search,
   Brain
 } from "lucide-react";
 
@@ -120,6 +121,12 @@ export default function AdminLayout({
       href: '/admin/analytics',
       label: 'Analytics',
       icon: BarChart3,
+      badge: null
+    },
+    {
+      href: '/admin/recherches',
+      label: 'Recherches',
+      icon: Search,
       badge: null
     },
     {
