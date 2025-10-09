@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useSession, signOut, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Heart, MapPin, Star, MessageSquare, Settings, LogOut, Edit3, Trash2, Save, X } from 'lucide-react';
+import { Heart, MapPin, Star, MessageSquare, Settings, LogOut, Edit3, Trash2, Save, X, Trophy } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from '@/lib/fake-toast';
+import UserBadges from '@/components/UserBadges';
 
 interface UserFavorite {
   id: string;
@@ -37,7 +38,7 @@ export default function MonComptePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'favoris' | 'avis' | 'profil'>('favoris');
+  const [activeTab, setActiveTab] = useState<'favoris' | 'avis' | 'badges' | 'profil'>('favoris');
   const [favorites, setFavorites] = useState<UserFavorite[]>([]);
   const [comments, setComments] = useState<UserComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,8 +59,8 @@ export default function MonComptePage() {
 
   // Initialiser l'onglet actif depuis l'URL
   useEffect(() => {
-    const tab = searchParams.get('tab') as 'favoris' | 'avis' | 'profil';
-    if (tab && ['favoris', 'avis', 'profil'].includes(tab)) {
+    const tab = searchParams.get('tab') as 'favoris' | 'avis' | 'badges' | 'profil';
+    if (tab && ['favoris', 'avis', 'badges', 'profil'].includes(tab)) {
       setActiveTab(tab);
     }
   }, [searchParams]);
@@ -300,6 +301,20 @@ export default function MonComptePage() {
               </button>
               <button
                 onClick={() => {
+                  setActiveTab('badges');
+                  router.push('/mon-compte?tab=badges');
+                }}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'badges'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Trophy className="w-4 h-4 inline mr-2" />
+                Badges & Karma
+              </button>
+              <button
+                onClick={() => {
                   setActiveTab('profil');
                   router.push('/mon-compte?tab=profil');
                 }}
@@ -432,6 +447,12 @@ export default function MonComptePage() {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {activeTab === 'badges' && (
+              <div className="p-6">
+                <UserBadges showProgress={true} />
               </div>
             )}
 

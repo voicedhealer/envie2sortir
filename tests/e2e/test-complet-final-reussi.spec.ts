@@ -197,18 +197,51 @@ test.describe('Test E2E Complet Réussi', () => {
       if (newTitle.includes('Comment les clients vous trouvent-ils')) {
         console.log('🔧 Remplissage des tags et mots-clés...');
         
-        // Cocher quelques checkboxes pour les tags
+        // 1. Cocher quelques checkboxes pour les tags existants
         const checkboxes = await page.locator('input[type="checkbox"]').all();
-        for (let i = 0; i < Math.min(5, checkboxes.length); i++) {
+        console.log(`📝 Checkboxes trouvées: ${checkboxes.length}`);
+        
+        for (let i = 0; i < Math.min(3, checkboxes.length); i++) {
           await checkboxes[i].check();
+          console.log(`✅ Checkbox ${i + 1} cochée`);
         }
         
-        // Remplir les champs de texte s'ils existent
-        const textInputs = await page.locator('input[type="text"], textarea').all();
-        for (const input of textInputs) {
-          const placeholder = await input.getAttribute('placeholder');
-          if (placeholder && !placeholder.includes('Ex:') && !placeholder.includes('https://')) {
-            await input.fill('Test automatique');
+        // 2. Ajouter des tags personnalisés si nécessaire
+        const customTagInput = page.locator('input[placeholder*="Ajouter un tag"], input[placeholder*="tag personnalisé"]');
+        const customTagCount = await customTagInput.count();
+        
+        if (customTagCount > 0) {
+          console.log('🔧 Ajout de tags personnalisés...');
+          
+          const tagsToAdd = ['restaurant', 'convivial', 'test'];
+          for (const tag of tagsToAdd) {
+            await customTagInput.fill(tag);
+            await page.click('button:has-text("Ajouter")');
+            await page.waitForTimeout(500);
+            console.log(`✅ Tag "${tag}" ajouté`);
+          }
+        }
+        
+        // 3. Vérifier qu'on a au moins 3 tags sélectionnés
+        const selectedTags = await page.locator('[class*="tag"], [class*="badge"], .selected-tag').all();
+        console.log(`📝 Tags sélectionnés: ${selectedTags.length}`);
+        
+        // 4. Si pas assez de tags, essayer de cliquer sur des options disponibles
+        if (selectedTags.length < 3) {
+          console.log('⚠️ Pas assez de tags, recherche d\'options...');
+          
+          // Chercher des éléments cliquables qui pourraient être des tags
+          const clickableElements = await page.locator('button, [role="button"], .tag-option, .tag-item').all();
+          console.log(`📝 Éléments cliquables trouvés: ${clickableElements.length}`);
+          
+          for (let i = 0; i < Math.min(3, clickableElements.length); i++) {
+            try {
+              await clickableElements[i].click();
+              await page.waitForTimeout(200);
+              console.log(`✅ Élément ${i + 1} cliqué`);
+            } catch (error) {
+              console.log(`⚠️ Impossible de cliquer sur l'élément ${i + 1}`);
+            }
           }
         }
         

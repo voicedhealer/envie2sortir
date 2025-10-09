@@ -36,6 +36,11 @@ model User {
   favorites        UserFavorite[]
   likes            UserLike[]
   adminActions     AdminAction[]
+  
+  // Gamification
+  karmaPoints        Int                @default(0)
+  gamificationBadges Json?              // Array de badges débloqués
+  eventEngagements   EventEngagement[]
 
   @@map("users")
 }
@@ -279,8 +284,27 @@ model Event {
   isRecurring    Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+  engagements    EventEngagement[]
 
   @@map("events")
+}
+
+/// *
+/// * EVENT_ENGAGEMENT - Engagement des utilisateurs sur les événements
+/// * Système de réactions avec jauge progressive (0-150%)
+/// * Gamification avec badges et karma points
+model EventEngagement {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  type      String   // 'envie', 'grande-envie', 'decouvrir', 'pas-envie'
+  createdAt DateTime @default(now())
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  @@unique([eventId, userId])
+  @@map("event_engagements")
 }
 
 model FeaturedPromotion {

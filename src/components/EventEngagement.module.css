@@ -1,0 +1,301 @@
+/* Container principal du système d'engagement */
+.engagementContainer {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFE0B2 100%);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid #FFE082;
+}
+
+/* Jauge d'envie */
+.jaugeContainer {
+  margin: 15px 0;
+  position: relative;
+}
+
+.jaugeBackground {
+  height: 24px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  border: 2px solid #ddd;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.jaugeFill {
+  height: 100%;
+  width: 0%;
+  border-radius: 12px;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  background: linear-gradient(to right,
+    #4CAF50 0%,     /* Vert début */
+    #8BC34A 16.66%, /* Vert clair */
+    #FFC107 33.33%, /* Jaune */
+    #FF9800 50%,    /* Orange */
+    #F44336 66.66%, /* Rouge */
+    #9C27B0 83.33%, /* Violet début */
+    #6A1B9A 100%    /* Violet intense */
+  );
+  background-size: 150% 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.jaugeFill.fireMode {
+  animation: fireMode 2s infinite alternate;
+  box-shadow: 0 0 20px rgba(156, 39, 176, 0.6);
+}
+
+@keyframes fireMode {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(156, 39, 176, 0.6);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 30px rgba(156, 39, 176, 0.9);
+  }
+}
+
+.percentageText {
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+  position: relative;
+  z-index: 1;
+}
+
+.jaugeLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #666;
+  padding: 0 4px;
+}
+
+.labelStart { color: #4CAF50; font-weight: 500; }
+.labelNormal { color: #FF9800; font-weight: 500; }
+.labelHot { color: #F44336; font-weight: 600; }
+.labelFire { color: #9C27B0; font-weight: bold; }
+
+/* Boutons d'engagement */
+.buttonsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.btnEnvie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  position: relative;
+  overflow: hidden;
+}
+
+.btnEnvie::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 152, 0, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btnEnvie:hover::before {
+  left: 100%;
+}
+
+.btnEnvie:hover:not(.loading) {
+  border-color: #FF9800;
+  background: #FFF3E0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 152, 0, 0.2);
+}
+
+.btnEnvie.active {
+  background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+  border-color: #F57C00;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 4px 8px rgba(245, 124, 0, 0.3);
+}
+
+.btnEnvie.loading {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnIcon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.btnLabel {
+  flex: 1;
+  text-align: left;
+}
+
+.count {
+  background: rgba(0,0,0,0.1);
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 28px;
+  text-align: center;
+}
+
+.btnEnvie.active .count {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Badges d'événement */
+.eventBadge {
+  display: inline-block;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: 10px;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  animation: badgeAppear 0.5s ease-out;
+}
+
+@keyframes badgeAppear {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.eventBadge.bronze { background: linear-gradient(135deg, #CD7F32 0%, #B8732A 100%); }
+.eventBadge.silver { background: linear-gradient(135deg, #C0C0C0 0%, #A8A8A8 100%); }
+.eventBadge.gold { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); }
+.eventBadge.fire { 
+  background: linear-gradient(135deg, #9C27B0 0%, #6A1B9A 100%);
+  animation: badgeAppear 0.5s ease-out, fireGlow 2s infinite alternate;
+}
+
+@keyframes fireGlow {
+  0% { box-shadow: 0 3px 6px rgba(156, 39, 176, 0.4); }
+  100% { box-shadow: 0 6px 20px rgba(156, 39, 176, 0.8); }
+}
+
+/* Notification de badge */
+.badgeNotification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  color: white;
+  padding: 14px 24px;
+  border-radius: 10px;
+  z-index: 9999;
+  animation: slideInRight 0.5s ease-out;
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Hint de connexion */
+.authHint {
+  margin-top: 10px;
+  padding: 10px;
+  background: #E3F2FD;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1976D2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.authIcon {
+  font-size: 16px;
+}
+
+/* États de chargement */
+.loadingSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #FF9800;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .engagementContainer {
+    padding: 12px;
+  }
+
+  .buttonsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .btnEnvie {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .btnLabel {
+    font-size: 11px;
+  }
+
+  .jaugeBackground {
+    height: 20px;
+  }
+
+  .percentageText {
+    font-size: 11px;
+  }
+
+  .badgeNotification {
+    top: 10px;
+    right: 10px;
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+}
+

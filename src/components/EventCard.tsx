@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Clock } from 'lucide-react';
 import ImageModal from './ImageModal';
+import EventEngagementGauge from './EventEngagementGauge';
+import EventEngagementButtons from './EventEngagementButtons';
 
 interface EventCardProps {
   event: {
@@ -20,6 +22,31 @@ interface EventCardProps {
 
 export default function EventCard({ event, isUpcoming = true }: EventCardProps) {
   const [modalImage, setModalImage] = useState<{ url: string; title: string } | null>(null);
+  const [engagementData, setEngagementData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Charger les données d'engagement au montage
+  useEffect(() => {
+    fetchEngagementData();
+  }, [event.id]);
+
+  const fetchEngagementData = async () => {
+    try {
+      const response = await fetch(`/api/events/${event.id}/engage`);
+      if (response.ok) {
+        const data = await response.json();
+        setEngagementData(data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'engagement:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEngagementUpdate = (data: any) => {
+    setEngagementData(data);
+  };
   // Formater la date et l'heure
   const formatEventDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -125,6 +152,27 @@ export default function EventCard({ event, isUpcoming = true }: EventCardProps) 
           )}
         </div>
       </div>
+
+      {/* Système d'engagement */}
+      {!loading && engagementData && (
+        <div className="px-4 pb-4">
+          <EventEngagementGauge
+            percentage={engagementData.gaugePercentage || 0}
+            eventBadge={engagementData.eventBadge}
+          />
+          <EventEngagementButtons
+            eventId={event.id}
+            stats={engagementData.stats || {
+              envie: 0,
+              'grande-envie': 0,
+              decouvrir: 0,
+              'pas-envie': 0
+            }}
+            userEngagement={engagementData.userEngagement}
+            onEngagementUpdate={handleEngagementUpdate}
+          />
+        </div>
+      )}
 
       {/* Modal d'image */}
       {modalImage && (
