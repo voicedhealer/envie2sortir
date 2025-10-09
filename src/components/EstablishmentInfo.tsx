@@ -107,6 +107,7 @@ const getPaymentMethods = (detailedPayments: any): string[] => {
           methods.push('Paiements mobiles NFC');
           break;
         case 'contactlessPayments':
+        case 'contactless':
           methods.push('Paiements sans contact');
           break;
         case 'mealVouchers':
@@ -116,13 +117,47 @@ const getPaymentMethods = (detailedPayments: any): string[] => {
           methods.push('Pluxee');
           break;
         case 'checks':
+        case 'check':
           methods.push('Chèques');
           break;
+        // Cartes bancaires spécifiques
+        case 'visa':
+          methods.push('Visa');
+          break;
+        case 'mastercard':
+          methods.push('Mastercard');
+          break;
+        case 'amex':
+          methods.push('American Express');
+          break;
+        case 'diners':
+          methods.push('Diners Club');
+          break;
+        case 'jcb':
+          methods.push('JCB');
+          break;
+        case 'unionpay':
+          methods.push('UnionPay');
+          break;
+        // Paiements mobiles
+        case 'applePay':
+          methods.push('Apple Pay');
+          break;
+        case 'googlePay':
+          methods.push('Google Pay');
+          break;
+        case 'samsungPay':
+          methods.push('Samsung Pay');
+          break;
+        case 'paypal':
+          methods.push('PayPal');
+          break;
+        case 'titresRestaurant':
+          methods.push('Titres restaurant');
+          break;
         default:
-          // Pour les autres clés, créer un libellé générique
-          if (typeof key === 'string') {
-            methods.push(key.replace(/([A-Z])/g, ' $1').toLowerCase());
-          }
+          // Ignorer les clés non reconnues plutôt que de créer des libellés génériques
+          break;
       }
     }
   });
@@ -307,8 +342,12 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const finalAccessibilityItems = accessibilityItems.length > 0 ? accessibilityItems : fallbackAccessibilityItems;
   
   // Debug: Afficher les données parsées
+  console.log('🔍 DEBUG PAYMENT METHODS:');
+  console.log('  - paymentMethods (hybrid):', paymentMethods);
+  console.log('  - uniquePaymentMethods:', uniquePaymentMethods);
+  console.log('  - fallbackPaymentMethods:', fallbackPaymentMethods);
+  console.log('  - finalPaymentMethods:', finalPaymentMethods);
   console.log('✅ accessibilityItems parsés:', finalAccessibilityItems);
-  console.log('✅ paymentMethods parsés:', finalPaymentMethods);
   console.log('✅ detailedServices parsés:', detailedServices);
   console.log('✅ smartEnrichmentData parsé:', smartEnrichmentData);
   console.log('✅ enrichmentData parsé:', enrichmentData);
@@ -441,6 +480,11 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
 
   // Combiner les moyens de paiement traditionnels et hybrides
   const moyensPaiement = [...traditionalPayments, ...finalPaymentMethods];
+  
+  console.log('🔍 DEBUG MOYENS PAIEMENT FINAL:');
+  console.log('  - traditionalPayments:', traditionalPayments);
+  console.log('  - finalPaymentMethods:', finalPaymentMethods);
+  console.log('  - moyensPaiement (combiné):', moyensPaiement);
 
   return (
     <div className="space-y-6">
