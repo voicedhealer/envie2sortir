@@ -49,3 +49,7 @@ prisma/dev.db.backup
 test-events-display.js
 test-final-subscription.js
 test-subscription-logic.js
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
