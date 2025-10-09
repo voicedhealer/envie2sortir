@@ -42,6 +42,7 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [showAddressExtracted, setShowAddressExtracted] = useState(false);
 
   // Debounce pour l'autocomplete
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -91,15 +92,15 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
   }, [value.street, value.postalCode, value.city, value.latitude, value.longitude]);
 
   // Fonction de géocodage automatique
-  const geocodeAddress = useCallback(async (street: string, postalCode: string, city: string) => {
+  const geocodeAddress = useCallback(async (street: string, postalCode: string, city: string, currentAddress?: AddressData) => {
     if (!street.trim() || !postalCode.trim() || !city.trim()) {
       return;
     }
 
-    // Vérifier que l'adresse contient un numéro pour éviter la confusion
-    const hasNumber = /\d/.test(street.trim());
-    if (!hasNumber) {
-      setGeocodeError("⚠️ Ajoutez le numéro de rue pour éviter la confusion avec d'autres établissements");
+    // Vérifier que l'adresse commence par un numéro pour une précision maximale
+    const hasNumberAtStart = /^\d+[a-zA-Z]?\s/.test(street.trim());
+    if (!hasNumberAtStart) {
+      setGeocodeError("⚠️ L'adresse doit commencer par un numéro (ex: 708 Rue...) pour un géocodage précis");
       return;
     }
 
@@ -113,9 +114,10 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       const result = await response.json();
 
       if (result.success && result.data) {
-        // Mise à jour des coordonnées
+        // Mise à jour des coordonnées - utiliser currentAddress si fourni, sinon value
+        const baseAddress = currentAddress || value;
         const updatedAddress = {
-          ...value,
+          ...baseAddress,
           latitude: result.data.latitude,
           longitude: result.data.longitude
         };
@@ -137,7 +139,7 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     } finally {
       setIsGeocoding(false);
     }
-  }, [value, onChange]);
+  }, [value, onChange, onValidationChange]);
 
   // Fonction d'autocomplete avec debounce
   const fetchSuggestions = useCallback(async (query: string) => {
@@ -208,6 +210,10 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     // Déclencher l'autocomplete si l'adresse contient au moins 3 caractères
     if (fullAddress.length >= 3) {
       fetchSuggestions(fullAddress);
+    } else {
+      // Fermer les suggestions si moins de 3 caractères
+      setShowSuggestions(false);
+      setSuggestions([]);
     }
     
     // Pour l'instant, on stocke l'adresse complète dans le champ street
@@ -229,15 +235,18 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     const currentStreet = value.street || '';
     const userNumber = currentStreet.match(/^\d+[a-zA-Z]?/)?.[0] || '';
     
-    // Construire la nouvelle adresse en préservant le numéro utilisateur
-    let street = currentStreet;
+    // Construire la rue avec le numéro
+    let street = '';
+    let houseNumber = '';
     
-    // Si l'utilisateur a saisi un numéro, le garder
+    // Si l'utilisateur a saisi un numéro, le garder en priorité
     if (userNumber) {
-      street = `${userNumber} ${address.road || ''}`.trim();
+      houseNumber = userNumber;
+      street = address.road || '';
     } else if (address.house_number) {
       // Sinon, utiliser le numéro de la suggestion
-      street = `${address.house_number} ${address.road || ''}`.trim();
+      houseNumber = address.house_number;
+      street = address.road || '';
     } else {
       // En dernier recours, juste la rue
       street = address.road || '';
@@ -250,8 +259,8 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     const latitude = suggestion.lat ? parseFloat(suggestion.lat) : undefined;
     const longitude = suggestion.lon ? parseFloat(suggestion.lon) : undefined;
 
-    // Créer l'adresse complète formatée pour le champ unique
-    const fullAddress = `${street}${street && postalCode ? ', ' : ''}${postalCode}${postalCode && city ? ' ' : ''}${city}`.trim();
+    // Créer l'adresse complète formatée AVEC le numéro (sans duplication)
+    const fullAddress = `${houseNumber}${houseNumber && street ? ' ' : ''}${street}, ${postalCode} ${city}`.trim();
 
     const newAddress: AddressData = {
       street: fullAddress, // Stocker l'adresse complète dans le champ street
@@ -261,9 +270,29 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       longitude
     };
 
-    onChange(newAddress);
+    // Fermer les suggestions AVANT de mettre à jour l'adresse pour éviter les re-renders
     setShowSuggestions(false);
     setSuggestions([]);
+    
+    // Nettoyer les erreurs
+    setGeocodeError(null);
+    
+    // Afficher le bloc "Adresse extraite" pendant 5 secondes
+    setShowAddressExtracted(true);
+    setTimeout(() => {
+      setShowAddressExtracted(false);
+    }, 5000);
+    
+    // Mettre à jour l'adresse
+    onChange(newAddress);
+    
+    // RE-GÉOCODER avec l'adresse complète et le numéro pour avoir des coordonnées PRÉCISES
+    if (houseNumber && street && postalCode && city) {
+      const preciseAddress = `${houseNumber} ${street}`;
+      console.log('🔄 Re-géocodage pour précision avec:', preciseAddress, postalCode, city);
+      // Passer newAddress pour éviter d'utiliser l'ancien value
+      geocodeAddress(preciseAddress, postalCode, city, newAddress);
+    }
   };
 
   // Nettoyage des timers
@@ -286,14 +315,26 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
             type="text"
             value={value.street || ''}
             onChange={(e) => handleFullAddressChange(e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            onBlur={() => {
+              // Fermer les suggestions après un court délai pour permettre le clic sur une suggestion
+              setTimeout(() => {
+                setShowSuggestions(false);
+              }, 200);
+            }}
+            onFocus={() => {
+              // Réafficher les suggestions si on a déjà du contenu
+              if (value.street && value.street.length >= 3 && suggestions.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
               error && !(value.latitude && value.longitude) ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Ex : 15 rue des envies, 75000 Paris"
+            placeholder="Ex : 708 Rue de la Pièce Cornue, 21160 Marsannay-la-Côte"
           />
           
           {/* Suggestions d'autocomplete */}
-          {showSuggestions && (
+          {showSuggestions && suggestions.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {isLoadingSuggestions ? (
                 <div className="p-3 text-center text-gray-500">
@@ -342,6 +383,44 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
                   Aucune suggestion trouvée
                 </div>
               )}
+            </div>
+          )}
+          
+          {/* Affichage détaillé de l'adresse après sélection - 5 secondes */}
+          {showAddressExtracted && value.street && value.postalCode && value.city && (
+            <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded-lg animate-in fade-in duration-300">
+              <p className="text-xs font-medium text-gray-600 mb-2">Adresse extraite :</p>
+              <div className="flex flex-wrap gap-2">
+                {(() => {
+                  const fullAddr = value.street;
+                  const numberMatch = fullAddr.match(/^(\d+[a-zA-Z]?)\s/);
+                  const number = numberMatch ? numberMatch[1] : null;
+                  
+                  return (
+                    <>
+                      {number && (
+                        <span className="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                          N° {number}
+                        </span>
+                      )}
+                      {!number && (
+                        <span className="inline-block bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">
+                          ⚠️ Numéro manquant
+                        </span>
+                      )}
+                      <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                        {value.street.replace(/^\d+[a-zA-Z]?\s/, '').split(',')[0]}
+                      </span>
+                      <span className="inline-block bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">
+                        {value.postalCode}
+                      </span>
+                      <span className="inline-block bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">
+                        {value.city}
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>

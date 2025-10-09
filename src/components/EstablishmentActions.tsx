@@ -132,7 +132,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   };
 
   const handleDirections = () => {
-    const address = `${establishment.address}${establishment.city ? `, ${establishment.city}` : ''}`;
+    const address = establishment.address;
     const encodedAddress = encodeURIComponent(address);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, '_blank');
   };

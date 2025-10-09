@@ -258,7 +258,6 @@ export default function EstablishmentHeroWithGallery({
                 <MapPin className="w-4 h-4" />
                 <span className="text-sm">
                   {establishment.address}
-                  {establishment.city && `, ${establishment.city}`}
                 </span>
               </div>
             </div>
@@ -331,7 +330,6 @@ export default function EstablishmentHeroWithGallery({
                   <MapPin className="w-4 h-4" />
                   <span className="text-sm">
                     {establishment.address}
-                    {establishment.city && `, ${establishment.city}`}
                   </span>
                 </div>
               </div>
@@ -417,7 +415,6 @@ export default function EstablishmentHeroWithGallery({
                   <MapPin className="w-4 h-4" />
                   <span className="text-sm">
                     {establishment.address}
-                    {establishment.city && `, ${establishment.city}`}
                   </span>
                 </div>
               </div>

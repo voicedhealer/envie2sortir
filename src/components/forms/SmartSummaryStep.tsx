@@ -86,6 +86,13 @@ interface SmartSummaryStepProps {
 }
 
 export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps) {
+  // Fonction pour nettoyer les tags avec barres de séparation
+  const cleanTagText = (text: string): string => {
+    if (!text) return '';
+    // Si le texte contient "|", ne garder que la partie avant (le texte visible)
+    return text.split('|')[0].trim();
+  };
+
   const renderPriorityData = (priorities: EnrichmentPriority[], title: string, icon: string, editStep?: number) => {
     if (!priorities || priorities.length === 0) return null;
 
@@ -115,7 +122,9 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                   'bg-orange-500'
                 }`}></span>
                 <span className="font-medium text-gray-900">
-                  {Array.isArray(priority.value) ? priority.value.join(', ') : priority.value}
+                  {Array.isArray(priority.value) 
+                    ? priority.value.map(v => cleanTagText(v)).join(', ') 
+                    : cleanTagText(priority.value)}
                 </span>
               </div>
               <div className="flex items-center space-x-2">
@@ -221,7 +230,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                     key={index}
                     className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
                   >
-                    {activity}
+                    {cleanTagText(activity)}
                   </span>
                 ))}
               </div>
@@ -500,7 +509,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
               >
-                {info}
+                {cleanTagText(info)}
               </span>
             ))}
           </div>
@@ -580,7 +589,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             <div className="flex flex-wrap gap-2">
               {data.services.map((service, index) => (
                 <span key={index} className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                  {service}
+                  {cleanTagText(service)}
                 </span>
               ))}
             </div>
@@ -590,7 +599,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             <div className="flex flex-wrap gap-2">
               {data.ambiance.map((ambiance, index) => (
                 <span key={index} className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
-                  {ambiance}
+                  {cleanTagText(ambiance)}
                 </span>
               ))}
             </div>
@@ -707,7 +716,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full"
               >
-                {tag}
+                {cleanTagText(tag)}
               </span>
             ))}
           </div>

@@ -101,18 +101,43 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    // MODE PRODUCTION : Utiliser Nominatim
-    const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=${limit}&addressdetails=1&countrycodes=fr,be,ch,ca&accept-language=fr`;
+    // MODE PRODUCTION : Utiliser l'API Adresse du gouvernement français (très précise !)
     
-    console.log(`🌐 URL Nominatim: ${nominatimUrl}`);
+    // Pour les adresses françaises, utiliser api-adresse.data.gouv.fr
+    // C'est GRATUIT, SANS CLÉ API, et TRÈS PRÉCIS (base officielle La Poste + IGN)
+    
+    let apiUrl;
+    let isGouvernementAPI = false;
+    
+    // Détecter si c'est une adresse française (code postal 5 chiffres)
+    const isFrenchAddress = /\d{5}/.test(address);
+    
+    if (isFrenchAddress && limit === '1') {
+      // Utiliser l'API du gouvernement français pour les adresses françaises
+      console.log('🇫🇷 Utilisation de l\'API Adresse du gouvernement français');
+      apiUrl = `https://api-adresse.data.gouv.fr/search/?q=${encodedAddress}&limit=1`;
+      isGouvernementAPI = true;
+    } else if (limit !== '1') {
+      // Pour l'autocomplete, utiliser l'API française aussi
+      console.log('🔍 Autocomplete avec l\'API française');
+      apiUrl = `https://api-adresse.data.gouv.fr/search/?q=${encodedAddress}&limit=${limit}`;
+      isGouvernementAPI = true;
+    } else {
+      // Fallback sur Nominatim pour les adresses non françaises
+      console.log('🌍 Fallback Nominatim pour adresse non française');
+      apiUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=${limit}&addressdetails=1&countrycodes=be,ch,ca&accept-language=fr`;
+      isGouvernementAPI = false;
+    }
+    
+    console.log(`🌐 URL API: ${apiUrl}`);
 
-    // Appel à l'API Nominatim avec délai pour éviter le rate limiting
-    console.log(`🌐 Appel à Nominatim: ${nominatimUrl}`);
-    
-    // Délai de 1 seconde pour éviter le rate limiting
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const response = await fetch(nominatimUrl, {
+    // Délai uniquement pour Nominatim (rate limiting)
+    if (!isGouvernementAPI) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    // Appel à l'API
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'User-Agent': 'Envie2Sortir/1.0 (https://envie2sortir.fr)',
@@ -120,7 +145,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    console.log(`📡 Réponse Nominatim: ${response.status} ${response.statusText}`);
+    console.log(`📡 Réponse API: ${response.status} ${response.statusText}`);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -130,26 +155,58 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
     
-    console.log(`📡 Réponse Nominatim:`, data);
+    console.log(`📡 Réponse API:`, JSON.stringify(data).substring(0, 500));
 
-    // Vérification des résultats
-    if (!Array.isArray(data) || data.length === 0) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Adresse non trouvée",
-          details: "Aucune correspondance trouvée pour cette adresse",
-          searchedAddress: address
-        },
-        { status: 404 }
-      );
+    // Adapter le format selon l'API utilisée
+    let results = [];
+    
+    if (isGouvernementAPI) {
+      // Format API française : { features: [...] }
+      if (!data.features || data.features.length === 0) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Adresse non trouvée",
+            details: "Aucune correspondance trouvée pour cette adresse",
+            searchedAddress: address
+          },
+          { status: 404 }
+        );
+      }
+      
+      // Convertir au format unifié
+      results = data.features.map((feature: any) => ({
+        lat: feature.geometry.coordinates[1].toString(), // latitude
+        lon: feature.geometry.coordinates[0].toString(), // longitude
+        display_name: feature.properties.label || feature.properties.name,
+        address: {
+          house_number: feature.properties.housenumber,
+          road: feature.properties.street,
+          postcode: feature.properties.postcode,
+          city: feature.properties.city || feature.properties.municipality
+        }
+      }));
+    } else {
+      // Format Nominatim : [ { lat, lon, ... } ]
+      if (!Array.isArray(data) || data.length === 0) {
+        return NextResponse.json(
+          { 
+            success: false,
+            error: "Adresse non trouvée",
+            details: "Aucune correspondance trouvée pour cette adresse",
+            searchedAddress: address
+          },
+          { status: 404 }
+        );
+      }
+      results = data;
     }
 
     // Si limit > 1, c'est pour l'autocomplete - retourner tous les résultats
     if (limit !== '1') {
       return NextResponse.json({
         success: true,
-        data: data.map(result => ({
+        data: results.map(result => ({
           display_name: result.display_name,
           lat: result.lat,
           lon: result.lon,
@@ -159,7 +216,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupération du premier résultat pour le géocodage simple
-    const firstResult = data[0];
+    const firstResult = results[0];
     
     if (!firstResult.lat || !firstResult.lon) {
       return NextResponse.json(
@@ -167,7 +224,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: "Données de géocodage invalides",
           details: "Les coordonnées retournées sont invalides",
-          nominatimData: firstResult
+          apiData: firstResult
         },
         { status: 500 }
       );
@@ -214,15 +271,18 @@ export async function GET(request: NextRequest) {
     // Informations supplémentaires utiles
     const additionalInfo = {
       displayName: firstResult.display_name,
-      type: firstResult.type,
-      importance: firstResult.importance,
-      country: firstResult.address?.country,
+      type: firstResult.type || 'address',
+      importance: firstResult.importance || 1,
+      country: firstResult.address?.country || 'France',
       city: firstResult.address?.city || firstResult.address?.town || firstResult.address?.village,
-      postcode: firstResult.address?.postcode
+      postcode: firstResult.address?.postcode,
+      housenumber: firstResult.address?.house_number,
+      street: firstResult.address?.road
     };
 
     console.log(`✅ Géocodage réussi: ${latitude}, ${longitude}`);
     console.log(`📍 Informations:`, additionalInfo);
+    console.log(`🏠 Numéro trouvé:`, firstResult.address?.house_number || 'NON');
 
     // Réponse de succès
     return NextResponse.json({

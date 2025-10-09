@@ -240,7 +240,6 @@ export default function EstablishmentHero({ establishment, onFavorite, onShare }
             <MapPin className="w-4 h-4" />
             <span className="text-sm">
               {establishment.address}
-              {establishment.city && `, ${establishment.city}`}
             </span>
           </div>
         </div>

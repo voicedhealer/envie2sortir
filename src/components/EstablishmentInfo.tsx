@@ -547,13 +547,10 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         <div className="space-y-3">
           {establishment.address && (
             <div className="flex items-start space-x-3">
-              <MapPin className="w-4 h-4 text-gray-400 mt-1" />
+              <MapPin className="w-8 h-4 text-gray-400 mt-1" />
               <div>
                 <p className="text-gray-900 font-medium">Adresse</p>
                 <p className="text-gray-600">{establishment.address}</p>
-                {establishment.city && !establishment.address.includes(establishment.city) && (
-                  <p className="text-gray-600">{establishment.city}</p>
-                )}
               </div>
             </div>
           )}

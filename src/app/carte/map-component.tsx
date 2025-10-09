@@ -474,7 +474,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                 
                 ${reviewText}
                 
-                <p class="text-xs text-gray-500 mb-3">📍 ${establishment.city || establishment.address}</p>
+                <p class="text-xs text-gray-500 mb-3">📍 ${establishment.address}</p>
                 
                 <a href="/etablissements/${establishment.slug}?from=carte" class="inline-flex items-center text-orange-600 hover:text-orange-700 font-semibold text-sm">
                   En savoir plus →

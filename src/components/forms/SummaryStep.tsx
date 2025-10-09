@@ -119,6 +119,14 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
   if (useSmartSummary) {
     return <SmartSummaryStep data={data} onEdit={onEdit} />;
   }
+  
+  // Fonction pour nettoyer les tags avec barres de séparation
+  const cleanTagText = (text: string): string => {
+    if (!text) return '';
+    // Si le texte contient "|", ne garder que la partie avant (le texte visible)
+    return text.split('|')[0].trim();
+  };
+  
   // Fonction pour formater les horaires
   const formatHours = (hours: EstablishmentFormData['hours']) => {
     if (!hours || Object.keys(hours).length === 0) {
@@ -226,7 +234,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                       key={index}
                       className="inline-flex items-center px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full"
                     >
-                      {activity}
+                      {cleanTagText(activity)}
                     </span>
                   ))
                 ) : (
@@ -291,7 +299,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                     key={index}
                     className="inline-flex items-center px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full"
                   >
-                    {service}
+                    {cleanTagText(service)}
                   </span>
                 ))
               ) : (
@@ -308,7 +316,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                     key={index}
                     className="inline-flex items-center px-3 py-1 text-xs bg-pink-100 text-pink-800 rounded-full"
                   >
-                    {ambiance}
+                    {cleanTagText(ambiance)}
                   </span>
                 ))
               ) : (
@@ -410,7 +418,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
               >
-                {info}
+                {cleanTagText(info)}
               </span>
             ))}
           </div>
@@ -466,7 +474,7 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
                 key={index}
                 className="inline-flex items-center px-3 py-1 text-xs bg-indigo-100 text-indigo-800 rounded-full"
               >
-                {tag.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                {cleanTagText(tag).replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
               </span>
             ))
           ) : (

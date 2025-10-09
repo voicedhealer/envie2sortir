@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, Lightbulb, Wrench, Palette, Users, Clock, Baby, Info, Car, Shield, Wifi, Utensils, Music, Gamepad2, SquareMousePointerIcon, PartyPopper, Star } from 'lucide-react';
 import { useSectionTracking } from '@/hooks/useClickTracking';
 
 interface EstablishmentMainSectionsProps {
@@ -165,13 +165,20 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       getData: (establishment: any) => {
         const services = parseJsonField(establishment.detailedServices);
         const basicServices = parseJsonField(establishment.services);
-        return [...services, ...basicServices].filter(service => 
-          service.toLowerCase().includes('wifi') ||
-          service.toLowerCase().includes('climatisation') ||
-          service.toLowerCase().includes('chauffage') ||
-          service.toLowerCase().includes('toilettes') ||
-          service.toLowerCase().includes('accessible')
-        );
+        return [...services, ...basicServices].filter(service => {
+          const serviceLower = cleanItemDisplay(service).toLowerCase();
+          return (
+            serviceLower.includes('wifi') ||
+            serviceLower.includes('climatisation') ||
+            serviceLower.includes('chauffage') ||
+            serviceLower.includes('toilettes') ||
+            serviceLower.includes('accessible') ||
+            serviceLower.includes('handicap') ||
+            serviceLower.includes('pmr') ||
+            serviceLower.includes('équipement') ||
+            serviceLower.includes('service')
+          );
+        });
       }
     },
     {
@@ -252,9 +259,9 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       color: 'purple',
       getData: (establishment: any) => {
         const ambiance = parseJsonField(establishment.ambiance);
-        // Filtrer pour garder uniquement les éléments d'ambiance
+        // Filtrer pour garder les éléments d'ambiance pure
         return ambiance.filter(item => {
-          const itemLower = item.toLowerCase();
+          const itemLower = cleanItemDisplay(item).toLowerCase();
           return (
             itemLower.includes('ambiance') ||
             itemLower.includes('convivial') ||
@@ -266,14 +273,61 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
             itemLower.includes('atmosphère') ||
             itemLower.includes('décontractée') ||
             itemLower.includes('mystérieuse') ||
-            itemLower.includes('immersif')
-          ) && !itemLower.includes('accessible') && !itemLower.includes('groupes');
+            itemLower.includes('immersif') ||
+            itemLower.includes('sport') ||
+            itemLower.includes('joie') ||
+            itemLower.includes('amusement')
+          ) && !itemLower.includes('accessible') && !itemLower.includes('groupes') && !itemLower.includes('clientele') && !itemLower.includes('points-forts') && !itemLower.includes('populaire-pour') && !itemLower.includes('offres') && !itemLower.includes('enfants');
         });
       }
     },
     {
-      id: 'specialties',
-      title: 'Spécialités',
+      id: 'points-forts',
+      title: 'Points forts',
+      icon: <Star className="w-4 h-4" />,
+      color: 'yellow',
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        // Extraire les points forts du champ ambiance
+        return ambiance.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
+          return (
+            itemLower.includes('excellent') ||
+            itemLower.includes('grand choix') ||
+            itemLower.includes('spécialité') ||
+            itemLower.includes('spécialiste') ||
+            itemLower.includes('unique') ||
+            itemLower.includes('exceptionnel') ||
+            itemLower.includes('remarquable')
+          ) || item.includes('|points-forts');
+        });
+      }
+    },
+    {
+      id: 'populaire-pour',
+      title: 'Populaire pour',
+      icon: <Users className="w-4 h-4" />,
+      color: 'green',
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        // Extraire les éléments populaires du champ ambiance
+        return ambiance.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
+          return (
+            itemLower.includes('populaire pour') ||
+            itemLower.includes('déjeuner') ||
+            itemLower.includes('dîner') ||
+            itemLower.includes('solo') ||
+            itemLower.includes('famille') ||
+            itemLower.includes('couple') ||
+            itemLower.includes('groupe')
+          ) || item.includes('|populaire-pour');
+        });
+      }
+    },
+    {
+      id: 'offres',
+      title: 'Offres',
       icon: <Utensils className="w-4 h-4" />,
       color: 'orange',
       getData: (establishment: any) => {
@@ -281,27 +335,63 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
         const specialties = parseJsonField(establishment.specialties);
         const atmosphere = parseJsonField(establishment.atmosphere);
         
-        // Extraire les spécialités du champ ambiance mélangé
-        const ambianceSpecialties = ambiance.filter(item => {
-          const itemLower = item.toLowerCase();
+        // Extraire les offres et services du champ ambiance
+        const ambianceOffres = ambiance.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
           return (
-            itemLower.includes('cuisine') ||
-            itemLower.includes('végétarien') ||
-            itemLower.includes('sain') ||
-            itemLower.includes('qualité') ||
-            itemLower.includes('boisson') ||
             itemLower.includes('alcool') ||
-            itemLower.includes('vin') ||
             itemLower.includes('bière') ||
             itemLower.includes('cocktail') ||
-            itemLower.includes('apéritif') ||
-            itemLower.includes('spiritueux') ||
-            itemLower.includes('déjeuner') ||
-            itemLower.includes('dîner')
-          );
+            itemLower.includes('vin') ||
+            itemLower.includes('végétarien') ||
+            itemLower.includes('sain') ||
+            itemLower.includes('portion') ||
+            itemLower.includes('halal') ||
+            itemLower.includes('casher') ||
+            itemLower.includes('bio') ||
+            itemLower.includes('sans gluten') ||
+            itemLower.includes('vegan') ||
+            itemLower.includes('plats') ||
+            itemLower.includes('menu') ||
+            itemLower.includes('spécialités') ||
+            itemLower.includes('parking') ||
+            itemLower.includes('snack') ||
+            itemLower.includes('terrain') ||
+            itemLower.includes('foot') ||
+            itemLower.includes('indoor') ||
+            itemLower.includes('légo') ||
+            itemLower.includes('géants') ||
+            itemLower.includes('tyrolienne') ||
+            itemLower.includes('toboggans') ||
+            itemLower.includes('xxl') ||
+            itemLower.includes('places')
+          ) || item.includes('|offres');
         });
         
-        return [...specialties, ...atmosphere, ...ambianceSpecialties];
+        return [...specialties, ...atmosphere, ...ambianceOffres];
+      }
+    },
+    {
+      id: 'enfants',
+      title: 'Enfants',
+      icon: <Baby className="w-4 h-4" />,
+      color: 'pink',
+      getData: (establishment: any) => {
+        const ambiance = parseJsonField(establishment.ambiance);
+        // Extraire les services enfants du champ ambiance
+        return ambiance.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
+          return (
+            itemLower.includes('enfant') ||
+            itemLower.includes('menu enfant') ||
+            itemLower.includes('famille') ||
+            itemLower.includes('aire de jeux') ||
+            itemLower.includes('jeux') ||
+            itemLower.includes('anniversaire') ||
+            itemLower.includes('salon') ||
+            itemLower.includes('insonorisé')
+          ) || item.includes('|enfants');
+        });
       }
     },
     {
@@ -315,16 +405,15 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
         
         // Extraire les informations clientèle du champ ambiance mélangé
         const ambianceClientele = ambiance.filter(item => {
-          const itemLower = item.toLowerCase();
+          const itemLower = cleanItemDisplay(item).toLowerCase();
           return (
-            itemLower.includes('groupes') ||
-            itemLower.includes('familles') ||
-            itemLower.includes('couples') ||
-            itemLower.includes('enfants') ||
-            itemLower.includes('jeunes') ||
-            itemLower.includes('populaire pour') ||
-            itemLower.includes('convient aux')
-          );
+            itemLower.includes('accessible') ||
+            itemLower.includes('clientele') ||
+            itemLower.includes('adapté aux') ||
+            itemLower.includes('spécialiste des') ||
+            itemLower.includes('étudiant') ||
+            itemLower.includes('touriste')
+          ) || item.includes('|clientele');
         });
         
         return [...clienteleInfo, ...ambianceClientele];
@@ -342,7 +431,8 @@ function getBulletColor(color: string): string {
     purple: 'text-purple-500',
     pink: 'text-pink-500',
     gray: 'text-gray-500',
-    red: 'text-red-500'
+    red: 'text-red-500',
+    yellow: 'text-yellow-500'
   };
   return colors[color as keyof typeof colors] || 'text-gray-500';
 }
