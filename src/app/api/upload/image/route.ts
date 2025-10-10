@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const maxImages = getMaxImages(establishment.subscription);
     
     if (existingImagesCount >= maxImages) {
-      const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Standard';
+      const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Basic';
       return NextResponse.json({ 
         error: `Limite d'images atteinte pour le plan ${planName}. Maximum: ${maxImages} image${maxImages > 1 ? 's' : ''}.`,
         subscription: establishment.subscription,

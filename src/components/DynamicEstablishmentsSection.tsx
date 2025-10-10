@@ -30,7 +30,7 @@ interface Establishment {
     price?: number;
     maxCapacity?: number;
   }>;
-  subscription?: 'STANDARD' | 'PREMIUM';
+  subscription?: 'FREE' | 'PREMIUM';
   description?: string;
   imageUrl?: string;
   priceMin?: number;

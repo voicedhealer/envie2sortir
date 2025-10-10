@@ -22,7 +22,7 @@ interface Event {
 interface EventsManagerProps {
   establishmentId: string;
   isPremium: boolean;
-  subscription: 'STANDARD' | 'PREMIUM';
+  subscription: 'FREE' | 'PREMIUM';
 }
 
 export default function EventsManager({ establishmentId, isPremium, subscription }: EventsManagerProps) {

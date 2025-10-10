@@ -1,9 +1,9 @@
 /**
- * Utilitaires pour la gestion des abonnements STANDARD vs PREMIUM
+ * Utilitaires pour la gestion des abonnements FREE vs PREMIUM
  * Centralise toute la logique métier pour éviter les incohérences
  */
 
-export type SubscriptionType = 'STANDARD' | 'PREMIUM';
+export type SubscriptionType = 'FREE' | 'PREMIUM';
 
 export interface SubscriptionFeatures {
   minImages: number;
@@ -18,7 +18,7 @@ export interface SubscriptionFeatures {
  * Définit les fonctionnalités disponibles selon le type d'abonnement
  */
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeatures> = {
-  STANDARD: {
+  FREE: {
     minImages: 1,
     maxImages: 2,
     canCreateEvents: false,
@@ -131,7 +131,7 @@ export function getAvailableFeatures(subscription: SubscriptionType): string[] {
 export function getSubscriptionDisplayInfo(subscription: SubscriptionType) {
   return {
     type: subscription,
-    label: subscription === 'PREMIUM' ? 'Premium' : 'Standard',
+    label: subscription === 'PREMIUM' ? 'Premium' : 'Basic',
     badgeColor: subscription === 'PREMIUM' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800',
     features: getAvailableFeatures(subscription),
     minImages: getMinImages(subscription),

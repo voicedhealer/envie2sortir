@@ -19,7 +19,7 @@ function applySorting(establishments: any[], filter: string) {
     
     case 'premium':
       return establishments.sort((a, b) => {
-        const subscriptionOrder = { 'PREMIUM': 2, 'STANDARD': 1 };
+        const subscriptionOrder = { 'PREMIUM': 2, 'FREE': 1 };
         const orderA = subscriptionOrder[a.subscription as keyof typeof subscriptionOrder] || 0;
         const orderB = subscriptionOrder[b.subscription as keyof typeof subscriptionOrder] || 0;
         

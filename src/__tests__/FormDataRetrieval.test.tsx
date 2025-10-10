@@ -207,7 +207,7 @@ describe('Récupération des données du formulaire', () => {
       parking: true,
       terrasse: true,
       status: 'approved' as const,
-      subscription: 'STANDARD' as const,
+      subscription: 'FREE' as const,
       ownerId: 'owner1',
       rejectionReason: null,
       rejectedAt: null,

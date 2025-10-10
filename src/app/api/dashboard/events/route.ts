@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier l'accès Premium avec validation centralisée
-    const validation = validateSubscriptionAccess(establishment.subscription as 'STANDARD' | 'PREMIUM', 'canCreateEvents');
+    const validation = validateSubscriptionAccess(establishment.subscription as 'FREE' | 'PREMIUM', 'canCreateEvents');
     if (!validation.hasAccess) {
       const error = getPremiumRequiredError('Événements');
       return NextResponse.json(error, { status: error.status });
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier l'accès Premium avec validation centralisée
-    const validation = validateSubscriptionAccess(establishment.subscription as 'STANDARD' | 'PREMIUM', 'canCreateEvents');
+    const validation = validateSubscriptionAccess(establishment.subscription as 'FREE' | 'PREMIUM', 'canCreateEvents');
     if (!validation.hasAccess) {
       const error = getPremiumRequiredError('Événements');
       return NextResponse.json(error, { status: error.status });

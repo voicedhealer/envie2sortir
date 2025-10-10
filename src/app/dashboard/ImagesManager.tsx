@@ -10,7 +10,7 @@ interface ImagesManagerProps {
   establishmentId: string; // Gardé pour compatibilité mais non utilisé
   establishmentSlug: string; // Gardé pour compatibilité mais non utilisé
   currentImageUrl?: string | null;
-  subscription?: 'STANDARD' | 'PREMIUM';
+  subscription?: 'FREE' | 'PREMIUM';
 }
 
 // Fonction utilitaire pour construire l'URL d'image
@@ -30,7 +30,7 @@ function getImageUrl(imagePath: string): string {
   return imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
 }
 
-export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'STANDARD' }: ImagesManagerProps) {
+export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'FREE' }: ImagesManagerProps) {
   const { data: session, status } = useSession();
   const [images, setImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string | null>(currentImageUrl || null);
@@ -590,9 +590,9 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
               Limite d'images atteinte
             </h4>
             <p className="text-gray-600 mb-4">
-              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Standard'}.
+              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Basic'}.
             </p>
-            {subscription === 'STANDARD' && (
+            {subscription === 'FREE' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-blue-800 font-medium mb-2">
                   💡 Passez au plan Premium pour uploader jusqu'à 5 images et un réel impact sur vos clients !
@@ -607,7 +607,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         
         <div className="mt-4 text-sm text-gray-500">
           Images actuelles : {images.length}/{maxImages} 
-          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Standard)'}
+          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Basic)'}
         </div>
       </div>
 

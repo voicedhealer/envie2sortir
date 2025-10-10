@@ -113,7 +113,7 @@ export default function DashboardContent({ user, establishment, professional }: 
                   ? 'text-orange-600 font-medium' 
                   : 'text-gray-500'
               }`}>
-                Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Gratuit'}
+                Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Basic'}
               </p>
             </div>
           </div>

@@ -52,7 +52,7 @@ interface UpdateEstablishmentData {
   priceMin?: number;
   priceMax?: number;
   informationsPratiques?: string[];
-  subscription?: 'STANDARD' | 'PREMIUM';
+  subscription?: 'FREE' | 'PREMIUM';
   status?: 'approved' | 'pending' | 'rejected';
   hours?: {
     monday?: { open: string; close: string; isOpen: boolean };

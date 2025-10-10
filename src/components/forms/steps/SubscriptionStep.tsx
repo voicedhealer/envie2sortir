@@ -62,7 +62,7 @@ export default function SubscriptionStep({
           <strong>Note :</strong> Vous pourrez ajouter vos photos après l'inscription depuis votre espace professionnel.
           {formData.subscriptionPlan === 'premium' 
             ? ' Avec le plan Premium, vous devrez ajouter entre 2 et 5 photos.'
-            : ' Avec le plan Standard, vous devrez ajouter exactement 2 photos obligatoires.'
+            : ' Avec le plan Basic, vous devrez ajouter exactement 2 photos obligatoires.'
           }
         </p>
       </div>

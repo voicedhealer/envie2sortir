@@ -824,7 +824,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           priceMin: formData.priceMin,
           priceMax: formData.priceMax,
           informationsPratiques: formData.informationsPratiques,
-          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD',
+          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
           ...(establishment.status === 'rejected' && {
             status: 'pending',
             rejectionReason: null,

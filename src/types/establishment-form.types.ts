@@ -251,7 +251,7 @@ export const CATEGORIES = {
 
 export const SUBSCRIPTION_PLANS = {
   free: {
-    label: "Plan Standard",
+    label: "Plan Basic",
     features: [
       "2 photos obligatoires",
       "Informations de base",

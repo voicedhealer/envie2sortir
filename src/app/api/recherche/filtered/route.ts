@@ -86,7 +86,7 @@ function applySorting(establishments: any[], filter: string) {
     case 'premium':
       return establishments.sort((a, b) => {
         // Tri par subscription (PREMIUM en premier) puis par score de pertinence
-        const subscriptionOrder = { 'PREMIUM': 2, 'STANDARD': 1 };
+        const subscriptionOrder = { 'PREMIUM': 2, 'FREE': 1 };
         const orderA = subscriptionOrder[a.subscription as keyof typeof subscriptionOrder] || 0;
         const orderB = subscriptionOrder[b.subscription as keyof typeof subscriptionOrder] || 0;
         

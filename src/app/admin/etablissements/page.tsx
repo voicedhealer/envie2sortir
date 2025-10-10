@@ -490,7 +490,7 @@ export default function AdminEstablishmentsPage() {
                               ? 'bg-purple-100 text-purple-800' 
                               : 'bg-gray-100 text-gray-800'
                           }`}>
-                            {selectedEstablishment.subscription === 'PREMIUM' ? '⭐ Premium' : '🆓 Gratuit'}
+                            {selectedEstablishment.subscription === 'PREMIUM' ? '⭐ Premium' : '📋 Basic'}
                           </span>
                         </div>
                       </div>

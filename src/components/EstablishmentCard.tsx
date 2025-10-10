@@ -207,7 +207,7 @@ interface EstablishmentCardProps {
       price?: number;
       maxCapacity?: number;
     }>;
-    subscription?: 'STANDARD' | 'PREMIUM';
+    subscription?: 'FREE' | 'PREMIUM';
     // Pour la recherche par envie
     distance?: number;
     matchedTags?: string[];

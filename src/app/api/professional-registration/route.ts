@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
           childrenServices: establishmentData.childrenServices,
           ownerId: professional.id, // Lien vers le professionnel
           status: 'pending', // En attente de validation
-          subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'STANDARD', // Plan d'abonnement
+          subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE', // Plan d'abonnement
         }
       });
 
