@@ -216,11 +216,44 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
       }
     },
     {
-      id: 'practical',
-      title: 'Informations pratiques',
+      id: 'groupes-reservations',
+      title: 'Groupes & Réservations',
+      icon: <Users className="w-4 h-4" />,
+      color: 'blue',
+      getData: (establishment: any) => {
+        const infos = parseJsonField(establishment.informationsPratiques);
+        return infos.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
+          return (
+            item.includes('|groupes-reservations') ||
+            itemLower.includes('groupe') ||
+            itemLower.includes('réservation') ||
+            itemLower.includes('famille') ||
+            itemLower.includes('cse') ||
+            itemLower.includes('soirée') ||
+            itemLower.includes('amis')
+          );
+        });
+      }
+    },
+    {
+      id: 'espaces',
+      title: 'Espaces',
       icon: <Info className="w-4 h-4" />,
       color: 'gray',
-      getData: (establishment: any) => parseJsonField(establishment.informationsPratiques)
+      getData: (establishment: any) => {
+        const infos = parseJsonField(establishment.informationsPratiques);
+        return infos.filter(item => {
+          const itemLower = cleanItemDisplay(item).toLowerCase();
+          return (
+            item.includes('|espaces') ||
+            itemLower.includes('espace') ||
+            itemLower.includes('fumeur') ||
+            itemLower.includes('déconseill') ||
+            itemLower.includes('femmes enceinte')
+          );
+        });
+      }
     },
     {
       id: 'health',

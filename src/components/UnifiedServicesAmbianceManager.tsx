@@ -43,13 +43,15 @@ export default function UnifiedServicesAmbianceManager({
 
 
   // Combiner tous les items avec leurs catégories d'origine
+  // ✅ Les moyens de paiement SONT inclus pour être gérés (ajout/suppression)
+  // mais ne seront PAS affichés dans les sections de commodités (gérés séparément dans EstablishmentInfo.tsx)
   const allItems = [
     ...(Array.isArray(services) ? services : []), 
     ...(Array.isArray(ambiance) ? ambiance : []), 
-    ...(Array.isArray(informationsPratiques) ? informationsPratiques : []), 
+    ...(Array.isArray(informationsPratiques) ? informationsPratiques : []),
     ...(Array.isArray(paymentMethods) ? paymentMethods : [])
   ];
-  console.log('🧠 RAW DATA - Tous les items combinés:', allItems);
+  console.log('🧠 RAW DATA - Tous les items combinés (avec moyens de paiement):', allItems);
   
   // ✅ FONCTION PERSONNALISÉE : Organiser en respectant les rubriques choisies
   const organizeItemsByUserChoice = (items: string[]): Record<string, Record<string, string[]>> => {
@@ -73,16 +75,30 @@ export default function UnifiedServicesAmbianceManager({
         const cleanItem = rubriqueMatch[1];
         const rubrique = rubriqueMatch[2];
         
-        // Déterminer la section principale
+        // ✅ CORRECTION : Déterminer la section principale selon la rubrique
         let mainSection = 'ambiance-specialites'; // par défaut
         
-        if (Array.isArray(services) && services.includes(item)) {
+        if (rubrique === 'services') {
           mainSection = 'equipements-services';
-        } else if (Array.isArray(informationsPratiques) && informationsPratiques.includes(item)) {
+        } else if (rubrique === 'informations-pratiques') {
           mainSection = 'informations-pratiques';
-        } else if (Array.isArray(paymentMethods) && paymentMethods.includes(item)) {
+        } else if (rubrique === 'moyens-paiement') {
           mainSection = 'moyens-paiement';
+          console.log('💳 MOYEN DE PAIEMENT - Item:', cleanItem);
+        } else if (rubrique === 'ambiance') {
+          mainSection = 'ambiance-specialites';
+        } else {
+          // Fallback : utiliser l'ancienne logique si la rubrique n'est pas reconnue
+          if (Array.isArray(services) && services.includes(item)) {
+            mainSection = 'equipements-services';
+          } else if (Array.isArray(informationsPratiques) && informationsPratiques.includes(item)) {
+            mainSection = 'informations-pratiques';
+          } else if (Array.isArray(paymentMethods) && paymentMethods.includes(item)) {
+            mainSection = 'moyens-paiement';
+          }
         }
+        
+        console.log('🔍 ORGANISATION - Item:', cleanItem, 'Rubrique:', rubrique, 'Section:', mainSection);
         
         // Ajouter dans la rubrique choisie par l'utilisateur
         if (organized[mainSection] && organized[mainSection][rubrique]) {

@@ -865,6 +865,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         const formDataToSend = new FormData();
         
         console.log('📤 Envoi des données du formulaire:', formData);
+        console.log('🔍 DEBUG paymentMethods dans formData:', formData.paymentMethods);
         Object.entries(formData).forEach(([key, value]) => {
           if (key === 'photos') {
             if (Array.isArray(value)) {

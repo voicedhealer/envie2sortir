@@ -365,6 +365,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   
   // Debug: Afficher les données parsées
   console.log('🔍 DEBUG PAYMENT METHODS:');
+  console.log('  - establishment.paymentMethods brut:', establishment.paymentMethods);
   console.log('  - paymentMethods (hybrid):', paymentMethods);
   console.log('  - uniquePaymentMethods:', uniquePaymentMethods);
   console.log('  - fallbackPaymentMethods:', fallbackPaymentMethods);
@@ -489,24 +490,60 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const ambiance = parseGooglePlacesField(establishment.ambiance, 'ambiance');
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
-  // ✅ AMÉLIORATION : Extraire les moyens de paiement des services et informations pratiques
-  const allData = [...services, ...informationsPratiques];
-  const traditionalPayments = allData.filter(item => {
-    const itemLower = cleanItemDisplay(item).toLowerCase(); // Nettoyer avant de filtrer
-    return itemLower.includes('carte') || itemLower.includes('paiement') ||
-           itemLower.includes('nfc') || itemLower.includes('pluxee') ||
-           itemLower.includes('titre restaurant') || itemLower.includes('titres restaurant') ||
-           itemLower.includes('espèces') || itemLower.includes('chèque') || 
-           itemLower.includes('paypal');
-  });
+  // ✅ CORRECTION : Extraire les moyens de paiement depuis le champ dédié paymentMethods
+  const traditionalPayments = (() => {
+    if (!establishment.paymentMethods) return [];
+    
+    console.log('🔍 DEBUG traditionalPayments - Type:', typeof establishment.paymentMethods);
+    console.log('🔍 DEBUG traditionalPayments - IsArray:', Array.isArray(establishment.paymentMethods));
+    console.log('🔍 DEBUG traditionalPayments - Valeur:', establishment.paymentMethods);
+    
+    // Si c'est un array de strings (format direct)
+    if (Array.isArray(establishment.paymentMethods)) {
+      const cleaned = establishment.paymentMethods.map(item => {
+        const strItem = String(item);
+        const cleaned = cleanItemDisplay(strItem);
+        console.log('🔍 Nettoyage:', strItem, '->', cleaned);
+        return cleaned;
+      });
+      console.log('✅ Moyens de paiement nettoyés:', cleaned);
+      return cleaned;
+    }
+    
+    // Si c'est un objet JSON (format clé-valeur)
+    if (typeof establishment.paymentMethods === 'object') {
+      const paymentObj = establishment.paymentMethods as any;
+      return Object.entries(paymentObj)
+        .filter(([key, value]) => value === true)
+        .map(([key]) => {
+          // Convertir les clés en libellés lisibles
+          const labels: { [key: string]: string } = {
+            creditCards: 'Cartes de crédit',
+            debitCards: 'Cartes de débit',
+            cash: 'Espèces',
+            nfc: 'Paiement mobile NFC',
+            pluxee: 'Pluxee',
+            checks: 'Chèques',
+            visa: 'Visa',
+            mastercard: 'Mastercard',
+            amex: 'American Express'
+          };
+          return labels[key] || key;
+        });
+    }
+    
+    return [];
+  })();
 
-  // Combiner les moyens de paiement traditionnels et hybrides
-  const moyensPaiement = [...traditionalPayments, ...finalPaymentMethods];
+  // Combiner les moyens de paiement traditionnels et hybrides + DÉDUPLIQUER
+  const allPaymentsCombined = [...traditionalPayments, ...finalPaymentMethods];
+  const moyensPaiement = [...new Set(allPaymentsCombined.map(p => cleanItemDisplay(p)))];
   
   console.log('🔍 DEBUG MOYENS PAIEMENT FINAL:');
   console.log('  - traditionalPayments:', traditionalPayments);
   console.log('  - finalPaymentMethods:', finalPaymentMethods);
-  console.log('  - moyensPaiement (combiné):', moyensPaiement);
+  console.log('  - allPaymentsCombined (avec doublons):', allPaymentsCombined);
+  console.log('  - moyensPaiement (dédupliqué):', moyensPaiement);
 
   return (
     <div className="space-y-6">
@@ -731,7 +768,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             {/* Cartes bancaires */}
             {moyensPaiement.some(p => {
               const pLower = cleanItemDisplay(p).toLowerCase();
-              return pLower.includes('carte') && (pLower.includes('crédit') || pLower.includes('credit') || pLower.includes('débit'));
+              return pLower.includes('carte') || pLower.includes('visa') || pLower.includes('mastercard') || 
+                     pLower.includes('amex') || pLower.includes('american express') || pLower.includes('cb');
             }) && (
               <div>
                 <div className="flex items-center mb-2">
@@ -741,7 +779,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 <div className="flex flex-wrap gap-2">
                   {moyensPaiement.filter(p => {
                     const pLower = cleanItemDisplay(p).toLowerCase();
-                    return pLower.includes('carte') && (pLower.includes('crédit') || pLower.includes('credit') || pLower.includes('débit'));
+                    return pLower.includes('carte') || pLower.includes('visa') || pLower.includes('mastercard') || 
+                           pLower.includes('amex') || pLower.includes('american express') || pLower.includes('cb');
                   }).map((paiement, index) => (
                     <span 
                       key={index}
@@ -757,7 +796,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             {/* Paiements mobiles */}
             {moyensPaiement.some(p => {
               const pLower = cleanItemDisplay(p).toLowerCase();
-              return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+              return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('sans contact') || 
+                     pLower.includes('contactless') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
             }) && (
               <div>
                 <div className="flex items-center mb-2">
@@ -767,7 +807,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 <div className="flex flex-wrap gap-2">
                   {moyensPaiement.filter(p => {
                     const pLower = cleanItemDisplay(p).toLowerCase();
-                    return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+                    return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('sans contact') || 
+                           pLower.includes('contactless') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
                   }).map((paiement, index) => (
                     <span 
                       key={index}
@@ -783,7 +824,12 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             {/* Espèces et autres */}
             {moyensPaiement.some(p => {
               const pLower = cleanItemDisplay(p).toLowerCase();
-              return pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal');
+              // Exclure les cartes et paiements mobiles
+              const isCard = pLower.includes('carte') || pLower.includes('visa') || pLower.includes('mastercard') || 
+                             pLower.includes('amex') || pLower.includes('american express') || pLower.includes('cb');
+              const isMobile = pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('sans contact') || 
+                               pLower.includes('contactless') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+              return !isCard && !isMobile && (pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal'));
             }) && (
               <div>
                 <div className="flex items-center mb-2">
@@ -793,7 +839,12 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                 <div className="flex flex-wrap gap-2">
                   {moyensPaiement.filter(p => {
                     const pLower = cleanItemDisplay(p).toLowerCase();
-                    return pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal');
+                    // Exclure les cartes et paiements mobiles
+                    const isCard = pLower.includes('carte') || pLower.includes('visa') || pLower.includes('mastercard') || 
+                                   pLower.includes('amex') || pLower.includes('american express') || pLower.includes('cb');
+                    const isMobile = pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('sans contact') || 
+                                     pLower.includes('contactless') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+                    return !isCard && !isMobile && (pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal'));
                   }).map((paiement, index) => (
                     <span 
                       key={index}
