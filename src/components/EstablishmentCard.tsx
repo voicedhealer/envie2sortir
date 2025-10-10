@@ -7,6 +7,8 @@ import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
 import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
+import { useActiveDeals } from '@/hooks/useActiveDeals';
+import DailyDealOverlay from './DailyDealOverlay';
 
 // Fonction pour déterminer la catégorie principale à partir des activités
 function getMainCategory(establishment: any): string {
@@ -237,6 +239,9 @@ export default function EstablishmentCard({
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const [isEventCurrentlyInProgress, setIsEventCurrentlyInProgress] = useState(false);
 
+  // Récupérer les bons plans actifs
+  const { activeDeal } = useActiveDeals(establishment.id);
+
   // Utiliser l'image principale du modèle
   const primaryImage = establishment.imageUrl || 
     (establishment.images?.find(img => img.isPrimary) || establishment.images?.[0])?.url;
@@ -431,6 +436,9 @@ export default function EstablishmentCard({
       } ${
         isPremiumHighlighted ? `ring-2 ring-orange-400 ring-opacity-80 ${styles.premiumBorder}` : ''
       }`}>
+        
+        {/* Overlay Bon plan du jour */}
+        {activeDeal && <DailyDealOverlay deal={activeDeal} />}
         
         {/* Image bandeau (hauteur agrandie) */}
         <div className="relative h-48 md:h-52 bg-gradient-to-br from-gray-100 to-gray-200">

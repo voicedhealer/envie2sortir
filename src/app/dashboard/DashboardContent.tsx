@@ -9,6 +9,7 @@ import ParametresManager from "./ParametresManager";
 import MenuManager from "@/components/dashboard/MenuManager";
 import ClickAnalyticsDashboard from "@/components/analytics/ClickAnalyticsDashboard";
 import DetailedAnalyticsDashboard from "@/components/analytics/DetailedAnalyticsDashboard";
+import DealsManager from "./DealsManager";
 
 interface User {
   id: string;
@@ -66,7 +67,7 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'analytics' | 'parametres'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'deals' | 'analytics' | 'parametres'>('overview');
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'overview' | 'detailed'>('overview');
 
   const getStatusColor = (status: string) => {
@@ -162,6 +163,18 @@ export default function DashboardContent({ user, establishment, professional }: 
             >
               Mes menus
             </button>
+            {professional.subscriptionPlan === 'PREMIUM' && (
+              <button
+                onClick={() => setActiveTab('deals')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'deals'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Bons plans
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('analytics')}
               className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
@@ -442,6 +455,11 @@ export default function DashboardContent({ user, establishment, professional }: 
         />
       ) : activeTab === 'menus' ? (
         <MenuManager 
+          establishmentId={establishment.id} 
+          isPremium={professional.subscriptionPlan === 'PREMIUM'}
+        />
+      ) : activeTab === 'deals' ? (
+        <DealsManager 
           establishmentId={establishment.id} 
           isPremium={professional.subscriptionPlan === 'PREMIUM'}
         />

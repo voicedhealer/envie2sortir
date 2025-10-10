@@ -14,6 +14,8 @@ import EstablishmentReviews from '@/components/EstablishmentReviews';
 import EventsSection from '@/components/EventsSection';
 import UpcomingEventsSection from '@/components/UpcomingEventsSection';
 import MapComponent from '@/app/carte/map-component';
+import DailyDealModal from '@/components/DailyDealModal';
+import { hasSeenDealToday, isDealActive } from '@/lib/deal-utils';
 
 // Fonction pour parser les données hybrides JSON
 const parseHybridData = (jsonField: any): any => {
@@ -100,6 +102,8 @@ interface EstablishmentDetailProps {
 export default function EstablishmentDetail({ establishment, isDashboard = false }: EstablishmentDetailProps) {
   const [isEditing, setIsEditing] = useState(false);
   const { incrementView, incrementClick } = useEstablishmentStats();
+  const [showDealModal, setShowDealModal] = useState(false);
+  const [activeDeal, setActiveDeal] = useState<any>(null);
   const [editForm, setEditForm] = useState({
     name: establishment.name || '',
     description: establishment.description || '',
@@ -160,6 +164,31 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
       incrementView(establishment.id);
     }
   }, [establishment.id, isDashboard, incrementView]);
+
+  // Récupérer et afficher le bon plan actif
+  useEffect(() => {
+    if (isDashboard) return; // Ne pas afficher sur le dashboard
+    
+    const fetchActiveDeal = async () => {
+      try {
+        const response = await fetch(`/api/deals/active/${establishment.id}`);
+        const data = await response.json();
+        
+        if (data.success && data.deal) {
+          setActiveDeal(data.deal);
+          
+          // Vérifier si le bon plan est actif et si l'utilisateur ne l'a pas déjà vu
+          if (isDealActive(data.deal) && !hasSeenDealToday(data.deal.id)) {
+            setShowDealModal(true);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du bon plan:', error);
+      }
+    };
+    
+    fetchActiveDeal();
+  }, [establishment.id, isDashboard]);
 
   // Fonction pour récupérer un token CSRF valide
   const getCSRFToken = async (): Promise<string> => {
@@ -330,6 +359,14 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Modal bon plan */}
+      {showDealModal && activeDeal && (
+        <DailyDealModal 
+          deal={activeDeal}
+          onClose={() => setShowDealModal(false)}
+        />
+      )}
+
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Section Hero */}

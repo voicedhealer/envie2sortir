@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -15,32 +12,30 @@ datasource db {
 /// * Peuvent consulter, commenter, ajouter aux favoris
 /// * Ne peuvent PAS créer d'établissements
 model User {
-  id               String           @id @default(cuid())
-  email            String           @unique
-  passwordHash     String?
-  firstName        String?
-  lastName         String?
-  name             String?
-  phone            String?
-  preferences      Json?
-  newsletterOptIn  Boolean          @default(true)
-  provider         String?
-  providerId       String?
-  avatar           String?
-  isVerified       Boolean          @default(false)
-  favoriteCity     String?
-  role             UserRole         @default(user)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  comments         UserComment[]
-  favorites        UserFavorite[]
-  likes            UserLike[]
-  adminActions     AdminAction[]
-  
-  // Gamification
-  karmaPoints        Int                @default(0)
-  gamificationBadges Json?              // Array de badges débloqués
+  id                 String            @id @default(cuid())
+  email              String            @unique
+  passwordHash       String?
+  firstName          String?
+  lastName           String?
+  name               String?
+  phone              String?
+  preferences        Json?
+  newsletterOptIn    Boolean           @default(true)
+  provider           String?
+  providerId         String?
+  avatar             String?
+  isVerified         Boolean           @default(false)
+  favoriteCity       String?
+  role               UserRole          @default(user)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  karmaPoints        Int               @default(0)
+  gamificationBadges Json?
+  adminActions       AdminAction[]
   eventEngagements   EventEngagement[]
+  comments           UserComment[]
+  favorites          UserFavorite[]
+  likes              UserLike[]
 
   @@map("users")
 }
@@ -52,20 +47,20 @@ model User {
 /// * Vérification obligatoire via SIRET
 /// * Relation 1:1 avec Establishment
 model Professional {
-  id               String           @id @default(cuid())
-  siret            String           @unique
+  id               String                      @id @default(cuid())
+  siret            String                      @unique
   firstName        String
   lastName         String
-  email            String           @unique
+  email            String                      @unique
   passwordHash     String
   phone            String
   companyName      String
   legalStatus      String
-  subscriptionPlan SubscriptionPlan @default(FREE)
-  siretVerified    Boolean          @default(false)
+  subscriptionPlan SubscriptionPlan            @default(FREE)
+  siretVerified    Boolean                     @default(false)
   siretVerifiedAt  DateTime?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
   establishment    Establishment?
   updateRequests   ProfessionalUpdateRequest[]
 
@@ -77,30 +72,23 @@ model Professional {
 /// * Nécessite validation admin pour email, SIRET, nom d'entreprise
 /// * Vérification SMS obligatoire avant toute demande
 model ProfessionalUpdateRequest {
-  id                 String       @id @default(cuid())
-  professionalId     String
-  professional       Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  
-  fieldName          String       // 'email', 'siret', 'companyName'
-  oldValue           String
-  newValue           String
-  
-  // Pour l'email : token de vérification
-  verificationToken  String?
-  isEmailVerified    Boolean      @default(false)
-  
-  // SMS verification
-  smsCode            String?
-  smsCodeExpiry      DateTime?
-  isSmsVerified      Boolean      @default(false)
-  
-  status             String       @default("pending") // 'pending', 'approved', 'rejected'
-  rejectionReason    String?
-  
-  requestedAt        DateTime     @default(now())
-  reviewedAt         DateTime?
-  reviewedBy         String?      // ID de l'admin
-  
+  id                String       @id @default(cuid())
+  professionalId    String
+  fieldName         String
+  oldValue          String
+  newValue          String
+  verificationToken String?
+  isEmailVerified   Boolean      @default(false)
+  smsCode           String?
+  smsCodeExpiry     DateTime?
+  isSmsVerified     Boolean      @default(false)
+  status            String       @default("pending")
+  rejectionReason   String?
+  requestedAt       DateTime     @default(now())
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  professional      Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+
   @@map("professional_update_requests")
 }
 
@@ -160,24 +148,26 @@ model Establishment {
   googlePlaceId         String?
   googleBusinessUrl     String?
   enriched              Boolean             @default(false)
-  
-  // Données d'enrichissement intelligent
-  smartEnrichmentData   Json?               // Données d'enrichissement intelligent avec priorisation
-  googleRating          Float?              // Note Google
-  googleReviewCount     Int?                // Nombre d'avis Google
-  envieTags             Json?               // Tags d'envie générés
-  theForkLink           String?             // Lien TheFork
-  uberEatsLink          String?             // Lien Uber Eats
-  enrichmentData        Json?               // Données d'enrichissement classiques
-  priceLevel            Int?                // Niveau de prix (1-4)
-  specialties           Json?               // Spécialités de l'établissement
-  atmosphere            Json?               // Ambiance de l'établissement
-  accessibility         Json?               // Détails d'accessibilité
-  accessibilityDetails  Json?               // Détails d'accessibilité manuels
-  detailedServices      Json?               // Services détaillés manuels
-  clienteleInfo         Json?               // Informations clientèle manuelles
-  detailedPayments      Json?               // Moyens de paiement détaillés manuels
-  childrenServices      Json?               // Services enfants manuels
+  smartEnrichmentData   Json?
+  googleRating          Float?
+  googleReviewCount     Int?
+  envieTags             Json?
+  theForkLink           String?
+  uberEatsLink          String?
+  enrichmentData        Json?
+  priceLevel            Int?
+  specialties           Json?
+  atmosphere            Json?
+  accessibility         Json?
+  accessibilityDetails  Json?
+  detailedServices      Json?
+  clienteleInfo         Json?
+  detailedPayments      Json?
+  childrenServices      Json?
+  adminActions          AdminAction[]
+  clickAnalytics        ClickAnalytics[]
+  dailyDeals            DailyDeal[]
+  menus                 EstablishmentMenu[]
   owner                 Professional        @relation(fields: [ownerId], references: [id])
   tags                  EtablissementTag[]
   events                Event[]
@@ -185,17 +175,287 @@ model Establishment {
   images                Image[]
   pricing               Pricing[]
   tariffs               Tariff[]
-  menus                 EstablishmentMenu[]
   comments              UserComment[]
   favorites             UserFavorite[]
   likes                 UserLike[]
-  adminActions          AdminAction[]
-  clickAnalytics        ClickAnalytics[]
 
   @@map("establishments")
 }
 
-// Enums
+model UserComment {
+  id              String        @id @default(cuid())
+  content         String
+  rating          Int
+  userId          String
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_comments")
+}
+
+model UserFavorite {
+  id              String        @id @default(cuid())
+  userId          String
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, establishmentId])
+  @@map("user_favorites")
+}
+
+model UserLike {
+  id              String        @id @default(cuid())
+  userId          String
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, establishmentId])
+  @@map("user_likes")
+}
+
+model EtablissementTag {
+  id              String        @id @default(cuid())
+  etablissementId String
+  tag             String
+  typeTag         String
+  poids           Int           @default(5)
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+
+  @@map("etablissement_tags")
+}
+
+model Event {
+  id              String            @id @default(cuid())
+  title           String
+  description     String?
+  imageUrl        String?
+  establishmentId String
+  startDate       DateTime
+  endDate         DateTime?
+  price           Float?
+  maxCapacity     Int?
+  isRecurring     Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  modality        String?
+  engagements     EventEngagement[]
+  establishment   Establishment     @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("events")
+}
+
+/// *
+/// * DAILY_DEAL - Bons plans journaliers pour établissements premium
+/// * Système de promotions programmables avec médias (image/PDF)
+/// * Affichage modal puis card sur les pages publiques
+model DailyDeal {
+  id              String        @id @default(cuid())
+  establishmentId String
+  title           String
+  description     String
+  originalPrice   Float?
+  discountedPrice Float?
+  imageUrl        String?
+  pdfUrl          String?
+  dateDebut       DateTime
+  dateFin         DateTime
+  heureDebut      String?
+  heureFin        String?
+  isActive        Boolean       @default(true)
+  isDismissed     Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  modality        String?
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, isActive, dateDebut, dateFin])
+  @@map("daily_deals")
+}
+
+/// *
+/// * EVENT_ENGAGEMENT - Engagement des utilisateurs sur les événements
+/// * Système de réactions avec jauge progressive (0-150%)
+/// * Gamification avec badges et karma points
+model EventEngagement {
+  id        String   @id @default(cuid())
+  eventId   String
+  userId    String
+  type      String
+  createdAt DateTime @default(now())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_engagements")
+}
+
+model FeaturedPromotion {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  establishmentId String
+  startDate       DateTime
+  endDate         DateTime?
+  discount        Float?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("featured_promotions")
+}
+
+model Image {
+  id              String        @id @default(cuid())
+  url             String
+  altText         String?
+  isPrimary       Boolean       @default(false)
+  ordre           Int           @default(0)
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("images")
+}
+
+model EstablishmentLearningPattern {
+  id            String   @id @default(cuid())
+  name          String
+  detectedType  String
+  correctedType String?
+  googleTypes   String
+  keywords      String
+  confidence    Float
+  isCorrected   Boolean  @default(false)
+  correctedBy   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("establishment_learning_patterns")
+}
+
+model Pricing {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("pricing")
+}
+
+model Tariff {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  price           Float
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("tariffs")
+}
+
+model EstablishmentMenu {
+  id              String        @id @default(cuid())
+  name            String
+  description     String?
+  fileUrl         String
+  fileName        String
+  fileSize        Int
+  mimeType        String        @default("application/pdf")
+  order           Int           @default(0)
+  isActive        Boolean       @default(true)
+  establishmentId String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@map("establishment_menus")
+}
+
+/// *
+/// * ADMIN_ACTIONS - Historique des actions administratives
+/// * Traçabilité complète pour conformité juridique
+/// * Qui, quoi, quand, pourquoi pour chaque action
+model AdminAction {
+  id              String          @id @default(cuid())
+  adminId         String
+  establishmentId String
+  action          AdminActionType
+  reason          String?
+  previousStatus  String?
+  newStatus       String?
+  details         Json?
+  createdAt       DateTime        @default(now())
+  establishment   Establishment   @relation(fields: [establishmentId], references: [id])
+  admin           User            @relation(fields: [adminId], references: [id])
+
+  @@map("admin_actions")
+}
+
+/// *
+/// * CLICK_ANALYTICS - Tracking des clics sur les pages publiques
+/// * Permet aux pros premium de voir les statistiques d'engagement
+/// * Données anonymisées pour respecter la vie privée
+model ClickAnalytics {
+  id              String        @id @default(cuid())
+  establishmentId String
+  elementType     String
+  elementId       String
+  elementName     String?
+  action          String
+  sectionContext  String?
+  userAgent       String?
+  referrer        String?
+  timestamp       DateTime      @default(now())
+  country         String?
+  city            String?
+  hour            Int?
+  dayOfWeek       String?
+  timeSlot        String?
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+
+  @@index([establishmentId, elementType])
+  @@index([timestamp])
+  @@index([hour, dayOfWeek])
+  @@map("click_analytics")
+}
+
+/// * SEARCH ANALYTICS - Analytics des recherches utilisateurs
+/// * Capture les termes de recherche "envie de :"
+/// * Track les clics post-recherche pour mesurer la conversion
+/// * Identifie les opportunités (recherches sans résultats)
+model SearchAnalytics {
+  id                       String   @id @default(cuid())
+  searchTerm               String
+  resultCount              Int      @default(0)
+  clickedEstablishmentId   String?
+  clickedEstablishmentName String?
+  userAgent                String?
+  referrer                 String?
+  timestamp                DateTime @default(now())
+  country                  String?
+  city                     String?
+  searchedCity             String?
+
+  @@index([searchTerm])
+  @@index([timestamp])
+  @@index([clickedEstablishmentId])
+  @@map("search_analytics")
+}
+
 enum UserRole {
   user
   admin
@@ -212,283 +472,12 @@ enum SubscriptionPlan {
   PREMIUM
 }
 
-// Autres modèles (simplifiés pour l'exemple)
-model UserComment {
-  id             String       @id @default(cuid())
-  content        String
-  rating         Int
-  userId         String
-  establishmentId String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("user_comments")
-}
-
-model UserFavorite {
-  id             String       @id @default(cuid())
-  userId         String
-  establishmentId String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@unique([userId, establishmentId])
-  @@map("user_favorites")
-}
-
-model UserLike {
-  id             String       @id @default(cuid())
-  userId         String
-  establishmentId String
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@unique([userId, establishmentId])
-  @@map("user_likes")
-}
-
-model EtablissementTag {
-  id              String       @id @default(cuid())
-  etablissementId String
-  tag             String
-  typeTag         String
-  poids           Int          @default(5)
-  establishment   Establishment @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
-  createdAt       DateTime     @default(now())
-
-  @@map("etablissement_tags")
-}
-
-model Event {
-  id             String       @id @default(cuid())
-  title          String
-  description    String?
-  modality       String?
-  imageUrl       String?
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  startDate      DateTime
-  endDate        DateTime?
-  price          Float?
-  maxCapacity    Int?
-  isRecurring    Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  engagements    EventEngagement[]
-
-  @@map("events")
-}
-
-/// *
-/// * EVENT_ENGAGEMENT - Engagement des utilisateurs sur les événements
-/// * Système de réactions avec jauge progressive (0-150%)
-/// * Gamification avec badges et karma points
-model EventEngagement {
-  id        String   @id @default(cuid())
-  eventId   String
-  userId    String
-  type      String   // 'envie', 'grande-envie', 'decouvrir', 'pas-envie'
-  createdAt DateTime @default(now())
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  
-  @@unique([eventId, userId])
-  @@map("event_engagements")
-}
-
-model FeaturedPromotion {
-  id             String       @id @default(cuid())
-  title          String
-  description    String?
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  startDate      DateTime
-  endDate        DateTime?
-  discount       Float?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("featured_promotions")
-}
-
-model Image {
-  id             String       @id @default(cuid())
-  url            String
-  altText        String?
-  isPrimary      Boolean      @default(false)
-  ordre          Int          @default(0)
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@map("images")
-}
-
-// Base de données d'apprentissage pour la détection des types d'établissements
-model EstablishmentLearningPattern {
-  id                String   @id @default(cuid())
-  name              String   // Nom de l'établissement
-  detectedType      String   // Type détecté automatiquement
-  correctedType     String?  // Type corrigé manuellement (si différent)
-  googleTypes       String   // Types Google Places (JSON string)
-  keywords          String   // Mots-clés extraits du nom/description (JSON string)
-  confidence        Float    // Niveau de confiance (0-1)
-  isCorrected       Boolean  @default(false) // Si le type a été corrigé manuellement
-  correctedBy       String?  // ID de l'utilisateur qui a corrigé
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@map("establishment_learning_patterns")
-}
-
-model Pricing {
-  id             String       @id @default(cuid())
-  name           String
-  description    String?
-  price          Float
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("pricing")
-}
-
-model Tariff {
-  id             String       @id @default(cuid())
-  name           String
-  description    String?
-  price          Float
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("tariffs")
-}
-
-model EstablishmentMenu {
-  id             String       @id @default(cuid())
-  name           String       // Nom du menu (ex: "Menu du jour", "Carte des vins")
-  description    String?      // Description optionnelle
-  fileUrl        String       // URL du fichier PDF stocké
-  fileName       String       // Nom original du fichier
-  fileSize       Int          // Taille du fichier en bytes
-  mimeType       String       @default("application/pdf")
-  order          Int          @default(0) // Ordre d'affichage
-  isActive       Boolean      @default(true) // Menu actif/inactif
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-
-  @@map("establishment_menus")
-}
-
-/// *
-/// * ADMIN_ACTIONS - Historique des actions administratives
-/// * Traçabilité complète pour conformité juridique
-/// * Qui, quoi, quand, pourquoi pour chaque action
-model AdminAction {
-  id              String        @id @default(cuid())
-  adminId         String        // ID de l'admin qui a fait l'action
-  establishmentId String        // ID de l'établissement concerné
-  action          AdminActionType // Type d'action effectuée
-  reason          String?       // Raison optionnelle (rejet, suppression)
-  previousStatus  String?       // Statut précédent
-  newStatus       String?       // Nouveau statut
-  details         Json?         // Détails supplémentaires (métadonnées)
-  createdAt       DateTime      @default(now())
-  
-  // Relations
-  admin           User          @relation(fields: [adminId], references: [id])
-  establishment   Establishment @relation(fields: [establishmentId], references: [id])
-
-  @@map("admin_actions")
-}
-
 /// Types d'actions administratives
 enum AdminActionType {
-  APPROVE         // Approuver un établissement
-  REJECT          // Rejeter un établissement
-  PENDING         // Remettre en attente
-  DELETE          // Supprimer un établissement
-  RESTORE         // Restaurer un établissement supprimé
-  UPDATE          // Mise à jour d'informations
-}
-
-/// *
-/// * CLICK_ANALYTICS - Tracking des clics sur les pages publiques
-/// * Permet aux pros premium de voir les statistiques d'engagement
-/// * Données anonymisées pour respecter la vie privée
-model ClickAnalytics {
-  id             String   @id @default(cuid())
-  establishmentId String
-  establishment  Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
-  
-  // Type d'élément cliqué
-  elementType    String   // 'section', 'subsection', 'link', 'button', 'image'
-  elementId      String   // ID de l'élément (ex: 'ambiance', 'instagram', 'favorite')
-  elementName    String?  // Nom affiché (ex: 'Ambiance & Spécialités', 'Instagram')
-  
-  // Contexte de l'action
-  action         String   // 'open', 'close', 'click', 'hover'
-  sectionContext String?  // Section parente (ex: 'commodites')
-  
-  // Métadonnées
-  userAgent      String?  // User agent du navigateur
-  referrer       String?  // Page d'origine
-  timestamp      DateTime @default(now())
-  
-  // Données géographiques (optionnelles)
-  country        String?
-  city           String?
-  
-  // ✅ AJOUT : Données temporelles précises
-  hour           Int?              // Heure de l'interaction (0-23)
-  dayOfWeek      String?           // Jour de la semaine (lundi, mardi, etc.)
-  timeSlot       String?           // Créneau horaire (ex: "14h-15h")
-  
-  @@map("click_analytics")
-  @@index([establishmentId, elementType])
-  @@index([timestamp])
-  @@index([hour, dayOfWeek])       // Index pour requêtes temporelles
-}
-
-/// * SEARCH ANALYTICS - Analytics des recherches utilisateurs
-/// * Capture les termes de recherche "envie de :"
-/// * Track les clics post-recherche pour mesurer la conversion
-/// * Identifie les opportunités (recherches sans résultats)
-model SearchAnalytics {
-  id             String   @id @default(cuid())
-  
-  // Terme de recherche
-  searchTerm     String   // Le mot-clé recherché (ex: "karaoké", "restaurant")
-  
-  // Résultats de la recherche
-  resultCount    Int      @default(0)  // Nombre de résultats trouvés
-  
-  // Établissement cliqué (si applicable)
-  clickedEstablishmentId    String?
-  clickedEstablishmentName  String?
-  
-  // Métadonnées
-  userAgent      String?  // User agent du navigateur
-  referrer       String?  // Page d'origine
-  timestamp      DateTime @default(now())
-  
-  // Données géographiques
-  country        String?
-  city           String?  // Ville de l'utilisateur
-  searchedCity   String?  // Ville recherchée (si précisée)
-  
-  @@map("search_analytics")
-  @@index([searchTerm])
-  @@index([timestamp])
-  @@index([clickedEstablishmentId])
+  APPROVE
+  REJECT
+  PENDING
+  DELETE
+  RESTORE
+  UPDATE
 }

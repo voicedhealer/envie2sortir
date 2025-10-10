@@ -2,8 +2,10 @@
 
 import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLinkTracking, useScheduleTracking } from '@/hooks/useClickTracking';
+import DailyDealCard from './DailyDealCard';
+import DailyDealModal from './DailyDealModal';
 
 // Fonction utilitaire pour nettoyer l'affichage d'une URL
 const cleanUrlForDisplay = (url: string): string => {
@@ -235,10 +237,30 @@ function parseGooglePlacesField(field: any, fieldName: string): string[] {
 
 export default function EstablishmentInfo({ establishment }: EstablishmentInfoProps) {
   const [isHoursExpanded, setIsHoursExpanded] = useState(false);
+  const [activeDeal, setActiveDeal] = useState<any>(null);
+  const [showDealModal, setShowDealModal] = useState(false);
   
   // Hook de tracking des liens
   const { trackLinkClick } = useLinkTracking(establishment.id);
   const { trackScheduleView, trackScheduleExpand } = useScheduleTracking(establishment.id);
+  
+  // Récupérer le bon plan actif
+  useEffect(() => {
+    const fetchActiveDeal = async () => {
+      try {
+        const response = await fetch(`/api/deals/active/${establishment.id}`);
+        const data = await response.json();
+        
+        if (data.success && data.deal) {
+          setActiveDeal(data.deal);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du bon plan:', error);
+      }
+    };
+    
+    fetchActiveDeal();
+  }, [establishment.id]);
   
   // Parser les données hybrides
   const hybridAccessibility = parseHybridData(establishment.accessibilityDetails);
@@ -488,6 +510,22 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
 
   return (
     <div className="space-y-6">
+      {/* Modal bon plan */}
+      {showDealModal && activeDeal && (
+        <DailyDealModal 
+          deal={activeDeal}
+          onClose={() => setShowDealModal(false)}
+        />
+      )}
+
+      {/* Bon plan du jour */}
+      {activeDeal && (
+        <DailyDealCard 
+          deal={activeDeal}
+          onClick={() => setShowDealModal(true)}
+        />
+      )}
+
       {/* Horaires d'ouverture */}
       {establishment.horairesOuverture && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
