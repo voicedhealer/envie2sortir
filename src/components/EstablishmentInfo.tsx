@@ -689,15 +689,84 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             Moyens de paiement
           </h3>
           
-          <div className="flex flex-wrap gap-2">
-            {moyensPaiement.map((paiement, index) => (
-              <span 
-                key={index}
-                className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
-              >
-                {cleanItemDisplay(paiement)}
-              </span>
-            ))}
+          <div className="space-y-4">
+            {/* Cartes bancaires */}
+            {moyensPaiement.some(p => {
+              const pLower = cleanItemDisplay(p).toLowerCase();
+              return pLower.includes('carte') && (pLower.includes('crédit') || pLower.includes('credit') || pLower.includes('débit'));
+            }) && (
+              <div>
+                <div className="flex items-center mb-2">
+                  <span className="text-lg mr-2">💳</span>
+                  <h4 className="font-medium text-gray-800">Cartes bancaires</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {moyensPaiement.filter(p => {
+                    const pLower = cleanItemDisplay(p).toLowerCase();
+                    return pLower.includes('carte') && (pLower.includes('crédit') || pLower.includes('credit') || pLower.includes('débit'));
+                  }).map((paiement, index) => (
+                    <span 
+                      key={index}
+                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      {cleanItemDisplay(paiement)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Paiements mobiles */}
+            {moyensPaiement.some(p => {
+              const pLower = cleanItemDisplay(p).toLowerCase();
+              return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+            }) && (
+              <div>
+                <div className="flex items-center mb-2">
+                  <span className="text-lg mr-2">📱</span>
+                  <h4 className="font-medium text-gray-800">Paiements mobiles</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {moyensPaiement.filter(p => {
+                    const pLower = cleanItemDisplay(p).toLowerCase();
+                    return pLower.includes('nfc') || pLower.includes('mobile') || pLower.includes('apple pay') || pLower.includes('google pay') || pLower.includes('samsung pay');
+                  }).map((paiement, index) => (
+                    <span 
+                      key={index}
+                      className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm"
+                    >
+                      {cleanItemDisplay(paiement)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Espèces et autres */}
+            {moyensPaiement.some(p => {
+              const pLower = cleanItemDisplay(p).toLowerCase();
+              return pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal');
+            }) && (
+              <div>
+                <div className="flex items-center mb-2">
+                  <span className="text-lg mr-2">💵</span>
+                  <h4 className="font-medium text-gray-800">Espèces et autres</h4>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {moyensPaiement.filter(p => {
+                    const pLower = cleanItemDisplay(p).toLowerCase();
+                    return pLower.includes('espèces') || pLower.includes('cash') || pLower.includes('chèque') || pLower.includes('pluxee') || pLower.includes('titre') || pLower.includes('paypal');
+                  }).map((paiement, index) => (
+                    <span 
+                      key={index}
+                      className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm"
+                    >
+                      {cleanItemDisplay(paiement)}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

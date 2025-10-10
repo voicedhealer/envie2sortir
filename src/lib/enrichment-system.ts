@@ -1506,6 +1506,10 @@ export class EstablishmentEnrichment {
     const types = result.types || [];
     const reviewText = reviews.map((review: any) => review.text).join(' ').toLowerCase();
     
+    // CORRECTION : Logique plus précise pour éviter les associations automatiques incorrectes
+    // Seulement ajouter des éléments enfants si c'est explicitement mentionné
+    
+    // Détection explicite d'éléments pour enfants
     if (reviewText.includes('enfant') || reviewText.includes('child') || reviewText.includes('familial')) {
       enfants.push('Convient aux enfants');
     }
@@ -1514,17 +1518,22 @@ export class EstablishmentEnrichment {
       enfants.push('Menu enfant');
     }
     
-    // Logique dynamique basée sur les données Google Places
-    // Analyser les avis pour détecter des informations enfants supplémentaires
-    if (reviewText.includes('activités enfants') || reviewText.includes('kids activities')) {
+    // Détection d'activités spécifiquement pour enfants
+    if (reviewText.includes('activités enfants') || reviewText.includes('kids activities') || 
+        reviewText.includes('animation enfants') || reviewText.includes('children activities')) {
       enfants.push('Activités adaptées aux enfants');
     }
     
-    // Enfants par défaut basé sur le type d'établissement
-    if (types.includes('restaurant') || types.includes('cafe')) {
-      if (!enfants.includes('Convient aux enfants')) enfants.push('Convient aux enfants');
+    // Détection d'espaces spécifiquement pour enfants
+    if (reviewText.includes('espace enfant') || reviewText.includes('kids area') || 
+        reviewText.includes('coin enfant') || reviewText.includes('children corner')) {
+      enfants.push('Espace dédié aux enfants');
     }
     
+    // SUPPRIMÉ : Logique automatique qui ajoutait "Convient aux enfants" pour tous les restaurants/cafés
+    // Cela évite les associations incorrectes comme "Jeux de café" → enfants
+    
+    console.log('👶 Éléments enfants détectés:', enfants);
     return enfants;
   }
 

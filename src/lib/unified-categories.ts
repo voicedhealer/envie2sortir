@@ -39,6 +39,15 @@ export const MAIN_CATEGORIES = {
       'groupes-reservations': { title: 'Groupes & Réservations', icon: '👥' },
       'espaces': { title: 'Espaces', icon: '⛔' }
     }
+  },
+  'moyens-paiement': {
+    title: 'Moyens de paiement',
+    icon: '💳',
+    subCategories: {
+      'cartes-bancaires': { title: 'Cartes bancaires', icon: '💳' },
+      'paiements-mobiles': { title: 'Paiements mobiles', icon: '📱' },
+      'especes-autres': { title: 'Espèces et autres', icon: '💵' }
+    }
   }
 };
 
@@ -109,10 +118,31 @@ export function categorizeItem(item: string): { mainCategory: string; subCategor
     return { mainCategory: 'informations-pratiques', subCategory: 'espaces' };
   }
   
-  // Par défaut, mettre dans "Autres" de la catégorie appropriée
+  // Moyens de paiement
   if (itemLower.includes('carte') || itemLower.includes('paiement') || itemLower.includes('nfc') || 
-      itemLower.includes('pluxee') || itemLower.includes('titre')) {
-    return { mainCategory: 'equipements-services', subCategory: 'services' };
+      itemLower.includes('pluxee') || itemLower.includes('titre') || itemLower.includes('visa') ||
+      itemLower.includes('mastercard') || itemLower.includes('amex') || itemLower.includes('paypal')) {
+    
+    // Cartes bancaires
+    if (itemLower.includes('visa') || itemLower.includes('mastercard') || itemLower.includes('amex') ||
+        itemLower.includes('carte') || itemLower.includes('débit') || itemLower.includes('crédit')) {
+      return { mainCategory: 'moyens-paiement', subCategory: 'cartes-bancaires' };
+    }
+    
+    // Paiements mobiles
+    if (itemLower.includes('nfc') || itemLower.includes('apple pay') || itemLower.includes('google pay') ||
+        itemLower.includes('samsung pay') || itemLower.includes('mobile')) {
+      return { mainCategory: 'moyens-paiement', subCategory: 'paiements-mobiles' };
+    }
+    
+    // Espèces et autres
+    if (itemLower.includes('espèces') || itemLower.includes('chèque') || itemLower.includes('paypal') ||
+        itemLower.includes('pluxee') || itemLower.includes('titre')) {
+      return { mainCategory: 'moyens-paiement', subCategory: 'especes-autres' };
+    }
+    
+    // Par défaut pour les moyens de paiement
+    return { mainCategory: 'moyens-paiement', subCategory: 'cartes-bancaires' };
   }
   
   return { mainCategory: 'ambiance-specialites', subCategory: 'ambiance' };

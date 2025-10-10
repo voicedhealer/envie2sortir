@@ -5,6 +5,7 @@ interface ServicesStepProps {
     services: string[];
     ambiance: string[];
     informationsPratiques?: string[];
+    paymentMethods?: string[];
     hybridAccessibilityDetails?: any;
     hybridDetailedServices?: any;
     hybridClienteleInfo?: any;
@@ -116,9 +117,11 @@ export default function ServicesStep({
         services={formData.services || []}
         ambiance={formData.ambiance || []}
         informationsPratiques={formData.informationsPratiques || []}
+        paymentMethods={formData.paymentMethods || []}
         onServicesChange={(services) => onInputChange('services', services)}
         onAmbianceChange={(ambiance) => onInputChange('ambiance', ambiance)}
         onInformationsPratiquesChange={(informationsPratiques) => onInputChange('informationsPratiques', informationsPratiques)}
+        onPaymentMethodsChange={(paymentMethods) => onInputChange('paymentMethods', paymentMethods)}
         isEditMode={isEditMode}
         establishmentType="restaurant" // TODO: Récupérer le type d'établissement depuis les données
       />

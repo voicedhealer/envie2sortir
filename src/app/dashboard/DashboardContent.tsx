@@ -56,6 +56,7 @@ interface Professional {
   phone: string;
   siret: string;
   companyName: string;
+  subscriptionPlan: 'FREE' | 'PREMIUM';
 }
 
 interface DashboardContentProps {
@@ -107,6 +108,13 @@ export default function DashboardContent({ user, establishment, professional }: 
               <p className="text-gray-600 mt-1">
                 Bienvenue, {user.firstName} {user.lastName}
               </p>
+              <p className={`text-sm mt-1 ${
+                professional.subscriptionPlan === 'PREMIUM' 
+                  ? 'text-orange-600 font-medium' 
+                  : 'text-gray-500'
+              }`}>
+                Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Gratuit'}
+              </p>
             </div>
           </div>
         </div>
@@ -143,11 +151,6 @@ export default function DashboardContent({ user, establishment, professional }: 
               }`}
             >
               Mes événements
-              {establishment.subscription === 'PREMIUM' && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Premium
-                </span>
-              )}
             </button>
             <button
               onClick={() => setActiveTab('menus')}
@@ -158,11 +161,6 @@ export default function DashboardContent({ user, establishment, professional }: 
               }`}
             >
               Mes menus
-              {establishment.subscription === 'PREMIUM' && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Premium
-                </span>
-              )}
             </button>
             <button
               onClick={() => setActiveTab('analytics')}
@@ -174,11 +172,6 @@ export default function DashboardContent({ user, establishment, professional }: 
             >
               <BarChart3 className="w-4 h-4 mr-1" />
               Analytics
-              {establishment.subscription === 'PREMIUM' && (
-                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                  Premium
-                </span>
-              )}
             </button>
             <button
               onClick={() => setActiveTab('parametres')}
@@ -439,18 +432,18 @@ export default function DashboardContent({ user, establishment, professional }: 
           establishmentId={establishment.id}
           establishmentSlug={establishment.slug}
           currentImageUrl={establishment.imageUrl}
-          subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
+          subscription={professional.subscriptionPlan}
         />
       ) : activeTab === 'events' ? (
         <EventsManager 
           establishmentId={establishment.id} 
-          isPremium={establishment.subscription === 'PREMIUM'} 
-          subscription={establishment.subscription as 'STANDARD' | 'PREMIUM'}
+          isPremium={professional.subscriptionPlan === 'PREMIUM'} 
+          subscription={professional.subscriptionPlan}
         />
       ) : activeTab === 'menus' ? (
         <MenuManager 
           establishmentId={establishment.id} 
-          isPremium={establishment.subscription === 'PREMIUM'}
+          isPremium={professional.subscriptionPlan === 'PREMIUM'}
         />
       ) : activeTab === 'analytics' ? (
         <div className="space-y-6">

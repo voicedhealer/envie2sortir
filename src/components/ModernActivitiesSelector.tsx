@@ -220,7 +220,7 @@ export const ModernActivitiesSelector = ({
           Activités proposées *
         </h3>
         <p className="text-sm text-gray-600">
-          Sélectionnez les activités que propose votre établissement pour aider les clients à vous trouver
+          Sélectionnez les activités que propose votre établissement pour que vos clients comprennent ce que vous proposez. Ex: si votre activité principal est bar tapas, vous aussi ajouté burger house etc...
         </p>
       </div>
       

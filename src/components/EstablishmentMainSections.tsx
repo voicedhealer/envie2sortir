@@ -385,8 +385,11 @@ const SUB_SECTIONS: Record<string, SubSection[]> = {
             itemLower.includes('enfant') ||
             itemLower.includes('menu enfant') ||
             itemLower.includes('famille') ||
+            itemLower.includes('trampoline') ||
             itemLower.includes('aire de jeux') ||
-            itemLower.includes('jeux') ||
+            itemLower.includes('toboggans') ||
+            itemLower.includes('petit train') ||
+            itemLower.includes('manèges') ||
             itemLower.includes('anniversaire') ||
             itemLower.includes('salon') ||
             itemLower.includes('insonorisé')

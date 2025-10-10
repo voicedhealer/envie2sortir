@@ -77,7 +77,6 @@ export default function EstablishmentSections({ establishment, parkingOptions = 
           terrasse: establishment.terrasse,
           smartEnrichmentData: establishment.smartEnrichmentData,
           enrichmentData: establishment.enrichmentData,
-          // ✅ AJOUT : Transmettre les données d'enrichissement pour les moyens de paiement
           accessibilityDetails: establishment.accessibilityDetails,
           detailedPayments: establishment.detailedPayments,
           childrenServices: establishment.childrenServices

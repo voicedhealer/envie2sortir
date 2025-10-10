@@ -437,8 +437,8 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* Moyens de paiement du formulaire */}
-          {data.paymentMethods ? (
+          {/* Moyens de paiement du formulaire - PRIORITÉ aux données manuelles */}
+          {data.paymentMethods && convertPaymentMethodsObjectToArray(data.paymentMethods).length > 0 ? (
             convertPaymentMethodsObjectToArray(data.paymentMethods).map((method, index) => (
               <span
                 key={index}
@@ -447,10 +447,8 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 {method}
               </span>
             ))
-          ) : null}
-          
-          {/* Moyens de paiement d'enrichissement intelligent */}
-          {data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
+          ) : data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
+            /* Moyens de paiement d'enrichissement intelligent - seulement si pas de données manuelles */
             data.smartEnrichmentData.paymentMethodsArray.map((method: string, index: number) => (
               <span
                 key={`enrichment-${index}`}

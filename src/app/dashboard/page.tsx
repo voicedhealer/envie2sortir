@@ -27,6 +27,7 @@ export default async function DashboardPage() {
       phone: true,
       siret: true,
       companyName: true,
+      subscriptionPlan: true,
     }
   });
 

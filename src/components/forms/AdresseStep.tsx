@@ -227,7 +227,7 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     }
   };
 
-  // Sélection d'une suggestion - CORRECTION : Préserver le numéro utilisateur
+  // Sélection d'une suggestion - NOUVELLE LOGIQUE : Extraire automatiquement ville et code postal
   const handleSuggestionSelect = (suggestion: Suggestion) => {
     const address = suggestion.address || {};
     
@@ -252,18 +252,32 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       street = address.road || '';
     }
     
-    const postalCode = address.postcode || '';
-    const city = address.city || address.town || address.village || '';
+    // Extraire automatiquement ville et code postal depuis display_name
+    let postalCode = address.postcode || '';
+    let city = address.city || address.town || address.village || '';
+    
+    // Si les données de l'API ne sont pas complètes, extraire depuis display_name
+    if (!postalCode || !city) {
+      const displayName = suggestion.display_name || '';
+      
+      // Pattern pour extraire "code postal ville" depuis display_name
+      // Ex: "8 Pl. Raspail, 69007 Lyon, France" -> "69007" et "Lyon"
+      const postalCityMatch = displayName.match(/,?\s*(\d{5})\s+([^,]+?)(?:,|$)/);
+      if (postalCityMatch) {
+        postalCode = postalCityMatch[1];
+        city = postalCityMatch[2].trim();
+      }
+    }
 
     // Validation des coordonnées
     const latitude = suggestion.lat ? parseFloat(suggestion.lat) : undefined;
     const longitude = suggestion.lon ? parseFloat(suggestion.lon) : undefined;
 
-    // Créer l'adresse complète formatée AVEC le numéro (sans duplication)
-    const fullAddress = `${houseNumber}${houseNumber && street ? ' ' : ''}${street}, ${postalCode} ${city}`.trim();
+    // Construire seulement la partie rue (avant la virgule) pour le champ street
+    const streetOnly = `${houseNumber}${houseNumber && street ? ' ' : ''}${street}`.trim();
 
     const newAddress: AddressData = {
-      street: fullAddress, // Stocker l'adresse complète dans le champ street
+      street: streetOnly, // Seulement la partie rue (ex: "8 Pl. Raspail")
       postalCode,
       city,
       latitude,
@@ -309,12 +323,12 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       <div>
         <label className="block text-sm font-medium mb-2">Adresse de l'établissement *</label>
         
-        {/* Champ Adresse complète */}
+        {/* Champ Rue avec autocomplete */}
         <div className="relative mb-3">
           <input
             type="text"
             value={value.street || ''}
-            onChange={(e) => handleFullAddressChange(e.target.value)}
+            onChange={(e) => handleFieldChange('street', e.target.value)}
             onBlur={() => {
               // Fermer les suggestions après un court délai pour permettre le clic sur une suggestion
               setTimeout(() => {
@@ -330,7 +344,7 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
             className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 ${
               error && !(value.latitude && value.longitude) ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="Ex : 708 Rue de la Pièce Cornue, 21160 Marsannay-la-Côte"
+            placeholder="Ex : 8 Pl. Raspail"
           />
           
           {/* Suggestions d'autocomplete */}
@@ -423,6 +437,33 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
               </div>
             </div>
           )}
+        </div>
+
+        {/* Champs Code postal et Ville */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+          {/* Champ Code postal */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Code postal</label>
+            <input
+              type="text"
+              value={value.postalCode || ''}
+              onChange={(e) => handleFieldChange('postalCode', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Ex : 69007"
+            />
+          </div>
+          
+          {/* Champ Ville */}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Ville</label>
+            <input
+              type="text"
+              value={value.city || ''}
+              onChange={(e) => handleFieldChange('city', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Ex : Lyon"
+            />
+          </div>
         </div>
 
         {/* Champs de coordonnées GPS modifiables */}

@@ -140,7 +140,7 @@ model Establishment {
   parking               Boolean             @default(false)
   terrasse              Boolean             @default(false)
   status                EstablishmentStatus @default(pending)
-  subscription          SubscriptionType    @default(STANDARD)
+  subscription          SubscriptionPlan    @default(FREE)
   ownerId               String              @unique
   rejectionReason       String?
   rejectedAt            DateTime?
@@ -205,12 +205,6 @@ enum EstablishmentStatus {
   pending
   approved
   rejected
-}
-
-enum SubscriptionType {
-  FREE
-  STANDARD
-  PREMIUM
 }
 
 enum SubscriptionPlan {

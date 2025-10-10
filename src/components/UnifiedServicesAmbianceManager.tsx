@@ -8,9 +8,11 @@ interface UnifiedServicesAmbianceManagerProps {
   services: string[];
   ambiance: string[];
   informationsPratiques?: string[];
+  paymentMethods?: string[];
   onServicesChange: (services: string[]) => void;
   onAmbianceChange: (ambiance: string[]) => void;
   onInformationsPratiquesChange?: (informationsPratiques: string[]) => void;
+  onPaymentMethodsChange?: (paymentMethods: string[]) => void;
   isEditMode?: boolean;
   establishmentType?: string;
 }
@@ -19,9 +21,11 @@ export default function UnifiedServicesAmbianceManager({
   services,
   ambiance,
   informationsPratiques = [],
+  paymentMethods = [],
   onServicesChange,
   onAmbianceChange,
   onInformationsPratiquesChange,
+  onPaymentMethodsChange,
   isEditMode = false,
   establishmentType = 'restaurant'
 }: UnifiedServicesAmbianceManagerProps) {
@@ -34,10 +38,17 @@ export default function UnifiedServicesAmbianceManager({
   console.log('🧠 RAW DATA - Services:', services);
   console.log('🧠 RAW DATA - Ambiance:', ambiance);
   console.log('🧠 RAW DATA - Informations pratiques:', informationsPratiques);
+  console.log('🧠 RAW DATA - Moyens de paiement:', paymentMethods);
+  console.log('🧠 RAW DATA - onPaymentMethodsChange:', !!onPaymentMethodsChange);
 
 
   // Combiner tous les items avec leurs catégories d'origine
-  const allItems = [...services, ...ambiance, ...informationsPratiques];
+  const allItems = [
+    ...(Array.isArray(services) ? services : []), 
+    ...(Array.isArray(ambiance) ? ambiance : []), 
+    ...(Array.isArray(informationsPratiques) ? informationsPratiques : []), 
+    ...(Array.isArray(paymentMethods) ? paymentMethods : [])
+  ];
   console.log('🧠 RAW DATA - Tous les items combinés:', allItems);
   
   // ✅ FONCTION PERSONNALISÉE : Organiser en respectant les rubriques choisies
@@ -65,10 +76,12 @@ export default function UnifiedServicesAmbianceManager({
         // Déterminer la section principale
         let mainSection = 'ambiance-specialites'; // par défaut
         
-        if (services.includes(item)) {
+        if (Array.isArray(services) && services.includes(item)) {
           mainSection = 'equipements-services';
-        } else if (informationsPratiques.includes(item)) {
+        } else if (Array.isArray(informationsPratiques) && informationsPratiques.includes(item)) {
           mainSection = 'informations-pratiques';
+        } else if (Array.isArray(paymentMethods) && paymentMethods.includes(item)) {
+          mainSection = 'moyens-paiement';
         }
         
         // Ajouter dans la rubrique choisie par l'utilisateur
@@ -104,26 +117,34 @@ export default function UnifiedServicesAmbianceManager({
 
   const addItem = (section: string, subSection: string, item: string) => {
     const trimmedItem = item.trim();
-    if (!trimmedItem) return;
+    if (!trimmedItem) {
+      console.log('⚠️ AJOUT IGNORÉ - Item vide:', item);
+      return;
+    }
 
     console.log('➕ AJOUT - Section:', section, 'SubSection:', subSection, 'Item:', trimmedItem);
+    console.log('➕ AJOUT - onPaymentMethodsChange disponible:', !!onPaymentMethodsChange);
 
     // ✅ SOLUTION : Stocker avec un marqueur pour respecter la rubrique choisie
     // Format: "item|subSection" pour conserver la rubrique d'origine
     const itemWithSubSection = `${trimmedItem}|${subSection}`;
 
     if (section === 'ambiance-specialites') {
-      const newAmbiance = [...ambiance, itemWithSubSection];
+      const newAmbiance = [...(Array.isArray(ambiance) ? ambiance : []), itemWithSubSection];
       onAmbianceChange(newAmbiance);
       console.log('➕ Ajouté à ambiance avec rubrique:', itemWithSubSection);
     } else if (section === 'equipements-services') {
-      const newServices = [...services, itemWithSubSection];
+      const newServices = [...(Array.isArray(services) ? services : []), itemWithSubSection];
       onServicesChange(newServices);
       console.log('➕ Ajouté à services avec rubrique:', itemWithSubSection);
     } else if (section === 'informations-pratiques') {
-      const newInfos = [...informationsPratiques, itemWithSubSection];
+      const newInfos = [...(Array.isArray(informationsPratiques) ? informationsPratiques : []), itemWithSubSection];
       onInformationsPratiquesChange?.(newInfos);
       console.log('➕ Ajouté à informations pratiques avec rubrique:', itemWithSubSection);
+    } else if (section === 'moyens-paiement') {
+      const newPaymentMethods = [...(Array.isArray(paymentMethods) ? paymentMethods : []), itemWithSubSection];
+      onPaymentMethodsChange?.(newPaymentMethods);
+      console.log('➕ Ajouté à moyens de paiement avec rubrique:', itemWithSubSection);
     }
 
     setNewItem(null);
@@ -137,36 +158,55 @@ export default function UnifiedServicesAmbianceManager({
     let found = false;
     
     // Chercher dans ambiance (avec et sans marqueur)
-    const ambianceItem = ambiance.find(a => a === item || a === expectedItem);
-    if (ambianceItem) {
-      const beforeCount = ambiance.length;
-      const newAmbiance = ambiance.filter(a => a !== ambianceItem);
-      const afterCount = newAmbiance.length;
-      onAmbianceChange(newAmbiance);
-      console.log('🗑️ Retiré de ambiance:', ambianceItem, `(${beforeCount} -> ${afterCount} éléments)`);
-      found = true;
+    if (Array.isArray(ambiance)) {
+      const ambianceItem = ambiance.find(a => a === item || a === expectedItem);
+      if (ambianceItem) {
+        const beforeCount = ambiance.length;
+        const newAmbiance = ambiance.filter(a => a !== ambianceItem);
+        const afterCount = newAmbiance.length;
+        onAmbianceChange(newAmbiance);
+        console.log('🗑️ Retiré de ambiance:', ambianceItem, `(${beforeCount} -> ${afterCount} éléments)`);
+        found = true;
+      }
     }
     
     // Chercher dans services (avec et sans marqueur)
-    const serviceItem = services.find(s => s === item || s === expectedItem);
-    if (serviceItem) {
-      const beforeCount = services.length;
-      const newServices = services.filter(s => s !== serviceItem);
-      const afterCount = newServices.length;
-      onServicesChange(newServices);
-      console.log('🗑️ Retiré de services:', serviceItem, `(${beforeCount} -> ${afterCount} éléments)`);
-      found = true;
+    if (Array.isArray(services)) {
+      const serviceItem = services.find(s => s === item || s === expectedItem);
+      if (serviceItem) {
+        const beforeCount = services.length;
+        const newServices = services.filter(s => s !== serviceItem);
+        const afterCount = newServices.length;
+        onServicesChange(newServices);
+        console.log('🗑️ Retiré de services:', serviceItem, `(${beforeCount} -> ${afterCount} éléments)`);
+        found = true;
+      }
     }
     
     // Chercher dans informationsPratiques (avec et sans marqueur)
-    const infosItem = informationsPratiques.find(i => i === item || i === expectedItem);
-    if (infosItem) {
-      const beforeCount = informationsPratiques.length;
-      const newInfos = informationsPratiques.filter(i => i !== infosItem);
-      const afterCount = newInfos.length;
-      onInformationsPratiquesChange?.(newInfos);
-      console.log('🗑️ Retiré de informationsPratiques:', infosItem, `(${beforeCount} -> ${afterCount} éléments)`);
-      found = true;
+    if (Array.isArray(informationsPratiques)) {
+      const infosItem = informationsPratiques.find(i => i === item || i === expectedItem);
+      if (infosItem) {
+        const beforeCount = informationsPratiques.length;
+        const newInfos = informationsPratiques.filter(i => i !== infosItem);
+        const afterCount = newInfos.length;
+        onInformationsPratiquesChange?.(newInfos);
+        console.log('🗑️ Retiré de informationsPratiques:', infosItem, `(${beforeCount} -> ${afterCount} éléments)`);
+        found = true;
+      }
+    }
+    
+    // Chercher dans paymentMethods (avec et sans marqueur)
+    if (Array.isArray(paymentMethods)) {
+      const paymentItem = paymentMethods.find(p => p === item || p === expectedItem);
+      if (paymentItem) {
+        const beforeCount = paymentMethods.length;
+        const newPaymentMethods = paymentMethods.filter(p => p !== paymentItem);
+        const afterCount = newPaymentMethods.length;
+        onPaymentMethodsChange?.(newPaymentMethods);
+        console.log('🗑️ Retiré de moyens de paiement:', paymentItem, `(${beforeCount} -> ${afterCount} éléments)`);
+        found = true;
+      }
     }
     
     if (!found) {
@@ -186,26 +226,33 @@ export default function UnifiedServicesAmbianceManager({
     // ✅ SOLUTION : Supprimer l'ancien item (avec ou sans marqueur) et ajouter le nouveau
     const expectedOldItem = `${editingItem.item}|${editingItem.subSection}`;
     
-    if (editingItem.section === 'ambiance-specialites') {
+    if (editingItem.section === 'ambiance-specialites' && Array.isArray(ambiance)) {
       const oldItem = ambiance.find(a => a === editingItem.item || a === expectedOldItem);
       if (oldItem) {
         const newAmbiance = ambiance.filter(a => a !== oldItem);
         onAmbianceChange(newAmbiance);
         console.log('🗑️ Modifié dans ambiance:', oldItem, '->', newValue.trim());
       }
-    } else if (editingItem.section === 'equipements-services') {
+    } else if (editingItem.section === 'equipements-services' && Array.isArray(services)) {
       const oldItem = services.find(s => s === editingItem.item || s === expectedOldItem);
       if (oldItem) {
         const newServices = services.filter(s => s !== oldItem);
         onServicesChange(newServices);
         console.log('🗑️ Modifié dans services:', oldItem, '->', newValue.trim());
       }
-    } else if (editingItem.section === 'informations-pratiques') {
+    } else if (editingItem.section === 'informations-pratiques' && Array.isArray(informationsPratiques)) {
       const oldItem = informationsPratiques.find(i => i === editingItem.item || i === expectedOldItem);
       if (oldItem) {
         const newInfos = informationsPratiques.filter(i => i !== oldItem);
         onInformationsPratiquesChange?.(newInfos);
         console.log('🗑️ Modifié dans informationsPratiques:', oldItem, '->', newValue.trim());
+      }
+    } else if (editingItem.section === 'moyens-paiement' && Array.isArray(paymentMethods)) {
+      const oldItem = paymentMethods.find(p => p === editingItem.item || p === expectedOldItem);
+      if (oldItem) {
+        const newPaymentMethods = paymentMethods.filter(p => p !== oldItem);
+        onPaymentMethodsChange?.(newPaymentMethods);
+        console.log('🗑️ Modifié dans moyens de paiement:', oldItem, '->', newValue.trim());
       }
     }
     
