@@ -18,6 +18,7 @@ interface Event {
   price?: number | null;
   maxCapacity?: number | null;
   imageUrl?: string | null;
+  location?: string | null;
 }
 
 interface UpcomingEventsSectionProps {
@@ -154,8 +155,33 @@ export default function UpcomingEventsSection({
           </div>
         </div>
 
-        {/* Afficher seulement le premier événement (le plus proche) */}
+        {/* Afficher SEULEMENT le premier événement (section hero) */}
         {events.length > 0 && (
+          <div className="space-y-4">
+            {events.slice(0, 1).map((event) => (
+              <EventCard
+                key={event.id}
+                event={{
+                  id: event.id,
+                  title: event.title,
+                  description: event.description || '',
+                  startDate: event.startDate,
+                  endDate: event.endDate || event.startDate,
+                  price: event.price || 0,
+                  location: event.location || '',
+                  imageUrl: event.imageUrl || '',
+                  modality: event.modality || '',
+                  establishmentId: establishmentSlug // Utiliser le slug comme ID temporaire
+                }}
+                establishment={establishmentInfo}
+              />
+            ))}
+            
+          </div>
+        )}
+
+        {/* Ancien code commenté pour référence */}
+        {false && events.length > 0 && (
           <div className="space-y-4">
             {(() => {
               const mainEvent = events[0]; // Premier événement (le plus proche)

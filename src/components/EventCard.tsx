@@ -16,11 +16,20 @@ interface EventCardProps {
     price?: number | null;
     maxCapacity?: number | null;
     imageUrl?: string | null;
+    location?: string;
+    modality?: string;
+    establishmentId?: string;
   };
+  establishment?: {
+    name?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+  } | null;
   isUpcoming?: boolean;
 }
 
-export default function EventCard({ event, isUpcoming = true }: EventCardProps) {
+export default function EventCard({ event, establishment, isUpcoming = true }: EventCardProps) {
   const [modalImage, setModalImage] = useState<{ url: string; title: string } | null>(null);
   const [engagementData, setEngagementData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

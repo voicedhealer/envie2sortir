@@ -127,11 +127,10 @@ export default function AddToCalendar({
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-lg hover:from-orange-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-sm"
+        className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full hover:from-orange-600 hover:to-pink-600 transition-all duration-200 shadow-md hover:shadow-lg font-medium text-md"
         disabled={isLoading}
       >
         <Calendar className="w-4 h-4" />
-        <span>Ajouter au calendrier</span>
         <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 

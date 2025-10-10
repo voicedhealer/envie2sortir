@@ -17,7 +17,7 @@ Les utilisateurs peuvent exprimer 4 types d'engagement :
 | Type | Score | Emoji | Label |
 |------|-------|-------|-------|
 | `envie` | +1 | 🌟 | Envie d'y être ! |
-| `grande-envie` | +3 | 🔥 | Grande envie ! |
+| `grande-envie` | +3 | 🔥 | Ultra envie ! |
 | `decouvrir` | +2 | 🔍 | Envie de découvrir |
 | `pas-envie` | -1 | ❌ | Pas mon envie |
 
