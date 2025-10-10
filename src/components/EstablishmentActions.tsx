@@ -1,8 +1,9 @@
 'use client';
 
-import { Phone, MapPin, Star, Heart, FileText } from 'lucide-react';
+import { Phone, MapPin, Star, Heart, FileText, MessageSquare } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
 import ContactButtons from './ContactButtons';
@@ -27,6 +28,7 @@ interface EstablishmentActionsProps {
 export default function EstablishmentActions({ establishment }: EstablishmentActionsProps) {
   console.log('🔍 EstablishmentActions rendu pour:', establishment.name);
   const { data: session } = useSession();
+  const router = useRouter();
   const { incrementClick } = useEstablishmentStats();
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +40,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const [isLoadingMenus, setIsLoadingMenus] = useState(false);
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState<PublicMenuDisplay | null>(null);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
 
   // Vérifier si l'établissement est en favori
@@ -202,6 +205,25 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     }
   };
 
+  // Gestion du clic sur "Laisser un avis"
+  const handleReviewClick = () => {
+    if (!session) {
+      // Utilisateur non connecté : afficher le modal d'inscription
+      setShowSignupModal(true);
+      return;
+    }
+
+    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
+    if (session.user.userType !== 'user' && session.user.role !== 'user') {
+      // Utilisateur connecté mais pas client : afficher le modal d'inscription
+      setShowSignupModal(true);
+      return;
+    }
+
+    // Utilisateur connecté et client : ouvrir le formulaire d'avis
+    setShowCommentForm(true);
+  };
+
   // Gestion des commentaires
   const handleSubmitComment = async () => {
     if (!comment.trim() || rating === 0) {
@@ -292,18 +314,16 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         )}
 
         {/* Laisser un avis */}
-        {session?.user?.role === 'user' && (
-          <button
-            onClick={() => {
-              handleReview();
-              incrementClick(establishment.id);
-            }}
+        <button
+          onClick={() => {
+            handleReviewClick();
+            incrementClick(establishment.id);
+          }}
             className="action-btn primary"
           >
             <Star className="w-4 h-4" />
             <span>Laisser un avis</span>
           </button>
-        )}
       </div>
 
       {/* Note et avis en bas */}
@@ -459,6 +479,40 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
               >
                 Télécharger
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'inscription */}
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Inscription requise
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Il faut être inscrit sur le site pour laisser un avis sur cet établissement.
+                Souhaitez-vous être redirigé vers la page d'inscription ?
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setShowSignupModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  S'inscrire
+                </button>
+              </div>
             </div>
           </div>
         </div>

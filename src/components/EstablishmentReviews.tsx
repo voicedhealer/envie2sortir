@@ -39,6 +39,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingUserReview, setExistingUserReview] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
   // Récupérer les avis depuis l'API
   useEffect(() => {
@@ -59,11 +60,17 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
           }));
           setReviews(formattedReviews);
         } else {
-          setError('Erreur lors du chargement des avis');
+          // Si l'API n'existe pas (404) ou pas d'avis (pas d'erreur grave), on affiche juste une liste vide
+          if (response.status === 404) {
+            setReviews([]);
+          } else {
+            setError('Erreur lors du chargement des avis');
+          }
         }
       } catch (err) {
         console.error('Erreur lors du chargement des avis:', err);
-        setError('Erreur lors du chargement des avis');
+        // En cas d'erreur réseau ou autre, on affiche juste une liste vide au lieu d'une erreur
+        setReviews([]);
       } finally {
         setIsLoading(false);
       }
@@ -120,15 +127,15 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
   // Gestion du clic sur "Laisser un avis"
   const handleReviewClick = () => {
     if (!session) {
-      // Utilisateur non connecté : redirection vers la connexion
-      router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+      // Utilisateur non connecté : afficher le modal d'inscription
+      setShowSignupModal(true);
       return;
     }
 
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
     if (session.user.userType !== 'user' && session.user.role !== 'user') {
-      // Utilisateur connecté mais pas client
-      toast.error('Seuls les clients peuvent laisser des avis');
+      // Utilisateur connecté mais pas client : afficher le modal d'inscription
+      setShowSignupModal(true);
       return;
     }
 
@@ -310,34 +317,6 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
         </>
       )}
 
-      {/* Bouton pour ajouter un avis */}
-      <div className="mt-4 text-center">
-        <button 
-          onClick={handleReviewClick}
-          className="action-btn primary"
-        >
-          <MessageCircle className="w-4 h-4" />
-          <span>{existingUserReview ? 'Modifier votre avis' : 'Laisser un avis'}</span>
-        </button>
-        
-        {/* Message informatif selon l'état de l'utilisateur */}
-        {!session && (
-          <p className="text-xs text-gray-500 mt-2">
-            <a 
-              href="/auth" 
-              className="text-orange-500 hover:text-orange-600 underline"
-            >
-              Connectez-vous
-            </a> pour laisser un avis
-          </p>
-        )}
-        
-        {session && (session.user.userType !== 'user' && session.user.role !== 'user') && (
-          <p className="text-xs text-gray-500 mt-2">
-            Seuls les clients peuvent laisser des avis
-          </p>
-        )}
-      </div>
 
       {/* Modal de formulaire d'avis */}
       {showCommentForm && (
@@ -412,6 +391,40 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
               >
                 {isSubmitting ? 'Envoi...' : (isEditMode ? 'Modifier' : 'Publier')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'inscription */}
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Inscription requise
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Il faut être inscrit sur le site pour laisser un avis sur cet établissement.
+                Souhaitez-vous être redirigé vers la page d'inscription ?
+              </p>
+              <div className="flex gap-3 justify-center">
+                <button
+                  onClick={() => setShowSignupModal(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+                  }}
+                  className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+                >
+                  S'inscrire
+                </button>
+              </div>
             </div>
           </div>
         </div>
