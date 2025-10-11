@@ -135,3 +135,4 @@ export function calculateDiscount(originalPrice: number | null | undefined, disc
   return Math.round(((originalPrice - discountedPrice) / originalPrice) * 100);
 }
 
+

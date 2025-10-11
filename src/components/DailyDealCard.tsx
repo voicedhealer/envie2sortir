@@ -1,6 +1,7 @@
 "use client";
 
-import { Tag, Clock, FileText } from 'lucide-react';
+import { Tag, Clock, FileText, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useState } from 'react';
 import { formatDealTime, formatPrice, calculateDiscount } from '@/lib/deal-utils';
 
 interface DailyDeal {
@@ -25,6 +26,38 @@ interface DailyDealCardProps {
 
 export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
+  const [userEngagement, setUserEngagement] = useState<'liked' | 'disliked' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleEngagement = async (type: 'liked' | 'disliked', e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher le clic sur la carte
+    
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch('/api/deals/engagement', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          dealId: deal.id,
+          type: type,
+          timestamp: new Date().toISOString()
+        })
+      });
+
+      if (response.ok) {
+        setUserEngagement(type);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de l\'engagement:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div
@@ -100,7 +133,39 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
         </div>
 
         {/* CTA */}
-        <div className="mt-4 pt-3 border-t border-orange-200">
+        <div className="mt-4 pt-3 border-t border-orange-200 space-y-3">
+          {/* Boutons d'engagement */}
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={(e) => handleEngagement('liked', e)}
+              disabled={isSubmitting}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                userEngagement === 'liked'
+                  ? 'bg-green-500 text-white shadow-md'
+                  : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
+              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title="Cette offre m'intéresse"
+            >
+              <ThumbsUp className="w-3.5 h-3.5" />
+              <span>Intéressé</span>
+            </button>
+            
+            <button
+              onClick={(e) => handleEngagement('disliked', e)}
+              disabled={isSubmitting}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
+                userEngagement === 'disliked'
+                  ? 'bg-red-500 text-white shadow-md'
+                  : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+              } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+              title="Cette offre ne m'intéresse pas"
+            >
+              <ThumbsDown className="w-3.5 h-3.5" />
+              <span>Pas intéressé</span>
+            </button>
+          </div>
+          
+          {/* Bouton principal */}
           <button className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition-colors text-sm">
             Voir les détails
           </button>

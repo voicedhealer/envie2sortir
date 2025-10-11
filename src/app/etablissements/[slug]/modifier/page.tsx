@@ -41,6 +41,7 @@ export default async function EditEstablishmentPage({
       instagram: true,
       facebook: true,
       tiktok: true,
+      youtube: true,
       activities: true,
       services: true,
       ambiance: true,

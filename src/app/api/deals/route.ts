@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       establishmentId,
       title,
       description,
+      modality,
       originalPrice,
       discountedPrice,
       imageUrl,
@@ -24,7 +25,12 @@ export async function POST(request: NextRequest) {
       dateFin,
       heureDebut,
       heureFin,
-      isActive
+      isActive,
+      // Récurrence
+      isRecurring,
+      recurrenceType,
+      recurrenceDays,
+      recurrenceEndDate
     } = body;
 
     // Validation des champs requis
@@ -65,6 +71,7 @@ export async function POST(request: NextRequest) {
         establishmentId,
         title,
         description,
+        modality: modality || null,
         originalPrice: originalPrice ? parseFloat(originalPrice) : null,
         discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
         imageUrl: imageUrl || null,
@@ -73,7 +80,12 @@ export async function POST(request: NextRequest) {
         dateFin: new Date(dateFin),
         heureDebut: heureDebut || null,
         heureFin: heureFin || null,
-        isActive: isActive !== undefined ? isActive : true
+        isActive: isActive !== undefined ? isActive : true,
+        // Récurrence
+        isRecurring: isRecurring || false,
+        recurrenceType: recurrenceType || null,
+        recurrenceDays: recurrenceDays || null,
+        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null
       }
     });
 
@@ -90,4 +102,5 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
+
 

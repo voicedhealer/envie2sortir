@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw } from 'lucide-react';
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
 
 interface DailyDeal {
@@ -19,6 +19,11 @@ interface DailyDeal {
   heureFin?: string | null;
   isActive: boolean;
   createdAt: Date | string;
+  // Récurrence
+  isRecurring?: boolean;
+  recurrenceType?: string | null;
+  recurrenceDays?: number[] | null;
+  recurrenceEndDate?: Date | string | null;
 }
 
 interface DealsManagerProps {
@@ -46,7 +51,12 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
     dateFin: '',
     heureDebut: '',
     heureFin: '',
-    isActive: true
+    isActive: true,
+    // Récurrence
+    isRecurring: false,
+    recurrenceType: '',
+    recurrenceDays: [] as number[],
+    recurrenceEndDate: ''
   });
 
   // Charger les bons plans
@@ -76,6 +86,19 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
   };
+
+  // Gestion des jours de récurrence
+  const handleRecurrenceDayChange = (day: number, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      recurrenceDays: checked 
+        ? [...prev.recurrenceDays, day]
+        : prev.recurrenceDays.filter(d => d !== day)
+    }));
+  };
+
+  // Noms des jours de la semaine
+  const dayNames = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -205,7 +228,12 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       dateFin: new Date(deal.dateFin).toISOString().split('T')[0],
       heureDebut: deal.heureDebut || '',
       heureFin: deal.heureFin || '',
-      isActive: deal.isActive
+      isActive: deal.isActive,
+      // Récurrence
+      isRecurring: deal.isRecurring || false,
+      recurrenceType: deal.recurrenceType || '',
+      recurrenceDays: deal.recurrenceDays || [],
+      recurrenceEndDate: deal.recurrenceEndDate ? new Date(deal.recurrenceEndDate).toISOString().split('T')[0] : ''
     });
     setShowForm(true);
   };
@@ -247,7 +275,12 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       dateFin: '',
       heureDebut: deal.heureDebut || '',
       heureFin: deal.heureFin || '',
-      isActive: true
+      isActive: true,
+      // Récurrence
+      isRecurring: deal.isRecurring || false,
+      recurrenceType: deal.recurrenceType || '',
+      recurrenceDays: deal.recurrenceDays || [],
+      recurrenceEndDate: ''
     });
     setShowForm(true);
   };
@@ -265,7 +298,12 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       dateFin: '',
       heureDebut: '',
       heureFin: '',
-      isActive: true
+      isActive: true,
+      // Récurrence
+      isRecurring: false,
+      recurrenceType: '',
+      recurrenceDays: [],
+      recurrenceEndDate: ''
     });
     setEditingDeal(null);
   };
@@ -465,6 +503,107 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
+              </div>
+
+              {/* Récurrence */}
+              <div className="md:col-span-2">
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                  <div className="flex items-center mb-3">
+                    <input
+                      type="checkbox"
+                      name="isRecurring"
+                      checked={formData.isRecurring}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        isRecurring: e.target.checked,
+                        recurrenceType: e.target.checked ? prev.recurrenceType : '',
+                        recurrenceDays: e.target.checked ? prev.recurrenceDays : [],
+                        recurrenceEndDate: e.target.checked ? prev.recurrenceEndDate : ''
+                      }))}
+                      className="mr-2"
+                    />
+                    <label className="text-sm font-medium text-gray-700">
+                      🔄 Bon plan récurrent
+                    </label>
+                  </div>
+                  
+                  {formData.isRecurring && (
+                    <div className="space-y-4">
+                      {/* Type de récurrence */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Type de récurrence
+                        </label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="recurrenceType"
+                              value="weekly"
+                              checked={formData.recurrenceType === 'weekly'}
+                              onChange={handleInputChange}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Hebdomadaire</span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="radio"
+                              name="recurrenceType"
+                              value="monthly"
+                              checked={formData.recurrenceType === 'monthly'}
+                              onChange={handleInputChange}
+                              className="mr-2"
+                            />
+                            <span className="text-sm">Mensuel</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Jours de la semaine (pour hebdomadaire) */}
+                      {formData.recurrenceType === 'weekly' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Jours de la semaine
+                          </label>
+                          <div className="grid grid-cols-4 gap-2">
+                            {dayNames.map((dayName, index) => {
+                              const dayNumber = index + 1; // 1 = Lundi, 7 = Dimanche
+                              return (
+                                <label key={dayNumber} className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.recurrenceDays.includes(dayNumber)}
+                                    onChange={(e) => handleRecurrenceDayChange(dayNumber, e.target.checked)}
+                                    className="mr-2"
+                                  />
+                                  <span className="text-sm">{dayName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Date de fin de récurrence */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date de fin de récurrence (optionnel)
+                        </label>
+                        <input
+                          type="date"
+                          name="recurrenceEndDate"
+                          value={formData.recurrenceEndDate}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Laissez vide pour une récurrence illimitée
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Image */}
@@ -680,7 +819,14 @@ function DealCard({
         {/* Contenu */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-2">
-            <h4 className="font-semibold text-gray-900 truncate">{deal.title}</h4>
+            <div className="flex items-center gap-2">
+              <h4 className="font-semibold text-gray-900 truncate">{deal.title}</h4>
+              {deal.isRecurring && (
+                <div title="Bon plan récurrent" className="flex-shrink-0">
+                  <RotateCcw className="text-orange-500 w-4 h-4" />
+                </div>
+              )}
+            </div>
             {!deal.isActive && (
               <span className="flex-shrink-0 ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
                 Inactif

@@ -221,3 +221,4 @@ Pour appliquer la migration sur un autre environnement :
 npx prisma migrate deploy
 ```
 
+

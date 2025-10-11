@@ -167,6 +167,7 @@ model Establishment {
   adminActions          AdminAction[]
   clickAnalytics        ClickAnalytics[]
   dailyDeals            DailyDeal[]
+  dealEngagements       DealEngagement[]
   menus                 EstablishmentMenu[]
   owner                 Professional        @relation(fields: [ownerId], references: [id])
   tags                  EtablissementTag[]
@@ -274,10 +275,39 @@ model DailyDeal {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   modality        String?
+  
+  // Récurrence
+  isRecurring     Boolean       @default(false) // Si le bon plan est récurrent
+  recurrenceType  String?       // 'weekly', 'monthly', null
+  recurrenceDays  Json?         // Pour weekly: [1,2,3,4,5] (1=lundi, 7=dimanche)
+  recurrenceEndDate DateTime?   // Date de fin de la récurrence
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  engagements     DealEngagement[]
 
   @@index([establishmentId, isActive, dateDebut, dateFin])
   @@map("daily_deals")
+}
+
+/// * Engagement des utilisateurs sur les bons plans
+model DealEngagement {
+  id              String    @id @default(cuid())
+  dealId          String
+  deal            DailyDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  establishmentId String
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
+  
+  type            String    // 'liked' ou 'disliked'
+  userIp          String    // IP de l'utilisateur pour éviter les doublons
+  timestamp       DateTime  @default(now())
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([dealId, userIp]) // Un utilisateur ne peut donner qu'un avis par bon plan
+  @@index([dealId, type])
+  @@index([establishmentId, type])
+  @@index([timestamp])
+  @@map("deal_engagements")
 }
 
 /// *

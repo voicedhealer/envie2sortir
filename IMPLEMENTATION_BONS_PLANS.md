@@ -211,3 +211,4 @@ npx prisma generate
 
 Le système est entièrement fonctionnel et peut être testé/déployé.
 
+

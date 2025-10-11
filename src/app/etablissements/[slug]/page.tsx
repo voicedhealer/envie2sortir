@@ -38,6 +38,7 @@ export default async function EstablishmentPage({
       instagram: true,
       facebook: true,
       tiktok: true,
+      youtube: true,
       theForkLink: true,
       uberEatsLink: true,
       activities: true,

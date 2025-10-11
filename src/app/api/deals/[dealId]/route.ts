@@ -44,6 +44,7 @@ export async function PUT(
       data: {
         title: body.title,
         description: body.description,
+        modality: body.modality || null,
         originalPrice: body.originalPrice ? parseFloat(body.originalPrice) : null,
         discountedPrice: body.discountedPrice ? parseFloat(body.discountedPrice) : null,
         imageUrl: body.imageUrl || null,
@@ -52,7 +53,12 @@ export async function PUT(
         dateFin: body.dateFin ? new Date(body.dateFin) : undefined,
         heureDebut: body.heureDebut || null,
         heureFin: body.heureFin || null,
-        isActive: body.isActive !== undefined ? body.isActive : undefined
+        isActive: body.isActive !== undefined ? body.isActive : undefined,
+        // Récurrence
+        isRecurring: body.isRecurring !== undefined ? body.isRecurring : undefined,
+        recurrenceType: body.recurrenceType || null,
+        recurrenceDays: body.recurrenceDays || null,
+        recurrenceEndDate: body.recurrenceEndDate ? new Date(body.recurrenceEndDate) : null
       }
     });
 
@@ -121,4 +127,5 @@ export async function DELETE(
     }, { status: 500 });
   }
 }
+
 

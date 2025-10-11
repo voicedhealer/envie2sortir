@@ -49,7 +49,7 @@ export interface MenuDeleteResponse {
 // Constantes pour la validation
 export const MENU_CONSTRAINTS = {
   MAX_FILES: 2,
-  MAX_FILE_SIZE: 20 * 1024 * 1024, // 20MB
+  MAX_FILE_SIZE: 60 * 1024 * 1024, // 60MB
   ALLOWED_MIME_TYPES: ['application/pdf'],
   ALLOWED_EXTENSIONS: ['.pdf']
 } as const;
