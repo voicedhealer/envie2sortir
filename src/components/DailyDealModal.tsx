@@ -16,6 +16,7 @@ interface DailyDeal {
   dateFin: Date | string;
   heureDebut?: string | null;
   heureFin?: string | null;
+  isActive: boolean;
 }
 
 interface DailyDealModalProps {
@@ -42,7 +43,7 @@ export default function DailyDealModal({ deal, onClose }: DailyDealModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-orange-500 shadow-2xl shadow-orange-500/50">
+      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] border-2 border-orange-500 shadow-2xl shadow-orange-500/50 overflow-hidden">
         {/* Bouton fermer */}
         <button
           onClick={handleClose}
@@ -52,25 +53,27 @@ export default function DailyDealModal({ deal, onClose }: DailyDealModalProps) {
           <X className="w-6 h-6 text-gray-700" />
         </button>
 
-        {/* Image */}
-        {deal.imageUrl && (
-          <div className="relative h-64 md:h-80 bg-gradient-to-br from-orange-100 to-orange-50">
-            <img
-              src={deal.imageUrl}
-              alt={deal.title}
-              className="w-full h-full object-cover"
-            />
-            {/* Badge réduction */}
-            {discount > 0 && (
-              <div className="absolute top-4 left-4 bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-lg shadow-lg">
-                -{discount}%
-              </div>
-            )}
-          </div>
-        )}
+        {/* Conteneur avec scroll */}
+        <div className="h-full overflow-y-auto">
+          {/* Image */}
+          {deal.imageUrl && (
+            <div className="relative h-64 md:h-80 bg-gradient-to-br from-orange-100 to-orange-50">
+              <img
+                src={deal.imageUrl}
+                alt={deal.title}
+                className="w-full h-full object-cover"
+              />
+              {/* Badge réduction */}
+              {discount > 0 && (
+                <div className="absolute top-4 left-4 bg-orange-500 text-white px-4 py-2 rounded-full font-bold text-lg shadow-lg">
+                  -{discount}%
+                </div>
+              )}
+            </div>
+          )}
 
-        {/* Contenu */}
-        <div className="p-6 md:p-8">
+          {/* Contenu */}
+          <div className="p-6 md:p-8">
           {/* Titre */}
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
             {deal.title}
@@ -142,6 +145,7 @@ export default function DailyDealModal({ deal, onClose }: DailyDealModalProps) {
             >
               J'en profite !
             </button>
+          </div>
           </div>
         </div>
       </div>

@@ -174,11 +174,11 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
         const response = await fetch(`/api/deals/active/${establishment.id}`);
         const data = await response.json();
         
-        if (data.success && data.deal) {
-          setActiveDeal(data.deal);
+        if (data.success && data.deals && data.deals.length > 0) {
+          setActiveDeal(data.deals[0]);
           
           // Vérifier si le bon plan est actif et si l'utilisateur ne l'a pas déjà vu
-          if (isDealActive(data.deal) && !hasSeenDealToday(data.deal.id)) {
+          if (isDealActive(data.deals[0]) && !hasSeenDealToday(data.deals[0].id)) {
             setShowDealModal(true);
           }
         }
@@ -323,6 +323,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
           onClose={() => setShowDealModal(false)}
         />
       )}
+
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

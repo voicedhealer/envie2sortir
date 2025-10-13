@@ -251,8 +251,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         const response = await fetch(`/api/deals/active/${establishment.id}`);
         const data = await response.json();
         
-        if (data.success && data.deal) {
-          setActiveDeal(data.deal);
+        if (data.success && data.deals && data.deals.length > 0) {
+          setActiveDeal(data.deals[0]);
         }
       } catch (error) {
         console.error('Erreur lors du chargement du bon plan:', error);
@@ -555,14 +555,6 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         />
       )}
 
-      {/* Bon plan du jour */}
-      {activeDeal && (
-        <DailyDealCard 
-          deal={activeDeal}
-          onClick={() => setShowDealModal(true)}
-        />
-      )}
-
       {/* Horaires d'ouverture */}
       {establishment.horairesOuverture && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -654,6 +646,14 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             </div>
           )}
         </div>
+      )}
+
+      {/* Bon plan du jour */}
+      {activeDeal && (
+        <DailyDealCard 
+          deal={activeDeal}
+          onClick={() => setShowDealModal(true)}
+        />
       )}
 
       {/* Informations de contact */}
