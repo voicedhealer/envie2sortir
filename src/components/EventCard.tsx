@@ -29,6 +29,7 @@ interface EventCardProps {
   isUpcoming?: boolean;
 }
 
+// DEPRECATED: Ce composant est remplacé par EventCardNew
 export default function EventCard({ event, establishment, isUpcoming = true }: EventCardProps) {
   const [modalImage, setModalImage] = useState<{ url: string; title: string } | null>(null);
   const [engagementData, setEngagementData] = useState<any>(null);
@@ -94,9 +95,9 @@ export default function EventCard({ event, establishment, isUpcoming = true }: E
 
   return (
     <div className="w-full bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl shadow-sm border border-yellow-100 hover:shadow-md transition-all duration-200 overflow-hidden">
-      <div className="flex">
+      <div className="flex h-40">
         {/* Image à gauche */}
-        <div className="w-24 sm:w-32 h-24 sm:h-32 flex-shrink-0">
+        <div className="w-24 h-40 flex-shrink-0">
           {event.imageUrl ? (
             <img
               src={event.imageUrl}
@@ -111,77 +112,71 @@ export default function EventCard({ event, establishment, isUpcoming = true }: E
           )}
         </div>
 
-        {/* Contenu à droite */}
-        <div className="flex-1 p-4 sm:p-5 flex flex-col justify-between">
-          {/* Header avec icône calendrier et "Événement à venir" */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-semibold text-amber-700">
-                {isUpcoming ? 'Événement à venir' : 'Événement en cours'}
-              </span>
-            </div>
+        {/* Contenu central avec boutons intégrés */}
+        <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+          {/* Header avec icône calendrier */}
+          <div className="flex items-center gap-1.5 mb-1">
+            <Calendar className="w-3 h-3 text-amber-600" />
+            <span className="text-xs font-semibold text-amber-700">
+              {isUpcoming ? 'Événement à venir' : 'Événement en cours'}
+            </span>
           </div>
 
           {/* Titre de l'événement */}
-          <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 leading-tight">
+          <h3 className="text-sm font-bold text-gray-800 mb-1 leading-tight line-clamp-2">
             {event.title}
           </h3>
 
           {/* Description */}
           {event.description && (
-            <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-              {truncateDescription(event.description, 60)}
+            <p className="text-xs text-gray-600 mb-1 leading-relaxed line-clamp-1">
+              {truncateDescription(event.description, 35)}
             </p>
           )}
 
-          {/* Footer avec date/heure et prix */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            {/* Date et heure */}
-            <div className="flex items-center gap-1.5 text-sm text-gray-700">
-              <Clock className="w-3.5 h-3.5 text-gray-500" />
+          {/* Date/heure et prix */}
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-1 text-xs text-gray-700">
+              <Clock className="w-3 h-3 text-gray-500" />
               <span className="font-medium">
                 {formatEventDate(event.startDate)}
               </span>
             </div>
-
-            {/* Prix */}
             {event.price && (
-              <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold self-start sm:self-auto">
+              <div className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-semibold">
                 {formatPrice(event.price)}
               </div>
             )}
           </div>
 
-          {/* Capacité si disponible */}
-          {event.maxCapacity && (
-            <div className="mt-2 text-xs text-gray-500">
-              Capacité: {event.maxCapacity} places
-            </div>
+          {/* Boutons d'engagement intégrés - plus fins et élégants */}
+          {!loading && engagementData && (
+            <EventEngagementButtons
+              eventId={event.id}
+              stats={engagementData.stats || {
+                envie: 0,
+                'grande-envie': 0,
+                decouvrir: 0,
+                'pas-envie': 0
+              }}
+              userEngagement={engagementData.userEngagement}
+              onEngagementUpdate={handleEngagementUpdate}
+              isInline={true}
+            />
           )}
         </div>
-      </div>
 
-      {/* Système d'engagement */}
-      {!loading && engagementData && (
-        <div className="px-4 pb-4">
-          <EventEngagementGauge
-            percentage={engagementData.gaugePercentage || 0}
-            eventBadge={engagementData.eventBadge}
-          />
-          <EventEngagementButtons
-            eventId={event.id}
-            stats={engagementData.stats || {
-              envie: 0,
-              'grande-envie': 0,
-              decouvrir: 0,
-              'pas-envie': 0
-            }}
-            userEngagement={engagementData.userEngagement}
-            onEngagementUpdate={handleEngagementUpdate}
-          />
-        </div>
-      )}
+        {/* Barre d'envie verticale à droite - prend toute la hauteur */}
+        {!loading && engagementData && (
+          <div className="w-16 flex flex-col items-center justify-center p-2 border-l border-yellow-200 h-full">
+            <EventEngagementGauge
+              percentage={engagementData.gaugePercentage || 0}
+              eventBadge={engagementData.eventBadge}
+              isVertical={true}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Modal d'image */}
       {modalImage && (

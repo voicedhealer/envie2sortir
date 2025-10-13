@@ -20,14 +20,28 @@ export async function GET(
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Récupérer les événements de l'établissement (seulement les événements à venir)
+    // Récupérer les événements de l'établissement (événements à venir ET en cours)
     const now = new Date();
     const events = await prisma.event.findMany({
       where: { 
         establishmentId: establishment.id,
-        startDate: {
-          gt: now // Seulement les événements à venir
-        }
+        OR: [
+          // Événements à venir (pas encore commencés)
+          {
+            startDate: {
+              gt: now
+            }
+          },
+          // Événements en cours (commencés mais pas encore finis)
+          {
+            startDate: {
+              lte: now
+            },
+            endDate: {
+              gte: now
+            }
+          }
+        ]
       },
       select: {
         id: true,
@@ -39,6 +53,7 @@ export async function GET(
         price: true,
         maxCapacity: true,
         isRecurring: true,
+        modality: true, // ✅ Ajout du champ modality
         createdAt: true
       },
       orderBy: { startDate: 'asc' }

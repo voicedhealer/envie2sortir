@@ -388,17 +388,15 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
           />
         </div>
 
-        {/* Section événements à venir - PRIORITAIRE */}
-        <div className="mb-8">
-          <UpcomingEventsSection establishmentSlug={establishment.slug} />
-        </div>
-
         {/* Layout principal */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Colonne principale */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Actions rapides */}
+            {/* Actions rapides - TOUJOURS EN PREMIER */}
             <EstablishmentActions establishment={establishment} />
+            
+            {/* Section événements à venir - EN DESSOUS DES ACTIONS */}
+            <UpcomingEventsSection establishmentSlug={establishment.slug} />
 
             {/* Sections d'informations */}
             <EstablishmentSections 

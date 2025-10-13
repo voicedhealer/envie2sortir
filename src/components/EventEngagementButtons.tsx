@@ -14,13 +14,17 @@ interface EventEngagementButtonsProps {
   };
   userEngagement?: string | null;
   onEngagementUpdate?: (data: any) => void;
+  isCompact?: boolean;
+  isInline?: boolean;
 }
 
 export default function EventEngagementButtons({
   eventId,
   stats,
   userEngagement,
-  onEngagementUpdate
+  onEngagementUpdate,
+  isCompact = false,
+  isInline = false
 }: EventEngagementButtonsProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -100,27 +104,31 @@ export default function EventEngagementButtons({
   };
 
   const buttons = [
-    { type: 'envie', icon: '🌟', label: 'Envie d\'y être !', count: currentStats.envie },
-    { type: 'grande-envie', icon: '🔥', label: 'Grande envie !', count: currentStats['grande-envie'] },
-    { type: 'decouvrir', icon: '🔍', label: 'Envie de découvrir', count: currentStats.decouvrir },
-    { type: 'pas-envie', icon: '❌', label: 'Pas mon envie', count: currentStats['pas-envie'] }
+    { type: 'envie', icon: '🌟', label: 'Envie d\'y être !', shortLabel: 'Envie', count: currentStats.envie },
+    { type: 'grande-envie', icon: '🔥', label: 'Grande envie !', shortLabel: 'Ultra envie', count: currentStats['grande-envie'] },
+    { type: 'decouvrir', icon: '🔍', label: 'Envie de découvrir', shortLabel: 'Découvrir', count: currentStats.decouvrir },
+    { type: 'pas-envie', icon: '❌', label: 'Pas mon envie', shortLabel: 'Pas envie', count: currentStats['pas-envie'] }
   ];
 
   return (
-    <div className="envie-buttons-container">
-      <div className="envie-buttons">
+    <div className={`envie-buttons-container ${isCompact ? 'compact' : ''} ${isInline ? 'inline' : ''}`}>
+      <div className={`envie-buttons ${isCompact ? 'compact' : ''} ${isInline ? 'inline' : ''}`}>
         {buttons.map((button) => (
-          <button
-            key={button.type}
-            className={`btn-envie ${currentUserEngagement === button.type ? 'active' : ''} ${loading ? 'loading' : ''}`}
-            data-type={button.type}
-            onClick={() => handleEngagement(button.type)}
-            disabled={loading}
-          >
-            <span className="btn-icon">{button.icon}</span>
-            <span className="btn-label">{button.label}</span>
-            <span className="count">{button.count}</span>
-          </button>
+          <div key={button.type} className="btn-wrapper">
+            <button
+              className={`btn-envie ${isCompact ? 'compact' : ''} ${isInline ? 'inline' : ''} ${currentUserEngagement === button.type ? 'active' : ''} ${loading ? 'loading' : ''}`}
+              data-type={button.type}
+              onClick={() => handleEngagement(button.type)}
+              disabled={loading}
+            >
+              <span className="btn-icon">{button.icon}</span>
+              {!isCompact && !isInline && <span className="btn-label">{button.label}</span>}
+              <span className="count">{button.count}</span>
+            </button>
+            {isInline && (
+              <span className="btn-short-label">{button.shortLabel}</span>
+            )}
+          </div>
         ))}
       </div>
 
@@ -136,10 +144,39 @@ export default function EventEngagementButtons({
           margin: 10px 0;
         }
 
+        .envie-buttons-container.compact {
+          margin: 5px 0;
+        }
+
+        .envie-buttons-container.inline {
+          margin: 0;
+        }
+
         .envie-buttons {
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
           gap: 8px;
+        }
+
+        .envie-buttons.compact {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 4px;
+        }
+
+        .envie-buttons.inline {
+          display: flex;
+          gap: 1px;
+          justify-content: space-between;
+          padding: 0 4px;
+        }
+
+        .btn-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          flex: 1;
+          min-width: 0;
         }
 
         .btn-envie {
@@ -157,11 +194,41 @@ export default function EventEngagementButtons({
           color: #333;
         }
 
+        .btn-envie.compact {
+          padding: 4px 6px;
+          gap: 3px;
+          border-radius: 6px;
+          font-size: 11px;
+          justify-content: center;
+        }
+
+        .btn-envie.inline {
+          padding: 4px 8px;
+          gap: 3px;
+          border-radius: 6px;
+          font-size: 10px;
+          justify-content: center;
+          min-width: 0;
+          flex: 1;
+          width: 100%;
+          max-width: 110px;
+        }
+
         .btn-envie:hover:not(.loading) {
           border-color: #FF9800;
           background: #FFF3E0;
           transform: translateY(-2px);
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .btn-envie.compact:hover:not(.loading) {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-envie.inline:hover:not(.loading) {
+          transform: translateY(-1px);
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .btn-envie.active {
@@ -181,6 +248,10 @@ export default function EventEngagementButtons({
           line-height: 1;
         }
 
+        .btn-envie.compact .btn-icon {
+          font-size: 14px;
+        }
+
         .btn-label {
           flex: 1;
           text-align: left;
@@ -197,6 +268,33 @@ export default function EventEngagementButtons({
           font-weight: 600;
           min-width: 24px;
           text-align: center;
+        }
+
+        .btn-envie.compact .count {
+          padding: 1px 6px;
+          border-radius: 8px;
+          font-size: 10px;
+          min-width: 18px;
+        }
+
+        .btn-envie.inline .count {
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-size: 9px;
+          min-width: 16px;
+        }
+
+        .btn-short-label {
+          margin-top: 1px;
+          font-size: 8px;
+          color: #666;
+          text-align: center;
+          line-height: 1;
+          font-weight: 500;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          max-width: 80px;
         }
 
         .btn-envie.active .count {

@@ -142,10 +142,20 @@ export async function POST(
       });
     }
 
-    // Récupérer les stats globales de l'événement
+    // Récupérer les stats globales de l'événement avec les infos utilisateur
     const engagements = await prisma.eventEngagement.findMany({
       where: { eventId },
-      select: { type: true }
+      select: { 
+        type: true,
+        userId: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
     });
 
     const stats = {
@@ -155,11 +165,29 @@ export async function POST(
       'pas-envie': 0
     };
 
+    // Grouper les utilisateurs par type d'engagement
+    const usersByEngagement = {
+      envie: [],
+      'grande-envie': [],
+      'decouvrir': [],
+      'pas-envie': []
+    };
+
     let totalScore = 0;
 
     engagements.forEach(eng => {
       stats[eng.type as EngagementType]++;
       totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
+      
+      // Ajouter l'utilisateur à la liste correspondante
+      if (eng.user) {
+        usersByEngagement[eng.type as EngagementType].push({
+          id: eng.userId,
+          firstName: eng.user.firstName,
+          lastName: eng.user.lastName,
+          initials: `${eng.user.firstName?.[0] || ''}${eng.user.lastName?.[0] || ''}`.toUpperCase()
+        });
+      }
     });
 
     const gaugePercentage = calculateGaugePercentage(totalScore);
@@ -184,7 +212,8 @@ export async function POST(
       eventBadge,
       userEngagement: type,
       newBadge,
-      userKarma: user.karmaPoints
+      userKarma: user.karmaPoints,
+      usersByEngagement
     });
 
   } catch (error) {
@@ -217,10 +246,20 @@ export async function GET(
       );
     }
 
-    // Récupérer les engagements de l'événement
+    // Récupérer les engagements de l'événement avec les infos utilisateur
     const engagements = await prisma.eventEngagement.findMany({
       where: { eventId },
-      select: { type: true, userId: true }
+      select: { 
+        type: true, 
+        userId: true,
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        }
+      }
     });
 
     const stats = {
@@ -230,12 +269,30 @@ export async function GET(
       'pas-envie': 0
     };
 
+    // Grouper les utilisateurs par type d'engagement
+    const usersByEngagement = {
+      envie: [],
+      'grande-envie': [],
+      'decouvrir': [],
+      'pas-envie': []
+    };
+
     let totalScore = 0;
     let userEngagement = null;
 
     engagements.forEach(eng => {
       stats[eng.type as EngagementType]++;
       totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
+      
+      // Ajouter l'utilisateur à la liste correspondante
+      if (eng.user) {
+        usersByEngagement[eng.type as EngagementType].push({
+          id: eng.userId,
+          firstName: eng.user.firstName,
+          lastName: eng.user.lastName,
+          initials: `${eng.user.firstName?.[0] || ''}${eng.user.lastName?.[0] || ''}`.toUpperCase()
+        });
+      }
       
       if (session?.user?.id && eng.userId === session.user.id) {
         userEngagement = eng.type;
@@ -262,7 +319,8 @@ export async function GET(
       totalScore,
       eventBadge,
       userEngagement,
-      totalEngagements: engagements.length
+      totalEngagements: engagements.length,
+      usersByEngagement
     });
 
   } catch (error) {
