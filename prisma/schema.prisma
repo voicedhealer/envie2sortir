@@ -281,6 +281,12 @@ model DailyDeal {
   recurrenceType  String?       // 'weekly', 'monthly', null
   recurrenceDays  Json?         // Pour weekly: [1,2,3,4,5] (1=lundi, 7=dimanche)
   recurrenceEndDate DateTime?   // Date de fin de la récurrence
+  
+  // Champs pour l'effet flip
+  shortTitle      String?       // Titre court pour la face avant
+  shortDescription String?      // Description courte pour la face avant
+  promoUrl        String?       // Lien vers la promotion sur internet
+  
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)
   engagements     DealEngagement[]
 

@@ -25,12 +25,7 @@ interface DailyDealOverlayProps {
 export default function DailyDealOverlay({ deal }: DailyDealOverlayProps) {
   // Logique pour déterminer le texte à afficher
   const getOverlayText = () => {
-    // Si modalité remplie, afficher la modalité
-    if (deal.modality) {
-      return deal.modality;
-    }
-    
-    // Sinon, afficher les heures si disponibles
+    // Prioriser les horaires sur les modalités
     if (deal.heureDebut && deal.heureFin) {
       return `de ${deal.heureDebut} à ${deal.heureFin}`;
     }
@@ -41,6 +36,11 @@ export default function DailyDealOverlay({ deal }: DailyDealOverlayProps) {
     
     if (deal.heureFin) {
       return `jusqu'à ${deal.heureFin}`;
+    }
+    
+    // Si pas d'horaires, afficher la modalité si disponible
+    if (deal.modality) {
+      return deal.modality;
     }
     
     // Par défaut, toute la journée

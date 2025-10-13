@@ -50,7 +50,8 @@ export async function GET(
         dateFin: true,
         heureDebut: true,
         heureFin: true,
-        isActive: true
+        isActive: true,
+        promoUrl: true
       },
       orderBy: {
         createdAt: 'desc'

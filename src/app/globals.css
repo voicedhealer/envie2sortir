@@ -881,10 +881,17 @@ body {
   transform-style: preserve-3d;
 }
 
-/* État flippé */
-.promo-card.flipped .promo-card-inner {
-  transform: rotateY(180deg);
-}
+        /* État flippé */
+        .promo-card.flipped .promo-card-inner {
+          transform: rotateY(180deg);
+        }
+        
+        /* Ombre pour la face arrière */
+        .promo-card.flipped {
+          box-shadow: 0 20px 40px rgba(255, 102, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+          transform: translateY(-2px);
+          transition: all 0.3s ease;
+        }
 
 /* Faces communes */
 .promo-card-front,
@@ -977,18 +984,18 @@ body {
   flex-direction: column;
   gap: 10px;
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 12px;
 }
 
 /* Boutons génériques */
 .btn-secondary {
   width: 100%;
-  padding: 12px 20px;
+  padding: 8px 16px;
   background: white;
   color: #666;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
   display: flex;

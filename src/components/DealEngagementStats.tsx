@@ -11,137 +11,129 @@ interface EngagementStats {
 }
 
 interface DealEngagementStatsProps {
+  dealId: string;
   establishmentId: string;
-  dealId?: string;
 }
 
-export default function DealEngagementStats({ establishmentId, dealId }: DealEngagementStatsProps) {
+export default function DealEngagementStats({ dealId, establishmentId }: DealEngagementStatsProps) {
   const [stats, setStats] = useState<EngagementStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const url = dealId 
-          ? `/api/deals/engagement?dealId=${dealId}`
-          : `/api/deals/engagement?establishmentId=${establishmentId}`;
-          
-        const response = await fetch(url);
+        setError(null);
+        
+        const response = await fetch(`/api/deals/engagement?dealId=${dealId}`);
+        
+        if (!response.ok) {
+          throw new Error('Erreur lors du chargement des statistiques');
+        }
+        
         const data = await response.json();
         
         if (data.success) {
           setStats(data.stats);
+        } else {
+          setError('Données non disponibles');
         }
-      } catch (error) {
-        console.error('Erreur lors du chargement des statistiques:', error);
+      } catch (err) {
+        console.error('Erreur lors du chargement des statistiques:', err);
+        setError('Erreur lors du chargement');
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, [establishmentId, dealId]);
+    
+    // Rafraîchir les stats toutes les 30 secondes
+    const interval = setInterval(fetchStats, 30000);
+    
+    return () => clearInterval(interval);
+  }, [dealId]);
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="h-20 bg-gray-200 rounded"></div>
-            <div className="h-20 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+        <span className="ml-2 text-sm text-gray-600">Chargement...</span>
       </div>
     );
   }
 
-  if (!stats || stats.total === 0) {
+  if (error || !stats) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <TrendingUp className="w-5 h-5 text-orange-500" />
-          Engagement des bons plans
-        </h3>
-        <div className="text-center py-8 text-gray-500">
-          <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-          <p>Aucune interaction sur vos bons plans pour le moment</p>
-        </div>
+      <div className="text-center p-4 text-gray-500 text-sm">
+        {error || 'Aucune donnée disponible'}
       </div>
     );
   }
-
-  const positiveRate = stats.total > 0 ? (stats.liked / stats.total) * 100 : 0;
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <TrendingUp className="w-5 h-5 text-orange-500" />
-        Engagement des bons plans
-      </h3>
+    <div className="bg-gradient-to-r from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <TrendingUp className="w-5 h-5 text-orange-600" />
+        <h4 className="font-semibold text-orange-800 text-sm">Engagement</h4>
+      </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Total interactions */}
-        <div className="bg-gray-50 rounded-lg p-4 text-center">
-          <Users className="w-8 h-8 text-gray-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
-          <div className="text-sm text-gray-600">Total interactions</div>
-        </div>
-
+      <div className="grid grid-cols-2 gap-4">
         {/* Intéressés */}
-        <div className="bg-green-50 rounded-lg p-4 text-center">
-          <ThumbsUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-green-700">{stats.liked}</div>
-          <div className="text-sm text-green-600">Intéressés</div>
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <ThumbsUp className="w-4 h-4 text-green-600" />
+            <span className="text-lg font-bold text-green-700">{stats.liked}</span>
+          </div>
+          <p className="text-xs text-gray-600">Intéressés</p>
         </div>
-
+        
         {/* Pas intéressés */}
-        <div className="bg-red-50 rounded-lg p-4 text-center">
-          <ThumbsDown className="w-8 h-8 text-red-600 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-red-700">{stats.disliked}</div>
-          <div className="text-sm text-red-600">Pas intéressés</div>
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-1 mb-1">
+            <ThumbsDown className="w-4 h-4 text-red-600" />
+            <span className="text-lg font-bold text-red-700">{stats.disliked}</span>
+          </div>
+          <p className="text-xs text-gray-600">Pas intéressés</p>
         </div>
       </div>
-
-      {/* Taux d'engagement positif */}
-      <div className="bg-gradient-to-r from-orange-50 to-orange-100 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-orange-800">Taux d'intérêt positif</span>
-          <span className="text-lg font-bold text-orange-900">{positiveRate.toFixed(1)}%</span>
+      
+      {/* Taux d'engagement */}
+      <div className="mt-3 pt-3 border-t border-orange-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1">
+            <Users className="w-4 h-4 text-orange-600" />
+            <span className="text-sm text-gray-700">Taux d'engagement</span>
+          </div>
+          <span className={`font-bold text-sm ${
+            stats.engagementRate >= 70 ? 'text-green-600' :
+            stats.engagementRate >= 50 ? 'text-yellow-600' :
+            'text-red-600'
+          }`}>
+            {stats.engagementRate.toFixed(1)}%
+          </span>
         </div>
         
         {/* Barre de progression */}
-        <div className="w-full bg-orange-200 rounded-full h-2">
+        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
           <div 
-            className="bg-orange-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${positiveRate}%` }}
-          ></div>
+            className={`h-2 rounded-full transition-all duration-300 ${
+              stats.engagementRate >= 70 ? 'bg-green-500' :
+              stats.engagementRate >= 50 ? 'bg-yellow-500' :
+              'bg-red-500'
+            }`}
+            style={{ width: `${Math.min(stats.engagementRate, 100)}%` }}
+          />
         </div>
-        
-        <p className="text-xs text-orange-700 mt-2">
-          {positiveRate >= 70 ? 'Excellent engagement !' : 
-           positiveRate >= 50 ? 'Bon engagement' : 
-           positiveRate >= 30 ? 'Engagement moyen' : 
-           'Engagement faible - pensez à ajuster vos offres'}
-        </p>
       </div>
-
-      {/* Insights */}
-      {stats.total >= 5 && (
-        <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-          <h4 className="text-sm font-medium text-blue-900 mb-1">💡 Insight</h4>
-          <p className="text-xs text-blue-800">
-            {positiveRate >= 70 ? 
-              'Vos bons plans génèrent un fort intérêt ! Continuez sur cette lancée.' :
-              positiveRate >= 50 ?
-              'Vos offres intéressent la majorité. Analysez les retours négatifs pour améliorer.' :
-              'Les retours suggèrent d\'ajuster vos bons plans. Considérez les préférences de votre audience.'
-            }
-          </p>
-        </div>
-      )}
+      
+      {/* Total */}
+      <div className="mt-2 text-center">
+        <span className="text-xs text-gray-500">
+          {stats.total} interaction{stats.total > 1 ? 's' : ''} au total
+        </span>
+      </div>
     </div>
   );
 }
-

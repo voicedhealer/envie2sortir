@@ -58,7 +58,9 @@ export async function PUT(
         isRecurring: body.isRecurring !== undefined ? body.isRecurring : undefined,
         recurrenceType: body.recurrenceType || null,
         recurrenceDays: body.recurrenceDays || null,
-        recurrenceEndDate: body.recurrenceEndDate ? new Date(body.recurrenceEndDate) : null
+        recurrenceEndDate: body.recurrenceEndDate ? new Date(body.recurrenceEndDate) : null,
+        // Champs pour l'effet flip
+        promoUrl: body.promoUrl || null
       }
     });
 

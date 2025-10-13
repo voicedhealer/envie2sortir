@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw } from 'lucide-react';
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
+import DealEngagementStats from '@/components/DealEngagementStats';
 
 interface DailyDeal {
   id: string;
+  establishmentId: string;
   title: string;
   description: string;
   modality?: string | null;
@@ -24,6 +26,8 @@ interface DailyDeal {
   recurrenceType?: string | null;
   recurrenceDays?: number[] | null;
   recurrenceEndDate?: Date | string | null;
+  // Champs pour l'effet flip
+  promoUrl?: string | null;
 }
 
 interface DealsManagerProps {
@@ -56,7 +60,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
     isRecurring: false,
     recurrenceType: '',
     recurrenceDays: [] as number[],
-    recurrenceEndDate: ''
+    recurrenceEndDate: '',
+    // Champs pour l'effet flip
+    promoUrl: '' // Lien vers la promotion sur internet (format URL)
   });
 
   // Charger les bons plans
@@ -233,7 +239,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       isRecurring: deal.isRecurring || false,
       recurrenceType: deal.recurrenceType || '',
       recurrenceDays: deal.recurrenceDays || [],
-      recurrenceEndDate: deal.recurrenceEndDate ? new Date(deal.recurrenceEndDate).toISOString().split('T')[0] : ''
+      recurrenceEndDate: deal.recurrenceEndDate ? new Date(deal.recurrenceEndDate).toISOString().split('T')[0] : '',
+      // Champs pour l'effet flip
+      promoUrl: (deal as any).promoUrl || ''
     });
     setShowForm(true);
   };
@@ -280,7 +288,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       isRecurring: deal.isRecurring || false,
       recurrenceType: deal.recurrenceType || '',
       recurrenceDays: deal.recurrenceDays || [],
-      recurrenceEndDate: ''
+      recurrenceEndDate: '',
+      // Champs pour l'effet flip
+      promoUrl: (deal as any).promoUrl || ''
     });
     setShowForm(true);
   };
@@ -303,7 +313,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       isRecurring: false,
       recurrenceType: '',
       recurrenceDays: [],
-      recurrenceEndDate: ''
+      recurrenceEndDate: '',
+      // Champs pour l'effet flip
+      promoUrl: ''
     });
     setEditingDeal(null);
   };
@@ -413,6 +425,24 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                 />
                 <p className="text-xs text-gray-500 mt-1">
                   Cette information apparaîtra sur l'overlay "Bon plan du jour" des cartes de recherche
+                </p>
+              </div>
+
+              {/* Lien promotion */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Lien vers la promotion (optionnel)
+                </label>
+                <input
+                  type="url"
+                  name="promoUrl"
+                  value={formData.promoUrl}
+                  onChange={handleInputChange}
+                  placeholder="https://example.com/promotion"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  URL complète vers votre promotion sur internet
                 </p>
               </div>
 
@@ -816,7 +846,7 @@ function DealCard({
           </div>
         )}
 
-        {/* Contenu */}
+        {/* Contenu principal */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -888,6 +918,14 @@ function DealCard({
             </button>
           </div>
         </div>
+      </div>
+      
+      {/* Statistiques d'engagement */}
+      <div className="mt-4">
+        <DealEngagementStats 
+          dealId={deal.id}
+          establishmentId={deal.establishmentId}
+        />
       </div>
     </div>
   );

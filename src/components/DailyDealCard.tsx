@@ -18,6 +18,8 @@ interface DailyDeal {
   heureDebut?: string | null;
   heureFin?: string | null;
   isActive: boolean;
+  // Champs pour l'effet flip
+  promoUrl?: string | null;
 }
 
 interface DailyDealCardProps {
@@ -30,6 +32,26 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
   const [userEngagement, setUserEngagement] = useState<'liked' | 'disliked' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+
+  // Fonction pour formater la date comme "Le XX XX XXXX à XXhXX"
+  const formatDateForFront = (deal: DailyDeal) => {
+    const startDate = new Date(deal.dateDebut);
+    const day = startDate.getDate().toString().padStart(2, '0');
+    const month = startDate.toLocaleDateString('fr-FR', { month: 'long' });
+    const year = startDate.getFullYear();
+    
+    if (deal.heureDebut) {
+      return `Le ${day} ${month} ${year} à ${deal.heureDebut}`;
+    }
+    
+    return `Le ${day} ${month} ${year}`;
+  };
+
+  // Fonction pour tronquer intelligemment le texte
+  const truncateText = (text: string, maxLength: number = 80) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength).trim() + '...';
+  };
 
   const handleEngagement = async (type: 'liked' | 'disliked', e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher le clic sur la carte
@@ -113,7 +135,13 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
           {/* Contenu */}
           <div className="p-4 flex flex-col flex-1">
             {/* Titre */}
-            <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2">
+            <h3 className="font-bold text-gray-900 text-lg mb-2" style={{
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
               {deal.title}
             </h3>
 
@@ -134,15 +162,15 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
             )}
 
             {/* Description */}
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-1">
-              {deal.description}
+            <p className="text-sm text-gray-600 mb-3 flex-1">
+              {truncateText(deal.description, 80)}
             </p>
 
             {/* Horaires */}
             <div className="space-y-1 text-xs text-gray-500 mb-4">
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-orange-500" />
-                <span>{formatDealTime(deal)}</span>
+                <span>{formatDateForFront(deal)}</span>
               </div>
               
               {deal.pdfUrl && (
@@ -224,7 +252,7 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
               
               {deal.modality && (
                 <div className="detail-item">
-                  <span className="detail-icon">📍</span>
+                  <span className="detail-icon">📋</span>
                   <span className="detail-text">{deal.modality}</span>
                 </div>
               )}
@@ -251,12 +279,26 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
                   <span className="detail-text">Menu disponible en PDF</span>
                 </div>
               )}
+              
             </div>
             
             <div className="promo-conditions">
               <p className="conditions-text">
                 {deal.description}
               </p>
+              
+              {deal.promoUrl && (
+                <div className="mt-3 pt-3 border-t border-orange-300">
+                  <a 
+                    href={deal.promoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium underline"
+                  >
+                    🔗 Voir la promotion en ligne
+                  </a>
+                </div>
+              )}
             </div>
           </div>
           

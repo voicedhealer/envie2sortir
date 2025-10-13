@@ -14,6 +14,7 @@ interface ActiveDeal {
   heureDebut?: string | null;
   heureFin?: string | null;
   isActive: boolean;
+  promoUrl?: string | null;
 }
 
 interface UseActiveDealsResult {
@@ -44,13 +45,29 @@ export function useActiveDeals(establishmentId: string): UseActiveDealsResult {
         console.log('useActiveDeals - Response status:', response.status);
         
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('useActiveDeals - Response not OK:', errorData);
+          let errorData = {};
+          try {
+            errorData = await response.json();
+          } catch (parseError) {
+            console.warn('useActiveDeals - Impossible de parser la réponse JSON:', parseError);
+          }
+          console.error('useActiveDeals - Response not OK:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorData
+          });
           throw new Error(errorData.error || `Erreur HTTP ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
         console.log('useActiveDeals - Data received:', data);
+        
+        // Vérifier que la réponse n'est pas vide
+        if (!data || Object.keys(data).length === 0) {
+          console.warn('useActiveDeals - Réponse vide reçue');
+          setActiveDeal(null);
+          return;
+        }
         
         if (data.success && data.deals && data.deals.length > 0) {
           // Prendre le premier bon plan actif (le plus récent)

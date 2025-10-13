@@ -10,6 +10,7 @@ import MenuManager from "@/components/dashboard/MenuManager";
 import ClickAnalyticsDashboard from "@/components/analytics/ClickAnalyticsDashboard";
 import DetailedAnalyticsDashboard from "@/components/analytics/DetailedAnalyticsDashboard";
 import DealsManager from "./DealsManager";
+import DealsGlobalStats from "@/components/DealsGlobalStats";
 
 interface User {
   id: string;
@@ -513,10 +514,13 @@ export default function DashboardContent({ user, establishment, professional }: 
           
           {/* Contenu selon la vue sélectionnée */}
           {analyticsViewMode === 'overview' ? (
-            <ClickAnalyticsDashboard 
-              establishmentId={establishment.id} 
-              period="30d"
-            />
+            <div className="space-y-6">
+              <ClickAnalyticsDashboard 
+                establishmentId={establishment.id} 
+                period="30d"
+              />
+              <DealsGlobalStats establishmentId={establishment.id} />
+            </div>
           ) : (
             <DetailedAnalyticsDashboard 
               establishmentId={establishment.id} 

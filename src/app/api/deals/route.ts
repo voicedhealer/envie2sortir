@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
       isRecurring,
       recurrenceType,
       recurrenceDays,
-      recurrenceEndDate
+      recurrenceEndDate,
+      // Champs pour l'effet flip
+      shortTitle,
+      shortDescription,
+      promoUrl
     } = body;
 
     // Validation des champs requis
@@ -85,7 +89,9 @@ export async function POST(request: NextRequest) {
         isRecurring: isRecurring || false,
         recurrenceType: recurrenceType || null,
         recurrenceDays: recurrenceDays || null,
-        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null
+        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+        // Champs pour l'effet flip
+        promoUrl: promoUrl || null
       }
     });
 
