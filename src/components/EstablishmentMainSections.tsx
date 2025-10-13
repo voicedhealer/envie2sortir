@@ -474,7 +474,7 @@ function getBulletColor(color: string): string {
 }
 
 export default function EstablishmentMainSections({ establishment, className = "" }: EstablishmentMainSectionsProps) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['about']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set([]));
   
   // Hook de tracking des sections
   const { trackSectionOpen, trackSectionClose, trackSubsectionClick } = useSectionTracking(establishment.id || '');

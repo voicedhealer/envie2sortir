@@ -1,6 +1,6 @@
 'use client';
 
-import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share } from 'lucide-react';
+import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -42,7 +42,32 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const [activeMenu, setActiveMenu] = useState<PublicMenuDisplay | null>(null);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [signupModalAction, setSignupModalAction] = useState<'review' | 'favorite'>('review');
+  const [existingUserReview, setExistingUserReview] = useState<any>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
 
+  // Vérifier si l'utilisateur a déjà un avis pour cet établissement
+  useEffect(() => {
+    const checkExistingReview = async () => {
+      if (!session?.user?.id || session.user.userType !== 'user' && session.user.role !== 'user') return;
+      
+      try {
+        const response = await fetch('/api/user/comments');
+        if (response.ok) {
+          const data = await response.json();
+          const userReview = data.comments.find((review: any) => 
+            review.establishment.id === establishment.id
+          );
+          if (userReview) {
+            setExistingUserReview(userReview);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'avis existant:', error);
+      }
+    };
+
+    checkExistingReview();
+  }, [session, establishment.id]);
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
@@ -262,7 +287,18 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
       return;
     }
 
-    // Utilisateur connecté et client : ouvrir le formulaire d'avis
+    // Utilisateur connecté et client : vérifier s'il a déjà un avis
+    if (existingUserReview) {
+      // Mode édition : pré-remplir avec l'avis existant
+      setIsEditMode(true);
+      setComment(existingUserReview.content || '');
+      setRating(existingUserReview.rating || 0);
+    } else {
+      // Mode création : formulaire vide
+      setIsEditMode(false);
+      setComment('');
+      setRating(0);
+    }
     setShowCommentForm(true);
   };
 
@@ -289,13 +325,17 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
       if (response.ok) {
         const data = await response.json();
-        toast.success(data.message || 'Avis enregistré avec succès');
+        toast.success(data.message || (isEditMode ? 'Avis modifié avec succès' : 'Avis enregistré avec succès'));
         setComment('');
         setRating(0);
+        setIsEditMode(false);
+        setExistingUserReview(null);
         setShowCommentForm(false);
+        // Recharger la page pour voir les changements
+        window.location.reload();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Erreur lors de l\'ajout de l\'avis');
+        toast.error(error.error || (isEditMode ? 'Erreur lors de la modification de l\'avis' : 'Erreur lors de l\'ajout de l\'avis'));
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout du commentaire:', error);
@@ -379,45 +419,46 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           </button>
         </div>
 
-        {/* Ligne 2 : Bouton "Laisser un avis" uniforme */}
+        {/* Ligne 2 : Bouton "Laisser un avis" avec notes intégrées */}
         <div className="w-full">
           <button
             onClick={() => {
               handleReviewClick();
               incrementClick(establishment.id);
             }}
-            className="w-full flex items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+            className="w-full flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
           >
-            <Star className="w-5 h-5 text-gray-700" />
-            <span className="text-gray-700 font-medium">Laisser un avis</span>
+            <div className="flex items-center gap-2">
+              <Star className="w-5 h-5 text-gray-700" />
+              <span className="text-gray-700 font-medium">Laisser un avis</span>
+            </div>
+            
+            {/* Affichage des notes intégré */}
+            {establishment.avgRating && (
+              <div className="flex items-center space-x-1">
+                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span className="font-semibold text-gray-900 text-sm">{establishment.avgRating.toFixed(1)}</span>
+                {establishment.totalComments && (
+                  <span className="text-gray-600 text-xs">
+                    ({establishment.totalComments})
+                  </span>
+                )}
+              </div>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Note et avis en bas */}
-      {establishment.avgRating && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="flex items-center space-x-1">
-              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="font-semibold text-gray-900">{establishment.avgRating.toFixed(1)}</span>
-            </div>
-            {establishment.totalComments && (
-              <span className="text-gray-600 text-sm">
-                ({establishment.totalComments} avis)
-              </span>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Modal de commentaire */}
       {showCommentForm && (
         <div 
-          className="fixed inset-0 bg-white/20 backdrop-blur-sm flex items-center justify-center z-[9999]"
+          className="fixed inset-0 bg-black/40 backdrop-blur-md flex items-center justify-center z-[9999]"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setShowCommentForm(false);
+              setIsEditMode(false);
+              setExistingUserReview(null);
             }
           }}
         >
@@ -425,7 +466,19 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
             className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Laisser un avis</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">{isEditMode ? 'Modifier votre avis' : 'Laisser un avis'}</h3>
+              <button
+                onClick={() => {
+                  setShowCommentForm(false);
+                  setIsEditMode(false);
+                  setExistingUserReview(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
             
             {/* Note */}
             <div className="mb-4">
@@ -473,7 +526,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 disabled={isSubmittingComment || !comment.trim() || rating === 0}
                 className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                {isSubmittingComment ? 'Envoi...' : 'Publier'}
+                {isSubmittingComment ? 'Envoi...' : (isEditMode ? 'Modifier' : 'Publier')}
               </button>
             </div>
           </div>

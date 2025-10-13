@@ -312,49 +312,6 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     }
   };
 
-  const handleFavorite = () => {
-    // TODO: Implémenter la logique de favoris
-    console.log('Ajouter aux favoris');
-  };
-
-  const handleShare = async () => {
-    // 1. Essayer l'API Web Share (mobile principalement)
-    if (navigator.share) {
-      try {
-        const shareData = {
-          title: establishment.name,
-          text: establishment.description || `Découvrez ${establishment.name} sur Envie2Sortir`,
-          url: window.location.href,
-        };
-        
-        await navigator.share(shareData);
-        console.log('✅ Partage réussi via Web Share API');
-        return;
-      } catch (error) {
-        // Si le partage a été annulé par l'utilisateur, c'est normal
-        if (error instanceof Error && error.name === 'AbortError') {
-          console.log('Partage annulé par l\'utilisateur');
-          return;
-        }
-        // Autres erreurs, continuer vers le fallback
-        console.warn('Erreur Web Share API:', error);
-      }
-    }
-
-    // 2. Fallback: copier dans le presse-papiers
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success('Lien copié dans le presse-papiers !');
-        return;
-      }
-    } catch (error) {
-      console.warn('Erreur clipboard:', error);
-    }
-
-    // 3. Fallback final: afficher une alerte simple
-    alert(`Partagez ce lien : ${window.location.href}`);
-  };
 
 
   return (
@@ -383,8 +340,6 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
               images: establishment.images?.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) || [],
               activities: establishment.activities
             }}
-            onFavorite={handleFavorite}
-            onShare={handleShare}
           />
         </div>
 

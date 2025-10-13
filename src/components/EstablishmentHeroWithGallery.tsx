@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Star, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useSession } from 'next-auth/react';
-import { toast } from '@/lib/fake-toast';
+import { MapPin, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { getActivityInfo } from '@/lib/category-tags-mapping';
 import PhotoGallery from './PhotoGallery';
@@ -21,18 +19,11 @@ interface EstablishmentHeroWithGalleryProps {
     category?: string;
     activities?: string[];
   };
-  onFavorite?: () => void;
-  onShare?: () => void;
 }
 
 export default function EstablishmentHeroWithGallery({ 
-  establishment, 
-  onFavorite, 
-  onShare 
+  establishment
 }: EstablishmentHeroWithGalleryProps) {
-  const { data: session } = useSession();
-  const [isLiked, setIsLiked] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -86,81 +77,6 @@ export default function EstablishmentHeroWithGallery({
     setCurrentImageIndex((prev) => (prev - 1 + uniqueImages.length) % uniqueImages.length);
   };
   
-  // Vérifier si l'établissement est en favori
-  useEffect(() => {
-    if (session?.user?.role === 'user') {
-      checkFavoriteStatus();
-    }
-  }, [session, establishment.id]);
-
-  const checkFavoriteStatus = async () => {
-    try {
-      const response = await fetch('/api/user/favorites');
-      if (response.ok) {
-        const data = await response.json();
-        const isFavorite = data.favorites.some((fav: any) => fav.establishment.id === establishment.id);
-        setIsLiked(isFavorite);
-      }
-    } catch (error) {
-      console.error('Erreur lors de la vérification des favoris:', error);
-    }
-  };
-
-  // Gestion des favoris
-  const handleFavorite = async () => {
-    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
-      toast.error('Vous devez être connecté pour ajouter aux favoris');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      if (isLiked) {
-        // Retirer des favoris
-        const response = await fetch(`/api/user/favorites`);
-        
-        if (response.ok) {
-          const data = await response.json();
-          const favorite = data.favorites.find((fav: any) => fav.establishment.id === establishment.id);
-          
-          if (favorite) {
-            const deleteResponse = await fetch(`/api/user/favorites/${favorite.id}`, {
-              method: 'DELETE'
-            });
-            
-            if (deleteResponse.ok) {
-              setIsLiked(false);
-              toast.success('Retiré des favoris');
-            }
-          }
-        }
-      } else {
-        // Ajouter aux favoris
-        const response = await fetch('/api/user/favorites', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ establishmentId: establishment.id })
-        });
-
-        if (response.ok) {
-          setIsLiked(true);
-          toast.success('Ajouté aux favoris');
-        } else {
-          const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
-          toast.error(errorData.error || 'Erreur lors de l\'ajout aux favoris');
-          console.error('Erreur favoris:', response.status, errorData);
-        }
-      }
-    } catch (error) {
-      console.error('Erreur lors de la gestion des favoris:', error);
-      toast.error('Erreur lors de la gestion des favoris');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="relative w-full animate-fade-in-up">
@@ -227,25 +143,6 @@ export default function EstablishmentHeroWithGallery({
             </div>
           )}
 
-          {/* Actions en haut à droite */}
-          <div className="absolute top-4 right-4 z-10 flex space-x-2">
-            <button
-              onClick={handleFavorite}
-              disabled={isLoading}
-              className={`bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
-            >
-              <Heart 
-                className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} 
-              />
-            </button>
-            <button
-              onClick={onShare}
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3"
-            >
-              <Share2 className="w-5 h-5 text-white" />
-            </button>
-          </div>
 
           {/* Informations principales en bas */}
           <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
@@ -299,25 +196,6 @@ export default function EstablishmentHeroWithGallery({
               </div>
             )}
 
-            {/* Actions en haut à droite */}
-            <div className="absolute top-4 right-4 z-10 flex space-x-2">
-              <button
-                onClick={handleFavorite}
-                disabled={isLoading}
-                className={`bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
-              >
-                <Heart 
-                  className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} 
-                />
-              </button>
-              <button
-                onClick={onShare}
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3"
-              >
-                <Share2 className="w-5 h-5 text-white" />
-              </button>
-            </div>
 
             {/* Informations principales en bas */}
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
@@ -384,25 +262,6 @@ export default function EstablishmentHeroWithGallery({
               </div>
             )}
 
-            {/* Actions en haut à droite */}
-            <div className="absolute top-4 right-4 flex space-x-2">
-              <button
-                onClick={handleFavorite}
-                disabled={isLoading}
-                className={`bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
-              >
-                <Heart 
-                  className={`w-5 h-5 ${isLiked ? 'text-red-500 fill-current' : 'text-white'}`} 
-                />
-              </button>
-              <button
-                onClick={onShare}
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all duration-300 rounded-full p-3"
-              >
-                <Share2 className="w-5 h-5 text-white" />
-              </button>
-            </div>
 
             {/* Informations principales en bas */}
             <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
