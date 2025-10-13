@@ -16,9 +16,10 @@ interface ContactButtonsProps {
     city?: string | null;
   };
   onContactClick?: () => void;
+  vertical?: boolean;
 }
 
-export default function ContactButtons({ establishment, onContactClick }: ContactButtonsProps) {
+export default function ContactButtons({ establishment, onContactClick, vertical = false }: ContactButtonsProps) {
   const { isMobile, isLoading } = useDeviceDetection();
   const [showOptions, setShowOptions] = useState(false);
 
@@ -91,44 +92,48 @@ export default function ContactButtons({ establishment, onContactClick }: Contac
   
   // Si un seul moyen de contact, l'afficher directement (peu importe mobile/desktop)
   if (contactMethods.length === 1) {
+    const buttonClass = vertical 
+      ? "flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+      : "action-btn info";
+    
     if (establishment.whatsappPhone) {
       return (
         <button
           onClick={handleWhatsAppClick}
-          className="action-btn info"
+          className={buttonClass}
         >
-          <MessageCircle className="w-4 h-4" />
-          <span>WhatsApp</span>
+          <MessageCircle className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>WhatsApp</span>
         </button>
       );
     } else if (establishment.messengerUrl) {
       return (
         <button
           onClick={handleMessengerClick}
-          className="action-btn info"
+          className={buttonClass}
         >
-          <MessageCircle className="w-4 h-4" />
-          <span>Messenger</span>
+          <MessageCircle className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Messenger</span>
         </button>
       );
     } else if (establishment.phone) {
       return (
         <button
           onClick={handlePhoneClick}
-          className="action-btn info"
+          className={buttonClass}
         >
-          <Phone className="w-4 h-4" />
-          <span>Appeler</span>
+          <Phone className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Contacter</span>
         </button>
       );
     } else if (establishment.email) {
       return (
         <button
           onClick={handleEmailClick}
-          className="action-btn info"
+          className={buttonClass}
         >
-          <Mail className="w-4 h-4" />
-          <span>Email</span>
+          <Mail className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Email</span>
         </button>
       );
     }
@@ -191,18 +196,22 @@ export default function ContactButtons({ establishment, onContactClick }: Contac
   }
 
   // Si plusieurs moyens de contact, afficher le menu déroulant
+  const buttonClass = vertical 
+    ? "flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+    : "action-btn info";
+    
   return (
     <div className="relative">
       <button
         onClick={() => setShowOptions(!showOptions)}
-        className="action-btn info"
+        className={buttonClass}
       >
-        <MessageCircle className="w-4 h-4" />
-        <span>Contacter</span>
+        <Phone className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+        <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Contacter</span>
       </button>
       
       {showOptions && (
-        <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+        <div className={`absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10 ${vertical ? 'left-1/2 transform -translate-x-1/2' : ''}`}>
           <div className="py-2">
             {establishment.whatsappPhone && (
               <button

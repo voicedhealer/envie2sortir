@@ -71,6 +71,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validation du rating
+    const validRating = rating && typeof rating === 'number' && rating > 0 && rating <= 5 ? rating : null;
+
     // Vérifier que l'établissement existe
     const establishment = await prisma.establishment.findUnique({
       where: { id: establishmentId }
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest) {
         where: { id: existingComment.id },
         data: {
           content: content,
-          rating: rating || null,
+          rating: validRating,
           updatedAt: new Date()
         },
         include: {
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
           userId: session.user.id,
           establishmentId: establishmentId,
           content: content,
-          rating: rating || null
+          rating: validRating
         },
         include: {
           establishment: {
@@ -130,22 +133,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Mettre à jour la note moyenne de l'établissement
-    if (rating) {
+    if (validRating && validRating > 0) {
       const allComments = await prisma.userComment.findMany({
         where: {
-          establishmentId: establishmentId,
-          rating: { not: null }
+          establishmentId: establishmentId
         },
         select: { rating: true }
       });
 
-      const avgRating = allComments.reduce((sum, c) => sum + (c.rating || 0), 0) / allComments.length;
+      // Filtrer les commentaires avec rating valide
+      const commentsWithRating = allComments.filter(c => c.rating && c.rating > 0);
+      const avgRating = commentsWithRating.length > 0 
+        ? commentsWithRating.reduce((sum, c) => sum + c.rating!, 0) / commentsWithRating.length 
+        : 0;
 
       await prisma.establishment.update({
         where: { id: establishmentId },
         data: {
           avgRating: avgRating,
-          totalComments: allComments.length
+          totalComments: commentsWithRating.length
         }
       });
     }

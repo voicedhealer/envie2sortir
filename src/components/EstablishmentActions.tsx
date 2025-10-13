@@ -1,6 +1,6 @@
 'use client';
 
-import { Phone, MapPin, Star, Heart, FileText, MessageSquare } from 'lucide-react';
+import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -41,6 +41,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const [showMenuModal, setShowMenuModal] = useState(false);
   const [activeMenu, setActiveMenu] = useState<PublicMenuDisplay | null>(null);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [signupModalAction, setSignupModalAction] = useState<'review' | 'favorite'>('review');
 
 
   // Vérifier si l'établissement est en favori
@@ -140,6 +141,45 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, '_blank');
   };
 
+  const handleShare = async () => {
+    // 1. Essayer l'API Web Share (mobile principalement)
+    if (navigator.share) {
+      try {
+        const shareData = {
+          title: establishment.name,
+          text: `Découvrez ${establishment.name} sur Envie2Sortir`,
+          url: window.location.href,
+        };
+        
+        await navigator.share(shareData);
+        console.log('✅ Partage réussi via Web Share API');
+        return;
+      } catch (error) {
+        // Si le partage a été annulé par l'utilisateur, c'est normal
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Partage annulé par l\'utilisateur');
+          return;
+        }
+        // Autres erreurs, continuer vers le fallback
+        console.warn('Erreur Web Share API:', error);
+      }
+    }
+
+    // 2. Fallback: copier dans le presse-papiers
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success('Lien copié dans le presse-papiers !');
+        return;
+      }
+    } catch (error) {
+      console.warn('Erreur clipboard:', error);
+    }
+
+    // 3. Dernier recours: afficher l'URL
+    toast.success(`Partagez ce lien: ${window.location.href}`);
+  };
+
   const handleReview = () => {
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
     if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
@@ -209,6 +249,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const handleReviewClick = () => {
     if (!session) {
       // Utilisateur non connecté : afficher le modal d'inscription
+      setSignupModalAction('review');
       setShowSignupModal(true);
       return;
     }
@@ -216,6 +257,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
     if (session.user.userType !== 'user' && session.user.role !== 'user') {
       // Utilisateur connecté mais pas client : afficher le modal d'inscription
+      setSignupModalAction('review');
       setShowSignupModal(true);
       return;
     }
@@ -267,63 +309,89 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 animate-slide-in-right">
       <h3 className="font-semibold text-gray-900 mb-4">Actions rapides</h3>
       
-      <div className="action-buttons">
-        {/* Itinéraire */}
-        <button
-          onClick={handleDirections}
-          className="action-btn info"
-        >
-          <MapPin className="w-4 h-4" />
-          <span>Itinéraire</span>
-        </button>
-
-        {/* Consulter le menu */}
-        {!isLoadingMenus && menus.length > 0 && (
+      {/* Layout Figma : 5 boutons ligne 1, 1 bouton ligne 2 */}
+      <div className="space-y-4">
+        {/* Ligne 1 : 5 boutons carrés verticaux */}
+        <div className="grid grid-cols-5 gap-3">
+          {/* Itinéraire */}
           <button
-            onClick={() => {
-              incrementClick(establishment.id);
-              setShowMenuModal(true);
-            }}
-            className="action-btn premium"
+            onClick={handleDirections}
+            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
           >
-            <FileText className="w-4 h-4" />
-            <span>Consulter le menu</span>
+            <MapPin className="w-5 h-5 text-gray-700 mb-2" />
+            <span className="text-xs text-gray-700 font-medium">Itinéraire</span>
           </button>
-        )}
 
-        {/* Boutons de contact (inclut Appeler, WhatsApp, Email) */}
-        <ContactButtons 
-          establishment={establishment}
-          onContactClick={() => incrementClick(establishment.id)}
-        />
-        
-        {/* Favoris */}
-        {session?.user?.role === 'user' && (
+          {/* Consulter le menu */}
+          {!isLoadingMenus && menus.length > 0 && (
+            <button
+              onClick={() => {
+                incrementClick(establishment.id);
+                setShowMenuModal(true);
+              }}
+              className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+            >
+              <FileText className="w-5 h-5 text-gray-700 mb-2" />
+              <span className="text-xs text-gray-700 font-medium">Consulter le menu</span>
+            </button>
+          )}
+
+          {/* Contacter - Utilise ContactButtons mais avec style vertical */}
+          <ContactButtons 
+            establishment={establishment}
+            onContactClick={() => incrementClick(establishment.id)}
+            vertical={true}
+          />
+          
+          {/* Favoris */}
           <button
             onClick={() => {
+              // Si l'utilisateur n'est pas connecté ou n'est pas un utilisateur simple
+              if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+                setSignupModalAction('favorite');
+                setShowSignupModal(true);
+                return;
+              }
+              // Sinon, gérer les favoris normalement
               handleFavorite();
               incrementClick(establishment.id);
             }}
-            disabled={isLoading}
-            className={`action-btn ${isLiked ? 'danger' : 'secondary'} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading && session?.user?.role === 'user'}
+            className={`flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors ${isLoading && session?.user?.role === 'user' ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
           >
-            <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
-            <span>{isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}</span>
+            <Heart className={`w-5 h-5 mb-2 ${isLiked ? 'text-red-500 fill-current' : 'text-gray-700'}`} />
+            <span className="text-xs text-gray-700 font-medium">
+              {isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+            </span>
           </button>
-        )}
 
-        {/* Laisser un avis */}
-        <button
-          onClick={() => {
-            handleReviewClick();
-            incrementClick(establishment.id);
-          }}
-            className="action-btn primary"
+          {/* Partager */}
+          <button
+            onClick={() => {
+              handleShare();
+              incrementClick(establishment.id);
+            }}
+            className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
           >
-            <Star className="w-4 h-4" />
-            <span>Laisser un avis</span>
+            <Share className="w-5 h-5 text-gray-700 mb-2" />
+            <span className="text-xs text-gray-700 font-medium">Partager</span>
           </button>
+        </div>
+
+        {/* Ligne 2 : Bouton "Laisser un avis" uniforme */}
+        <div className="w-full">
+          <button
+            onClick={() => {
+              handleReviewClick();
+              incrementClick(establishment.id);
+            }}
+            className="w-full flex items-center justify-center gap-2 p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+          >
+            <Star className="w-5 h-5 text-gray-700" />
+            <span className="text-gray-700 font-medium">Laisser un avis</span>
+          </button>
+        </div>
       </div>
 
       {/* Note et avis en bas */}
@@ -493,8 +561,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 Inscription requise
               </h3>
               <p className="text-gray-600 mb-6">
-                Il faut être inscrit sur le site pour laisser un avis sur cet établissement.
-                Souhaitez-vous être redirigé vers la page d'inscription ?
+                {signupModalAction === 'review' 
+                  ? "Il faut être inscrit sur le site pour laisser un avis sur cet établissement."
+                  : "Il faut être inscrit sur le site pour ajouter cet établissement à vos favoris."
+                } Souhaitez-vous être redirigé vers la page d'inscription ?
               </p>
               <div className="flex gap-3 justify-center">
                 <button

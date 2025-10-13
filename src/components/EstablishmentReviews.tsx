@@ -46,7 +46,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
     const fetchReviews = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/establishments/${establishment.slug}/comments`);
+        const response = await fetch(`/api/public/establishments/${establishment.slug}/comments`);
         
         if (response.ok) {
           const data = await response.json();
