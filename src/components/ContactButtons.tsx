@@ -102,7 +102,7 @@ export default function ContactButtons({ establishment, onContactClick, vertical
           onClick={handleWhatsAppClick}
           className={buttonClass}
         >
-          <MessageCircle className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <MessageCircle className={`w-5 h-5 text-gray-700 ${vertical ? 'mb-2' : ''}`} />
           <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>WhatsApp</span>
         </button>
       );
@@ -112,7 +112,7 @@ export default function ContactButtons({ establishment, onContactClick, vertical
           onClick={handleMessengerClick}
           className={buttonClass}
         >
-          <MessageCircle className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <MessageCircle className={`w-5 h-5 text-gray-700 ${vertical ? 'mb-2' : ''}`} />
           <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Messenger</span>
         </button>
       );
@@ -122,7 +122,7 @@ export default function ContactButtons({ establishment, onContactClick, vertical
           onClick={handlePhoneClick}
           className={buttonClass}
         >
-          <Phone className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <Phone className={`w-5 h-5 text-gray-700 ${vertical ? 'mb-2' : ''}`} />
           <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Contacter</span>
         </button>
       );
@@ -132,7 +132,7 @@ export default function ContactButtons({ establishment, onContactClick, vertical
           onClick={handleEmailClick}
           className={buttonClass}
         >
-          <Mail className={`w-4 h-4 ${vertical ? 'mb-2' : ''}`} />
+          <Mail className={`w-5 h-5 text-gray-700 ${vertical ? 'mb-2' : ''}`} />
           <span className={vertical ? 'text-xs text-gray-700 font-medium' : ''}>Email</span>
         </button>
       );

@@ -1,12 +1,11 @@
 'use client';
 
-import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share, X } from 'lucide-react';
+import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share, X, MessageCircle, Mail } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
-import ContactButtons from './ContactButtons';
 import { PublicMenuDisplay } from '@/types/menu.types';
 
 interface EstablishmentActionsProps {
@@ -44,6 +43,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const [signupModalAction, setSignupModalAction] = useState<'review' | 'favorite'>('review');
   const [existingUserReview, setExistingUserReview] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showContactOptions, setShowContactOptions] = useState(false);
 
   // Vérifier si l'utilisateur a déjà un avis pour cet établissement
   useEffect(() => {
@@ -134,6 +134,26 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
       document.body.style.overflow = 'unset';
     };
   }, [showCommentForm]);
+
+  // Gestion de la fermeture du dropdown contact
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (showContactOptions) {
+        const target = e.target as Element;
+        if (!target.closest('.contact-dropdown')) {
+          setShowContactOptions(false);
+        }
+      }
+    };
+
+    if (showContactOptions) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showContactOptions]);
 
   // Gestion du blur et de la touche Échap pour le modal menu
   useEffect(() => {
@@ -363,25 +383,101 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           </button>
 
           {/* Consulter le menu */}
-          {!isLoadingMenus && menus.length > 0 && (
+          <button
+            onClick={() => {
+              if (menus.length > 0) {
+                incrementClick(establishment.id);
+                setShowMenuModal(true);
+              }
+            }}
+            disabled={isLoadingMenus || menus.length === 0}
+            className={`flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg transition-colors ${
+              isLoadingMenus || menus.length === 0 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:border-gray-300'
+            }`}
+          >
+            <FileText className="w-5 h-5 text-gray-700 mb-2" />
+            <span className="text-xs text-gray-700 font-medium">
+              {isLoadingMenus ? 'Chargement...' : 'Consulter le menu'}
+            </span>
+          </button>
+
+          {/* Contacter */}
+          <div className="relative contact-dropdown w-full h-full flex">
             <button
               onClick={() => {
                 incrementClick(establishment.id);
-                setShowMenuModal(true);
+                setShowContactOptions(!showContactOptions);
               }}
-              className="flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+              className="flex-1 flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
             >
-              <FileText className="w-5 h-5 text-gray-700 mb-2" />
-              <span className="text-xs text-gray-700 font-medium">Consulter le menu</span>
+              <Phone className="w-5 h-5 text-gray-700 mb-2" />
+              <span className="text-xs text-gray-700 font-medium">Contacter</span>
             </button>
-          )}
-
-          {/* Contacter - Utilise ContactButtons mais avec style vertical */}
-          <ContactButtons 
-            establishment={establishment}
-            onContactClick={() => incrementClick(establishment.id)}
-            vertical={true}
-          />
+            
+            {/* Dropdown des options de contact */}
+            {showContactOptions && (
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                {establishment.phone && (
+                  <button
+                    onClick={() => {
+                      window.open(`tel:${establishment.phone}`);
+                      setShowContactOptions(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Phone className="w-4 h-4 text-blue-500" />
+                    <span>Appeler</span>
+                  </button>
+                )}
+                {establishment.whatsappPhone && (
+                  <button
+                    onClick={() => {
+                      const cleanPhone = establishment.whatsappPhone!.replace(/[\s\.\-\(\)]/g, '');
+                      const phoneWithCountryCode = cleanPhone.startsWith('+33') 
+                        ? cleanPhone 
+                        : cleanPhone.startsWith('0') 
+                          ? '+33' + cleanPhone.substring(1)
+                          : '+33' + cleanPhone;
+                      const message = `Bonjour ! Je suis intéressé(e) par votre établissement "${establishment.name}" et j'aimerais avoir plus d'informations.`;
+                      const encodedMessage = encodeURIComponent(message);
+                      window.open(`https://wa.me/${phoneWithCountryCode}?text=${encodedMessage}`);
+                      setShowContactOptions(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4 text-green-500" />
+                    <span>WhatsApp</span>
+                  </button>
+                )}
+                {establishment.messengerUrl && (
+                  <button
+                    onClick={() => {
+                      window.open(establishment.messengerUrl!);
+                      setShowContactOptions(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <MessageCircle className="w-4 h-4 text-blue-600" />
+                    <span>Messenger</span>
+                  </button>
+                )}
+                {establishment.email && (
+                  <button
+                    onClick={() => {
+                      window.open(`mailto:${establishment.email}`);
+                      setShowContactOptions(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Mail className="w-4 h-4 text-orange-500" />
+                    <span>Email</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
           
           {/* Favoris */}
           <button
