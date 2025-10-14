@@ -8,6 +8,9 @@ export default defineConfig({
   // Dossier où se trouvent les tests
   testDir: './tests/e2e',
   
+  // Fichier de setup global
+  globalSetup: require.resolve('./tests/e2e/global-setup.ts'),
+
   // Durée maximale d'un test (30 secondes)
   timeout: 30 * 1000,
   

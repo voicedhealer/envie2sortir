@@ -193,11 +193,11 @@ export async function GET(request: NextRequest) {
         .replace(/[\u0300-\u036f]/g, "");
       
       keywords.forEach(keyword => {
-        if (nameNormalized.includes(keyword)) {
+        if (nameNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
           thematicScore += 20; // Nom contient le mot-clé
           console.log(`  📛 Nom "${establishment.name}" contient "${keyword}" → +20 points`);
         }
-        if (descriptionNormalized.includes(keyword)) {
+        if (descriptionNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
           thematicScore += 10; // Description contient le mot-clé
           console.log(`  📄 Description contient "${keyword}" → +10 points`);
         }
@@ -212,7 +212,7 @@ export async function GET(request: NextRequest) {
               .normalize("NFD")
               .replace(/[\u0300-\u036f]/g, "");
             keywords.forEach(keyword => {
-              if (activityNormalized.includes(keyword) || keyword.includes(activityNormalized)) {
+              if (activityNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
                 thematicScore += 25; // Activité correspondante (score élevé)
                 console.log(`  🎯 Activité "${activity}" correspond à "${keyword}" → +25 points`);
               }
@@ -221,15 +221,16 @@ export async function GET(request: NextRequest) {
         });
       }
 
+      let openBonus = 0;
       // Vérifier si ouvert (bonus seulement si déjà pertinent thématiquement)
       const isOpen = isOpenNow(establishment.horairesOuverture);
       if (isOpen && thematicScore > 0) {
-        thematicScore += 15; // Bonus si ouvert ET pertinent
+        openBonus = 15; // Bonus si ouvert ET pertinent
         console.log(`  🕐 Établissement ouvert → +15 points`);
       }
 
       // Score final = score thématique + bonus de proximité
-      let finalScore = thematicScore;
+      let finalScore = thematicScore + openBonus;
       let proximityBonus = 0;
       if (thematicScore > 0 && lat && lng && establishment.latitude && establishment.longitude) {
         proximityBonus = Math.max(0, 50 - distance * 2); // Bonus de 50 à 0 selon la distance
