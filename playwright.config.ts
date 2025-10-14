@@ -8,9 +8,6 @@ export default defineConfig({
   // Dossier où se trouvent les tests
   testDir: './tests/e2e',
   
-  // Fichier de setup global
-  globalSetup: require.resolve('./tests/e2e/global-setup.ts'),
-
   // Durée maximale d'un test (30 secondes)
   timeout: 30 * 1000,
   
@@ -61,6 +58,11 @@ export default defineConfig({
     url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    expect: {
+      stdout: /ready - started server on/i,
+    },
   },
 });
 
