@@ -593,12 +593,18 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
               Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Basic'}.
             </p>
             {subscription === 'FREE' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-800 font-medium mb-2">
-                  💡 Passez au plan Premium pour uploader jusqu'à 5 images et un réel impact sur vos clients !
+              <div className="bg-gradient-to-br from-orange-50 to-pink-50 border-2 border-[#ff751f] rounded-xl p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-3xl">🦋</span>
+                  <p className="text-gray-800 font-semibold text-lg">
+                    Débloquez l'effet Papillon Premium !
+                  </p>
+                </div>
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  Ajoutez jusqu'à 5 photos avec une découverte progressive au survol. Votre photo principale en couleur, les autres en noir et blanc. Vos visiteurs découvrent votre établissement en survolant les images. Un vrai plus pour séduire vos clients !
                 </p>
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                  Voir les plans
+                <button className="bg-[#ff751f] text-white px-6 py-3 rounded-lg hover:bg-[#e66a1c] transition-all font-semibold shadow-md hover:shadow-lg">
+                  ⭐ Passer au Premium
                 </button>
               </div>
             )}

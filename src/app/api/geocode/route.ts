@@ -26,6 +26,10 @@ import { NextRequest, NextResponse } from "next/server";
  * }
  */
 
+// Cache simple en mémoire pour éviter les requêtes répétées
+const geocodeCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 60 * 60 * 1000; // 1 heure
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -43,13 +47,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const cleanAddress = address.trim();
+    
+    // Vérifier le cache d'abord
+    const cacheKey = cleanAddress.toLowerCase();
+    const cached = geocodeCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+      console.log(`💾 Utilisation du cache pour: ${cleanAddress}`);
+      return NextResponse.json({
+        success: true,
+        data: cached.data,
+        fromCache: true
+      });
+    }
+
     // Encodage de l'adresse pour l'URL
-    const encodedAddress = encodeURIComponent(address.trim());
+    const encodedAddress = encodeURIComponent(cleanAddress);
     
     // Récupération du paramètre limit (pour l'autocomplete)
     const limit = searchParams.get('limit') || '1';
     
-    console.log(`🔍 Géocodage de l'adresse: ${address}`);
+    console.log(`🔍 Géocodage de l'adresse: ${cleanAddress}`);
     
     // Pour activer le mode simulé en développement, définir USE_MOCK_GEOCODING=true dans .env
     // Sinon, le système utilisera le vrai service Nominatim (OpenStreetMap)
@@ -149,7 +167,60 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ Erreur Nominatim: ${errorText}`);
+      console.error(`❌ Erreur API: ${errorText}`);
+      
+      // Si c'est une erreur 429 (rate limiting), essayer un fallback
+      if (response.status === 429) {
+        console.log('⚠️ Rate limiting détecté, tentative de fallback...');
+        
+        // Fallback vers Nominatim avec délai
+        if (isGouvernementAPI) {
+          console.log('🔄 Fallback vers Nominatim...');
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Délai plus long
+          
+          const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=${limit}&addressdetails=1&countrycodes=fr&accept-language=fr`;
+          
+          try {
+            const fallbackResponse = await fetch(fallbackUrl, {
+              method: 'GET',
+              headers: {
+                'User-Agent': 'Envie2Sortir/1.0 (https://envie2sortir.fr)',
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (fallbackResponse.ok) {
+              console.log('✅ Fallback Nominatim réussi');
+              const fallbackData = await fallbackResponse.json();
+              
+              if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+                const firstResult = fallbackData[0];
+                const result = {
+                  latitude: parseFloat(firstResult.lat),
+                  longitude: parseFloat(firstResult.lon),
+                  additionalInfo: {
+                    displayName: firstResult.display_name,
+                    type: 'fallback',
+                    source: 'nominatim'
+                  }
+                };
+                
+                // Mettre en cache le résultat du fallback
+                geocodeCache.set(cacheKey, { data: result, timestamp: Date.now() });
+                
+                return NextResponse.json({
+                  success: true,
+                  data: result,
+                  fallback: true
+                });
+              }
+            }
+          } catch (fallbackError) {
+            console.error('❌ Erreur fallback:', fallbackError);
+          }
+        }
+      }
+      
       throw new Error(`Erreur HTTP: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
@@ -284,28 +355,44 @@ export async function GET(request: NextRequest) {
     console.log(`📍 Informations:`, additionalInfo);
     console.log(`🏠 Numéro trouvé:`, firstResult.address?.house_number || 'NON');
 
+    const result = {
+      latitude,
+      longitude
+    };
+
+    // Mettre en cache le résultat
+    geocodeCache.set(cacheKey, { data: result, timestamp: Date.now() });
+
     // Réponse de succès
     return NextResponse.json({
       success: true,
-      data: {
-        latitude,
-        longitude
-      },
+      data: result,
       additionalInfo
     });
 
   } catch (error) {
     console.error("❌ Erreur géocodage:", error);
     
-    return NextResponse.json(
-      { 
-        success: false,
-        error: "Erreur interne du serveur",
-        details: process.env.NODE_ENV === 'development' 
-          ? error instanceof Error ? error.message : 'Erreur inconnue' 
-          : "Erreur lors du géocodage de l'adresse"
+    // En cas d'erreur, proposer des coordonnées par défaut pour continuer
+    console.log("🆘 Mode de secours : coordonnées par défaut");
+    
+    // Coordonnées par défaut (centre de la France)
+    const fallbackCoordinates = {
+      latitude: 46.603354,
+      longitude: 1.888334
+    };
+    
+    // Réponse avec coordonnées par défaut
+    return NextResponse.json({
+      success: true,
+      data: fallbackCoordinates,
+      additionalInfo: {
+        displayName: `${cleanAddress} (géocodage approximatif)`,
+        type: 'fallback_default',
+        source: 'emergency_fallback',
+        warning: 'Géocodage approximatif utilisé'
       },
-      { status: 500 }
-    );
+      warning: "Géocodage approximatif - les coordonnées exactes n'ont pas pu être récupérées"
+    });
   }
 }

@@ -253,25 +253,32 @@ export const SUBSCRIPTION_PLANS = {
   free: {
     label: "Plan Basic",
     features: [
-      "2 photos obligatoires",
-      "Informations de base",
-      "Présence sur la carte",
-      "Statistiques limitées"
+      "1 photo pour votre établissement",
+      "Fiche établissement basique",
+      "Présence sur la carte interactive",
+      "Statistiques de consultation limitées"
     ],
-    price: "0€/mois"
+    price: "Gratuit",
+    badge: "Découverte",
+    color: "gray",
+    savings: undefined
   },
   premium: {
     label: "Plan Premium",
     features: [
-      "2 à 5 photos pour une galerie immersive",
-      "Description détaillée",
-      "Logo flamme pour un visuel client tendance",
-      "Mise en avant de votre établissement avec l'offre premium dans le filtre de recherche",
-      "Statistiques avancées, détails de vos visiteurs",
-      "Support prioritaire",
-      "Événements temporaires + visuel sur la card de votre établissement"
+      "🦋 Effet Papillon : jusqu'à 5 photos avec découverte progressive au survol",
+      "🔥 Badge Premium avec logo flamme tendance",
+      "📢 Créez des Événements temporaires avec visuel attractif",
+      "🎁 Publiez des Bons Plans quotidiens pour attirer plus de clients",
+      "⭐ Mise en avant prioritaire dans les résultats de recherche",
+      "📊 Analytics avancées : profil détaillé de vos visiteurs",
+      "💬 Support client prioritaire et dédié",
+      "✨ Description enrichie avec intelligence artificielle"
     ],
-    price: "29€/mois"
+    price: "29€/mois",
+    badge: "Recommandé",
+    color: "orange",
+    savings: "Augmentez votre visibilité de 300%"
   }
 } as const;
 

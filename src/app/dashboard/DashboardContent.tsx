@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye } from "lucide-react";
+import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
@@ -176,17 +176,31 @@ export default function DashboardContent({ user, establishment, professional }: 
                 Bons plans
               </button>
             )}
-            <button
-              onClick={() => setActiveTab('analytics')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                activeTab === 'analytics'
-                  ? 'border-orange-500 text-orange-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4 mr-1" />
-              Analytics
-            </button>
+            {professional.subscriptionPlan === 'PREMIUM' ? (
+              <button
+                onClick={() => setActiveTab('analytics')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                  activeTab === 'analytics'
+                    ? 'border-orange-500 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <BarChart3 className="w-4 h-4 mr-1" />
+                Analytics
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveTab('overview')}
+                title="Réservé au plan Premium"
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center cursor-not-allowed ${
+                  'border-transparent text-gray-300'
+                }`}
+                disabled
+              >
+                <Lock className="w-4 h-4 mr-1" />
+                Analytics
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('parametres')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
@@ -465,6 +479,21 @@ export default function DashboardContent({ user, establishment, professional }: 
           isPremium={professional.subscriptionPlan === 'PREMIUM'}
         />
       ) : activeTab === 'analytics' ? (
+        professional.subscriptionPlan !== 'PREMIUM' ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6 text-orange-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Analytics Premium</h2>
+            <p className="text-gray-600 max-w-xl mx-auto mb-4">
+              Les tableaux de bord Analytics détaillés sont réservés au plan Premium. 
+              Depuis l'onglet « Vue d'ensemble », vous conservez l'accès à vos statistiques globales.
+            </p>
+            <div className="inline-flex items-center gap-2 bg-[#ff751f] text-white px-5 py-3 rounded-lg font-semibold cursor-not-allowed">
+              Passer au Premium
+            </div>
+          </div>
+        ) : (
         <div className="space-y-6">
           {/* En-tête Analytics avec boutons de basculement */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -528,6 +557,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             />
           )}
         </div>
+        )
       ) : (
         <ParametresManager 
           professional={professional}

@@ -1,14 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-config';
+import { getPremiumRequiredError } from '@/lib/subscription-utils';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d';
 
     if (!establishmentId) {
       return NextResponse.json({ error: 'establishmentId is required' }, { status: 400 });
+    }
+
+    // Vérifier l'abonnement
+    const establishment = await prisma.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { subscription: true }
+    });
+    if (!establishment || establishment.subscription !== 'PREMIUM') {
+      const error = getPremiumRequiredError('Analytics');
+      return NextResponse.json(error, { status: error.status });
     }
 
     // Calculer la date de début selon la période

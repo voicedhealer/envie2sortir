@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-config';
+import { prisma as prismaShared } from '@/lib/prisma';
+import { getPremiumRequiredError } from '@/lib/subscription-utils';
 
 const prisma = new PrismaClient();
 
@@ -68,6 +72,12 @@ export async function POST(request: NextRequest) {
 // GET pour récupérer les statistiques (pour les dashboards)
 export async function GET(request: NextRequest) {
   try {
+    // Vérifier l'abonnement: Premium requis pour consulter les analytics détaillés
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d'; // 7d, 30d, 90d, 1y
@@ -77,6 +87,16 @@ export async function GET(request: NextRequest) {
         { error: 'establishmentId is required' },
         { status: 400 }
       );
+    }
+
+    // Vérifier le plan d'abonnement de l'établissement
+    const establishment = await prismaShared.establishment.findUnique({
+      where: { id: establishmentId },
+      select: { subscription: true }
+    });
+    if (!establishment || establishment.subscription !== 'PREMIUM') {
+      const error = getPremiumRequiredError('Analytics');
+      return NextResponse.json(error, { status: error.status });
     }
 
     // Calculer la date de début selon la période

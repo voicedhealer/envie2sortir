@@ -633,6 +633,19 @@ body {
   z-index: 1 !important;
 }
 
+.leaflet-overlay-pane {
+  z-index: 2 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 3 !important;
+}
+
+/* S'assurer que tous les éléments Leaflet restent en dessous des modals */
+.leaflet-container {
+  z-index: 10 !important;
+}
+
 /* Styles pour les cards d'établissement */
 .line-clamp-1 {
   overflow: hidden;
@@ -728,14 +741,6 @@ body {
 
 .establishment-card .text-blue-500 {
   animation: shareBounce 0.4s ease;
-}
-
-.leaflet-overlay-pane {
-  z-index: 2 !important;
-}
-
-.leaflet-marker-pane {
-  z-index: 3 !important;
 }
 
 .leaflet-popup-pane {

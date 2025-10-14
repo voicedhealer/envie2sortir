@@ -179,10 +179,21 @@ export default function AccountStep({
           </p>
         ) : phoneState.state === 'valid' ? (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 flex items-center">
-              <span className="mr-2">📱</span>
-              <span className="font-medium">{phoneState.message}</span>
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-blue-800 flex items-center">
+                <span className="mr-2">📱</span>
+                <span className="font-medium">{phoneState.message}</span>
+              </p>
+              {!phoneVerification.isVerified && (
+                <button
+                  type="button"
+                  onClick={() => onInputChange('autoVerifyPhone', true)}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
+                >
+                  Envoyer le SMS
+                </button>
+              )}
+            </div>
           </div>
         ) : phoneState.state === 'invalid' ? (
           <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

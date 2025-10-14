@@ -5,13 +5,14 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import ClickAnalyticsDashboard from '@/components/analytics/ClickAnalyticsDashboard';
 import DetailedAnalyticsDashboard from '@/components/analytics/DetailedAnalyticsDashboard';
-import { BarChart3, TrendingUp, Users, Eye } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, Eye, Lock } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'overview' | 'detailed'>('overview');
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
+  const isPremium = (session?.user as any)?.subscriptionPlan === 'PREMIUM' || (session?.user as any)?.role === 'admin';
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -78,11 +79,17 @@ export default function AnalyticsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                  <BarChart3 className="w-6 h-6 text-blue-600 mr-3" />
+                  {isPremium ? (
+                    <BarChart3 className="w-6 h-6 text-blue-600 mr-3" />
+                  ) : (
+                    <Lock className="w-6 h-6 text-orange-600 mr-3" />
+                  )}
                   Analytics de votre établissement
                 </h1>
                 <p className="text-gray-600 mt-1">
-                  Découvrez comment vos clients interagissent avec votre page
+                  {isPremium 
+                    ? 'Découvrez comment vos clients interagissent avec votre page'
+                    : "Fonctionnalité réservée au plan Premium. Accédez à vos statistiques globales depuis la Vue d'ensemble."}
                 </p>
               </div>
               
@@ -102,10 +109,11 @@ export default function AnalyticsPage() {
                   </button>
                   <button
                     onClick={() => setViewMode('detailed')}
+                    disabled={!isPremium}
                     className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                       viewMode === 'detailed'
                         ? 'bg-white text-gray-900 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-900'
+                        : (isPremium ? 'text-gray-600 hover:text-gray-900' : 'text-gray-300 cursor-not-allowed')
                     }`}
                   >
                     <TrendingUp className="w-4 h-4 inline mr-2" />
@@ -125,16 +133,28 @@ export default function AnalyticsPage() {
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {viewMode === 'overview' ? (
-          <ClickAnalyticsDashboard 
-            establishmentId={establishmentId} 
-            period="30d"
-          />
+        {isPremium ? (
+          viewMode === 'overview' ? (
+            <ClickAnalyticsDashboard 
+              establishmentId={establishmentId} 
+              period="30d"
+            />
+          ) : (
+            <DetailedAnalyticsDashboard 
+              establishmentId={establishmentId} 
+              period="30d"
+            />
+          )
         ) : (
-          <DetailedAnalyticsDashboard 
-            establishmentId={establishmentId} 
-            period="30d"
-          />
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+            <div className="mx-auto w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6 text-orange-600" />
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Analytics Premium</h2>
+            <p className="text-gray-600 max-w-xl mx-auto mb-4">
+              Les Analytics détaillés sont réservés au plan Premium. Depuis votre tableau de bord, l'onglet « Vue d'ensemble » affiche vos statistiques globales.
+            </p>
+          </div>
         )}
       </div>
     </div>

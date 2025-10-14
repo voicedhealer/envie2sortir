@@ -20,7 +20,7 @@ export interface SubscriptionFeatures {
 export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeatures> = {
   FREE: {
     minImages: 1,
-    maxImages: 2,
+    maxImages: 1,  // 1 photo max (pas d'effet Papillon)
     canCreateEvents: false,
     canUseAdvancedAnalytics: false,
     canUsePromotions: false,
@@ -28,7 +28,7 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeature
   },
   PREMIUM: {
     minImages: 1,
-    maxImages: 5,
+    maxImages: 5,  // Jusqu'à 5 photos avec effet Papillon
     canCreateEvents: true,
     canUseAdvancedAnalytics: true,
     canUsePromotions: true,
