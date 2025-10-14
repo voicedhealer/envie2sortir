@@ -33,13 +33,24 @@ export function isDealActive(deal: DailyDeal): boolean {
   }
 
   // Si pas d'horaires spécifiques, le bon plan est actif toute la journée
-  if (!deal.heureDebut || !deal.heureFin) {
+  if (!deal.heureDebut && !deal.heureFin) {
     return true;
   }
 
   // Vérifier si on est dans les horaires
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
+  // Si seulement heure de début définie
+  if (deal.heureDebut && !deal.heureFin) {
+    return currentTime >= deal.heureDebut;
+  }
+  
+  // Si seulement heure de fin définie
+  if (!deal.heureDebut && deal.heureFin) {
+    return currentTime <= deal.heureFin;
+  }
+  
+  // Si les deux heures sont définies
   return currentTime >= deal.heureDebut && currentTime <= deal.heureFin;
 }
 

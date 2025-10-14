@@ -67,12 +67,7 @@ export async function GET(
         return true;
       }
       
-      // Si modalité remplie, actif toute la journée
-      if (deal.modality) {
-        return true;
-      }
-      
-      // Sinon, vérifier les heures
+      // Vérifier les heures (même si modalité remplie, les heures ont priorité)
       const currentHour = now.getHours();
       const currentMinute = now.getMinutes();
       const currentTime = currentHour * 60 + currentMinute;
