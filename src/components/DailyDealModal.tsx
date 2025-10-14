@@ -1,7 +1,7 @@
 "use client";
 
 import { X, Calendar, Clock, Tag, FileText } from 'lucide-react';
-import { formatDealTime, formatPrice, calculateDiscount, markDealAsSeen } from '@/lib/deal-utils';
+import { formatDealTime, formatDealDate, formatPrice, calculateDiscount, markDealAsSeen } from '@/lib/deal-utils';
 import { useEffect } from 'react';
 
 interface DailyDeal {
@@ -105,7 +105,7 @@ export default function DailyDealModal({ deal, onClose }: DailyDealModalProps) {
             {/* Date */}
             <div className="flex items-center gap-3 text-gray-700">
               <Calendar className="w-5 h-5 text-orange-500 flex-shrink-0" />
-              <span className="font-medium">{formatDealTime(deal)}</span>
+              <span className="font-medium">{formatDealDate(deal)}</span>
             </div>
 
             {/* Horaires */}

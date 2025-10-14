@@ -2,7 +2,7 @@
 
 import { Tag, Clock, FileText, ThumbsUp, ThumbsDown, MapPin, Calendar, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
-import { formatDealTime, formatPrice, calculateDiscount } from '@/lib/deal-utils';
+import { formatDealTime, formatDealDate, formatPrice, calculateDiscount } from '@/lib/deal-utils';
 
 interface DailyDeal {
   id: string;
@@ -33,16 +33,12 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Fonction pour formater la date comme "Le XX XX XXXX à XXhXX"
+  // Fonction pour formater uniquement la date (sans l'heure)
   const formatDateForFront = (deal: DailyDeal) => {
     const startDate = new Date(deal.dateDebut);
     const day = startDate.getDate().toString().padStart(2, '0');
     const month = startDate.toLocaleDateString('fr-FR', { month: 'long' });
     const year = startDate.getFullYear();
-    
-    if (deal.heureDebut) {
-      return `Le ${day} ${month} ${year} à ${deal.heureDebut}`;
-    }
     
     return `Le ${day} ${month} ${year}`;
   };
@@ -166,12 +162,19 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
               {truncateText(deal.description, 80)}
             </p>
 
-            {/* Horaires */}
+            {/* Date et horaires */}
             <div className="space-y-1 text-xs text-gray-500 mb-4">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-orange-500" />
+                <Calendar className="w-4 h-4 text-orange-500" />
                 <span>{formatDateForFront(deal)}</span>
               </div>
+              
+              {deal.heureDebut && deal.heureFin && (
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span>De {deal.heureDebut} à {deal.heureFin}</span>
+                </div>
+              )}
               
               {deal.pdfUrl && (
                 <div className="flex items-center gap-2">
@@ -240,7 +243,7 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
               
               <div className="detail-item">
                 <span className="detail-icon">📅</span>
-                <span className="detail-text">{formatDealTime(deal)}</span>
+                <span className="detail-text">{formatDealDate(deal)}</span>
               </div>
               
               {deal.heureDebut && deal.heureFin && (

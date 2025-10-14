@@ -100,6 +100,45 @@ export function formatDealTime(deal: DailyDeal): string {
 }
 
 /**
+ * Formater uniquement la date/jour d'un bon plan (sans les horaires)
+ */
+export function formatDealDate(deal: DailyDeal): string {
+  const dateDebut = new Date(deal.dateDebut);
+  const dateFin = new Date(deal.dateFin);
+  
+  // Si c'est le même jour
+  const isSameDay = dateDebut.toDateString() === dateFin.toDateString();
+  
+  if (isSameDay) {
+    const today = new Date();
+    const isToday = dateDebut.toDateString() === today.toDateString();
+    
+    if (isToday) {
+      return 'Aujourd\'hui';
+    } else {
+      const dateStr = dateDebut.toLocaleDateString('fr-FR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      });
+      return `Le ${dateStr}`;
+    }
+  }
+  
+  // Si c'est sur plusieurs jours
+  const dateDebutStr = dateDebut.toLocaleDateString('fr-FR', { 
+    day: 'numeric', 
+    month: 'long' 
+  });
+  const dateFinStr = dateFin.toLocaleDateString('fr-FR', { 
+    day: 'numeric', 
+    month: 'long' 
+  });
+  
+  return `Du ${dateDebutStr} au ${dateFinStr}`;
+}
+
+/**
  * Obtenir la clé localStorage pour tracker le modal
  */
 export function getDealStorageKey(dealId: string): string {

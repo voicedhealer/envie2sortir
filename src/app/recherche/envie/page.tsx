@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import SearchFilters from '@/components/SearchFilters';
@@ -141,7 +141,7 @@ export default function EnvieSearchResults() {
   };
 
   // Fonction pour charger les résultats
-  const loadResults = async (
+  const loadResults = useCallback(async (
     envie: string, 
     ville: string, 
     lat: string, 
@@ -193,7 +193,7 @@ export default function EnvieSearchResults() {
       setLoading(false);
       setLoadingMore(false);
     }
-  };
+  }, [rayon]);
 
   if (loading) {
     return (
@@ -317,10 +317,6 @@ export default function EnvieSearchResults() {
             searchCenter={query?.coordinates}
             searchRadius={query?.rayon}
           />
-          {/* Debug info */}
-          <div className="absolute top-2 left-2 bg-black bg-opacity-75 text-white text-xs p-2 rounded z-10">
-            Debug: Center: {JSON.stringify(query?.coordinates)}, Radius: {query?.rayon}
-          </div>
         </div>
       </div>
     </main>
