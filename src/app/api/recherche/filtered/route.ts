@@ -14,20 +14,58 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-// Fonction pour extraire les mots-clés significatifs
-function extractKeywords(envie: string): string[] {
-  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver'];
+// Fonction pour extraire les mots-clés significatifs avec priorité
+function extractKeywords(envie: string): { keywords: string[], primaryKeywords: string[], contextKeywords: string[] } {
+  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver', 'ai', 'as', 'a', 'et', 'ou', 'si', 'on', 'il', 'je', 'tu', 'nous', 'vous', 'ils', 'elle', 'elles'];
   
-  return envie
+  // Mots de contexte temporel (moins importants)
+  const contextWords = ['ce', 'soir', 'demain', 'aujourd', 'maintenant', 'bientot', 'plus', 'tard'];
+  
+  // Mots d'action spécifiques (très importants) - correspondance exacte uniquement
+  const actionWords = ['kart', 'karting', 'bowling', 'laser', 'escape', 'game', 'paintball', 'tir', 'archery', 'escalade', 'piscine', 'cinema', 'theatre', 'concert', 'danse', 'danser', 'boire', 'manger', 'restaurant', 'bar', 'cafe'];
+  
+  const normalizedText = envie
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .split(/[\s,]+/)
-    .filter(word => {
-      const trimmed = word.trim();
-      return (trimmed.length > 2 || (trimmed.length === 2 && /^[a-z]{2}$/.test(trimmed))) && !stopWords.includes(trimmed);
-    })
-    .map(word => word.trim());
+    .replace(/[^\w\s]/g, ' ');
+  
+  const words = normalizedText.split(/\s+/).filter(word => word.length > 1);
+  
+  const primaryKeywords: string[] = [];
+  const contextKeywords: string[] = [];
+  const allKeywords: string[] = [];
+  
+  words.forEach(word => {
+    const trimmed = word.trim();
+    if (trimmed.length < 2) return;
+    
+    console.log(`🔍 Traitement du mot: "${trimmed}"`);
+    
+    // Mots de contexte = priorité faible (vérifier d'abord pour éviter les conflits)
+    if (contextWords.includes(trimmed)) {
+      contextKeywords.push(trimmed);
+      allKeywords.push(trimmed);
+      console.log(`⏰ Mot-clé de contexte: "${trimmed}"`);
+    }
+    // Mots d'action spécifiques = priorité maximale (correspondance exacte)
+    else if (actionWords.includes(trimmed)) {
+      primaryKeywords.push(trimmed);
+      allKeywords.push(trimmed);
+      console.log(`🎯 Mot-clé primaire détecté: "${trimmed}"`);
+    }
+    // Autres mots significatifs
+    else if (!stopWords.includes(trimmed)) {
+      allKeywords.push(trimmed);
+      console.log(`📝 Mot-clé normal: "${trimmed}"`);
+    }
+  });
+  
+  return {
+    keywords: allKeywords,
+    primaryKeywords,
+    contextKeywords
+  };
 }
 
 // Fonction pour vérifier si un établissement est ouvert
@@ -144,7 +182,13 @@ export async function GET(request: NextRequest) {
       lng = 5.041;
     }
 
-    const keywords = extractKeywords(envie);
+    const keywordData = extractKeywords(envie);
+    const { keywords, primaryKeywords, contextKeywords } = keywordData;
+    
+    console.log(`📝 Mots-clés extraits: [${keywords.join(', ')}]`);
+    console.log(`🎯 Mots-clés primaires: [${primaryKeywords.join(', ')}]`);
+    console.log(`⏰ Mots-clés de contexte: [${contextKeywords.join(', ')}]`);
+    
     if (keywords.length === 0) {
       return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
     }
@@ -184,6 +228,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log(`🔍 Nombre total d'établissements trouvés: ${establishments.length}`);
+
     // Appliquer le filtrage géographique
     const establishmentsInRadius = establishments.filter(est => {
       if (lat && lng && est.latitude && est.longitude) {
@@ -206,14 +252,34 @@ export async function GET(request: NextRequest) {
       console.log(` CALCUL SCORE: ${establishment.name}`);
       console.log(` Mots-clés extraits: [${keywords.join(', ')}]`);
       
-      // Score basé sur les tags
+      // Score basé sur les tags avec priorité pour les mots-clés primaires
+      const tagMatchedKeywords = new Set<string>(); // Pour éviter les doublons
+      
       establishment.tags.forEach(tag => {
         const tagNormalized = tag.tag
           .toLowerCase()
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "");
-        keywords.forEach(keyword => {
+        
+        // Vérifier d'abord les mots-clés primaires (poids très élevé)
+        primaryKeywords.forEach(keyword => {
           if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
+            const tagScore = 150; // Score très élevé pour les mots-clés primaires
+            thematicScore += tagScore;
+            matchedTags.push(tag.tag);
+            tagMatchedKeywords.add(keyword);
+            console.log(`🎯 PRIMARY TAG MATCH: ${establishment.name} - "${tag.tag}" +${tagScore} (total: ${thematicScore})`);
+          }
+        });
+        
+        // Ensuite les autres mots-clés (poids normal)
+        keywords.forEach(keyword => {
+          // Ignorer les stop words dans les tags (comme "envie", "de", etc.)
+          const stopWordsForTags = ['envie', 'de', 'le', 'la', 'les', 'un', 'une', 'des', 'du'];
+          
+          if (!primaryKeywords.includes(keyword) && !tagMatchedKeywords.has(keyword) && !stopWordsForTags.includes(keyword) && (tagNormalized.includes(keyword) || keyword.includes(tagNormalized))) {
+            const isContext = contextKeywords.includes(keyword);
+            
             // Ajuster le poids pour les tags "envie de" génériques
             let adjustedPoids = tag.poids;
             if (tag.tag.toLowerCase().includes('envie de découvrir') || 
@@ -221,9 +287,13 @@ export async function GET(request: NextRequest) {
                 tag.tag.toLowerCase().includes('envie de détente')) {
               adjustedPoids = 3; // Réduire le poids des tags génériques
             }
-            const tagScore = adjustedPoids * 10;
+            
+            // Réduire drastiquement le poids des mots de contexte - compter seulement 1 fois par mot-clé
+            const contextMultiplier = isContext ? 0.5 : 10; // Mots de contexte = 0.5x, autres = 10x
+            const tagScore = adjustedPoids * contextMultiplier;
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
+            tagMatchedKeywords.add(keyword);
             console.log(`️ TAG MATCH: ${establishment.name} - "${tag.tag}" +${tagScore} (total: ${thematicScore})`);
           }
         });
@@ -239,18 +309,24 @@ export async function GET(request: NextRequest) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
       
+      // Score basé sur le nom et la description avec priorité pour les mots-clés primaires
       keywords.forEach(keyword => {
+        const isPrimary = primaryKeywords.includes(keyword);
+        const isContext = contextKeywords.includes(keyword);
+        
         if (nameNormalized.includes(keyword)) {
-          thematicScore += 20;
-          console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +20 (total: ${thematicScore})`);
+          const score = isPrimary ? 50 : (isContext ? 5 : 20);
+          thematicScore += score;
+          console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
         }
         if (descriptionNormalized.includes(keyword)) {
-          thematicScore += 10;
-          console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +10 (total: ${thematicScore})`);
+          const score = isPrimary ? 30 : (isContext ? 3 : 10);
+          thematicScore += score;
+          console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
         }
       });
 
-      // Score basé sur les activités
+      // Score basé sur les activités avec priorité pour les mots-clés primaires
       if (establishment.activities && Array.isArray(establishment.activities)) {
         establishment.activities.forEach((activity: any) => {
           if (typeof activity === 'string') {
@@ -259,9 +335,17 @@ export async function GET(request: NextRequest) {
               .normalize("NFD")
               .replace(/[\u0300-\u036f]/g, "");
             keywords.forEach(keyword => {
-              if (activityNormalized.includes(keyword) || keyword.includes(activityNormalized)) {
-                thematicScore += 25;
-                console.log(`🎯 ACTIVITY MATCH: ${establishment.name} - "${activity}" +25 (total: ${thematicScore})`);
+              // Matching plus intelligent : vérifier si le mot-clé est contenu dans l'activité ou vice versa
+              const keywordInActivity = activityNormalized.includes(keyword);
+              const activityInKeyword = keyword.includes(activityNormalized);
+              const isExactMatch = activityNormalized === keyword;
+              
+              if (keywordInActivity || activityInKeyword || isExactMatch) {
+                const isPrimary = primaryKeywords.includes(keyword);
+                const isContext = contextKeywords.includes(keyword);
+                const score = isPrimary ? 100 : (isContext ? 10 : 25);
+                thematicScore += score;
+                console.log(`🎯 ACTIVITY MATCH: ${establishment.name} - "${activity}" (keyword: "${keyword}") +${score} (total: ${thematicScore})`);
               }
             });
           }
@@ -296,9 +380,41 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Filtrer par pertinence thématique
+    // Filtrer par pertinence thématique - ajusté pour les nouvelles priorités
+    const minScore = primaryKeywords.length > 0 ? 30 : 50; // Seuil plus bas si on a des mots-clés primaires
+    console.log(`🎯 Seuil de filtrage: ${minScore} (mots-clés primaires: ${primaryKeywords.length})`);
+    
     const relevantEstablishments = scoredEstablishments
-      .filter(est => est.thematicScore > 70); // Score du resultat filtre
+      .filter(est => est.thematicScore >= minScore);
+    
+    console.log(`✅ Établissements pertinents après filtrage: ${relevantEstablishments.length}`);
+    
+    // Fallback: si aucun résultat avec le nouveau système, utiliser l'ancien seuil
+    if (relevantEstablishments.length === 0) {
+      console.log(`⚠️ Aucun résultat avec le nouveau système, fallback vers l'ancien seuil`);
+      const fallbackEstablishments = scoredEstablishments
+        .filter(est => est.thematicScore > 30);
+      console.log(`🔄 Résultats avec fallback: ${fallbackEstablishments.length}`);
+      return NextResponse.json({
+        success: true,
+        results: fallbackEstablishments.slice(0, limit),
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(fallbackEstablishments.length / limit),
+          totalResults: fallbackEstablishments.length,
+          hasMore: (page * limit) < fallbackEstablishments.length,
+          limit
+        },
+        filter,
+        query: {
+          envie,
+          ville,
+          rayon,
+          keywords,
+          coordinates: lat && lng ? { lat, lng } : null
+        }
+      });
+    }
 
     // Appliquer le tri selon le filtre
     const sortedEstablishments = applySorting(relevantEstablishments, filter);

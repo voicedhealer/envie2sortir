@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { isDealActive } from '@/lib/deal-utils';
 
 export async function GET(
   request: NextRequest,
@@ -60,32 +61,9 @@ export async function GET(
 
     console.log('API deals/active - Deals trouvés:', activeDeals.length, activeDeals);
 
-    // Filtrer les bons plans qui sont actifs maintenant (selon les heures si spécifiées)
+    // Filtrer les bons plans qui sont actifs maintenant en utilisant la fonction centralisée
     const currentActiveDeals = activeDeals.filter(deal => {
-      // Si pas d'heures spécifiées, actif toute la journée
-      if (!deal.heureDebut && !deal.heureFin) {
-        return true;
-      }
-      
-      // Vérifier les heures (même si modalité remplie, les heures ont priorité)
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-      
-      let startTime = 0; // 00h00 par défaut
-      let endTime = 24 * 60 - 1; // 23h59 par défaut
-      
-      if (deal.heureDebut) {
-        const [hours, minutes] = deal.heureDebut.split(':').map(Number);
-        startTime = hours * 60 + minutes;
-      }
-      
-      if (deal.heureFin) {
-        const [hours, minutes] = deal.heureFin.split(':').map(Number);
-        endTime = hours * 60 + minutes;
-      }
-      
-      return currentTime >= startTime && currentTime <= endTime;
+      return isDealActive(deal);
     });
 
     console.log('API deals/active - Deals actifs maintenant:', currentActiveDeals.length, currentActiveDeals);

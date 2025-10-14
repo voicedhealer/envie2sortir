@@ -120,10 +120,19 @@ export default function EnvieSearchResults() {
   const lng = searchParams.get('lng') || '';
   const rayon = searchParams.get('rayon') || '5';
 
+  // Debug: afficher les establishments
+  useEffect(() => {
+    console.log('📦 [EnvieSearch] Establishments updated:', establishments.length, 'items');
+  }, [establishments]);
+
   // Charger les résultats initiaux
   useEffect(() => {
+    console.log('🔍 [EnvieSearch] useEffect triggered with:', { envie, ville, lat, lng, rayon });
     if (envie) {
+      console.log('🚀 [EnvieSearch] Calling loadResults...');
       loadResults(envie, ville, lat, lng, activeFilter, 1, true);
+    } else {
+      console.log('⚠️ [EnvieSearch] No envie, skipping search');
     }
   }, [envie, ville, lat, lng]);
 
@@ -172,10 +181,20 @@ export default function EnvieSearchResults() {
         params.append('lng', lng);
       }
 
-      const response = await fetch(`/api/recherche/filtered?${params}`);
+      const apiUrl = `/api/recherche/filtered?${params}`;
+      console.log('📡 [EnvieSearch] Fetching:', apiUrl);
+      
+      const response = await fetch(apiUrl);
       const data: SearchResponse = await response.json();
+      
+      console.log('📊 [EnvieSearch] API Response:', { 
+        success: data.success, 
+        resultsCount: data.results?.length, 
+        error: data.error 
+      });
 
       if (data.success) {
+        console.log('✅ [EnvieSearch] Setting establishments:', data.results.length, 'items');
         if (reset) {
           setEstablishments(data.results);
           setQuery(data.query);
@@ -184,10 +203,11 @@ export default function EnvieSearchResults() {
         }
         setPagination(data.pagination);
       } else {
+        console.error('❌ [EnvieSearch] API Error:', data.error);
         setError(data.error || 'Erreur lors de la recherche');
       }
     } catch (err) {
-      console.error('Erreur lors du chargement:', err);
+      console.error('❌ [EnvieSearch] Exception:', err);
       setError('Erreur de connexion');
     } finally {
       setLoading(false);

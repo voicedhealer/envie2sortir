@@ -163,7 +163,7 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
             </p>
 
             {/* Date et horaires */}
-            <div className="space-y-1 text-xs text-gray-500 mb-4">
+            <div className="space-y-1 text-xs text-gray-500 mb-3">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-orange-500" />
                 <span>{formatDateForFront(deal)}</span>
@@ -185,7 +185,7 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
             </div>
 
             {/* CTA */}
-            <div className="space-y-3">
+            <div className="space-y-2">
               {/* Boutons d'engagement */}
               <div className="flex gap-2 justify-center">
                 <button

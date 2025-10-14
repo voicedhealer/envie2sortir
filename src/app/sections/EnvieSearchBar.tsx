@@ -271,6 +271,50 @@ export default function EnvieSearchBar() {
       return;
     }
 
+    // Détecter si l'utilisateur a tapé une variante de "autour de moi"
+    const cityLower = cityValue.toLowerCase().trim();
+    const isAroundMe = cityLower === "autour de moi" || 
+                       cityLower === "autour" || 
+                       cityValue === "Autour de moi";
+    
+    // Variable pour stocker les coordonnées (soit existantes, soit nouvellement obtenues)
+    let coords = userLocation;
+    
+    // Si la ville est vide ou "autour de moi" et qu'on n'a pas de coordonnées, demander la géolocalisation
+    const needsGeolocation = (isAroundMe || !cityValue.trim()) && !coords;
+    
+    if (needsGeolocation) {
+      // Déclencher automatiquement la géolocalisation
+      console.log('🌍 Déclenchement automatique de la géolocalisation (ville vide ou "autour de moi")...');
+      
+      if (navigator.geolocation) {
+        try {
+          // Attendre la géolocalisation avant de continuer
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
+            });
+          });
+          
+          const { latitude, longitude } = position.coords;
+          coords = { lat: latitude, lng: longitude };
+          setUserLocation(coords); // Mettre à jour le state pour les futures recherches
+          setCityValue("Autour de moi"); // Mettre à jour l'affichage
+          console.log('✅ Géolocalisation obtenue:', coords);
+          
+        } catch (error) {
+          console.error('❌ Erreur de géolocalisation:', error);
+          alert("🌍 Impossible d'obtenir votre position.\n\nVeuillez :\n1. Autoriser la géolocalisation dans votre navigateur\n2. Ou sélectionner une ville dans la liste");
+          return;
+        }
+      } else {
+        alert("❌ La géolocalisation n'est pas supportée par votre navigateur.\nVeuillez sélectionner une ville dans la liste.");
+        return;
+      }
+    }
+
     // Track la recherche (non-bloquant)
     trackSearch(inputValue, cityValue !== "Autour de moi" ? cityValue : undefined);
 
@@ -280,18 +324,23 @@ export default function EnvieSearchBar() {
     params.set("rayon", selectedRadius.toString());
     
     // Ajout de la ville si renseignée (sauf géolocalisation)
-    if (cityValue && cityValue !== "Autour de moi") {
+    if (cityValue && !isAroundMe) {
       params.set("ville", cityValue);
     }
     
     // Ajout des coordonnées GPS si disponibles
-    if (userLocation) {
-      params.set("lat", userLocation.lat.toString());
-      params.set("lng", userLocation.lng.toString());
+    if (coords) {
+      params.set("lat", coords.lat.toString());
+      params.set("lng", coords.lng.toString());
+      console.log('📍 Coordonnées ajoutées à l\'URL:', coords);
+    } else {
+      console.warn('⚠️ Aucune coordonnée GPS disponible');
     }
 
     // Navigation vers la page de résultats
-    router.push(`/recherche/envie?${params.toString()}`);
+    const finalUrl = `/recherche/envie?${params.toString()}`;
+    console.log('🚀 Navigation vers:', finalUrl);
+    router.push(finalUrl);
   };
 
   // === GESTION DES CLICS EXTÉRIEURS ===

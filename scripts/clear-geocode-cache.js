@@ -21,3 +21,4 @@ exec('pkill -f "next dev"', (error, stdout, stderr) => {
   console.log('💡 Vous pouvez maintenant redémarrer le serveur avec: npm run dev');
 });
 
+
