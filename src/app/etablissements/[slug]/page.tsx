@@ -82,7 +82,9 @@ export default async function EstablishmentPage({
       createdAt: true,
       updatedAt: true,
       imageUrl: true,
-      images: true,
+      images: {
+        orderBy: { ordre: "asc" }
+      },
       events: { 
         orderBy: { startDate: "asc" },
         select: {

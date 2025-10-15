@@ -121,12 +121,12 @@ export default function DashboardContent({ user, establishment, professional }: 
           </div>
         </div>
         
-        {/* Onglets */}
-        <div className="px-6">
-          <nav className="flex space-x-8">
+        {/* Onglets - Responsive avec scroll horizontal sur mobile/tablette */}
+        <div className="px-3 sm:px-6 overflow-x-auto">
+          <nav className="flex space-x-4 sm:space-x-6 lg:space-x-8 min-w-max">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'overview'
                   ? 'border-orange-500 text-orange-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -136,7 +136,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             </button>
             <button
               onClick={() => setActiveTab('images')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'images'
                   ? 'border-orange-500 text-orange-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -146,7 +146,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             </button>
             <button
               onClick={() => setActiveTab('events')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'events'
                   ? 'border-orange-500 text-orange-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -156,7 +156,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             </button>
             <button
               onClick={() => setActiveTab('menus')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'menus'
                   ? 'border-orange-500 text-orange-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -167,7 +167,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             {professional.subscriptionPlan === 'PREMIUM' && (
               <button
                 onClick={() => setActiveTab('deals')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                   activeTab === 'deals'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -179,31 +179,31 @@ export default function DashboardContent({ user, establishment, professional }: 
             {professional.subscriptionPlan === 'PREMIUM' ? (
               <button
                 onClick={() => setActiveTab('analytics')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm flex items-center whitespace-nowrap ${
                   activeTab === 'analytics'
                     ? 'border-orange-500 text-orange-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
               >
-                <BarChart3 className="w-4 h-4 mr-1" />
+                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 Analytics
               </button>
             ) : (
               <button
                 onClick={() => setActiveTab('overview')}
                 title="Réservé au plan Premium"
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center cursor-not-allowed ${
+                className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm flex items-center cursor-not-allowed whitespace-nowrap ${
                   'border-transparent text-gray-300'
                 }`}
                 disabled
               >
-                <Lock className="w-4 h-4 mr-1" />
+                <Lock className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 Analytics
               </button>
             )}
             <button
               onClick={() => setActiveTab('parametres')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
                 activeTab === 'parametres'
                   ? 'border-orange-500 text-orange-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { MapPin, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
-import { getActivityInfo } from '@/lib/category-tags-mapping';
 import PhotoGallery from './PhotoGallery';
 
 interface EstablishmentHeroWithGalleryProps {
@@ -15,7 +14,7 @@ interface EstablishmentHeroWithGalleryProps {
     avgRating?: number;
     totalComments?: number;
     imageUrl?: string;
-    images?: string[];
+    images?: string[]; // ✅ CORRECTION : Le parent passe déjà des strings
     category?: string;
     activities?: string[];
   };
@@ -39,28 +38,15 @@ export default function EstablishmentHeroWithGallery({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  // Calculer la catégorie à partir des activités
-  const getDisplayCategory = () => {
-    if (establishment.category) {
-      return establishment.category;
-    }
-    
-    if (establishment.activities && establishment.activities.length > 0) {
-      const firstActivity = establishment.activities[0];
-      const activityInfo = getActivityInfo(firstActivity);
-      return activityInfo?.label || firstActivity.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-    
-    return null;
-  };
   
-  const displayCategory = getDisplayCategory();
+  // ✅ CORRECTION : Utiliser l'ordre correct des images
+  // Les images sont déjà ordonnées par le champ 'ordre' dans la requête Prisma
+  // et transformées en strings par le composant parent
   
-  // Combiner imageUrl et images pour créer un tableau
-  const allImages = [
-    ...(establishment.imageUrl ? [establishment.imageUrl] : []),
-    ...(establishment.images || [])
-  ].filter(Boolean).filter(img => img && img.trim() !== '');
+  // Les images sont déjà des strings, on les utilise directement
+  const allImages = (establishment.images || [])
+    .filter(Boolean)
+    .filter(img => img && img.trim() !== '');
   
   // Déduplication des images (éviter les doublons)
   const uniqueImages = [...new Set(allImages)];
@@ -134,14 +120,6 @@ export default function EstablishmentHeroWithGallery({
             </div>
           )}
 
-          {/* Badge catégorie en haut à gauche */}
-          {displayCategory && (
-            <div className="absolute top-4 left-4 z-10">
-              <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-                {displayCategory}
-              </span>
-            </div>
-          )}
 
 
           {/* Informations principales en bas */}
@@ -187,14 +165,6 @@ export default function EstablishmentHeroWithGallery({
               establishmentName={establishment.name}
             />
             
-            {/* Badge catégorie en haut à gauche */}
-            {displayCategory && (
-              <div className="absolute top-4 left-4 z-10">
-                <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium shadow-lg">
-                  {displayCategory}
-                </span>
-              </div>
-            )}
 
 
             {/* Informations principales en bas */}
@@ -253,14 +223,6 @@ export default function EstablishmentHeroWithGallery({
               </div>
             )}
 
-            {/* Badge catégorie en haut à gauche */}
-            {displayCategory && (
-              <div className="absolute top-4 left-4">
-                <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  {displayCategory}
-                </span>
-              </div>
-            )}
 
 
             {/* Informations principales en bas */}

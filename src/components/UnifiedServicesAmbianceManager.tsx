@@ -72,8 +72,11 @@ export default function UnifiedServicesAmbianceManager({
       
       if (rubriqueMatch) {
         // Format: "item|rubrique" - respecter le choix de l'utilisateur
-        const cleanItem = rubriqueMatch[1];
+        let cleanItem = rubriqueMatch[1];
         const rubrique = rubriqueMatch[2];
+        
+        // ✅ NETTOYAGE : Supprimer les icônes automatiques (⚠️, ✅, etc.)
+        cleanItem = cleanItem.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
         
         // ✅ CORRECTION : Déterminer la section principale selon la rubrique
         let mainSection = 'ambiance-specialites'; // par défaut
@@ -106,9 +109,11 @@ export default function UnifiedServicesAmbianceManager({
         }
       } else {
         // Format ancien : utiliser la catégorisation automatique
-        const { mainCategory, subCategory } = categorizeItem(item);
+        // ✅ NETTOYAGE : Supprimer les icônes automatiques
+        const cleanItem = item.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const { mainCategory, subCategory } = categorizeItem(cleanItem);
         if (organized[mainCategory] && organized[mainCategory][subCategory]) {
-          organized[mainCategory][subCategory].push(item);
+          organized[mainCategory][subCategory].push(cleanItem);
         }
       }
     });
@@ -140,30 +145,47 @@ export default function UnifiedServicesAmbianceManager({
 
     console.log('➕ AJOUT - Section:', section, 'SubSection:', subSection, 'Item:', trimmedItem);
     console.log('➕ AJOUT - onPaymentMethodsChange disponible:', !!onPaymentMethodsChange);
+    console.log('➕ AJOUT - onInformationsPratiquesChange disponible:', !!onInformationsPratiquesChange);
 
     // ✅ SOLUTION : Stocker avec un marqueur pour respecter la rubrique choisie
     // Format: "item|subSection" pour conserver la rubrique d'origine
     const itemWithSubSection = `${trimmedItem}|${subSection}`;
+    let added = false;
 
     if (section === 'ambiance-specialites') {
       const newAmbiance = [...(Array.isArray(ambiance) ? ambiance : []), itemWithSubSection];
       onAmbianceChange(newAmbiance);
       console.log('➕ Ajouté à ambiance avec rubrique:', itemWithSubSection);
+      added = true;
     } else if (section === 'equipements-services') {
       const newServices = [...(Array.isArray(services) ? services : []), itemWithSubSection];
       onServicesChange(newServices);
       console.log('➕ Ajouté à services avec rubrique:', itemWithSubSection);
+      added = true;
     } else if (section === 'informations-pratiques') {
-      const newInfos = [...(Array.isArray(informationsPratiques) ? informationsPratiques : []), itemWithSubSection];
-      onInformationsPratiquesChange?.(newInfos);
-      console.log('➕ Ajouté à informations pratiques avec rubrique:', itemWithSubSection);
+      if (onInformationsPratiquesChange) {
+        const newInfos = [...(Array.isArray(informationsPratiques) ? informationsPratiques : []), itemWithSubSection];
+        onInformationsPratiquesChange(newInfos);
+        console.log('➕ Ajouté à informations pratiques avec rubrique:', itemWithSubSection);
+        added = true;
+      } else {
+        console.error('❌ onInformationsPratiquesChange n\'est pas disponible');
+      }
     } else if (section === 'moyens-paiement') {
-      const newPaymentMethods = [...(Array.isArray(paymentMethods) ? paymentMethods : []), itemWithSubSection];
-      onPaymentMethodsChange?.(newPaymentMethods);
-      console.log('➕ Ajouté à moyens de paiement avec rubrique:', itemWithSubSection);
+      if (onPaymentMethodsChange) {
+        const newPaymentMethods = [...(Array.isArray(paymentMethods) ? paymentMethods : []), itemWithSubSection];
+        onPaymentMethodsChange(newPaymentMethods);
+        console.log('➕ Ajouté à moyens de paiement avec rubrique:', itemWithSubSection);
+        added = true;
+      } else {
+        console.error('❌ onPaymentMethodsChange n\'est pas disponible');
+      }
     }
 
-    setNewItem(null);
+    // ✅ CORRECTION : Ne vider le champ que si l'ajout a réussi
+    if (added) {
+      setNewItem(null);
+    }
   };
 
   const removeItem = (section: string, subSection: string, item: string) => {
@@ -173,9 +195,13 @@ export default function UnifiedServicesAmbianceManager({
     const expectedItem = `${item}|${subSection}`;
     let found = false;
     
-    // Chercher dans ambiance (avec et sans marqueur)
+    // Chercher dans ambiance (avec et sans marqueur, avec ou sans icônes)
     if (Array.isArray(ambiance)) {
-      const ambianceItem = ambiance.find(a => a === item || a === expectedItem);
+      const ambianceItem = ambiance.find(a => {
+        const cleanA = a.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanAWithoutMarker = cleanA.split('|')[0].trim();
+        return a === item || a === expectedItem || cleanAWithoutMarker === item;
+      });
       if (ambianceItem) {
         const beforeCount = ambiance.length;
         const newAmbiance = ambiance.filter(a => a !== ambianceItem);
@@ -186,9 +212,13 @@ export default function UnifiedServicesAmbianceManager({
       }
     }
     
-    // Chercher dans services (avec et sans marqueur)
+    // Chercher dans services (avec et sans marqueur, avec ou sans icônes)
     if (Array.isArray(services)) {
-      const serviceItem = services.find(s => s === item || s === expectedItem);
+      const serviceItem = services.find(s => {
+        const cleanS = s.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanSWithoutMarker = cleanS.split('|')[0].trim();
+        return s === item || s === expectedItem || cleanSWithoutMarker === item;
+      });
       if (serviceItem) {
         const beforeCount = services.length;
         const newServices = services.filter(s => s !== serviceItem);
@@ -199,9 +229,13 @@ export default function UnifiedServicesAmbianceManager({
       }
     }
     
-    // Chercher dans informationsPratiques (avec et sans marqueur)
+    // Chercher dans informationsPratiques (avec et sans marqueur, avec ou sans icônes)
     if (Array.isArray(informationsPratiques)) {
-      const infosItem = informationsPratiques.find(i => i === item || i === expectedItem);
+      const infosItem = informationsPratiques.find(i => {
+        const cleanI = i.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanIWithoutMarker = cleanI.split('|')[0].trim();
+        return i === item || i === expectedItem || cleanIWithoutMarker === item;
+      });
       if (infosItem) {
         const beforeCount = informationsPratiques.length;
         const newInfos = informationsPratiques.filter(i => i !== infosItem);
@@ -212,9 +246,13 @@ export default function UnifiedServicesAmbianceManager({
       }
     }
     
-    // Chercher dans paymentMethods (avec et sans marqueur)
+    // Chercher dans paymentMethods (avec et sans marqueur, avec ou sans icônes)
     if (Array.isArray(paymentMethods)) {
-      const paymentItem = paymentMethods.find(p => p === item || p === expectedItem);
+      const paymentItem = paymentMethods.find(p => {
+        const cleanP = p.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanPWithoutMarker = cleanP.split('|')[0].trim();
+        return p === item || p === expectedItem || cleanPWithoutMarker === item;
+      });
       if (paymentItem) {
         const beforeCount = paymentMethods.length;
         const newPaymentMethods = paymentMethods.filter(p => p !== paymentItem);
@@ -238,64 +276,97 @@ export default function UnifiedServicesAmbianceManager({
     if (!editingItem || !newValue.trim()) return;
 
     console.log('✏️ MODIFICATION - Item:', editingItem.item, 'Index:', editingItem.index, 'Nouvelle valeur:', newValue.trim());
+    console.log('🔍 DEBUG - Section d\'affichage:', editingItem.section);
 
-    // ✅ SOLUTION : Remplacer l'item à l'index précis (gère les doublons)
-    const newItemWithSubSection = `${newValue.trim()}|${editingItem.subSection}`;
+    // ✅ SOLUTION SIMPLIFIÉE : Remplacer directement par le nom de l'item (sans marqueur de rubrique)
+    // Cela évite les problèmes de doublons et de marqueurs
+    // ✅ NETTOYAGE : Supprimer les icônes automatiques du nouveau texte
+    const newItem = newValue.trim().replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+    const newItemWithSubSection = `${newItem}|${editingItem.subSection}`;
+    const expectedOldItem = `${editingItem.item}|${editingItem.subSection}`;
     
-    if (editingItem.section === 'ambiance-specialites' && Array.isArray(ambiance)) {
-      // Trouver l'item à l'index dans la liste organisée
-      const organizedItems = organizeItemsByUserChoice(ambiance);
-      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
-      const oldItem = items[editingItem.index];
+    // ✅ NOUVELLE STRATÉGIE : Chercher dans TOUS les tableaux
+    // car la section d'affichage peut être différente du tableau de stockage
+    let itemFound = false;
+    
+    // 1. Chercher dans ambiance
+    if (!itemFound && Array.isArray(ambiance)) {
+      const oldItem = ambiance.find(a => {
+        const cleanA = a.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanAWithoutMarker = cleanA.split('|')[0].trim();
+        return a === editingItem.item || 
+               a === expectedOldItem || 
+               cleanAWithoutMarker === editingItem.item;
+      });
       
       if (oldItem) {
-        // Trouver l'item complet dans le tableau original
-        const fullOldItem = ambiance.find(a => a.includes(oldItem));
-        if (fullOldItem) {
-          const newAmbiance = ambiance.map(a => a === fullOldItem ? newItemWithSubSection : a);
-          onAmbianceChange(newAmbiance);
-          console.log('✏️ Remplacé dans ambiance (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
-        }
+        const newAmbiance = ambiance.map(a => a === oldItem ? newItemWithSubSection : a);
+        onAmbianceChange(newAmbiance);
+        console.log('✅ Remplacé dans AMBIANCE:', oldItem, '->', newItemWithSubSection);
+        itemFound = true;
       }
-    } else if (editingItem.section === 'equipements-services' && Array.isArray(services)) {
-      const organizedItems = organizeItemsByUserChoice(services);
-      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
-      const oldItem = items[editingItem.index];
+    }
+    
+    // 2. Chercher dans services
+    if (!itemFound && Array.isArray(services)) {
+      const oldItem = services.find(s => {
+        const cleanS = s.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanSWithoutMarker = cleanS.split('|')[0].trim();
+        return s === editingItem.item || 
+               s === expectedOldItem || 
+               cleanSWithoutMarker === editingItem.item;
+      });
       
       if (oldItem) {
-        const fullOldItem = services.find(s => s.includes(oldItem));
-        if (fullOldItem) {
-          const newServices = services.map(s => s === fullOldItem ? newItemWithSubSection : s);
-          onServicesChange(newServices);
-          console.log('✏️ Remplacé dans services (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
-        }
+        const newServices = services.map(s => s === oldItem ? newItemWithSubSection : s);
+        onServicesChange(newServices);
+        console.log('✅ Remplacé dans SERVICES:', oldItem, '->', newItemWithSubSection);
+        itemFound = true;
       }
-    } else if (editingItem.section === 'informations-pratiques' && Array.isArray(informationsPratiques)) {
-      const organizedItems = organizeItemsByUserChoice(informationsPratiques);
-      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
-      const oldItem = items[editingItem.index];
+    }
+    
+    // 3. Chercher dans informationsPratiques
+    if (!itemFound && Array.isArray(informationsPratiques)) {
+      const oldItem = informationsPratiques.find(i => {
+        const cleanI = i.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanIWithoutMarker = cleanI.split('|')[0].trim();
+        return i === editingItem.item || 
+               i === expectedOldItem || 
+               cleanIWithoutMarker === editingItem.item;
+      });
       
       if (oldItem) {
-        const fullOldItem = informationsPratiques.find(i => i.includes(oldItem));
-        if (fullOldItem) {
-          const newInfos = informationsPratiques.map(i => i === fullOldItem ? newItemWithSubSection : i);
-          onInformationsPratiquesChange?.(newInfos);
-          console.log('✏️ Remplacé dans informationsPratiques (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
-        }
+        const newInfos = informationsPratiques.map(i => i === oldItem ? newItemWithSubSection : i);
+        onInformationsPratiquesChange?.(newInfos);
+        console.log('✅ Remplacé dans INFORMATIONS PRATIQUES:', oldItem, '->', newItemWithSubSection);
+        itemFound = true;
       }
-    } else if (editingItem.section === 'moyens-paiement' && Array.isArray(paymentMethods)) {
-      const organizedItems = organizeItemsByUserChoice(paymentMethods);
-      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
-      const oldItem = items[editingItem.index];
+    }
+    
+    // 4. Chercher dans paymentMethods
+    if (!itemFound && Array.isArray(paymentMethods)) {
+      const oldItem = paymentMethods.find(p => {
+        const cleanP = p.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+        const cleanPWithoutMarker = cleanP.split('|')[0].trim();
+        return p === editingItem.item || 
+               p === expectedOldItem || 
+               cleanPWithoutMarker === editingItem.item;
+      });
       
       if (oldItem) {
-        const fullOldItem = paymentMethods.find(p => p.includes(oldItem));
-        if (fullOldItem) {
-          const newPaymentMethods = paymentMethods.map(p => p === fullOldItem ? newItemWithSubSection : p);
-          onPaymentMethodsChange?.(newPaymentMethods);
-          console.log('✏️ Remplacé dans moyens de paiement (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
-        }
+        const newPaymentMethods = paymentMethods.map(p => p === oldItem ? newItemWithSubSection : p);
+        onPaymentMethodsChange?.(newPaymentMethods);
+        console.log('✅ Remplacé dans MOYENS DE PAIEMENT:', oldItem, '->', newItemWithSubSection);
+        itemFound = true;
       }
+    }
+    
+    if (!itemFound) {
+      console.warn('❌ Item NON TROUVÉ dans aucun tableau:', editingItem.item);
+      console.log('🔍 DEBUG - Services:', services);
+      console.log('🔍 DEBUG - Ambiance:', ambiance);
+      console.log('🔍 DEBUG - Infos pratiques:', informationsPratiques);
+      console.log('🔍 DEBUG - Moyens de paiement:', paymentMethods);
     }
     
     setEditingItem(null);

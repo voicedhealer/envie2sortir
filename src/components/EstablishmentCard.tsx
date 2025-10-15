@@ -250,9 +250,9 @@ export default function EstablishmentCard({
   // Récupérer les bons plans actifs
   const { activeDeal } = useActiveDeals(establishment.id);
 
-  // Utiliser l'image principale du modèle
-  const primaryImage = establishment.imageUrl || 
-    (establishment.images?.find(img => img.isPrimary) || establishment.images?.[0])?.url;
+  // ✅ CORRECTION : Utiliser uniquement l'ordre (première image = principale)
+  // Plus de logique isPrimary, l'ordre définit tout
+  const primaryImage = establishment.imageUrl || establishment.images?.[0]?.url;
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {

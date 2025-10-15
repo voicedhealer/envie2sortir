@@ -162,9 +162,10 @@ export async function GET(request: NextRequest) {
             url: true,
             altText: true,
             isPrimary: true,
-            createdAt: true
+            createdAt: true,
+            ordre: true
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { ordre: 'asc' } // ✅ CORRECTION : Trier par ordre, pas par date
         }
       }
     });

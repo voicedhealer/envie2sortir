@@ -69,6 +69,9 @@ export type ProfessionalData = {
   atmosphere?: string[];
   accessibility?: string[];
   
+  // Acceptation des conditions
+  termsAccepted?: boolean;
+  
   // === NOUVELLES SECTIONS DÉTAILLÉES ===
   accessibilityInfo?: {
     wheelchairAccessibleEntrance?: boolean;

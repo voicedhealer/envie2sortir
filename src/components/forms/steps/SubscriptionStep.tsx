@@ -67,7 +67,7 @@ export default function SubscriptionStep({
               {/* Savings pour Premium */}
               {isPremium && 'savings' in plan && plan.savings && plan.savings.trim() && (
                 <div className="mb-4 p-2 bg-[#ff751f] bg-opacity-10 rounded-lg border border-[#ff751f] border-opacity-30">
-                  <p className="text-sm font-semibold text-[#ff751f] text-center">
+                  <p className="text-sm font-semibold text-white text-center">
                     ✨ {plan.savings}
                   </p>
                 </div>

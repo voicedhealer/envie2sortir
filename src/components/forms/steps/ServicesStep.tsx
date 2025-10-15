@@ -1,11 +1,12 @@
 import UnifiedServicesAmbianceManager from '@/components/UnifiedServicesAmbianceManager';
+import { convertPaymentMethodsObjectToArray, convertPaymentMethodsArrayToObject } from '@/lib/establishment-form.utils';
 
 interface ServicesStepProps {
   formData: {
     services: string[];
     ambiance: string[];
     informationsPratiques?: string[];
-    paymentMethods?: string[];
+    paymentMethods?: any; // Peut être string[] ou objet {creditCards: true, ...}
     hybridAccessibilityDetails?: any;
     hybridDetailedServices?: any;
     hybridClienteleInfo?: any;
@@ -117,11 +118,22 @@ export default function ServicesStep({
         services={formData.services || []}
         ambiance={formData.ambiance || []}
         informationsPratiques={formData.informationsPratiques || []}
-        paymentMethods={formData.paymentMethods || []}
+        paymentMethods={
+          // ✅ CORRECTION : Garder le format tableau, convertir l'objet si nécessaire
+          formData.paymentMethods 
+            ? (Array.isArray(formData.paymentMethods) 
+                ? formData.paymentMethods 
+                : convertPaymentMethodsObjectToArray(formData.paymentMethods))
+            : []
+        }
         onServicesChange={(services) => onInputChange('services', services)}
         onAmbianceChange={(ambiance) => onInputChange('ambiance', ambiance)}
         onInformationsPratiquesChange={(informationsPratiques) => onInputChange('informationsPratiques', informationsPratiques)}
-        onPaymentMethodsChange={(paymentMethods) => onInputChange('paymentMethods', paymentMethods)}
+        onPaymentMethodsChange={(paymentMethodsArray) => {
+          // ✅ CORRECTION : Sauvegarder directement le tableau, sans conversion
+          console.log('💾 SAUVEGARDE - Moyens de paiement (tableau):', paymentMethodsArray);
+          onInputChange('paymentMethods', paymentMethodsArray);
+        }}
         isEditMode={isEditMode}
         establishmentType="restaurant" // TODO: Récupérer le type d'établissement depuis les données
       />

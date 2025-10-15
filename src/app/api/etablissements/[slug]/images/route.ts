@@ -22,9 +22,10 @@ export async function GET(
             id: true,
             url: true,
             isPrimary: true,
-            createdAt: true
+            createdAt: true,
+            ordre: true
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { ordre: 'asc' } // ✅ CORRECTION : Trier par ordre, pas par date
         }
       }
     });

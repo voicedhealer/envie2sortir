@@ -175,28 +175,9 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const [csrfTokenExpiry, setCsrfTokenExpiry] = useState<number>(0);
 
-  // Vérification si l'utilisateur a déjà un établissement
-  useEffect(() => {
-    const checkExistingEstablishment = async () => {
-      if (session?.user?.id) {
-        try {
-          const response = await fetch('/api/professional/establishments');
-          if (response.ok) {
-            const data = await response.json();
-            if (data.establishment) {
-              router.push('/dashboard?tab=overview');
-            }
-          }
-        } catch (error) {
-          console.error('Erreur lors de la vérification de l\'établissement:', error);
-        }
-      }
-    };
-
-    if (status === 'authenticated') {
-      checkExistingEstablishment();
-    }
-  }, [session, status, router]);
+  // ✅ OPTIMISATION : Suppression de la vérification inutile des établissements existants
+  // Cette vérification causait une 404 et ralentissait la validation
+  // Le dashboard gère déjà la récupération des établissements
 
 
   // Charger les données existantes en mode édition
@@ -759,6 +740,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 8:
+        // Validation de l'acceptation des conditions générales
+        if (!formData.termsAccepted) {
+          newErrors.termsAccepted = "Vous devez accepter les conditions générales d'utilisation";
+        }
         break;
     }
 
@@ -924,22 +909,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             });
 
             if (signInResult?.ok) {
-              console.log('✅ Connexion automatique réussie');
-              // Attendre que la session soit mise à jour
-              await new Promise(resolve => setTimeout(resolve, 1000));
-              
-              // Vérifier que la session est bien établie
-              const sessionCheck = await fetch('/api/auth/session');
-              const sessionData = await sessionCheck.json();
-              
-              if (sessionData?.user?.id) {
-                console.log('✅ Session confirmée, redirection vers dashboard');
-                router.push('/dashboard');
-              } else {
-                console.log('⚠️ Session non confirmée, redirection forcée vers dashboard');
-                // Forcer la redirection même si la session n'est pas encore propagée
-                window.location.href = '/dashboard';
-              }
+              console.log('✅ Connexion automatique réussie, redirection vers dashboard');
+              // ✅ OPTIMISATION : Redirection immédiate sans attendre ni vérifier la session
+              // Next-Auth gère la session automatiquement, pas besoin de vérifier
+              router.push('/dashboard');
             } else {
               console.error('❌ Échec de la connexion automatique:', signInResult?.error);
               // En cas d'échec, rediriger vers la page de connexion avec un message

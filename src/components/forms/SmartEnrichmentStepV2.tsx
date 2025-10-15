@@ -134,7 +134,8 @@ export default function SmartEnrichmentStepV2({
     const manualData: any = {
       servicesArray: [],
       ambianceArray: [],
-      informationsPratiques: []
+      informationsPratiques: [],
+      paymentMethodsArray: []
     };
     
     console.log('🔧 CRÉATION DONNÉES MANUELLES - Suggestions sélectionnées:', selected);
@@ -149,7 +150,9 @@ export default function SmartEnrichmentStepV2({
           manualData.servicesArray.push(value);
         } else if (category === 'clientele' || category === 'ambiance') {
           manualData.ambianceArray.push(value);
-        } else if (category === 'payments' || category === 'health') {
+        } else if (category === 'payments') {
+          manualData.paymentMethodsArray.push(value);
+        } else if (category === 'health') {
           manualData.informationsPratiques.push(value);
         }
       }
@@ -183,6 +186,8 @@ export default function SmartEnrichmentStepV2({
       servicesArray: [...(enrichmentData.servicesArray || []), ...(manualData.servicesArray || [])],
       ambianceArray: [...(enrichmentData.ambianceArray || []), ...(manualData.ambianceArray || [])],
       informationsPratiques: [...(enrichmentData.informationsPratiques || []), ...(manualData.informationsPratiques || [])],
+      // ✅ AJOUT : Inclure les moyens de paiement d'enrichissement et manuels
+      paymentMethodsArray: [...(enrichmentData.paymentMethodsArray || []), ...(manualData.paymentMethodsArray || [])],
     };
 
     // Continuer avec les données finales incluant les suggestions manuelles

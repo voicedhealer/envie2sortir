@@ -3,12 +3,12 @@ export async function geocodeAddress(address: string): Promise<{ latitude: numbe
   try {
     console.log('🌍 Géocodage de l\'adresse:', address);
     
-    // Déterminer l'URL de base selon l'environnement
-    const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXTAUTH_URL || 'https://envie2sortir.fr'
-      : 'http://localhost:3001';
+    // Construire l'URL absolue pour les appels côté serveur
+    // Utiliser process.env pour obtenir l'URL de base
+    const baseUrl = typeof window === 'undefined' 
+      ? (process.env.NEXTAUTH_URL || `http://localhost:${process.env.PORT || 3000}`)
+      : '';
     
-    // Utiliser l'API de géocodage interne avec URL complète
     const apiUrl = `${baseUrl}/api/geocode?address=${encodeURIComponent(address)}`;
     console.log('🔗 URL de géocodage:', apiUrl);
     

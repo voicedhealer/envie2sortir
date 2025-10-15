@@ -5,6 +5,24 @@ import { useSession } from "next-auth/react";
 import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
 import { getMinImages, getMaxImages } from "@/lib/subscription-utils";
+import { 
+  DndContext, 
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { GripVertical } from 'lucide-react';
 
 interface ImagesManagerProps {
   establishmentId: string; // Gardé pour compatibilité mais non utilisé
@@ -30,6 +48,100 @@ function getImageUrl(imagePath: string): string {
   return imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
 }
 
+// ✅ NOUVEAU : Composant pour une image déplaçable
+interface SortableImageProps {
+  imageUrl: string;
+  index: number;
+  isLoading: boolean;
+  onRemove: () => void;
+  onReplace: () => void;
+}
+
+function SortableImage({ 
+  imageUrl, 
+  index, 
+  isLoading,
+  onRemove,
+  onReplace
+}: SortableImageProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: imageUrl });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const fullUrl = getImageUrl(imageUrl);
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      className={`relative group ${isDragging ? 'z-50' : ''}`}
+    >
+      {/* Indicateur de position */}
+      <div className="absolute -top-2 -left-2 bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold z-20">
+        {index + 1}
+      </div>
+
+      {/* Poignée de drag */}
+      <div 
+        {...attributes}
+        {...listeners}
+        className="absolute top-2 right-2 bg-gray-800/70 hover:bg-gray-800 text-white p-2 rounded cursor-move z-20 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Glisser pour réorganiser"
+      >
+        <GripVertical className="w-5 h-5" />
+      </div>
+
+      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
+        <img
+          src={fullUrl}
+          alt={`Image ${index + 1}`}
+          className="w-full h-full object-cover"
+          style={{
+            minHeight: '200px',
+            backgroundColor: '#f3f4f6'
+          }}
+          onError={(e) => {
+            console.error('Erreur chargement image:', e);
+          }}
+        />
+      </div>
+    
+      {/* Overlay avec actions */}
+      <div className="absolute inset-0 bg-transparent group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 rounded-lg flex items-center justify-center z-10">
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col space-y-2">
+          <button
+            onClick={onRemove}
+            disabled={isLoading}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            🗑️ Supprimer
+          </button>
+          <button
+            onClick={onReplace}
+            disabled={isLoading}
+            className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            📷 Remplacer
+          </button>
+        </div>
+      </div>
+      
+      {/* ✅ BADGE SUPPRIMÉ : La position #1 indique clairement l'image principale */}
+    </div>
+  );
+}
+
 export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'FREE' }: ImagesManagerProps) {
   const { data: session, status } = useSession();
   const [images, setImages] = useState<string[]>([]);
@@ -38,10 +150,19 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const [error, setError] = useState<string | null>(null);
   const [establishmentData, setEstablishmentData] = useState<any>(null);
 
+  // ✅ NOUVEAU : Sensors pour le drag & drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Calculer les limites d'images selon l'abonnement
   const minImages = getMinImages(subscription);
   const maxImages = getMaxImages(subscription);
   const canUploadMore = images.length < maxImages;
+  const remainingSlots = maxImages - images.length; // ✅ NOUVEAU : Nombre de slots restants
   const hasMinimumImages = images.length >= minImages;
   
   // Log pour debug
@@ -63,37 +184,6 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       console.log('⚠️ État de session inattendu:', { status, session });
     }
   }, [status, session]);
-
-  // Afficher un message si l'utilisateur n'est pas connecté
-  if (status === 'unauthenticated') {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <div className="text-red-600 mb-4">
-          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-medium text-red-800 mb-2">Session expirée</h3>
-        <p className="text-red-600 mb-4">Vous devez vous reconnecter pour gérer vos images.</p>
-        <a 
-          href="/auth" 
-          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          Se reconnecter
-        </a>
-      </div>
-    );
-  }
-
-  // Afficher un loader pendant le chargement de la session
-  if (status === 'loading') {
-    return (
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Chargement de votre session...</p>
-      </div>
-    );
-  }
 
   // Fonction pour charger les images avec retry et backoff
   const loadImages = async (retryCount = 0) => {
@@ -222,6 +312,84 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     }
   }, [establishmentData, currentImageUrl]);
 
+  // ✅ IMPORTANT : Les returns anticipés doivent être APRÈS tous les hooks
+  // Afficher un message si l'utilisateur n'est pas connecté
+  if (status === 'unauthenticated') {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <div className="text-red-600 mb-4">
+          <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-red-800 mb-2">Session expirée</h3>
+        <p className="text-red-600 mb-4">Vous devez vous reconnecter pour gérer vos images.</p>
+        <a 
+          href="/auth" 
+          className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+        >
+          Se reconnecter
+        </a>
+      </div>
+    );
+  }
+
+  // Afficher un loader pendant le chargement de la session
+  if (status === 'loading') {
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+        <p className="text-gray-600">Chargement de votre session...</p>
+      </div>
+    );
+  }
+
+  // ✅ NOUVEAU : Gérer le drag & drop des images
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id) {
+      const oldIndex = images.indexOf(active.id as string);
+      const newIndex = images.indexOf(over?.id as string);
+
+      const newOrder = arrayMove(images, oldIndex, newIndex);
+      setImages(newOrder);
+
+      console.log('🔄 Nouvel ordre des images:', newOrder);
+
+      // Sauvegarder l'ordre dans la base de données
+      try {
+        const response = await fetch('/api/dashboard/images/reorder', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            establishmentId: establishmentId,
+            imageOrder: newOrder
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Erreur lors de la sauvegarde de l\'ordre');
+        }
+
+        toast.success('Ordre des images mis à jour !');
+        
+        // La première image devient automatiquement l'image principale
+        if (newOrder.length > 0 && newOrder[0] !== primaryImage) {
+          setPrimaryImage(newOrder[0]);
+        }
+      } catch (error) {
+        console.error('❌ Erreur lors de la sauvegarde de l\'ordre:', error);
+        toast.error('Erreur lors de la sauvegarde de l\'ordre');
+        // Annuler le changement en cas d'erreur
+        await loadImages();
+      }
+    }
+  };
+
   const handleFileUpload = async (file: File) => {
     try {
       setIsLoading(true);
@@ -322,141 +490,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     }
   };
 
-  const updatePrimaryImage = async (imageUrl: string) => {
-    try {
-      // Vérifier l'authentification
-      console.log('🔍 Vérification de session avant updatePrimaryImage:', { 
-        status, 
-        hasSession: !!session, 
-        hasUser: !!session?.user,
-        userId: session?.user?.id 
-      });
-      
-      if (!session?.user) {
-        console.error('❌ Utilisateur non authentifié');
-        setError('Session expirée. Veuillez vous reconnecter.');
-        toast.error('Session expirée. Veuillez vous reconnecter.');
-        return;
-      }
-      
-      console.log('🔄 Mise à jour image principale:', imageUrl);
-      
-      // Utiliser l'API pour l'établissement de l'utilisateur connecté
-      const response = await fetch(`/api/etablissements/images`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Inclure les cookies de session
-        body: JSON.stringify({
-          imageUrl: imageUrl
-        }),
-      });
-
-      console.log('📡 Réponse API:', response.status, response.statusText);
-
-      if (!response.ok) {
-        let errorData: any = {};
-        let responseText = '';
-        
-        try {
-          // Cloner la réponse pour pouvoir la lire plusieurs fois
-          const responseClone = response.clone();
-          responseText = await responseClone.text();
-          console.log('📝 Réponse brute:', responseText);
-          console.log('📝 Longueur de la réponse:', responseText.length);
-          console.log('📝 Type de contenu:', response.headers.get('content-type'));
-          
-          if (responseText.trim()) {
-            // Vérifier si c'est du JSON
-            const contentType = response.headers.get('content-type');
-            if (contentType?.includes('application/json')) {
-              try {
-                errorData = JSON.parse(responseText);
-                console.log('✅ JSON parsé avec succès:', errorData);
-              } catch (jsonError) {
-                console.error('❌ Erreur parsing JSON:', jsonError);
-                errorData = { 
-                  error: `Réponse JSON invalide du serveur`,
-                  rawResponse: responseText.substring(0, 200),
-                  parseError: jsonError instanceof Error ? jsonError.message : 'Erreur inconnue'
-                };
-              }
-            } else {
-              // Probablement du HTML ou du texte
-              console.warn('⚠️ Réponse non-JSON reçue, probablement une erreur Next.js');
-              errorData = { 
-                error: `Erreur serveur (${response.status})`,
-                rawResponse: responseText.substring(0, 200),
-                isHtml: contentType?.includes('text/html')
-              };
-            }
-          } else {
-            console.warn('⚠️ Réponse vide reçue');
-            errorData = { 
-              error: `Erreur ${response.status}: ${response.statusText}`,
-              emptyResponse: true
-            };
-          }
-        } catch (textError) {
-          console.error('❌ Erreur lecture réponse:', textError);
-          errorData = { 
-            error: `Erreur ${response.status}: Impossible de lire la réponse`,
-            readError: textError instanceof Error ? textError.message : 'Erreur inconnue'
-          };
-        }
-        
-        console.error('❌ Erreur API détaillée:', {
-          status: response.status,
-          statusText: response.statusText,
-          responseText: responseText.substring(0, 500),
-          errorData: errorData,
-          url: response.url,
-          contentType: response.headers.get('content-type'),
-          headers: Object.fromEntries(response.headers.entries())
-        });
-        
-        // Log supplémentaire pour debug
-        console.error('❌ Détails de l\'erreur:', {
-          hasErrorData: !!errorData,
-          errorDataKeys: errorData ? Object.keys(errorData) : 'N/A',
-          errorDataType: typeof errorData,
-          responseTextLength: responseText.length,
-          responseTextPreview: responseText.substring(0, 200)
-        });
-        
-        let errorMessage = 'Erreur lors de la mise à jour';
-        
-        if (response.status === 401) {
-          errorMessage = 'Session expirée. Veuillez vous reconnecter.';
-        } else if (response.status === 403) {
-          errorMessage = 'Vous n\'avez pas les permissions pour modifier cet établissement.';
-        } else if (response.status === 404) {
-          errorMessage = 'Établissement non trouvé.';
-        } else if (response.status === 500) {
-          errorMessage = 'Erreur serveur. Veuillez réessayer.';
-        } else if (errorData && errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData && typeof errorData === 'object' && Object.keys(errorData).length > 0) {
-          errorMessage = `Erreur: ${JSON.stringify(errorData)}`;
-        } else {
-          errorMessage = `Erreur ${response.status}: ${response.statusText}`;
-        }
-        
-        setError(errorMessage);
-        throw new Error(`Erreur API ${response.status}: ${errorMessage}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ Image principale mise à jour:', result);
-      
-      setPrimaryImage(imageUrl);
-      toast.success('Image principale mise à jour !');
-    } catch (error) {
-      console.error('❌ Erreur lors de la mise à jour de l\'image principale:', error);
-      toast.error('Erreur lors de la mise à jour de l\'image principale');
-    }
-  };
+  // ✅ SUPPRIMÉ : Plus besoin de updatePrimaryImage car la position 1 = image principale automatiquement
 
   const removeImage = async (imageUrl: string) => {
     try {
@@ -573,7 +607,12 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       {/* Upload d'images */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">
-          Ajouter une image
+          Ajouter {remainingSlots > 1 ? 'des images' : 'une image'}
+          {remainingSlots > 0 && (
+            <span className="text-sm text-gray-500 ml-2">
+              ({remainingSlots} {remainingSlots > 1 ? 'emplacements disponibles' : 'emplacement disponible'})
+            </span>
+          )}
         </h3>
 
         {canUploadMore ? (
@@ -582,6 +621,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
             onImageRemove={() => {}}
             establishmentId={establishmentId}
             currentImageUrl={undefined}
+            multiple={true}
+            onMultipleImagesUpload={async (uploadedUrls) => {
+              console.log('📸 Upload multiple terminé:', uploadedUrls);
+              // ✅ Recharger les images en utilisant la fonction existante
+              await loadImages();
+              toast.success(`${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''} ajoutée${uploadedUrls.length > 1 ? 's' : ''} avec succès !`);
+            }}
+            maxImages={remainingSlots}
           />
         ) : (
           <div className="text-center py-8">
@@ -619,69 +666,55 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
 
 
-      {/* Images existantes */}
+      {/* Images existantes avec drag & drop */}
       {images.length > 0 && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Mes images ({images.length})
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-gray-900">
+              Mes images ({images.length})
+            </h3>
+            <div className="text-sm text-gray-600 flex items-center gap-2">
+              <GripVertical className="w-4 h-4" />
+              <span>Glissez pour réorganiser</span>
+            </div>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {images
-              .filter((imageUrl) => {
-                // Filtrer les URLs invalides AVANT le map
+          <DndContext 
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext 
+              items={images.filter((imageUrl) => {
                 return typeof imageUrl === 'string' && 
                        imageUrl !== '' && 
                        imageUrl !== 'undefined' && 
                        imageUrl !== 'null' && 
                        imageUrl !== '{}' && 
                        imageUrl.length > 0;
-              })
-              .map((imageUrl, index) => {
-                const fullUrl = getImageUrl(imageUrl);
-                return (
-                <div key={`${imageUrl}-${index}`} className="relative group">
-                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden relative">
-                    <img
-                      src={fullUrl}
-                      alt={`Image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      style={{
-                        minHeight: '200px',
-                        backgroundColor: '#f3f4f6'
-                      }}
-                      onError={(e) => {
-                        console.error('Erreur chargement image:', e);
-                      }}
-                      onLoad={() => {
-                        // Image chargée avec succès
-                      }}
-                    />
-                  </div>
-                
-                {/* Overlay avec actions - FINAL */}
-                <div className="absolute inset-0 bg-transparent group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 rounded-lg flex items-center justify-center z-10">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
-                    {primaryImage !== imageUrl && (
-                      <button
-                        onClick={() => updatePrimaryImage(imageUrl)}
-                        disabled={isLoading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
-                      >
-                        ⭐ Image principale
-                      </button>
-                    )}
-                    <button
-                      onClick={() => removeImage(imageUrl)}
-                      disabled={isLoading}
-                      className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      🗑️ Supprimer
-                    </button>
-                    <button
-                      onClick={() => {
+              })}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {images
+                  .filter((imageUrl) => {
+                    // Filtrer les URLs invalides AVANT le map
+                    return typeof imageUrl === 'string' && 
+                           imageUrl !== '' && 
+                           imageUrl !== 'undefined' && 
+                           imageUrl !== 'null' && 
+                           imageUrl !== '{}' && 
+                           imageUrl.length > 0;
+                  })
+                  .map((imageUrl, index) => (
+                    <SortableImage
+                      key={imageUrl}
+                      imageUrl={imageUrl}
+                      index={index}
+                      isLoading={isLoading}
+                      onRemove={() => removeImage(imageUrl)}
+                      onReplace={() => {
                         console.log('🔄 Bouton Remplacer cliqué');
-                        // Déclencher l'upload d'une nouvelle image
                         const fileInput = document.getElementById('replace-image-upload') as HTMLInputElement;
                         if (fileInput) {
                           console.log('📁 Input file trouvé, ouverture du sélecteur');
@@ -690,25 +723,11 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
                           console.error('❌ Input file non trouvé');
                         }
                       }}
-                      disabled={isLoading}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      📷 Remplacer
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Badge image principale */}
-                {primaryImage === imageUrl && (
-                  <div className="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                    Image principale
-                  </div>
-                )}
-                
+                    />
+                  ))}
               </div>
-              );
-            })}
-          </div>
+            </SortableContext>
+          </DndContext>
         </div>
       )}
 
@@ -721,11 +740,12 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
             </svg>
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-medium text-blue-900 mb-1">💡 Astuce sur les formats d'images</h4>
+            <h4 className="text-sm font-medium text-blue-900 mb-2">💡 Astuces</h4>
+            <p className="text-sm text-blue-800 mb-2">
+              <strong>🎯 Position = Importance</strong> : Glissez-déposez vos images pour les réorganiser. L'image en <strong>position #1</strong> devient automatiquement votre <strong>image principale</strong> (couverture) et s'affiche en premier sur la page publique. Simple et logique !
+            </p>
             <p className="text-sm text-blue-800">
-              <strong>Photos en mode paysage</strong> (horizontales) : créent un effet de zoom immersif dans la galerie, idéal pour mettre en valeur l'ambiance, un plat ou un lieu.
-              <br />
-              <strong>Photos en mode portrait ou carré</strong> : s'affichent avec un effet plus doux et centré.
+              <strong>📸 Formats d'images</strong> : Les photos en mode <strong>paysage</strong> (horizontales) créent un effet de zoom immersif, idéal pour mettre en valeur l'ambiance. Les photos en <strong>portrait ou carré</strong> s'affichent avec un effet plus doux.
             </p>
           </div>
         </div>

@@ -47,12 +47,16 @@ interface SummaryStepProps {
   };
   isEditMode: boolean;
   onEdit: (step: FormStep) => void;
+  onInputChange?: (field: string, value: any) => void;
+  errors?: Record<string, string>;
 }
 
 export default function SummaryStepWrapper({
   formData,
   isEditMode,
-  onEdit
+  onEdit,
+  onInputChange,
+  errors
 }: SummaryStepProps) {
   return (
     <div className="space-y-6">
@@ -102,7 +106,13 @@ export default function SummaryStepWrapper({
       {!isEditMode && (
         <div className="text-sm text-gray-600">
           <label className="flex items-start space-x-2">
-            <input type="checkbox" className="mt-1 rounded text-blue-600 focus:ring-blue-500" required />
+            <input 
+              type="checkbox" 
+              className="mt-1 rounded text-blue-600 focus:ring-blue-500" 
+              checked={formData.termsAccepted || false}
+              onChange={(e) => onInputChange?.('termsAccepted', e.target.checked)}
+              required 
+            />
             <span>
               J'accepte les{' '}
               <a href="/conditions" className="text-blue-600 underline">
@@ -114,6 +124,9 @@ export default function SummaryStepWrapper({
               </a>
             </span>
           </label>
+          {errors?.termsAccepted && (
+            <p className="text-red-500 text-xs mt-1">{errors.termsAccepted}</p>
+          )}
         </div>
       )}
     </div>

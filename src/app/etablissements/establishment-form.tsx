@@ -212,6 +212,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               accountLastName: formData.accountLastName,
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
+              termsAccepted: formData.termsAccepted,
               // Données d'enrichissement
               enrichmentData: enrichmentData,
               theForkLink: formData.theForkLink,
@@ -232,6 +233,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             onEdit={(step) => {
               setCurrentStep(step as FormStep);
             }}
+            onInputChange={handleInputChange}
+            errors={errors}
           />
         );
 

@@ -50,6 +50,76 @@ export default function AccountStep({
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   
+  // État pour la vérification de l'email
+  const [emailCheck, setEmailCheck] = useState<{
+    checking: boolean;
+    exists: boolean;
+    message: string;
+    userName?: string;
+    companyName?: string;
+  }>({
+    checking: false,
+    exists: false,
+    message: ''
+  });
+
+  // Vérifier si l'email existe déjà dans la base de données
+  useEffect(() => {
+    const checkEmailExists = async () => {
+      const email = formData.accountEmail.trim().toLowerCase();
+      
+      // Ne vérifier que si l'email est valide (format basique)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailCheck({
+          checking: false,
+          exists: false,
+          message: ''
+        });
+        return;
+      }
+
+      setEmailCheck({ checking: true, exists: false, message: '' });
+
+      try {
+        const response = await fetch('/api/check-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        const data = await response.json();
+
+        if (data.exists) {
+          setEmailCheck({
+            checking: false,
+            exists: true,
+            message: data.message,
+            userName: data.userName,
+            companyName: data.companyName
+          });
+        } else {
+          setEmailCheck({
+            checking: false,
+            exists: false,
+            message: data.message
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'email:', error);
+        setEmailCheck({
+          checking: false,
+          exists: false,
+          message: ''
+        });
+      }
+    };
+
+    // Debounce de 500ms pour éviter trop de requêtes
+    const timer = setTimeout(checkEmailExists, 500);
+    return () => clearTimeout(timer);
+  }, [formData.accountEmail]);
+  
   // Auto-validation du téléphone quand il devient valide
   useEffect(() => {
     if (phoneState.state === 'valid' && !phoneVerification.isVerified && !phoneVerification.isSending && !autoValidationTriggered.current) {
@@ -121,13 +191,57 @@ export default function AccountStep({
         <label className="block text-sm font-medium mb-2">
           Email professionnel * <span className="text-xs text-gray-500 ml-1">(email qui sera utilisé pour la connexion)</span>
         </label>
-        <input
-          type="email"
-          value={formData.accountEmail}
-          onChange={(e) => onInputChange('accountEmail', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          placeholder="votre.email@exemple.com"
-        />
+        <div className="relative">
+          <input
+            type="email"
+            value={formData.accountEmail}
+            onChange={(e) => onInputChange('accountEmail', e.target.value)}
+            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+              emailCheck.exists ? 'border-red-500' : 'border-gray-300'
+            }`}
+            placeholder="votre.email@exemple.com"
+          />
+          <div className="absolute right-3 top-3">
+            {emailCheck.checking && <Icons.Spinner />}
+            {!emailCheck.checking && emailCheck.message && !emailCheck.exists && <Icons.Check />}
+            {emailCheck.exists && <Icons.X />}
+          </div>
+        </div>
+        
+        {/* ⚠️ Email déjà utilisé */}
+        {emailCheck.exists && (
+          <div className="mt-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm font-semibold text-red-800 mb-2">
+              ⚠️ Cet email est déjà utilisé
+            </p>
+            {emailCheck.userName && (
+              <p className="text-sm text-red-700 mb-1">
+                <strong>Utilisateur :</strong> {emailCheck.userName}
+              </p>
+            )}
+            {emailCheck.companyName && (
+              <p className="text-sm text-red-700 mb-2">
+                <strong>Entreprise :</strong> {emailCheck.companyName}
+              </p>
+            )}
+            <p className="text-sm text-red-700">
+              Si c'est bien vous, veuillez{' '}
+              <a href="/auth" className="font-semibold underline hover:text-red-900">
+                vous connecter à votre compte existant
+              </a>.
+            </p>
+          </div>
+        )}
+        
+        {/* ✓ Email disponible */}
+        {emailCheck.message && !emailCheck.exists && formData.accountEmail && (
+          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm text-green-800">
+              ✓ {emailCheck.message}
+            </p>
+          </div>
+        )}
+        
         {errors.accountEmail && (
           <p className="text-red-500 text-sm mt-1">{errors.accountEmail}</p>
         )}

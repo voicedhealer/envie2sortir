@@ -240,22 +240,77 @@ export async function POST(request: NextRequest) {
         .replace(/-+/g, '-')
         .trim();
     };
-    // Géocoder l'adresse automatiquement (non-bloquant)
-    console.log('🌍 Géocodage de l\'adresse:', establishmentData.address);
-    let coordinates = null;
+    // ✅ CORRECTION : Prioriser les coordonnées GPS du formulaire
+    const manualLatitude = formData.get('latitude') as string;
+    const manualLongitude = formData.get('longitude') as string;
     
-    try {
-      coordinates = await geocodeAddress(establishmentData.address);
+    console.log('📍 Coordonnées GPS du formulaire:');
+    console.log('  Latitude:', manualLatitude, 'Type:', typeof manualLatitude);
+    console.log('  Longitude:', manualLongitude, 'Type:', typeof manualLongitude);
+    
+    let finalCoordinates = null;
+    
+    // Si des coordonnées GPS sont fournies manuellement, les utiliser
+    if (manualLatitude && manualLongitude) {
+      const lat = parseFloat(manualLatitude);
+      const lng = parseFloat(manualLongitude);
       
-      if (coordinates) {
-        console.log('✅ Coordonnées GPS trouvées:', coordinates);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        finalCoordinates = { latitude: lat, longitude: lng };
+        console.log('✅ Utilisation des coordonnées GPS du formulaire:', finalCoordinates);
       } else {
-        console.log('⚠️ Géocodage n\'a pas retourné de coordonnées, mais on continue');
+        console.log('⚠️ Coordonnées GPS invalides, tentative de géocodage automatique');
       }
-    } catch (geocodeError) {
-      console.warn('⚠️ Erreur lors du géocodage (non-bloquant):', geocodeError);
-      console.log('➡️  L\'établissement sera créé sans coordonnées GPS');
-      // On continue quand même, les coordonnées seront null
+    }
+    
+    // Si pas de coordonnées manuelles, essayer le géocodage automatique
+    if (!finalCoordinates) {
+      console.log('🌍 Géocodage automatique de l\'adresse:', establishmentData.address);
+      
+      // Fonction de géocodage avec retry
+      const geocodeWithRetry = async (address, maxRetries = 3) => {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+          try {
+            console.log(`🔄 Tentative de géocodage ${attempt}/${maxRetries}`);
+            const result = await geocodeAddress(address);
+            
+            if (result) {
+              console.log(`✅ Géocodage réussi (tentative ${attempt}):`, result);
+              return result;
+            }
+            
+            if (attempt < maxRetries) {
+              console.log(`⏳ Attente avant retry (${attempt * 1000}ms)...`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+            }
+          } catch (error) {
+            console.warn(`⚠️ Erreur tentative ${attempt}:`, error.message);
+            
+            if (attempt < maxRetries) {
+              console.log(`⏳ Attente avant retry (${attempt * 1000}ms)...`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+            }
+          }
+        }
+        
+        console.log('❌ Toutes les tentatives de géocodage ont échoué');
+        return null;
+      };
+      
+      try {
+        finalCoordinates = await geocodeWithRetry(establishmentData.address);
+        
+        if (finalCoordinates) {
+          console.log('✅ Coordonnées GPS trouvées par géocodage:', finalCoordinates);
+        } else {
+          console.log('⚠️ Géocodage n\'a pas retourné de coordonnées, mais on continue');
+          console.log('💡 Les coordonnées pourront être ajoutées manuellement dans le dashboard');
+        }
+      } catch (geocodeError) {
+        console.warn('⚠️ Erreur lors du géocodage (non-bloquant):', geocodeError);
+        console.log('➡️  L\'établissement sera créé sans coordonnées GPS');
+        // On continue quand même, les coordonnées seront null
+      }
     }
 
     // Transaction pour créer professional + établissement ensemble
@@ -290,8 +345,8 @@ export async function POST(request: NextRequest) {
           address: establishmentData.address,
           city: establishmentData.city,
           postalCode: establishmentData.postalCode,
-          latitude: coordinates?.latitude || null, // Coordonnées GPS
-          longitude: coordinates?.longitude || null, // Coordonnées GPS
+          latitude: finalCoordinates?.latitude || null, // Coordonnées GPS (priorité au formulaire)
+          longitude: finalCoordinates?.longitude || null, // Coordonnées GPS (priorité au formulaire)
           activities: establishmentData.activities, // Activités multiples (JSON)
           services: establishmentData.services, // Services (JSON)
           ambiance: establishmentData.ambiance, // Ambiance (JSON)
