@@ -30,7 +30,7 @@ export default function UnifiedServicesAmbianceManager({
   establishmentType = 'restaurant'
 }: UnifiedServicesAmbianceManagerProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['ambiance-specialites']));
-  const [editingItem, setEditingItem] = useState<{ section: string; subSection: string; item: string } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ section: string; subSection: string; item: string; index: number } | null>(null);
   const [newItem, setNewItem] = useState<{ section: string; subSection: string; value: string } | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -230,50 +230,73 @@ export default function UnifiedServicesAmbianceManager({
     }
   };
 
-  const startEditing = (section: string, subSection: string, item: string) => {
-    setEditingItem({ section, subSection, item });
+  const startEditing = (section: string, subSection: string, item: string, index: number) => {
+    setEditingItem({ section, subSection, item, index });
   };
 
   const saveEdit = (newValue: string) => {
     if (!editingItem || !newValue.trim()) return;
 
-    console.log('✏️ MODIFICATION - Item:', editingItem.item, 'Nouvelle valeur:', newValue.trim());
+    console.log('✏️ MODIFICATION - Item:', editingItem.item, 'Index:', editingItem.index, 'Nouvelle valeur:', newValue.trim());
 
-    // ✅ SOLUTION : Supprimer l'ancien item (avec ou sans marqueur) et ajouter le nouveau
-    const expectedOldItem = `${editingItem.item}|${editingItem.subSection}`;
+    // ✅ SOLUTION : Remplacer l'item à l'index précis (gère les doublons)
+    const newItemWithSubSection = `${newValue.trim()}|${editingItem.subSection}`;
     
     if (editingItem.section === 'ambiance-specialites' && Array.isArray(ambiance)) {
-      const oldItem = ambiance.find(a => a === editingItem.item || a === expectedOldItem);
+      // Trouver l'item à l'index dans la liste organisée
+      const organizedItems = organizeItemsByUserChoice(ambiance);
+      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
+      const oldItem = items[editingItem.index];
+      
       if (oldItem) {
-        const newAmbiance = ambiance.filter(a => a !== oldItem);
-        onAmbianceChange(newAmbiance);
-        console.log('🗑️ Modifié dans ambiance:', oldItem, '->', newValue.trim());
+        // Trouver l'item complet dans le tableau original
+        const fullOldItem = ambiance.find(a => a.includes(oldItem));
+        if (fullOldItem) {
+          const newAmbiance = ambiance.map(a => a === fullOldItem ? newItemWithSubSection : a);
+          onAmbianceChange(newAmbiance);
+          console.log('✏️ Remplacé dans ambiance (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
+        }
       }
     } else if (editingItem.section === 'equipements-services' && Array.isArray(services)) {
-      const oldItem = services.find(s => s === editingItem.item || s === expectedOldItem);
+      const organizedItems = organizeItemsByUserChoice(services);
+      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
+      const oldItem = items[editingItem.index];
+      
       if (oldItem) {
-        const newServices = services.filter(s => s !== oldItem);
-        onServicesChange(newServices);
-        console.log('🗑️ Modifié dans services:', oldItem, '->', newValue.trim());
+        const fullOldItem = services.find(s => s.includes(oldItem));
+        if (fullOldItem) {
+          const newServices = services.map(s => s === fullOldItem ? newItemWithSubSection : s);
+          onServicesChange(newServices);
+          console.log('✏️ Remplacé dans services (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
+        }
       }
     } else if (editingItem.section === 'informations-pratiques' && Array.isArray(informationsPratiques)) {
-      const oldItem = informationsPratiques.find(i => i === editingItem.item || i === expectedOldItem);
+      const organizedItems = organizeItemsByUserChoice(informationsPratiques);
+      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
+      const oldItem = items[editingItem.index];
+      
       if (oldItem) {
-        const newInfos = informationsPratiques.filter(i => i !== oldItem);
-        onInformationsPratiquesChange?.(newInfos);
-        console.log('🗑️ Modifié dans informationsPratiques:', oldItem, '->', newValue.trim());
+        const fullOldItem = informationsPratiques.find(i => i.includes(oldItem));
+        if (fullOldItem) {
+          const newInfos = informationsPratiques.map(i => i === fullOldItem ? newItemWithSubSection : i);
+          onInformationsPratiquesChange?.(newInfos);
+          console.log('✏️ Remplacé dans informationsPratiques (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
+        }
       }
     } else if (editingItem.section === 'moyens-paiement' && Array.isArray(paymentMethods)) {
-      const oldItem = paymentMethods.find(p => p === editingItem.item || p === expectedOldItem);
+      const organizedItems = organizeItemsByUserChoice(paymentMethods);
+      const items = organizedItems[editingItem.section]?.[editingItem.subSection] || [];
+      const oldItem = items[editingItem.index];
+      
       if (oldItem) {
-        const newPaymentMethods = paymentMethods.filter(p => p !== oldItem);
-        onPaymentMethodsChange?.(newPaymentMethods);
-        console.log('🗑️ Modifié dans moyens de paiement:', oldItem, '->', newValue.trim());
+        const fullOldItem = paymentMethods.find(p => p.includes(oldItem));
+        if (fullOldItem) {
+          const newPaymentMethods = paymentMethods.map(p => p === fullOldItem ? newItemWithSubSection : p);
+          onPaymentMethodsChange?.(newPaymentMethods);
+          console.log('✏️ Remplacé dans moyens de paiement (index', editingItem.index, '):', fullOldItem, '->', newItemWithSubSection);
+        }
       }
     }
-    
-    // Ajouter le nouvel item
-    addItem(editingItem.section, editingItem.subSection, newValue.trim());
     
     setEditingItem(null);
   };
@@ -404,7 +427,7 @@ export default function UnifiedServicesAmbianceManager({
                                     <span className="text-base font-medium text-gray-800 flex-1">{item}</span>
                                     <div className="flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
-                                        onClick={() => startEditing(sectionId, subSectionId, item)}
+                                        onClick={() => startEditing(sectionId, subSectionId, item, index)}
                                         className="text-gray-400 hover:text-blue-600 p-1 rounded"
                                         title="Modifier"
                                       >

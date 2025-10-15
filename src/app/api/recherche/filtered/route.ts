@@ -14,15 +14,30 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Associations mot-clé -> activités (pour améliorer le matching sémantique)
+const ACTIVITY_ASSOCIATIONS: { [key: string]: string[] } = {
+  'boire': ['bar', 'cocktails', 'bieres', 'cafe'],
+  'verre': ['bar', 'cocktails', 'bieres', 'cafe'],
+  'cocktail': ['bar', 'cocktails'],
+  'cocktails': ['bar', 'cocktails'],
+  'biere': ['bar', 'bieres'],
+  'bieres': ['bar', 'bieres'],
+  'amis': ['bar', 'karaoke', 'jeux', 'ambiance'],
+  'soiree': ['bar', 'karaoke', 'danse', 'concert', 'dj'],
+  'manger': ['restaurant', 'burger', 'tapas'],
+  'burger': ['burger', 'restaurant'],
+  'tapas': ['tapas', 'bar', 'restaurant']
+};
+
 // Fonction pour extraire les mots-clés significatifs avec priorité
 function extractKeywords(envie: string): { keywords: string[], primaryKeywords: string[], contextKeywords: string[] } {
-  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver', 'ai', 'as', 'a', 'et', 'ou', 'si', 'on', 'il', 'je', 'tu', 'nous', 'vous', 'ils', 'elle', 'elles'];
+  const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver', 'ai', 'as', 'a', 'et', 'ou', 'si', 'on', 'il', 'je', 'tu', 'nous', 'vous', 'ils', 'elle', 'elles'];
   
   // Mots de contexte temporel (moins importants)
   const contextWords = ['ce', 'soir', 'demain', 'aujourd', 'maintenant', 'bientot', 'plus', 'tard'];
   
   // Mots d'action spécifiques (très importants) - correspondance exacte uniquement
-  const actionWords = ['kart', 'karting', 'bowling', 'laser', 'escape', 'game', 'paintball', 'tir', 'archery', 'escalade', 'piscine', 'cinema', 'theatre', 'concert', 'danse', 'danser', 'boire', 'manger', 'restaurant', 'bar', 'cafe'];
+  const actionWords = ['kart', 'karting', 'bowling', 'laser', 'escape', 'game', 'paintball', 'tir', 'archery', 'escalade', 'piscine', 'cinema', 'theatre', 'concert', 'danse', 'danser', 'boire', 'manger', 'restaurant', 'bar', 'cafe', 'verre', 'cocktail', 'biere', 'bieres', 'tapas', 'burger', 'karaoke'];
   
   const normalizedText = envie
     .toLowerCase()
@@ -340,12 +355,17 @@ export async function GET(request: NextRequest) {
               const activityInKeyword = keyword.includes(activityNormalized);
               const isExactMatch = activityNormalized === keyword;
               
-              if (keywordInActivity || activityInKeyword || isExactMatch) {
+              // Vérifier aussi les associations (ex: "boire" -> "bar", "cocktails", etc.)
+              const associations = ACTIVITY_ASSOCIATIONS[keyword] || [];
+              const hasAssociation = associations.some(assoc => activityNormalized.includes(assoc));
+              
+              if (keywordInActivity || activityInKeyword || isExactMatch || hasAssociation) {
                 const isPrimary = primaryKeywords.includes(keyword);
                 const isContext = contextKeywords.includes(keyword);
                 const score = isPrimary ? 100 : (isContext ? 10 : 25);
                 thematicScore += score;
-                console.log(`🎯 ACTIVITY MATCH: ${establishment.name} - "${activity}" (keyword: "${keyword}") +${score} (total: ${thematicScore})`);
+                const matchType = hasAssociation ? 'via association' : 'direct';
+                console.log(`🎯 ACTIVITY MATCH (${matchType}): ${establishment.name} - "${activity}" (keyword: "${keyword}") +${score} (total: ${thematicScore})`);
               }
             });
           }

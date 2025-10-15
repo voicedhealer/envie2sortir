@@ -225,12 +225,20 @@ interface EstablishmentCardProps {
   };
   searchCenter?: { lat: number; lng: number };
   from?: string;
+  searchParams?: {
+    envie?: string;
+    ville?: string;
+    lat?: string;
+    lng?: string;
+    rayon?: string;
+  };
 }
 
 export default function EstablishmentCard({ 
   establishment, 
   searchCenter, 
-  from = 'recherche' 
+  from = 'recherche',
+  searchParams
 }: EstablishmentCardProps) {
   const { data: session } = useSession();
   const [isLiked, setIsLiked] = useState(false);
@@ -426,9 +434,27 @@ export default function EstablishmentCard({
     setTimeout(() => setIsShared(false), 1000);
   };
 
+  // Construire l'URL avec les paramètres de recherche
+  const getEstablishmentUrl = () => {
+    const baseUrl = `/etablissements/${establishment.slug}`;
+    const params = new URLSearchParams();
+    params.set('from', from);
+    
+    // Ajouter les paramètres de recherche s'ils existent
+    if (searchParams) {
+      if (searchParams.envie) params.set('envie', searchParams.envie);
+      if (searchParams.ville) params.set('ville', searchParams.ville);
+      if (searchParams.lat) params.set('lat', searchParams.lat);
+      if (searchParams.lng) params.set('lng', searchParams.lng);
+      if (searchParams.rayon) params.set('rayon', searchParams.rayon);
+    }
+    
+    return `${baseUrl}?${params.toString()}`;
+  };
+
   return (
     <Link 
-      href={`/etablissements/${establishment.slug}?from=${from}`}
+      href={getEstablishmentUrl()}
       className="group block"
     >
       <div className={`relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden establishment-card mb-6 flex flex-col min-h-110 ${

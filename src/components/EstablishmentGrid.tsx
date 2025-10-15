@@ -34,6 +34,13 @@ interface EstablishmentGridProps {
   establishments: Establishment[];
   searchCenter?: { lat: number; lng: number };
   from?: string;
+  searchParams?: {
+    envie?: string;
+    ville?: string;
+    lat?: string;
+    lng?: string;
+    rayon?: string;
+  };
   title?: string;
   subtitle?: string;
 }
@@ -42,6 +49,7 @@ export default function EstablishmentGrid({
   establishments, 
   searchCenter, 
   from = 'recherche',
+  searchParams,
   title,
   subtitle 
 }: EstablishmentGridProps) {
@@ -77,6 +85,7 @@ export default function EstablishmentGrid({
             establishment={establishment}
             searchCenter={searchCenter}
             from={from}
+            searchParams={searchParams}
           />
         ))}
       </div>

@@ -177,28 +177,25 @@ export default async function EstablishmentPage({
 
     // Si on vient d'une recherche par envie
     if ((referer && referer.includes('/recherche/envie')) || search.from === 'envie') {
-      if (referer && isValidUrl(referer)) {
-        const url = new URL(referer);
-        const envie = url.searchParams.get('envie');
-        const ville = url.searchParams.get('ville');
-        const rayon = url.searchParams.get('rayon');
-        const lat = url.searchParams.get('lat');
-        const lng = url.searchParams.get('lng');
-        
-        let backUrl = '/recherche/envie';
-        const params = new URLSearchParams();
-        if (envie) params.set('envie', envie);
-        if (ville) params.set('ville', ville);
-        if (rayon) params.set('rayon', rayon);
-        if (lat) params.set('lat', lat);
-        if (lng) params.set('lng', lng);
-        
-        if (params.toString()) {
-          backUrl += '?' + params.toString();
-        }
-        return backUrl;
+      // Priorité aux paramètres URL (plus fiables que le referer)
+      const envie = search.envie || (referer && isValidUrl(referer) ? new URL(referer).searchParams.get('envie') : null);
+      const ville = search.ville || (referer && isValidUrl(referer) ? new URL(referer).searchParams.get('ville') : null);
+      const rayon = search.rayon || (referer && isValidUrl(referer) ? new URL(referer).searchParams.get('rayon') : null);
+      const lat = search.lat || (referer && isValidUrl(referer) ? new URL(referer).searchParams.get('lat') : null);
+      const lng = search.lng || (referer && isValidUrl(referer) ? new URL(referer).searchParams.get('lng') : null);
+      
+      let backUrl = '/recherche/envie';
+      const params = new URLSearchParams();
+      if (envie) params.set('envie', envie);
+      if (ville) params.set('ville', ville);
+      if (rayon) params.set('rayon', rayon);
+      if (lat) params.set('lat', lat);
+      if (lng) params.set('lng', lng);
+      
+      if (params.toString()) {
+        backUrl += '?' + params.toString();
       }
-      return '/recherche/envie';
+      return backUrl;
     }
     
     // Si on vient d'une recherche classique

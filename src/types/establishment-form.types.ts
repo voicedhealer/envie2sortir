@@ -278,7 +278,7 @@ export const SUBSCRIPTION_PLANS = {
     price: "29€/mois",
     badge: "Recommandé",
     color: "orange",
-    savings: "Augmentez votre visibilité de 300%"
+    savings: undefined
   }
 } as const;
 

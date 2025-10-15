@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import SearchFilters from '@/components/SearchFilters';
@@ -113,6 +113,7 @@ export default function EnvieSearchResults() {
   });
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState<any>(null);
+  const isLoadingRef = useRef(false);
 
   const envie = searchParams.get('envie') || '';
   const ville = searchParams.get('ville') || '';
@@ -134,7 +135,8 @@ export default function EnvieSearchResults() {
     } else {
       console.log('⚠️ [EnvieSearch] No envie, skipping search');
     }
-  }, [envie, ville, lat, lng]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [envie, ville, lat, lng, rayon]);
 
   // Charger plus de résultats
   const loadMore = () => {
@@ -159,8 +161,15 @@ export default function EnvieSearchResults() {
     page: number, 
     reset: boolean
   ) => {
+    // Éviter les appels multiples en cours
+    if (reset && isLoadingRef.current) {
+      console.log('⏸️ [EnvieSearch] Chargement déjà en cours, skip');
+      return;
+    }
+
     try {
       if (reset) {
+        isLoadingRef.current = true;
         setLoading(true);
         setError(null);
       } else {
@@ -210,6 +219,7 @@ export default function EnvieSearchResults() {
       console.error('❌ [EnvieSearch] Exception:', err);
       setError('Erreur de connexion');
     } finally {
+      isLoadingRef.current = false;
       setLoading(false);
       setLoadingMore(false);
     }
@@ -316,6 +326,13 @@ export default function EnvieSearchResults() {
             establishments={establishments as any}
             searchCenter={query?.coordinates}
             from="envie"
+            searchParams={{
+              envie: envie,
+              ville: ville,
+              lat: lat,
+              lng: lng,
+              rayon: rayon
+            }}
             title={query?.envie ? `Résultats pour "${query.envie}"` : "Résultats de recherche"}
             subtitle={query?.ville ? `à ${query.ville}` : undefined}
           />
