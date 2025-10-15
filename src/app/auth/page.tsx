@@ -255,7 +255,7 @@ export default function AuthPage() {
               onClick={() => setIsLogin(false)}
               className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${
                 !isLogin
-                  ? 'bg-white text-orange-600 shadow-sm'
+                  ? 'bg-white text-orange-600 shadow-lg'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
@@ -273,10 +273,10 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedRole('user')}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     selectedRole === 'user'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-orange-500 text-white border-2 border-white-500 shadow-lg transform scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent hover:border-gray-300'
                   }`}
                 >
                   Utilisateur
@@ -284,10 +284,10 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedRole('pro')}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     selectedRole === 'pro'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-purple-500 text-white border-2 border-white-500 shadow-lg transform scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent hover:border-gray-300'
                   }`}
                 >
                   Professionnel
@@ -295,19 +295,16 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setSelectedRole('admin')}
-                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  className={`py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                     selectedRole === 'admin'
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      ? 'bg-red-500 text-white border-2 border-white-500 shadow-lg transform scale-105'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent hover:border-gray-300'
                   }`}
                 >
                   Admin
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 <strong>Important :</strong> Sélectionnez le bon type de compte selon votre profil. 
-                Les comptes professionnels sont créés via l'inscription professionnelle.
-              </p>
+
             </div>
           )}
 
@@ -568,7 +565,7 @@ export default function AuthPage() {
                 Découvrez de nouveaux lieux
               </h2>
               <p className="text-lg text-gray-600 leading-relaxed">
-                Trouvez les meilleurs restaurants, bars et activités près de chez vous. 
+                Trouvez vos envies, restaurants, bars et activités près de chez vous. 
                 Partagez vos découvertes et inspirez d'autres passionnés de sorties.
               </p>
             </div>
