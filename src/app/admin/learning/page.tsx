@@ -26,6 +26,11 @@ interface LearningPattern {
   updatedAt: string;
 }
 
+interface TypeOption {
+  value: string;
+  label: string;
+}
+
 export default function LearningDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -33,6 +38,25 @@ export default function LearningDashboard() {
   const [patterns, setPatterns] = useState<LearningPattern[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingPattern, setEditingPattern] = useState<string | null>(null);
+  const [correctedType, setCorrectedType] = useState<string>('');
+
+  // Options de types d'établissements
+  const typeOptions: TypeOption[] = [
+    { value: 'restaurant', label: 'Restaurant' },
+    { value: 'bar', label: 'Bar' },
+    { value: 'cafe', label: 'Café' },
+    { value: 'parc_loisir_indoor', label: 'Parc de loisirs indoor' },
+    { value: 'bowling', label: 'Bowling' },
+    { value: 'escape_game', label: 'Escape Game' },
+    { value: 'karaoke', label: 'Karaoké' },
+    { value: 'cinema', label: 'Cinéma' },
+    { value: 'theatre', label: 'Théâtre' },
+    { value: 'club', label: 'Club/Discothèque' },
+    { value: 'sport', label: 'Sport' },
+    { value: 'wellness', label: 'Bien-être/Spa' },
+    { value: 'other', label: 'Autre' }
+  ];
 
   useEffect(() => {
     if (status === 'loading') return;
@@ -71,6 +95,61 @@ export default function LearningDashboard() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCorrectType = async (patternId: string, patternName: string) => {
+    if (!correctedType) return;
+
+    try {
+      const response = await fetch('/api/admin/learning/correct', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patternId,
+          patternName,
+          correctedType,
+          correctedBy: session?.user?.email || 'admin'
+        }),
+      });
+
+      if (response.ok) {
+        // Recharger les données
+        await fetchLearningData();
+        setEditingPattern(null);
+        setCorrectedType('');
+      } else {
+        setError('Erreur lors de la correction du type');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
+
+  const handleDeletePattern = async (patternId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce pattern d\'apprentissage ?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/learning/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ patternId }),
+      });
+
+      if (response.ok) {
+        // Recharger les données
+        await fetchLearningData();
+      } else {
+        setError('Erreur lors de la suppression du pattern');
+      }
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
@@ -202,6 +281,9 @@ export default function LearningDashboard() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -211,13 +293,29 @@ export default function LearningDashboard() {
                       {pattern.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {pattern.detectedType}
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                        {pattern.detectedType}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {pattern.correctedType || '-'}
+                      {pattern.isCorrected ? (
+                        <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                          {pattern.correctedType}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {Math.round(pattern.confidence * 100)}%
+                      <div className="flex items-center">
+                        <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                          <div 
+                            className="bg-orange-500 h-2 rounded-full" 
+                            style={{ width: `${Math.round(pattern.confidence * 100)}%` }}
+                          ></div>
+                        </div>
+                        <span>{Math.round(pattern.confidence * 100)}%</span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {pattern.isCorrected ? (
@@ -234,6 +332,64 @@ export default function LearningDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(pattern.createdAt).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {!pattern.isCorrected && (
+                        <div className="flex space-x-2">
+                          {editingPattern === pattern.id ? (
+                            <div className="flex items-center space-x-2">
+                              <select
+                                value={correctedType}
+                                onChange={(e) => setCorrectedType(e.target.value)}
+                                className="text-xs border border-gray-300 rounded px-2 py-1"
+                              >
+                                <option value="">Sélectionner...</option>
+                                {typeOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                onClick={() => handleCorrectType(pattern.id, pattern.name)}
+                                disabled={!correctedType}
+                                className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 disabled:bg-gray-300"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingPattern(null);
+                                  setCorrectedType('');
+                                }}
+                                className="text-xs bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => setEditingPattern(pattern.id)}
+                                className="text-orange-600 hover:text-orange-900 text-xs bg-orange-50 px-2 py-1 rounded"
+                              >
+                                ✏️ Corriger
+                              </button>
+                              <button
+                                onClick={() => handleDeletePattern(pattern.id)}
+                                className="text-red-600 hover:text-red-900 text-xs bg-red-50 px-2 py-1 rounded"
+                              >
+                                🗑️
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {pattern.isCorrected && (
+                        <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                          ✓ Corrigé
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}

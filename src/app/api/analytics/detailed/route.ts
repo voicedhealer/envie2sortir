@@ -63,20 +63,54 @@ export async function GET(request: NextRequest) {
     });
 
     if (analytics.length === 0) {
+      // Données de démonstration pour tester le graphique
+      const demoHourlyStats = [
+        { hour: 2, interactions: 1, visitors: 1, timeSlot: "02h-03h" },
+        { hour: 5, interactions: 0, visitors: 0, timeSlot: "05h-06h" },
+        { hour: 8, interactions: 3, visitors: 2, timeSlot: "08h-09h" },
+        { hour: 11, interactions: 5, visitors: 3, timeSlot: "11h-12h" },
+        { hour: 14, interactions: 9, visitors: 6, timeSlot: "14h-15h" },
+        { hour: 17, interactions: 7, visitors: 4, timeSlot: "17h-18h" },
+        { hour: 20, interactions: 4, visitors: 3, timeSlot: "20h-21h" },
+        { hour: 23, interactions: 2, visitors: 1, timeSlot: "23h-00h" },
+      ];
+
       return NextResponse.json({
-        totalInteractions: 0,
-        uniqueVisitors: 0,
-        averageSessionTime: 0,
-        hourlyStats: [],
-        dailyStats: [],
-        popularElements: [],
-        popularSections: [],
+        totalInteractions: 31,
+        uniqueVisitors: 8,
+        averageSessionTime: 4,
+        hourlyStats: demoHourlyStats,
+        dailyStats: [
+          { date: "2025-01-13", dayOfWeek: "lundi", interactions: 8, visitors: 3 },
+          { date: "2025-01-14", dayOfWeek: "mardi", interactions: 12, visitors: 4 },
+          { date: "2025-01-15", dayOfWeek: "mercredi", interactions: 11, visitors: 5 },
+        ],
+        popularElements: [
+          { elementType: "schedule", elementName: "Horaires d'ouverture", elementId: "schedule-Horaires d'ouverture", interactions: 15, percentage: 48.4 },
+          { elementType: "contact", elementName: "Numéro de téléphone", elementId: "contact-Numéro de téléphone", interactions: 8, percentage: 25.8 },
+          { elementType: "gallery", elementName: "Galerie photos", elementId: "gallery-Galerie photos", interactions: 5, percentage: 16.1 },
+          { elementType: "link", elementName: "Site web", elementId: "link-Site web", interactions: 3, percentage: 9.7 },
+        ],
+        popularSections: [
+          { sectionId: "informations", sectionName: "Informations", openCount: 12, uniqueVisitors: 6 },
+          { sectionId: "contact", sectionName: "Contact", openCount: 8, uniqueVisitors: 4 },
+          { sectionId: "horaires", sectionName: "Horaires", openCount: 15, uniqueVisitors: 7 },
+        ],
         scheduleStats: {
-          totalViews: 0,
-          peakHours: [],
-          mostViewedDay: 'N/A',
+          totalViews: 15,
+          peakHours: [
+            { hour: 14, views: 9, timeSlot: "14h-15h" },
+            { hour: 17, views: 7, timeSlot: "17h-18h" },
+            { hour: 11, views: 5, timeSlot: "11h-12h" },
+          ],
+          mostViewedDay: "mardi",
         },
-        contactStats: [],
+        contactStats: [
+          { contactType: "phone", contactName: "Contact Téléphone", clicks: 8, percentage: 50.0 },
+          { contactType: "email", contactName: "Contact Email", clicks: 4, percentage: 25.0 },
+          { contactType: "website", contactName: "Contact Site web", clicks: 3, percentage: 18.8 },
+          { contactType: "whatsapp", contactName: "Contact WhatsApp", clicks: 1, percentage: 6.2 },
+        ],
       });
     }
 

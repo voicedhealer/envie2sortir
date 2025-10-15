@@ -180,53 +180,93 @@ export default function DetailedAnalyticsDashboard({
 
       {/* Graphique des heures les plus visitées */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">🕐 Heures les plus visitées</h4>
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">Répartition des interactions par heure</h4>
         <div className="mb-4 text-sm text-gray-600">
-          <p>Répartition des interactions par heure de la journée.</p>
-          <p>Identifiez vos créneaux de forte affluence pour optimiser votre présence.</p>
+          <p>Ce graphique montre les heures de la journée où vos visiteurs sont les plus actifs.</p>
+          <p>Utile pour identifier les créneaux de forte affluence et optimiser vos horaires d'ouverture.</p>
         </div>
-        <ResponsiveContainer width="100%" height={350}>
-          <LineChart data={data.hourlyStats} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
-            <XAxis 
-              dataKey="timeSlot" 
-              tickFormatter={(value) => value}
-              tick={{ fill: '#374151', fontSize: 12 }}
-              axisLine={{ stroke: '#D1D5DB' }}
-              tickLine={{ stroke: '#D1D5DB' }}
-            />
-            <YAxis 
-              domain={[0, 'dataMax + 1']}
-              tickFormatter={(value) => Math.round(value).toString()}
-              tick={{ fill: '#374151', fontSize: 12 }}
-              axisLine={{ stroke: '#D1D5DB' }}
-              tickLine={{ stroke: '#D1D5DB' }}
-            />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                color: '#374151',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-              labelStyle={{ color: '#374151' }}
-              labelFormatter={(value, payload) => {
-                const data = payload?.[0]?.payload;
-                return `${data?.timeSlot} • ${data?.interactions} interactions • ${data?.visitors} visiteurs`;
-              }}
-              formatter={(value, name) => [String(value), name === 'interactions' ? 'Interactions' : 'Visiteurs']}
-            />
-            <Line 
-              type="monotone" 
-              dataKey="interactions" 
-              stroke="#3B82F6" 
-              strokeWidth={3}
-              dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
-              activeDot={{ r: 8, stroke: '#3B82F6', strokeWidth: 2, fill: '#ffffff' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        
+        {data.hourlyStats.length === 0 ? (
+          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="text-center">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune donnée disponible</h3>
+              <p className="text-gray-500 mb-4">
+                Les données d'interaction par heure apparaîtront ici une fois que vos visiteurs commenceront à interagir avec votre établissement.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-blue-800 text-sm">
+                  <strong>Conseil :</strong> Partagez votre lien d'établissement pour commencer à collecter des données d'analytics.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ResponsiveContainer width="100%" height={350}>
+              <LineChart data={data.hourlyStats} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
+                <XAxis 
+                  dataKey="timeSlot" 
+                  tickFormatter={(value) => value}
+                  tick={{ fill: '#374151', fontSize: 12 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                />
+                <YAxis 
+                  domain={[0, 'dataMax + 1']}
+                  tickFormatter={(value) => Math.round(value).toString()}
+                  tick={{ fill: '#374151', fontSize: 12 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    color: '#374151',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  labelStyle={{ color: '#374151' }}
+                  labelFormatter={(value, payload) => {
+                    const data = payload?.[0]?.payload;
+                    return `${data?.timeSlot} • ${data?.interactions} interactions • ${data?.visitors} visiteurs`;
+                  }}
+                  formatter={(value, name) => [String(value), name === 'interactions' ? 'Interactions' : 'Visiteurs']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="interactions" 
+                  stroke="#3B82F6" 
+                  strokeWidth={3}
+                  dot={{ fill: '#3B82F6', strokeWidth: 2, r: 6 }}
+                  activeDot={{ r: 8, stroke: '#3B82F6', strokeWidth: 2, fill: '#ffffff' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            
+            {/* Insights */}
+            {data.hourlyStats.length > 0 && (
+              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="text-sm">
+                  <span className="font-medium text-green-800">Insights :</span>
+                  <span className="text-green-700 ml-2">
+                    Heure la plus active : <strong>
+                      {data.hourlyStats.reduce((max, curr) => curr.interactions > max.interactions ? curr : max).timeSlot}
+                    </strong> avec <strong>
+                      {data.hourlyStats.reduce((max, curr) => curr.interactions > max.interactions ? curr : max).interactions} interactions
+                    </strong>
+                  </span>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Éléments les plus populaires */}
