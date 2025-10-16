@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, TrendingUp, Maximize2, X } from 'lucide-react';
+import { Calendar, Clock, TrendingUp, Maximize2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './Toast';
 import { useSession } from 'next-auth/react';
@@ -70,6 +70,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
   const [justVoted, setJustVoted] = useState<string | null>(null);
   const [engagementData, setEngagementData] = useState<EngagementData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAccordionOpen, setIsAccordionOpen] = useState(false);
 
   // Mapping des niveaux d'engagement avec les nouveaux termes
   const excitementLevels = [
@@ -271,8 +272,11 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
   return (
     <>
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Header avec gradient + image de l'événement */}
-        <div className="relative min-h-[200px] bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 overflow-hidden">
+        {/* Header avec gradient + image de l'événement - CLIQUABLE */}
+        <button
+          onClick={() => setIsAccordionOpen(!isAccordionOpen)}
+          className="relative min-h-[200px] bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 overflow-hidden w-full text-left hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition-all duration-300 group"
+        >
           {/* Pattern de fond */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0" style={{
@@ -286,7 +290,10 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => setShowImageModal(true)}
+              onClick={(e) => {
+                e.stopPropagation(); // Empêcher l'ouverture de l'accordéon
+                setShowImageModal(true);
+              }}
               className="relative w-full md:w-40 h-40 md:h-full flex-shrink-0 rounded-xl overflow-hidden bg-white/10 backdrop-blur-sm border-2 border-white/20 group"
             >
               {event.imageUrl ? (
@@ -352,16 +359,35 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
               </div>
             </div>
           </div>
-        </div>
+          
+          {/* Chevron pour l'accordéon */}
+          <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full p-2 group-hover:bg-white/30 transition-colors">
+            {isAccordionOpen ? (
+              <ChevronUp className="w-5 h-5 text-white" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-white" />
+            )}
+          </div>
+        </button>
 
-        <div className="p-4 md:p-6">
-          {/* Niveau d'excitation moyen */}
-          <div className="mb-6">
+        {/* Contenu de l'accordéon - Niveau d'engagement et vote */}
+        <AnimatePresence>
+          {isAccordionOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <div className="p-4 md:p-6">
+                {/* Niveau d'excitation moyen */}
+                <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-orange-500" />
                 <div>
-                  <p className="text-sm font-medium">Niveau d'excitation global</p>
+                  <p className="text-sm font-medium">Niveau d'envie global</p>
                   <p className="text-xs text-gray-500">{totalUsers} personnes ont voté</p>
                 </div>
               </div>
@@ -412,7 +438,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
 
           {/* Niveaux d'excitation */}
           <div className="mb-4">
-            <p className="text-sm mb-3 font-medium">Quel est votre niveau d'excitation ?</p>
+            <p className="text-sm mb-3 font-medium">Quel est votre niveau d'envie ?</p>
             
             <div className="space-y-2">
               {excitementLevels.map((level) => {
@@ -585,7 +611,10 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
               }
             </p>
           </div>
-        </div>
+                </div>
+              </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Toast Container */}

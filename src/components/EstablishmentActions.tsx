@@ -25,7 +25,6 @@ interface EstablishmentActionsProps {
 }
 
 export default function EstablishmentActions({ establishment }: EstablishmentActionsProps) {
-  console.log('🔍 EstablishmentActions rendu pour:', establishment.name);
   const { data: session } = useSession();
   const router = useRouter();
   const { incrementClick } = useEstablishmentStats();
@@ -87,7 +86,22 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
       }
     };
 
+    // Écouter les changements de favoris depuis le MapComponent
+    const handleFavoriteChanged = (event: CustomEvent) => {
+      const { establishmentId, isFavorite } = event.detail;
+      
+      // Mettre à jour l'état seulement si c'est pour cet établissement
+      if (establishmentId === establishment.id) {
+        setIsLiked(isFavorite);
+      }
+    };
+
     checkFavoriteStatus();
+    window.addEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    
+    return () => {
+      window.removeEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    };
   }, [session?.user?.role, establishment.id]);
 
   // Charger les menus publics pour cet établissement
@@ -260,6 +274,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
             if (deleteResponse.ok) {
               setIsLiked(false);
               toast.success('Retiré des favoris');
+              // Notifier le MapComponent du changement
+              window.dispatchEvent(new CustomEvent('favorite-changed', {
+                detail: { establishmentId: establishment.id, isFavorite: false }
+              }));
             }
           }
         }
@@ -276,6 +294,10 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         if (response.ok) {
           setIsLiked(true);
           toast.success('Ajouté aux favoris');
+          // Notifier le MapComponent du changement
+          window.dispatchEvent(new CustomEvent('favorite-changed', {
+            detail: { establishmentId: establishment.id, isFavorite: true }
+          }));
         } else {
           const errorData = await response.json().catch(() => ({ error: 'Erreur inconnue' }));
           toast.error(errorData.error || 'Erreur lors de l\'ajout aux favoris');

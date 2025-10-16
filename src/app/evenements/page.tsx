@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Euro, Filter, Search, Flame, X } from 'lucide-react';
+import { Calendar, Clock, MapPin, Euro, Filter, Search, Flame, X, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { isEventInProgress } from '@/lib/date-utils';
+import EventsPageAccordion from '@/components/EventsPageAccordion';
 
 interface Event {
   id: string;

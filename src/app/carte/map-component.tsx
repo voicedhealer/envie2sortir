@@ -67,8 +67,64 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
     const handleAuthRequired = () => {
       setShowAuthModal(true);
     };
+
+    const handleFavoriteChanged = (event: CustomEvent) => {
+      const { establishmentId, isFavorite } = event.detail;
+      
+      // Mettre à jour l'état des favoris dans le MapComponent
+      if (window.mapFavoriteHandlers?.favorites) {
+        if (isFavorite) {
+          window.mapFavoriteHandlers.favorites.add(establishmentId);
+        } else {
+          window.mapFavoriteHandlers.favorites.delete(establishmentId);
+        }
+        
+        // Forcer la mise à jour visuelle de tous les popups (ouverts ou fermés)
+        if (window.mapInstance) {
+          window.mapInstance.eachLayer((layer: any) => {
+            if (layer.getPopup) {
+              const popup = layer.getPopup();
+              if (!popup) return; // Ignorer si pas de popup
+              
+              const content = popup.getContent();
+              
+              if (content && content.includes(establishmentId)) {
+                const popupElement = popup.getElement();
+                
+                if (popupElement) {
+                  const heartContainer = popupElement.querySelector('.popup-heart-icon');
+                  
+                  if (heartContainer) {
+                    const heartElement = heartContainer.querySelector('svg');
+                    
+                    if (heartElement) {
+                      if (isFavorite) {
+                        // État favori : cœur rouge plein
+                        heartElement.setAttribute('fill', '#ef4444');
+                        heartElement.setAttribute('stroke', '#ef4444');
+                        heartContainer.classList.add('is-favorite');
+                      } else {
+                        // État non-favori : cœur blanc avec contour
+                        heartElement.setAttribute('fill', 'none');
+                        heartElement.setAttribute('stroke', 'currentColor');
+                        heartContainer.classList.remove('is-favorite');
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+        }
+      }
+    };
+
     window.addEventListener('map-auth-required', handleAuthRequired);
-    return () => window.removeEventListener('map-auth-required', handleAuthRequired);
+    window.addEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    return () => {
+      window.removeEventListener('map-auth-required', handleAuthRequired);
+      window.removeEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    };
   }, []);
 
   const handleAuthConfirm = () => {
@@ -236,6 +292,14 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                         this.favorites.delete(establishmentId);
                         heartElement.classList.remove('is-favorite');
                         console.log('✅ Retiré des favoris');
+                        // Afficher notification toast
+                        window.dispatchEvent(new CustomEvent('show-toast', {
+                          detail: { type: 'success', message: 'Retiré des favoris' }
+                        }));
+                        // Notifier EstablishmentActions du changement
+                        window.dispatchEvent(new CustomEvent('favorite-changed', {
+                          detail: { establishmentId, isFavorite: false }
+                        }));
                       }
                     }
                   } else if (response.status === 401 || response.status === 403) {
@@ -253,7 +317,15 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                   if (response.ok) {
                     this.favorites.add(establishmentId);
                     heartElement.classList.add('is-favorite');
+                    // Notifier EstablishmentActions du changement
+                    window.dispatchEvent(new CustomEvent('favorite-changed', {
+                      detail: { establishmentId, isFavorite: true }
+                    }));
                     console.log('✅ Ajouté aux favoris');
+                    // Afficher notification toast
+                    window.dispatchEvent(new CustomEvent('show-toast', {
+                      detail: { type: 'success', message: 'Ajouté aux favoris' }
+                    }));
                   } else if (response.status === 401 || response.status === 403) {
                     alert('Vous devez être connecté pour ajouter des favoris.');
                     this.isAuthenticated = false;
@@ -292,6 +364,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        window.mapInstance = undefined; // Nettoyer la référence globale
       }
 
       const popupSize = getPopupSize();
@@ -307,6 +380,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       // Créer la carte
       const map = window.L.map(mapRef.current).setView([centerLat, centerLng], 13);
       mapInstanceRef.current = map; // Stocker la référence
+      window.mapInstance = map; // Rendre disponible globalement pour la synchronisation des favoris
 
       // Ajouter les tuiles
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -392,8 +466,8 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
         const rating = establishment.avgRating || establishment.googleRating;
         let displayRating = null;
         if (rating) {
-          // Si la note est sur 10, on la garde telle quelle. Si elle est sur 5, on la multiplie par 2
-          displayRating = rating > 5 ? (rating / 2).toFixed(1) : (rating * 2).toFixed(1);
+          // Toujours afficher la note telle quelle (pas de conversion)
+          displayRating = rating.toFixed(1);
         }
         console.log('📊 Note pour', establishment.name, '- avgRating:', establishment.avgRating, 'googleRating:', establishment.googleRating, 'displayRating:', displayRating);
         
@@ -415,12 +489,19 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
           const startDate = new Date(upcomingEvent.startDate);
           const endDate = upcomingEvent.endDate ? new Date(upcomingEvent.endDate) : null;
           
+          // Normaliser les dates pour comparer seulement les jours (sans l'heure)
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const eventDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+          
           if (endDate && now >= startDate && now <= endDate) {
             // Événement en cours
             eventBadge = `<div class="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background-color: #FFEB3B; color: #000000;">🎉 ${upcomingEvent.title}</div>`;
-          } else if (now < startDate) {
+          } else if (eventDay.getTime() === today.getTime()) {
+            // Événement aujourd'hui
+            eventBadge = `<div class="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background-color: #FFEB3B; color: #000000;">📅 ${upcomingEvent.title} aujourd'hui</div>`;
+          } else if (eventDay > today) {
             // Événement à venir
-            const daysUntil = Math.ceil((startDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysUntil = Math.ceil((eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
             const daysText = daysUntil <= 7 ? ` dans ${daysUntil}j` : '';
             eventBadge = `<div class="mb-2 inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background-color: #FFEB3B; color: #000000;">📅 ${upcomingEvent.title}${daysText}</div>`;
           }
@@ -449,7 +530,9 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                     class="popup-heart-icon ${window.mapFavoriteHandlers?.favorites.has(establishment.id) ? 'is-favorite' : ''}" 
                     data-establishment-id="${establishment.id}"
                     onclick="event.stopPropagation(); window.mapFavoriteHandlers?.toggleFavorite('${establishment.id}', this);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" 
+                         ${window.mapFavoriteHandlers?.favorites.has(establishment.id) ? 'fill="#ef4444" stroke="#ef4444"' : 'fill="none" stroke="currentColor"'} 
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                     </svg>
                   </div>
@@ -460,8 +543,11 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                 <div class="flex items-start justify-between mb-1">
                   <h3 class="font-bold text-base text-gray-900 leading-tight flex-1">${establishment.name}</h3>
                   ${displayRating ? `
-                    <div class="ml-2 px-2 py-1 rounded-md text-sm font-bold flex-shrink-0" style="background-color: #f97316; color: white;">
-                      ${displayRating}
+                    <div class="ml-2 flex items-center gap-1 flex-shrink-0">
+                      <svg class="w-4 h-4" style="color: #fbbf24;" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                      </svg>
+                      <span class="text-sm font-bold text-gray-900">${displayRating}</span>
                     </div>
                   ` : ''}
                 </div>
@@ -512,6 +598,7 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        window.mapInstance = undefined; // Nettoyer la référence globale
       }
     };
   }, [memoizedEstablishments, memoizedSearchCenter, memoizedSearchRadius, context]);

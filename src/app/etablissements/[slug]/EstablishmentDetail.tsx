@@ -165,6 +165,24 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
     }
   }, [establishment.id, isDashboard, incrementView]);
 
+  // Écouter les notifications toast depuis le MapComponent
+  useEffect(() => {
+    const handleShowToast = (event: CustomEvent) => {
+      const { type, message } = event.detail;
+      if (type === 'success') {
+        toast.success(message);
+      } else if (type === 'error') {
+        toast.error(message);
+      }
+    };
+
+    window.addEventListener('show-toast', handleShowToast as EventListener);
+    
+    return () => {
+      window.removeEventListener('show-toast', handleShowToast as EventListener);
+    };
+  }, []);
+
   // Récupérer et afficher le bon plan actif
   useEffect(() => {
     if (isDashboard) return; // Ne pas afficher sur le dashboard
@@ -382,7 +400,7 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
                 <div className="p-4 border-b border-gray-100">
                   <h3 className="font-semibold text-gray-900">Localisation</h3>
                 </div>
-                <div className="h-64">
+                <div className="h-110">
                   <MapComponent 
                     establishments={[establishment]} 
                     searchCenter={{ lat: establishment.latitude, lng: establishment.longitude }}
