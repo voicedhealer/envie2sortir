@@ -43,7 +43,7 @@ function checkNewBadge(
 // POST - Créer ou mettre à jour un engagement
 export async function POST(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -66,7 +66,7 @@ export async function POST(
       );
     }
 
-    const eventId = params.eventId;
+    const { eventId } = await params;
     const userId = session.user.id;
 
     // Vérifier que l'événement existe
@@ -228,11 +228,11 @@ export async function POST(
 // GET - Récupérer les stats d'engagement d'un événement
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
-    const eventId = params.eventId;
+    const { eventId } = await params;
 
     // Vérifier que l'événement existe
     const event = await prisma.event.findUnique({

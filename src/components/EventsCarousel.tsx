@@ -239,8 +239,12 @@ export default function EventsCarousel() {
             <div className="relative group">
               {/* Bouton gauche */}
               <button
-                onClick={() => scrollContainer('left')}
-                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 z-10 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  scrollContainer('left');
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white pointer-events-auto"
                 aria-label="Précédent"
               >
                 <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -249,10 +253,10 @@ export default function EventsCarousel() {
               {/* Container scrollable */}
               <div 
                 id="events-scroll-container"
-                className="overflow-x-auto scrollbar-hide scroll-smooth"
+                className="overflow-x-auto scrollbar-hide scroll-smooth pointer-events-auto"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                <div className="flex gap-6 pb-4">
+                <div className="flex gap-6 py-4 px-4">
                   {filteredEvents.map((event) => {
                 const isLive = isMounted ? isEventInProgress(event.startDate, event.endDate) : false;
                 const isTrending = trendingEvents.some(t => t.id === event.id);
@@ -260,21 +264,21 @@ export default function EventsCarousel() {
                     return (
                       <Link
                         key={event.id}
-                        href={`/etablissements/${event.establishment.slug}?event=${event.id}`}
-                        className="flex-none w-80 group/card"
+                        href={`/etablissements/${event.establishment.slug}`}
+                        className="flex-none w-80 group/card block"
                       >
-                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105">
+                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-[1.02] hover:-translate-y-1">
                           
                           {/* Image de l'événement */}
-                          <div className="relative h-44 bg-gradient-to-br from-purple-400 to-pink-400">
+                          <div className="relative h-44 bg-gradient-to-br from-purple-400 to-pink-400 overflow-hidden rounded-t-2xl">
                             {event.imageUrl ? (
                               <img 
                                 src={event.imageUrl}
                                 alt={event.title}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500 rounded-t-2xl"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center">
+                              <div className="w-full h-full flex items-center justify-center rounded-t-2xl">
                                 <span className="text-6xl">🎪</span>
                               </div>
                             )}
@@ -393,8 +397,12 @@ export default function EventsCarousel() {
 
               {/* Bouton droit */}
               <button
-                onClick={() => scrollContainer('right')}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-10 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  scrollContainer('right');
+                }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white pointer-events-auto"
                 aria-label="Suivant"
               >
                 <ChevronRight className="w-6 h-6 text-gray-800" />

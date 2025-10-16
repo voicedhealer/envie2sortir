@@ -400,23 +400,26 @@ export async function PUT(
       ambiance: establishment?.ambiance
     });
     
+    // Parser les JSON fields avec gestion des erreurs
+    const parseJsonField = (field: any) => {
+      if (!field || typeof field !== 'string') return field;
+      try {
+        return JSON.parse(field);
+      } catch (error) {
+        console.warn('Erreur parsing JSON field:', field, error);
+        return null;
+      }
+    };
+
     const response = {
       ...establishment,
-      activities: establishment.activities ? (typeof establishment.activities === 'string' 
-        ? JSON.parse(establishment.activities) 
-        : establishment.activities) : [],
-      services: establishment.services ? (typeof establishment.services === 'string' 
-        ? JSON.parse(establishment.services) 
-        : establishment.services) : [],
-      ambiance: establishment.ambiance ? (typeof establishment.ambiance === 'string'
-        ? JSON.parse(establishment.ambiance)
-        : establishment.ambiance) : [],
-      paymentMethods: establishment.paymentMethods ? (typeof establishment.paymentMethods === 'string'
-        ? JSON.parse(establishment.paymentMethods)
-        : establishment.paymentMethods) : [],
-      horairesOuverture: establishment.horairesOuverture ? (typeof establishment.horairesOuverture === 'string'
-        ? JSON.parse(establishment.horairesOuverture)
-        : establishment.horairesOuverture) : {},
+      activities: parseJsonField(establishment.activities) || [],
+      services: parseJsonField(establishment.services) || [],
+      ambiance: parseJsonField(establishment.ambiance) || [],
+      paymentMethods: parseJsonField(establishment.paymentMethods) || [],
+      horairesOuverture: parseJsonField(establishment.horairesOuverture) || {},
+      envieTags: parseJsonField(establishment.envieTags) || [],
+      informationsPratiques: parseJsonField(establishment.informationsPratiques) || [],
     };
 
     return NextResponse.json({
@@ -593,15 +596,26 @@ export async function GET(
       );
     }
 
-    // Parser les JSON fields
+    // Parser les JSON fields avec gestion des erreurs
+    const parseJsonField = (field: any) => {
+      if (!field || typeof field !== 'string') return field;
+      try {
+        return JSON.parse(field);
+      } catch (error) {
+        console.warn('Erreur parsing JSON field:', field, error);
+        return null;
+      }
+    };
+
     const response = {
       ...establishment,
-      services: typeof establishment.services === 'string' 
-        ? JSON.parse(establishment.services) 
-        : establishment.services,
-      ambiance: typeof establishment.ambiance === 'string'
-        ? JSON.parse(establishment.ambiance)
-        : establishment.ambiance,
+      activities: parseJsonField(establishment.activities) || [],
+      services: parseJsonField(establishment.services) || [],
+      ambiance: parseJsonField(establishment.ambiance) || [],
+      paymentMethods: parseJsonField(establishment.paymentMethods) || [],
+      horairesOuverture: parseJsonField(establishment.horairesOuverture) || {},
+      envieTags: parseJsonField(establishment.envieTags) || [],
+      informationsPratiques: parseJsonField(establishment.informationsPratiques) || [],
     };
 
     return NextResponse.json({
