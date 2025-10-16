@@ -279,6 +279,7 @@ export class EstablishmentEnrichment {
     // Sauvegarder le pattern d'apprentissage via API
     try {
       const keywords = this.extractKeywords(`${result.name} ${result.editorial_summary?.overview || ''}`);
+      const confidence = this.calculateConfidence(this.establishmentType, result.types || [], keywords);
       await fetch('/api/establishments/save-pattern', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -287,7 +288,7 @@ export class EstablishmentEnrichment {
           detectedType: this.establishmentType,
           googleTypes: result.types || [],
           keywords,
-          confidence: 0.8
+          confidence
         })
       });
     } catch (error) {
@@ -1689,6 +1690,92 @@ export class EstablishmentEnrichment {
     console.log('🔄 Items après déduplication:', unique);
     
     return unique;
+  }
+
+  /**
+   * Calcule la confiance de détection basée sur plusieurs facteurs
+   */
+  private calculateConfidence(detectedType: string, googleTypes: string[], keywords: string[]): number {
+    let confidence = 0;
+
+    // 1. Confiance basée sur le type détecté (40% du score)
+    if (detectedType === 'other') {
+      // Si on ne sait pas, confiance très faible
+      confidence += 0.2;
+    } else if (detectedType.includes('_general')) {
+      // Types génériques : confiance moyenne
+      confidence += 0.6;
+    } else {
+      // Types spécifiques : confiance élevée
+      confidence += 0.8;
+    }
+
+    // 2. Confiance basée sur les types Google (30% du score)
+    const googleConfidence = this.calculateGoogleTypesConfidence(detectedType, googleTypes);
+    confidence += googleConfidence * 0.3;
+
+    // 3. Confiance basée sur les mots-clés (30% du score)
+    const keywordConfidence = this.calculateKeywordsConfidence(detectedType, keywords);
+    confidence += keywordConfidence * 0.3;
+
+    // Limiter entre 0.1 et 0.95
+    return Math.max(0.1, Math.min(0.95, confidence));
+  }
+
+  /**
+   * Calcule la confiance basée sur les types Google Places
+   */
+  private calculateGoogleTypesConfidence(detectedType: string, googleTypes: string[]): number {
+    // Mapping des types Google vers nos types
+    const googleMapping: Record<string, string[]> = {
+      'restaurant': ['restaurant', 'food', 'meal_takeaway', 'meal_delivery'],
+      'bar': ['bar', 'night_club', 'liquor_store'],
+      'cafe': ['cafe', 'bakery'],
+      'karaoke': ['establishment', 'point_of_interest'],
+      'parc_loisir_indoor': ['establishment', 'point_of_interest', 'amusement_park'],
+      'escape_game': ['establishment', 'point_of_interest'],
+      'cinema': ['movie_theater', 'establishment'],
+      'theatre': ['movie_theater', 'establishment'],
+      'sport': ['gym', 'sports_complex', 'stadium'],
+      'wellness': ['spa', 'beauty_salon', 'health'],
+      'other': [] // Pas de correspondance spécifique
+    };
+
+    const expectedTypes = googleMapping[detectedType] || [];
+    if (expectedTypes.length === 0) return 0.3; // Faible confiance pour 'other'
+
+    // Calculer le pourcentage de correspondance
+    const matches = googleTypes.filter(type => expectedTypes.includes(type)).length;
+    return matches / Math.max(expectedTypes.length, googleTypes.length);
+  }
+
+  /**
+   * Calcule la confiance basée sur les mots-clés
+   */
+  private calculateKeywordsConfidence(detectedType: string, keywords: string[]): number {
+    // Mots-clés spécifiques par type
+    const typeKeywords: Record<string, string[]> = {
+      'parc_loisir_indoor': ['parc', 'loisir', 'indoor', 'jeux', 'games', 'factory'],
+      'escape_game': ['escape', 'room', 'énigme', 'mystère', 'puzzle'],
+      'karaoke': ['karaoké', 'karaoke', 'chanson', 'micro', 'cabine'],
+      'restaurant': ['restaurant', 'resto', 'cuisine', 'manger', 'repas'],
+      'bar': ['bar', 'boisson', 'alcool', 'cocktail', 'bière'],
+      'cinema': ['cinéma', 'cinema', 'film', 'movie'],
+      'theatre': ['théâtre', 'theatre', 'spectacle', 'scène'],
+      'sport': ['sport', 'gym', 'fitness', 'musculation'],
+      'wellness': ['spa', 'massage', 'relaxation', 'bien-être'],
+      'other': [] // Pas de mots-clés spécifiques
+    };
+
+    const expectedKeywords = typeKeywords[detectedType] || [];
+    if (expectedKeywords.length === 0) return 0.2; // Faible confiance pour 'other'
+
+    // Calculer le pourcentage de correspondance
+    const matches = keywords.filter(keyword => 
+      expectedKeywords.some(expected => keyword.includes(expected))
+    ).length;
+    
+    return matches / Math.max(expectedKeywords.length, keywords.length);
   }
 
   /**

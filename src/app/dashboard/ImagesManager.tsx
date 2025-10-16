@@ -22,7 +22,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Pin } from 'lucide-react';
 
 interface ImagesManagerProps {
   establishmentId: string; // Gardé pour compatibilité mais non utilisé
@@ -53,16 +53,20 @@ interface SortableImageProps {
   imageUrl: string;
   index: number;
   isLoading: boolean;
+  isCardImage?: boolean;
   onRemove: () => void;
   onReplace: () => void;
+  onSetCardImage?: () => void;
 }
 
 function SortableImage({ 
   imageUrl, 
   index, 
   isLoading,
+  isCardImage,
   onRemove,
-  onReplace
+  onReplace,
+  onSetCardImage
 }: SortableImageProps) {
   const {
     attributes,
@@ -92,6 +96,14 @@ function SortableImage({
         {index + 1}
       </div>
 
+      {/* Badge "Image de card" */}
+      {isCardImage && (
+        <div className="absolute -top-2 -right-2 bg-purple-600 text-white px-2 py-1 rounded-full flex items-center gap-1 text-xs font-bold z-20">
+          <Pin className="w-3 h-3" />
+          Card
+        </div>
+      )}
+
       {/* Poignée de drag */}
       <div 
         {...attributes}
@@ -120,6 +132,16 @@ function SortableImage({
       {/* Overlay avec actions */}
       <div className="absolute inset-0 bg-transparent group-hover:bg-white/20 group-hover:backdrop-blur-sm transition-all duration-300 rounded-lg flex items-center justify-center z-10">
         <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col space-y-2">
+          {onSetCardImage && !isCardImage && (
+            <button
+              onClick={onSetCardImage}
+              disabled={isLoading}
+              className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              <Pin className="w-4 h-4" />
+              Sur card
+            </button>
+          )}
           <button
             onClick={onRemove}
             disabled={isLoading}
@@ -146,6 +168,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const { data: session, status } = useSession();
   const [images, setImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string | null>(currentImageUrl || null);
+  const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [establishmentData, setEstablishmentData] = useState<any>(null);
@@ -243,6 +266,15 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
                    url !== '{}' && 
                    url.length > 0;
           });
+          
+          // Trouver l'image de card (isCardImage: true)
+          const cardImage = establishmentImages.find((img: { isCardImage?: boolean }) => img.isCardImage);
+          if (cardImage && typeof cardImage.url === 'string') {
+            setCardImageUrl(cardImage.url);
+            console.log('📍 Image de card trouvée:', cardImage.url);
+          } else {
+            setCardImageUrl(null);
+          }
           
           setImages(imageUrls);
           console.log('🔄 Images mises à jour depuis establishmentData:', imageUrls);
@@ -492,6 +524,64 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
   // ✅ SUPPRIMÉ : Plus besoin de updatePrimaryImage car la position 1 = image principale automatiquement
 
+  // Fonction pour définir l'image de card
+  const setCardImage = async (imageUrl: string) => {
+    if (!establishmentData?.establishment?.images) {
+      console.error('❌ Pas de données d\'images');
+      toast.error('Impossible de définir l\'image de card');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      // Trouver l'ID de l'image
+      const image = establishmentData.establishment.images.find((img: { url: string }) => img.url === imageUrl);
+      if (!image || !image.id) {
+        console.error('❌ Image non trouvée:', imageUrl);
+        toast.error('Image non trouvée');
+        return;
+      }
+
+      console.log('📍 Définition de l\'image de card:', image.id);
+
+      const response = await fetch('/api/dashboard/images/set-card-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageId: image.id,
+          establishmentId: establishmentId,
+        }),
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Image de card définie:', data);
+        setCardImageUrl(imageUrl);
+        toast.success('Image de card définie avec succès !');
+
+        // Recharger les images
+        await loadImages();
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Erreur API (status:', response.status, '):', errorData);
+        const errorMessage = errorData.details 
+          ? `${errorData.error}: ${errorData.details}` 
+          : (errorData.error || 'Erreur lors de la définition de l\'image de card');
+        toast.error(errorMessage);
+      }
+    } catch (error) {
+      console.error('❌ Erreur exception:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      toast.error(`Erreur: ${errorMessage}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const removeImage = async (imageUrl: string) => {
     try {
       setIsLoading(true);
@@ -712,6 +802,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
                       imageUrl={imageUrl}
                       index={index}
                       isLoading={isLoading}
+                      isCardImage={imageUrl === cardImageUrl}
                       onRemove={() => removeImage(imageUrl)}
                       onReplace={() => {
                         console.log('🔄 Bouton Remplacer cliqué');
@@ -723,6 +814,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
                           console.error('❌ Input file non trouvé');
                         }
                       }}
+                      onSetCardImage={() => setCardImage(imageUrl)}
                     />
                   ))}
               </div>
@@ -743,6 +835,12 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
             <h4 className="text-sm font-medium text-blue-900 mb-2">💡 Astuces</h4>
             <p className="text-sm text-blue-800 mb-2">
               <strong>🎯 Position = Importance</strong> : Glissez-déposez vos images pour les réorganiser. L'image en <strong>position #1</strong> devient automatiquement votre <strong>image principale</strong> (couverture) et s'affiche en premier sur la page publique. Simple et logique !
+            </p>
+            <p className="text-sm text-blue-800 mb-2 flex items-start gap-2">
+              <Pin className="w-4 h-4 mt-0.5 flex-shrink-0 text-purple-600" />
+              <span>
+                <strong>Image de card (Résultats de recherche)</strong> : Cliquez sur le bouton violet <strong>"Sur card"</strong> pour choisir quelle image apparaît sur les cartes dans les résultats de recherche. Cette image peut être différente de votre image principale pour mieux attirer l'attention des visiteurs !
+              </span>
             </p>
             <p className="text-sm text-blue-800">
               <strong>📸 Formats d'images</strong> : Les photos en mode <strong>paysage</strong> (horizontales) créent un effet de zoom immersif, idéal pour mettre en valeur l'ambiance. Les photos en <strong>portrait ou carré</strong> s'affichent avec un effet plus doux.

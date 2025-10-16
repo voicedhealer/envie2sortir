@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       detectedType,
       googleTypes: googleTypes || [],
       keywords: keywords || [],
-      confidence: confidence || 0.8
+      confidence: confidence || 0.5
     });
 
     return NextResponse.json({

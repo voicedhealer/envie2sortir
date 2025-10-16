@@ -545,6 +545,40 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     relatedTags: ["divertissement", "amusement", "convivial", "groupe", "fun"]
   },
 
+  // 🎵 Blind Test & Quiz
+  blind_test: {
+    primaryTags: ["blind test", "musique", "quiz", "salle", "entre amis"],
+    secondaryTags: ["chanson", "deviner", "équipe", "compétition", "amusant"],
+    relatedTags: ["musical", "décontracté", "groupe", "festif", "interactif"]
+  },
+  
+  // 🏢 TYPES GÉNÉRIQUES AMÉLIORÉS (pour l'interface admin)
+  restaurant_general: {
+    primaryTags: ["restaurant", "cuisine", "manger", "repas"],
+    secondaryTags: ["gastronomique", "traditionnel", "familial", "bistrot"],
+    relatedTags: ["général", "non-spécifique", "à-préciser"]
+  },
+  bar_general: {
+    primaryTags: ["bar", "boisson", "alcool", "convivial"],
+    secondaryTags: ["cocktails", "bière", "vin", "apéritif"],
+    relatedTags: ["général", "non-spécifique", "à-préciser"]
+  },
+  quiz_room: {
+    primaryTags: ["quiz", "room", "questions", "culture", "général"],
+    secondaryTags: ["salle", "équipe", "compétition", "savoir", "amusant"],
+    relatedTags: ["intellectuel", "groupe", "défi", "connaissance", "interactif"]
+  },
+  salle_jeux_amis: {
+    primaryTags: ["salle", "jeux", "amis", "groupe", "multiactivité"],
+    secondaryTags: ["blind test", "quiz", "karaoké", "jeux société", "divertissement"],
+    relatedTags: ["convivial", "entre amis", "festif", "décontracté", "amusant"]
+  },
+  complexe_multiactivites: {
+    primaryTags: ["centre", "multiactivité", "salles", "jeux", "groupe"],
+    secondaryTags: ["blind test", "quiz", "escape game", "karaoké", "bowling"],
+    relatedTags: ["diversifié", "entre amis", "famille", "entreprise", "anniversaire"]
+  },
+
   // ❓ Autres
   autre: {
     primaryTags: ["autre", "activité", "spécialité", "unique"],
@@ -1423,6 +1457,40 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["artistique", "acrobatie", "spectacle", "groupe", "créatif"]
   },
 
+  // 🎵 Blind Test & Quiz - Informations complètes
+  blind_test: {
+    label: "Blind Test / Quiz Musical",
+    services: ["Salles blind test", "Quiz musique", "Équipes", "Compétition", "Playlist"],
+    ambiance: ["Musicale", "Compétitive", "Conviviale", "Festive", "Interactive"],
+    primaryTags: ["blind test", "musique", "quiz", "salle", "entre amis"],
+    secondaryTags: ["chanson", "deviner", "équipe", "compétition", "amusant"],
+    relatedTags: ["musical", "décontracté", "groupe", "festif", "interactif"]
+  },
+  quiz_room: {
+    label: "Quiz Room / Salle de Quiz",
+    services: ["Questions culture", "Quiz général", "Équipes", "Score", "Thématiques"],
+    ambiance: ["Intellectuelle", "Compétitive", "Conviviale", "Défi", "Interactive"],
+    primaryTags: ["quiz", "room", "questions", "culture", "général"],
+    secondaryTags: ["salle", "équipe", "compétition", "savoir", "amusant"],
+    relatedTags: ["intellectuel", "groupe", "défi", "connaissance", "interactif"]
+  },
+  salle_jeux_amis: {
+    label: "Salle de jeux entre amis",
+    services: ["Blind test", "Quiz", "Karaoké", "Jeux société", "Multiactivité"],
+    ambiance: ["Conviviale", "Entre amis", "Festive", "Décontractée", "Amusante"],
+    primaryTags: ["salle", "jeux", "amis", "groupe", "multiactivité"],
+    secondaryTags: ["blind test", "quiz", "karaoké", "jeux société", "divertissement"],
+    relatedTags: ["convivial", "entre amis", "festif", "décontracté", "amusant"]
+  },
+  complexe_multiactivites: {
+    label: "Centre multiactivités",
+    services: ["Blind test", "Quiz", "Escape game", "Karaoké", "Bowling", "Laser game"],
+    ambiance: ["Diversifiée", "Entre amis", "Familiale", "Entreprise", "Anniversaire"],
+    primaryTags: ["centre", "multiactivité", "salles", "jeux", "groupe"],
+    secondaryTags: ["blind test", "quiz", "escape game", "karaoké", "bowling"],
+    relatedTags: ["diversifié", "entre amis", "famille", "entreprise", "anniversaire"]
+  },
+
   // ❓ Autres
   autre: {
     label: "Autre activité",
@@ -1482,6 +1550,9 @@ export function getGroupedActivities() {
     "🎮 Escape Games": [
       "escape_game", "escape_game_horreur", "escape_game_aventure", "escape_game_mystere",
       "escape_game_sf", "escape_game_fantasy", "escape_game_familial"
+    ],
+    "🎵 Blind Test & Quiz": [
+      "blind_test", "quiz_room", "salle_jeux_amis", "centre_multiactivites"
     ],
     "👶 Enfants & Famille": [
       "trampoline_parc", "parc_loisirs_enfants", "centre_aquatique", "parc_aventure_enfants",

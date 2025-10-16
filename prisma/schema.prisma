@@ -353,6 +353,7 @@ model Image {
   url             String
   altText         String?
   isPrimary       Boolean       @default(false)
+  isCardImage     Boolean       @default(false)
   ordre           Int           @default(0)
   establishmentId String
   createdAt       DateTime      @default(now())

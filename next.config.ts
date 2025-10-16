@@ -27,6 +27,38 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // Optimisations de performance
+  compress: true, // Activer la compression gzip
+  
+  // Configuration du cache
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'recharts'],
+  },
+  
+  // Réduire le bundle en production
+  productionBrowserSourceMaps: false,
+  
+  // Optimiser les chunks webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: false,
+            vendors: false,
+            commons: {
+              name: 'commons',
+              chunks: 'all',
+              minChunks: 2,
+            },
+          },
+        },
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

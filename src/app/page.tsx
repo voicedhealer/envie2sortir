@@ -18,6 +18,8 @@ export default function Home() {
               loop={false}
               muted
               playsInline
+              loading="lazy"
+              preload="none"
               className="w-full h-full object-contain"
               aria-label="Silhouettes de danse animées"
             />

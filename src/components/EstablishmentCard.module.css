@@ -102,13 +102,27 @@
 
 /* Badge tendance */
 .tendanceBadge {
-  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.3);
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3);
   transition: all 0.2s ease;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
 }
 
 .tendanceBadge:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4);
+  box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+}
+
+/* Badge secondaire */
+.secondaryBadge {
+  box-shadow: 0 1px 4px rgba(147, 51, 234, 0.2);
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  opacity: 0.9;
+}
+
+.secondaryBadge:hover {
+  transform: scale(1.05);
+  opacity: 1;
 }
 
 /* Responsive adjustments */

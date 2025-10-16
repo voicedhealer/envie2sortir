@@ -41,21 +41,56 @@ export default function LearningDashboard() {
   const [editingPattern, setEditingPattern] = useState<string | null>(null);
   const [correctedType, setCorrectedType] = useState<string>('');
 
-  // Options de types d'établissements
+  // Options de types d'établissements (organisées par catégories)
   const typeOptions: TypeOption[] = [
-    { value: 'restaurant', label: 'Restaurant' },
-    { value: 'bar', label: 'Bar' },
-    { value: 'cafe', label: 'Café' },
-    { value: 'parc_loisir_indoor', label: 'Parc de loisirs indoor' },
-    { value: 'bowling', label: 'Bowling' },
-    { value: 'escape_game', label: 'Escape Game' },
-    { value: 'karaoke', label: 'Karaoké' },
-    { value: 'cinema', label: 'Cinéma' },
-    { value: 'theatre', label: 'Théâtre' },
-    { value: 'club', label: 'Club/Discothèque' },
-    { value: 'sport', label: 'Sport' },
-    { value: 'wellness', label: 'Bien-être/Spa' },
-    { value: 'other', label: 'Autre' }
+    // 🏢 TYPES GÉNÉRIQUES
+    { value: 'restaurant_general', label: '🏢 Restaurant (général)' },
+    { value: 'bar_general', label: '🏢 Bar (général)' },
+    
+    // 🍽️ RESTAURANTS SPÉCIALISÉS
+    { value: 'restaurant_italien', label: '🍝 Restaurant italien' },
+    { value: 'restaurant_japonais', label: '🍣 Restaurant japonais' },
+    { value: 'restaurant_chinois', label: '🥢 Restaurant chinois' },
+    { value: 'restaurant_thai', label: '🌶️ Restaurant thaï' },
+    { value: 'restaurant_indien', label: '🍛 Restaurant indien' },
+    { value: 'restaurant_gastronomique', label: '⭐ Restaurant gastronomique' },
+    
+    // 🍹 BARS SPÉCIALISÉS
+    { value: 'bar_cocktails', label: '🍹 Bar à cocktails' },
+    { value: 'bar_vins', label: '🍷 Bar à vins' },
+    { value: 'bar_whisky', label: '🥃 Bar à whisky' },
+    { value: 'bar_tapas', label: '🥘 Bar à tapas' },
+    { value: 'pub_traditionnel', label: '🍺 Pub traditionnel' },
+    
+    // 🎮 ACTIVITÉS & LOISIRS
+    { value: 'parc_loisir_indoor', label: '🎪 Parc de loisirs indoor' },
+    { value: 'escape_game', label: '🔍 Escape Game' },
+    { value: 'karaoke', label: '🎤 Karaoké' },
+    { value: 'bowling', label: '🎳 Bowling' },
+    { value: 'laser_game', label: '🔫 Laser Game' },
+    { value: 'karting', label: '🏎️ Karting' },
+    
+    // 🎵 NOUVELLES ACTIVITÉS
+    { value: 'blind_test', label: '🎵 Blind Test' },
+    { value: 'quiz_room', label: '🧠 Quiz Room' },
+    { value: 'salle_jeux_amis', label: '🎮 Salle de jeux entre amis' },
+    { value: 'complexe_multiactivites', label: '🏢 Complexe multiactivités' },
+    
+    // 🎭 CULTURE & SPECTACLES
+    { value: 'cinema', label: '🎬 Cinéma' },
+    { value: 'theatre', label: '🎭 Théâtre' },
+    
+    // 🌙 SORTIES NOCTURNES
+    { value: 'discotheque', label: '💃 Discothèque' },
+    { value: 'club_techno', label: '🎧 Club techno' },
+    
+    // 🏃 SPORTS & BIEN-ÊTRE
+    { value: 'sport', label: '⚽ Sport' },
+    { value: 'wellness', label: '🧘 Bien-être/Spa' },
+    
+    // ❓ AUTRES
+    { value: 'cafe', label: '☕ Café' },
+    { value: 'other', label: '❓ Autre' }
   ];
 
   useEffect(() => {
@@ -91,8 +126,8 @@ export default function LearningDashboard() {
         const patternsData = await patternsResponse.json();
         setPatterns(patternsData);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
@@ -123,8 +158,8 @@ export default function LearningDashboard() {
       } else {
         setError('Erreur lors de la correction du type');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
   };
 
@@ -148,8 +183,38 @@ export default function LearningDashboard() {
       } else {
         setError('Erreur lors de la suppression du pattern');
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    }
+  };
+
+  const handleValidatePattern = async (patternId: string, patternName: string, detectedType: string) => {
+    if (!confirm(`Valider la détection "${detectedType}" pour "${patternName}" ?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/learning/validate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          patternId,
+          patternName,
+          validatedType: detectedType,
+          validatedBy: session?.user?.email || 'admin'
+        }),
+      });
+
+      if (response.ok) {
+        // Recharger les données
+        await fetchLearningData();
+      } else {
+        setError('Erreur lors de la validation du pattern');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue');
     }
   };
 
@@ -172,10 +237,10 @@ export default function LearningDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center">
             <Brain className="w-8 h-8 text-orange-500 mr-3" />
-            Intelligence d'Apprentissage
+            Intelligence d&apos;Apprentissage
           </h1>
           <p className="text-gray-600 mt-2">
-            Analyse des patterns d'apprentissage et de la performance du système
+            Analyse des patterns d&apos;apprentissage et de la performance du système
           </p>
         </div>
 
@@ -256,7 +321,7 @@ export default function LearningDashboard() {
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center">
               <Brain className="w-5 h-5 text-purple-600 mr-2" />
-              Patterns d'Apprentissage Récents
+              Patterns d&apos;Apprentissage Récents
             </h3>
           </div>
           <div className="overflow-x-auto">
@@ -369,6 +434,12 @@ export default function LearningDashboard() {
                             </div>
                           ) : (
                             <>
+                              <button
+                                onClick={() => handleValidatePattern(pattern.id, pattern.name, pattern.detectedType)}
+                                className="text-green-600 hover:text-green-900 text-xs bg-green-50 px-2 py-1 rounded"
+                              >
+                                ✓ Valider
+                              </button>
                               <button
                                 onClick={() => setEditingPattern(pattern.id)}
                                 className="text-orange-600 hover:text-orange-900 text-xs bg-orange-50 px-2 py-1 rounded"

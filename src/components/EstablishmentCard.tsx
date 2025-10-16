@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro } from 'lucide-react';
+import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
@@ -9,6 +9,7 @@ import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
 import { useActiveDeals } from '@/hooks/useActiveDeals';
 import DailyDealOverlay from './DailyDealOverlay';
+import { getTrendingAnalysis, type TrendingScore } from '@/lib/trending-system';
 
 // Fonction pour déterminer la catégorie principale à partir des activités
 function getMainCategory(establishment: any): string {
@@ -199,6 +200,7 @@ interface EstablishmentCardProps {
       url: string;
       altText?: string;
       isPrimary?: boolean;
+      isCardImage?: boolean;
     }>;
     events?: Array<{
       id: string;
@@ -250,9 +252,9 @@ export default function EstablishmentCard({
   // Récupérer les bons plans actifs
   const { activeDeal } = useActiveDeals(establishment.id);
 
-  // ✅ CORRECTION : Utiliser uniquement l'ordre (première image = principale)
-  // Plus de logique isPrimary, l'ordre définit tout
-  const primaryImage = establishment.imageUrl || establishment.images?.[0]?.url;
+  // ✅ PRIORITÉ : 1) Image de card (isCardImage), 2) imageUrl, 3) Première image
+  const cardImage = establishment.images?.find(img => img.isCardImage)?.url;
+  const primaryImage = cardImage || establishment.imageUrl || establishment.images?.[0]?.url;
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
@@ -331,8 +333,51 @@ export default function EstablishmentCard({
   // Déterminer le statut d'ouverture (déterministe basé sur l'ID)
   const isOpen = establishment.id.charCodeAt(establishment.id.length - 1) % 10 < 7; // 70% de chance d'être ouvert
 
-  // Déterminer si l'établissement est "hot" (déterministe basé sur l'ID)
-  const isHot = establishment.isHot || establishment.id.charCodeAt(establishment.id.length - 2) % 10 < 2; // 20% de chance d'être hot
+  // Calculer l'analyse de tendance avec le nouveau système intelligent
+  const trendingAnalysis: TrendingScore = getTrendingAnalysis(establishment);
+  const isHot = trendingAnalysis.isTrending; // Utilise maintenant le vrai calcul
+
+  // Fonction pour rendre les badges de tendance
+  const renderTrendingBadges = () => {
+    const badges = trendingAnalysis.badges;
+    if (badges.length === 0) return null;
+
+    // Afficher le premier badge (le plus important) en grand
+    const primaryBadge = badges[0];
+    const otherBadges = badges.slice(1);
+
+    return (
+      <div className="absolute bottom-2 right-2 flex flex-col gap-1">
+        {/* Badge principal */}
+        <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${styles.tendanceBadge}`}>
+          {primaryBadge.includes('🔥') && <Flame className="w-3 h-3 text-white" />}
+          {primaryBadge.includes('⭐') && <Star className="w-3 h-3 text-white" />}
+          {primaryBadge.includes('🆕') && <span className="text-white text-xs">🆕</span>}
+          {primaryBadge.includes('📈') && <TrendingUp className="w-3 h-3 text-white" />}
+          <span className="text-white text-xs font-medium">
+            {primaryBadge.replace(/[🔥⭐🆕📈]/g, '').trim()}
+          </span>
+        </div>
+
+        {/* Badges secondaires (plus petits) */}
+        {otherBadges.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {otherBadges.map((badge, index) => (
+              <div key={index} className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${styles.secondaryBadge}`}>
+                {badge.includes('🔥') && <Flame className="w-2 h-2 text-white" />}
+                {badge.includes('⭐') && <Star className="w-2 h-2 text-white" />}
+                {badge.includes('🆕') && <span className="text-white text-xs">🆕</span>}
+                {badge.includes('📈') && <TrendingUp className="w-2 h-2 text-white" />}
+                <span className="text-white text-xs font-medium">
+                  {badge.replace(/[🔥⭐🆕📈]/g, '').trim()}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // Formater l'adresse pour n'afficher que la ville
   const formatAddress = (address: string) => {
@@ -516,22 +561,17 @@ export default function EstablishmentCard({
             </div>
           )}
 
-          {/* Flamme "Hot" (coin inférieur droit) - seulement si pas d'événement */}
-          {isHot && !upcomingEvent && (
-            <div className="absolute bottom-2 right-2" title="Ce lieu a le feu cette semaine 🔥">
-              <div className={`flex items-center gap-1 px-2 py-1 bg-purple-600 rounded-full ${styles.tendanceBadge}`}>
-                <Flame className="w-3 h-3 text-white" />
-                <span className="text-white text-xs font-medium">tendance</span>
+          {/* Badges de tendance (coin inférieur droit) - seulement si pas d'événement */}
+          {!upcomingEvent && renderTrendingBadges()}
+
+          {/* Badge catégorie (coin supérieur droit) - FOND PINK - Masqué si générique */}
+          {getMainCategory(establishment) !== 'établissement' && (
+            <div className="absolute top-2 right-2">
+              <div className="px-2 py-1 bg-pink-600 bg-opacity-50 text-white text-xs rounded-full font-regular">
+                {getMainCategory(establishment)}
               </div>
             </div>
           )}
-
-          {/* Badge catégorie (coin supérieur droit) - FOND PINK */}
-          <div className="absolute top-2 right-2">
-            <div className="px-2 py-1 bg-pink-600 bg-opacity-50 text-white text-xs rounded-full font-regular">
-              {getMainCategory(establishment)}
-            </div>
-          </div>
 
           {/* Overlay événement à venir/en cours - EN BAS, HAUTEUR GÉNÉREUSE */}
           {upcomingEvent && (
