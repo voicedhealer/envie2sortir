@@ -1,5 +1,6 @@
 import EnvieSearchBar from "./sections/EnvieSearchBar";
 import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSection";
+import EventsCarousel from "@/components/EventsCarousel";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
@@ -42,73 +43,8 @@ export default function Home() {
       {/* Section dynamique des établissements */}
       <DynamicEstablishmentsSection />
 
-      {/* Section "Catégories visuelles" */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Catégories visuelles</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {/* Restaurant */}
-            <a href="/recherche/envie?envie=restaurant&ville=Marseille&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-blue-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">🍽️</span>
-                </div>
-                <div className="text-xs font-medium text-white">Restaurant</div>
-              </div>
-            </a>
-
-            {/* Cinéma */}
-            <a href="/recherche/envie?envie=cinema&ville=Lyon&rayon=15" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-yellow-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">🎬</span>
-                </div>
-                <div className="text-xs font-medium text-white">Cinéma</div>
-              </div>
-            </a>
-
-            {/* Théâtre */}
-            <a href="/recherche/envie?envie=theater&ville=Paris&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-green-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">🎭</span>
-                </div>
-                <div className="text-xs font-medium text-white">Théâtre</div>
-              </div>
-            </a>
-
-            {/* Concert */}
-            <a href="/recherche/envie?envie=concert&ville=Bordeaux&rayon=12" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-purple-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">🎵</span>
-                </div>
-                <div className="text-xs font-medium text-white">Concert</div>
-              </div>
-            </a>
-
-            {/* Musée */}
-            <a href="/recherche/envie?envie=museum&ville=Lille&rayon=10" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-pink-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">🎨</span>
-                </div>
-                <div className="text-xs font-medium text-white">Musée</div>
-              </div>
-            </a>
-
-            {/* Multi-activités */}
-            <a href="/recherche/envie?envie=other&ville=Toulouse&rayon=15" className="text-center group cursor-pointer">
-              <div className="w-20 h-20 bg-cyan-500 rounded-2xl shadow-sm flex flex-col items-center justify-center group-hover:shadow-md transition-all duration-300 group-hover:scale-110">
-                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-1">
-                  <span className="text-2xl">👥</span>
-                </div>
-                <div className="text-xs font-medium text-white">activités +</div>
-              </div>
-            </a>
-          </div>
-        </div>
-      </section>
+      {/* 🎉 Section Événements à venir - remplace les catégories visuelles */}
+      <EventsCarousel />
 
       {/* Section "Comment ça marche ?" */}
       <section className="py-16 bg-white">

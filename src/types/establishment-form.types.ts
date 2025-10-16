@@ -274,6 +274,7 @@ export const SUBSCRIPTION_PLANS = {
       "📢 Créez des Événements temporaires avec visuel attractif",
       "🎁 Publiez des Bons Plans quotidiens pour attirer plus de clients",
       "⭐ Mise en avant prioritaire dans les résultats de recherche",
+      "🏠 Mise en avant de vos événements sur la page d'accueil",
       "📊 Analytics avancées : profil détaillé de vos visiteurs",
       "💬 Support client prioritaire et dédié",
       "✨ Description enrichie avec intelligence artificielle"

@@ -333,9 +333,19 @@ export default function EstablishmentCard({
   // Déterminer le statut d'ouverture (déterministe basé sur l'ID)
   const isOpen = establishment.id.charCodeAt(establishment.id.length - 1) % 10 < 7; // 70% de chance d'être ouvert
 
-  // Calculer l'analyse de tendance avec le nouveau système intelligent
-  const trendingAnalysis: TrendingScore = getTrendingAnalysis(establishment);
-  const isHot = trendingAnalysis.isTrending; // Utilise maintenant le vrai calcul
+  // État pour l'analyse de tendance (calcul côté client uniquement)
+  const [trendingAnalysis, setTrendingAnalysis] = useState<TrendingScore>({
+    score: 0,
+    isTrending: false,
+    badges: []
+  });
+  const isHot = trendingAnalysis.isTrending;
+
+  // Calculer l'analyse de tendance côté client pour éviter l'erreur d'hydratation
+  useEffect(() => {
+    const analysis = getTrendingAnalysis(establishment);
+    setTrendingAnalysis(analysis);
+  }, [establishment]);
 
   // Fonction pour rendre les badges de tendance
   const renderTrendingBadges = () => {

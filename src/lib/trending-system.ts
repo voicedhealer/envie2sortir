@@ -28,7 +28,8 @@ export function calculateTrendingScore(establishment: any): number {
   }
   
   // Bonus fraîcheur : établissement mis à jour récemment
-  if (establishment.lastModifiedAt) {
+  // Calcul côté client uniquement pour éviter l'erreur d'hydratation
+  if (typeof window !== 'undefined' && establishment.lastModifiedAt) {
     const daysSinceUpdate = Math.floor(
       (new Date().getTime() - new Date(establishment.lastModifiedAt).getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -68,6 +69,11 @@ export function isPopular(establishment: any): boolean {
  * @returns true si l'établissement est nouveau
  */
 export function isNew(establishment: any): boolean {
+  // Calcul côté client uniquement pour éviter l'erreur d'hydratation
+  if (typeof window === 'undefined') {
+    return false; // Pas de calcul côté serveur
+  }
+  
   const daysSinceCreation = Math.floor(
     (new Date().getTime() - new Date(establishment.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );

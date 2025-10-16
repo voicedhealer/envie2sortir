@@ -1,18 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const city = searchParams.get('city');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    // Récupérer les événements à venir
+    const now = new Date();
+    
+    // Récupérer les événements à venir ET en cours
     const events = await prisma.event.findMany({
       where: {
-        startDate: {
-          gte: new Date() // Événements futurs uniquement
-        },
+        OR: [
+          {
+            // Événements futurs
+            startDate: {
+              gte: now
+            }
+          },
+          {
+            // Événements en cours (ont commencé mais pas encore terminés)
+            AND: [
+              { startDate: { lte: now } },
+              {
+                OR: [
+                  { endDate: { gte: now } },
+                  { endDate: null } // Événements sans date de fin
+                ]
+              }
+            ]
+          }
+        ],
         establishment: {
           status: 'approved', // Seulement les établissements approuvés
           ...(city ? { city } : {})
