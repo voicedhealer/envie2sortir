@@ -360,13 +360,21 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
             </div>
           </div>
           
-          {/* Chevron pour l'accordéon */}
-          <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full p-2 group-hover:bg-white/30 transition-colors">
-            {isAccordionOpen ? (
-              <ChevronUp className="w-5 h-5 text-white" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-white" />
-            )}
+          {/* Chevron pour l'accordéon avec effet halo/onde */}
+          <div className="absolute top-4 right-4">
+            {/* Ondes de pulsation ralenties */}
+            <div className="absolute inset-0 rounded-full bg-white/30 animate-ping" style={{ animationDuration: '3s' }}></div>
+            <div className="absolute inset-0 rounded-full bg-white/20 animate-ping" style={{ animationDelay: '1s', animationDuration: '3s' }}></div>
+            <div className="absolute inset-0 rounded-full bg-white/10 animate-ping" style={{ animationDelay: '2s', animationDuration: '3s' }}></div>
+            
+            {/* Container principal */}
+            <div className="relative bg-white/20 backdrop-blur-sm rounded-full p-2 group-hover:bg-white/30 transition-colors">
+              {isAccordionOpen ? (
+                <ChevronUp className="w-5 h-5 text-white" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-white" />
+              )}
+            </div>
           </div>
         </button>
 
