@@ -28,7 +28,7 @@ interface Event {
   engagementCount: number;
 }
 
-type FilterType = 'all' | 'today' | 'week';
+type FilterType = 'all' | 'today' | 'week' | 'weekend';
 
 export default function EventsCarousel() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -83,6 +83,33 @@ export default function EventsCarousel() {
         return eventDate <= weekEnd;
       });
       setFilteredEvents(weekEvents);
+    } else if (filter === 'weekend') {
+      const weekendEvents = allEvents.filter(event => {
+        const eventDate = new Date(event.startDate);
+        const dayOfWeek = eventDate.getDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+        const hour = eventDate.getHours();
+        const minutes = eventDate.getMinutes();
+        
+        // Vendredi à partir de 18h00
+        if (dayOfWeek === 5 && (hour > 18 || (hour === 18 && minutes >= 0))) {
+          return true;
+        }
+        // Samedi toute la journée
+        if (dayOfWeek === 6) {
+          return true;
+        }
+        // Dimanche jusqu'à 23h00 (excluant 23h30 et plus)
+        if (dayOfWeek === 0 && hour < 23) {
+          return true;
+        }
+        // Dimanche à 23h00 exactement
+        if (dayOfWeek === 0 && hour === 23 && minutes === 0) {
+          return true;
+        }
+        
+        return false;
+      });
+      setFilteredEvents(weekendEvents);
     } else {
       setFilteredEvents(allEvents);
     }
@@ -185,6 +212,16 @@ export default function EventsCarousel() {
               Cette semaine
             </button>
             <button
+              onClick={() => setFilter('weekend')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                filter === 'weekend'
+                  ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
+                  : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              Week-end
+            </button>
+            <button
               onClick={() => setFilter('all')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 filter === 'all'
@@ -208,6 +245,8 @@ export default function EventsCarousel() {
                 ? 'Aucun événement aujourd\'hui, mais de belles surprises vous attendent !'
                 : filter === 'week' 
                 ? 'Cette semaine est calme, mais la semaine prochaine sera animée !'
+                : filter === 'weekend'
+                ? 'Aucun événement ce week-end, mais les professionnels préparent de belles surprises !'
                 : 'Les professionnels préparent de superbes événements pour vous. Revenez bientôt !'
               }
             </p>

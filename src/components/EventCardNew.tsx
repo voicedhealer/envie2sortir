@@ -273,9 +273,9 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
     <>
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
         {/* Header avec gradient + image de l'événement - CLIQUABLE */}
-        <button
+        <div
           onClick={() => setIsAccordionOpen(!isAccordionOpen)}
-          className="relative min-h-[200px] bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 overflow-hidden w-full text-left hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition-all duration-300 group"
+          className="relative min-h-[200px] bg-gradient-to-br from-orange-500 via-red-500 to-pink-500 overflow-hidden w-full text-left hover:from-orange-600 hover:via-red-600 hover:to-pink-600 transition-all duration-300 group cursor-pointer"
         >
           {/* Pattern de fond */}
           <div className="absolute inset-0 opacity-10">
@@ -303,8 +303,16 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center">
-                  <Calendar className="w-12 h-12 text-amber-600" />
+                <div className={`w-full h-full flex items-center justify-center ${
+                  eventStatus.status === 'in-progress' 
+                    ? 'bg-green-100' 
+                    : 'bg-yellow-100'
+                }`}>
+                  <Calendar className={`w-12 h-12 ${
+                    eventStatus.status === 'in-progress' 
+                      ? 'text-green-600' 
+                      : 'text-yellow-600'
+                  }`} />
                 </div>
               )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
@@ -343,7 +351,11 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                 </div>
                 
                 <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                  <Calendar className="w-3 h-3" />
+                  <Calendar className={`w-3 h-3 ${
+                    eventStatus.status === 'in-progress' 
+                      ? 'text-green-600' 
+                      : 'text-yellow-600'
+                  }`} />
                   <span>{formatEventDate(event.startDate)}</span>
                 </div>
                 <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
@@ -376,7 +388,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
               )}
             </div>
           </div>
-        </button>
+        </div>
 
         {/* Contenu de l'accordéon - Niveau d'engagement et vote */}
         <AnimatePresence>
