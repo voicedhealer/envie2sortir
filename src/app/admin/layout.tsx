@@ -11,8 +11,10 @@ import {
   History, 
   BarChart3, 
   Search,
-  Brain
+  Brain,
+  MessageSquare
 } from "lucide-react";
+import MessageBadge from "@/components/messaging/MessageBadge";
 
 export default function AdminLayout({
   children,
@@ -97,43 +99,57 @@ export default function AdminLayout({
       href: '/admin',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      badge: null
+      badge: null,
+      customBadge: false
     },
     {
       href: '/admin/etablissements',
       label: 'Établissements',
       icon: Building2,
-      badge: pendingEstablishments > 0 ? pendingEstablishments : null
+      badge: pendingEstablishments > 0 ? pendingEstablishments : null,
+      customBadge: false
     },
     {
       href: '/admin/modifications',
       label: 'Modifications',
       icon: FileText,
-      badge: pendingModifications > 0 ? pendingModifications : null
+      badge: pendingModifications > 0 ? pendingModifications : null,
+      customBadge: false
+    },
+    {
+      href: '/admin/messagerie',
+      label: 'Messagerie',
+      icon: MessageSquare,
+      badge: null,
+      customBadge: true
     },
     {
       href: '/admin/historique',
       label: 'Historique',
       icon: History,
-      badge: null
+      badge: null,
+      customBadge: false
     },
     {
       href: '/admin/analytics',
       label: 'Analytics',
       icon: BarChart3,
-      badge: null
+      badge: null,
+      customBadge: false
     },
     {
       href: '/admin/recherches',
       label: 'Recherches',
       icon: Search,
-      badge: null
+      badge: null,
+      customBadge: false
     },
     {
       href: '/admin/learning',
       label: 'Intelligence',
       icon: Brain,
-      badge: null
+      badge: null,
+      customBadge: false
     }
   ];
 
@@ -173,11 +189,13 @@ export default function AdminLayout({
                     >
                       <Icon className="w-4 h-4" />
                       <span>{item.label}</span>
-                      {item.badge && (
+                      {item.customBadge ? (
+                        <MessageBadge />
+                      ) : item.badge ? (
                         <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[20px] animate-pulse">
                           {item.badge}
                         </span>
-                      )}
+                      ) : null}
                     </Link>
                   );
                 })}
@@ -205,11 +223,13 @@ export default function AdminLayout({
                   >
                     <Icon className="w-4 h-4" />
                     <span className="text-center">{item.label}</span>
-                    {item.badge && (
+                    {item.customBadge ? (
+                      <MessageBadge />
+                    ) : item.badge ? (
                       <span className="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full min-w-[16px]">
                         {item.badge}
                       </span>
-                    )}
+                    ) : null}
                   </Link>
                 );
               })}
