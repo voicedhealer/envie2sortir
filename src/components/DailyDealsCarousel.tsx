@@ -26,7 +26,7 @@ interface DailyDeal {
     name: string;
     address: string;
     city?: string;
-    category?: string;
+    activities?: string[];
     imageUrl?: string;
   };
 }
