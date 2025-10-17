@@ -2,6 +2,7 @@
 
 import { Tag, Clock, FileText, ThumbsUp, ThumbsDown, MapPin, Calendar, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatDealTime, formatDealDate, formatPrice, calculateDiscount } from '@/lib/deal-utils';
 
 interface DailyDeal {
@@ -25,9 +26,12 @@ interface DailyDeal {
 interface DailyDealCardProps {
   deal: DailyDeal;
   onClick?: () => void;
+  redirectToEstablishment?: boolean; // Si true, redirige vers la page établissement au lieu d'ouvrir le modal
+  establishmentId?: string; // ID de l'établissement pour la redirection
 }
 
-export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
+export default function DailyDealCard({ deal, onClick, redirectToEstablishment = false, establishmentId }: DailyDealCardProps) {
+  const router = useRouter();
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
   const [userEngagement, setUserEngagement] = useState<'liked' | 'disliked' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -90,7 +94,15 @@ export default function DailyDealCard({ deal, onClick }: DailyDealCardProps) {
   };
 
   const handleCardClick = () => {
-    if (isFlipped) return; // Ne pas ouvrir le modal si la carte est retournée
+    if (isFlipped) return; // Ne pas ouvrir le modal/rediriger si la carte est retournée
+    
+    // Si redirection vers établissement activée
+    if (redirectToEstablishment && establishmentId) {
+      router.push(`/etablissement/${establishmentId}`);
+      return;
+    }
+    
+    // Sinon, comportement par défaut (modal)
     if (onClick) onClick();
   };
 

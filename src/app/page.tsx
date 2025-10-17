@@ -1,6 +1,7 @@
 import EnvieSearchBar from "./sections/EnvieSearchBar";
 import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSection";
 import EventsCarousel from "@/components/EventsCarousel";
+import DailyDealsCarousel from "@/components/DailyDealsCarousel";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
@@ -80,6 +81,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* 🎯 Section Bons Plans du Jour */}
+      <DailyDealsCarousel />
 
       {/* Section "Ce qu'ils disent de nous" */}
       <section className="py-16 bg-gray-50">
