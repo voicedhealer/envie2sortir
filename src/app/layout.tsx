@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${inter.variable} antialiased`} suppressHydrationWarning={true}>
+      <body className={`${inter.variable} antialiased`} suppressHydrationWarning={true} style={{ overflowAnchor: 'none' }}>
         <AuthProvider>
           <CSRFProvider>
             <Navigation />

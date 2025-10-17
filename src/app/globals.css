@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Désactiver le scroll anchor pour éviter les scrolls intempestifs lors des reflows */
+html, body {
+  overflow-anchor: none;
+}
+
 /* Classes utilitaires pour le texte tronqué */
 .line-clamp-1 {
   display: -webkit-box;

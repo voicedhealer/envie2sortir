@@ -2,11 +2,14 @@ import EnvieSearchBar from "./sections/EnvieSearchBar";
 import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSection";
 import EventsCarousel from "@/components/EventsCarousel";
 import DailyDealsCarousel from "@/components/DailyDealsCarousel";
+import PageLoadingOverlay from "@/components/PageLoadingOverlay";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
   return (
     <main>
+      {/* 🛡️ Bloquer les interactions pendant l'initialisation */}
+      <PageLoadingOverlay />
       {/* HERO */}
       <section className="relative">
         <div className="hero-gradient/10">
@@ -20,7 +23,6 @@ export default function Home() {
               loop={false}
               muted
               playsInline
-              loading="lazy"
               preload="none"
               className="w-full h-full object-contain"
               aria-label="Silhouettes de danse animées"

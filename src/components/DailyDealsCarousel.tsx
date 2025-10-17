@@ -38,7 +38,13 @@ export default function DailyDealsCarousel() {
 
   useEffect(() => {
     setIsMounted(true);
-    fetchDeals();
+    
+    // Petit délai pour éviter la surcharge au montage initial
+    const timer = setTimeout(() => {
+      fetchDeals();
+    }, 150); // Délai pour décaler après les autres sections
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const fetchDeals = async () => {
@@ -69,13 +75,8 @@ export default function DailyDealsCarousel() {
 
   if (!isMounted) return null;
 
-  // Si aucun bon plan, ne rien afficher
-  if (!loading && deals.length === 0) {
-    return null;
-  }
-
   return (
-    <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-pink-50">
+    <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-pink-50" style={{ minHeight: '500px' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -109,6 +110,53 @@ export default function DailyDealsCarousel() {
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+          </div>
+        )}
+
+        {/* État vide - Aucun bon plan */}
+        {!loading && deals.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+            <div className="max-w-2xl mx-auto">
+              {/* Icône */}
+              <div className="w-24 h-24 bg-gradient-to-br from-orange-100 to-pink-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span className="text-5xl">🎁</span>
+              </div>
+
+              {/* Message principal */}
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                Aucun bon plan disponible pour le moment
+              </h3>
+              
+              <p className="text-gray-600 mb-8 text-lg">
+                Revenez bientôt pour découvrir nos offres exclusives !
+              </p>
+
+              {/* CTA Inscription */}
+              <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-8 border-2 border-orange-200">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <span className="text-2xl">💙</span>
+                  <h4 className="text-xl font-semibold text-gray-900">
+                    Ne ratez aucune offre !
+                  </h4>
+                </div>
+                
+                <p className="text-gray-700 mb-6">
+                  Inscrivez-vous pour suivre vos établissements favoris et recevoir des notifications sur les nouveaux bons plans
+                </p>
+
+                <Link
+                  href="/auth"
+                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-pink-600 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <span>Créer un compte gratuitement</span>
+                  <ChevronRight className="w-5 h-5" />
+                </Link>
+
+                <p className="text-sm text-gray-500 mt-4">
+                  Déjà inscrit ? <Link href="/auth" className="text-orange-500 hover:text-orange-600 font-medium underline">Connectez-vous</Link>
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

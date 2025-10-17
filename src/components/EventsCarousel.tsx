@@ -40,7 +40,13 @@ export default function EventsCarousel() {
 
   useEffect(() => {
     setIsMounted(true);
-    fetchEvents();
+    
+    // Petit délai pour éviter la surcharge au montage initial
+    const timer = setTimeout(() => {
+      fetchEvents();
+    }, 50); // Très court mais suffisant pour décaler
+    
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -154,7 +160,7 @@ export default function EventsCarousel() {
 
   if (loading) {
     return (
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-white">
+      <section className="py-16 bg-gradient-to-b from-gray-50 to-white" style={{ minHeight: '500px' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse">
             <div className="h-10 bg-gray-200 rounded w-64 mb-8"></div>
@@ -262,12 +268,12 @@ export default function EventsCarousel() {
                 </button>
               )}
               
-              <a 
+              <Link 
                 href="/etablissements/nouveau" 
                 className="px-6 py-3 bg-white border-2 border-orange-500 text-orange-600 rounded-lg hover:bg-orange-50 transition-all font-medium"
               >
                 Ajoutez mon établissement et créez un événement
-              </a>
+              </Link>
             </div>
 
 

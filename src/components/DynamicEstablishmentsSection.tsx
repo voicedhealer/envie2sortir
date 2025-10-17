@@ -46,7 +46,7 @@ export default function DynamicEstablishmentsSection() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchEstablishments = async () => {
+    const timer = setTimeout(async () => {
       try {
         setLoading(true);
         
@@ -72,14 +72,14 @@ export default function DynamicEstablishmentsSection() {
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchEstablishments();
+    }, 100); // Délai pour décaler du chargement EventsCarousel
+    
+    return () => clearTimeout(timer);
   }, [session]);
 
   if (loading) {
     return (
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white" style={{ minHeight: '600px' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12">Nos meilleurs endroits</h2>
           <div className="flex justify-center">

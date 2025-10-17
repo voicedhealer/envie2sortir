@@ -38,11 +38,8 @@ export function useActiveDeals(establishmentId: string): UseActiveDealsResult {
       try {
         setLoading(true);
         setError(null);
-        console.log('useActiveDeals - Fetching deals for:', establishmentId);
         
         const response = await fetch(`/api/deals/active/${establishmentId}`);
-        
-        console.log('useActiveDeals - Response status:', response.status);
         
         if (!response.ok) {
           let errorData = {};
@@ -84,7 +81,7 @@ export function useActiveDeals(establishmentId: string): UseActiveDealsResult {
       }
     };
 
-    fetchActiveDeals();
+    fetchActiveDeals(); // Charger immédiatement sans délai
   }, [establishmentId]);
 
   return { activeDeal, loading, error };

@@ -30,6 +30,12 @@ export default function AuthPage() {
     const errorParam = searchParams.get('error');
     const messageParam = searchParams.get('message');
     const emailParam = searchParams.get('email');
+    const tabParam = searchParams.get('tab');
+    
+    // Gérer l'onglet à afficher depuis l'URL
+    if (tabParam === 'signup') {
+      setIsLogin(false);
+    }
     
     if (errorParam) {
       switch (errorParam) {
