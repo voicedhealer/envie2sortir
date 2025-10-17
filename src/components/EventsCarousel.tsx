@@ -301,7 +301,7 @@ export default function EventsCarousel() {
                 className="overflow-x-auto scrollbar-hide scroll-smooth pointer-events-auto"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                <div className="flex gap-6 py-4 px-4">
+                <div className="flex gap-6 py-4 px-4 items-stretch">
                   {filteredEvents.map((event) => {
                 const isLive = isMounted ? isEventInProgress(event.startDate, event.endDate) : false;
                 const isTrending = trendingEvents.some(t => t.id === event.id);
@@ -310,9 +310,9 @@ export default function EventsCarousel() {
                       <Link
                         key={event.id}
                         href={`/etablissements/${event.establishment.slug}`}
-                        className="flex-none w-80 group/card block"
+                        className="flex-none w-80 group/card block flex flex-col"
                       >
-                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-[1.02] hover:-translate-y-1">
+                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-full">
                           
                           {/* Image de l'événement */}
                           <div className="relative h-44 bg-gradient-to-br from-purple-400 to-pink-400 overflow-hidden rounded-t-2xl">
@@ -366,7 +366,7 @@ export default function EventsCarousel() {
                           </div>
 
                           {/* Contenu */}
-                          <div className="p-4">
+                          <div className="p-4 flex-1 flex flex-col">
                             {/* Titre de l'événement */}
                             <h3 className="font-bold text-lg mb-2 line-clamp-2 group-hover/card:text-orange-600 transition-colors">
                               {event.title}
@@ -388,8 +388,11 @@ export default function EventsCarousel() {
                               </div>
                             </div>
 
+                            {/* Spacer pour pousser le contenu vers le bas */}
+                            <div className="flex-1"></div>
+
                             {/* Heure, prix et capacité */}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
                               <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
                                 <Clock className="w-4 h-4" />
                                 {new Date(event.startDate).toLocaleTimeString('fr-FR', { 
