@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // GET /api/messaging/conversations/[id] - Détails d'une conversation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,8 +18,10 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
+
     const conversation = await prisma.conversation.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         professional: {
           select: {

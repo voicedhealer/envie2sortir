@@ -165,7 +165,7 @@ describe("Messagerie - Tests de performance", () => {
       );
 
       const startTime = Date.now();
-      const response = await sendMessage(request, { params: { id: "conv123" } });
+      const response = await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       const endTime = Date.now();
 
       const responseTime = endTime - startTime;
@@ -202,7 +202,7 @@ describe("Messagerie - Tests de performance", () => {
           }
         );
 
-        return sendMessage(request, { params: { id: "conv123" } });
+        return sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       });
 
       await Promise.all(promises);

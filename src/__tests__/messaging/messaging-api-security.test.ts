@@ -104,7 +104,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         );
 
         try {
-          await sendMessage(request, { params: { id: "conv123" } });
+          await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
         } catch (error) {
           expect(error).toBeDefined();
         }
@@ -166,7 +166,7 @@ describe("Messagerie API - Tests de sécurité", () => {
           }
         );
 
-        const response = await sendMessage(request, { params: { id: "conv123" } });
+        const response = await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
         
         // Les payloads devraient être acceptés (échappés au render)
         expect([201, 404]).toContain(response.status);
@@ -186,7 +186,7 @@ describe("Messagerie API - Tests de sécurité", () => {
       );
 
       const response = await getConversation(request, {
-        params: { id: "other-pro-conv" },
+        params: Promise.resolve({ id: "other-pro-conv" }),
       });
 
       // Devrait retourner 404 ou 403
@@ -203,7 +203,7 @@ describe("Messagerie API - Tests de sécurité", () => {
       );
 
       const response = await getConversation(request, {
-        params: { id: "any-conv" },
+        params: Promise.resolve({ id: "any-conv" }),
       });
 
       // 404 si n'existe pas, mais pas 403
@@ -247,7 +247,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         }
       );
 
-      const response = await sendMessage(request, { params: { id: "conv123" } });
+      const response = await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -269,7 +269,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         }
       );
 
-      const response = await sendMessage(request, { params: { id: "conv123" } });
+      const response = await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -292,7 +292,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         }
       );
 
-      const response = await changeStatus(request, { params: { id: "conv123" } });
+      const response = await changeStatus(request, { params: Promise.resolve({ id: "conv123" }) });
       const data = await response.json();
 
       expect(response.status).toBe(400);
@@ -377,7 +377,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         }
       );
 
-      const response = await sendMessage(request, { params: { id: "conv123" } });
+      const response = await sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       
       // Devrait accepter ou avoir une limite définie
       expect([201, 400, 404]).toContain(response.status);
@@ -404,7 +404,7 @@ describe("Messagerie API - Tests de sécurité", () => {
         );
 
         const response = await getConversation(request, {
-          params: { id: invalidId },
+          params: Promise.resolve({ id: invalidId }),
         });
 
         // Devrait gérer gracieusement
@@ -430,7 +430,7 @@ describe("Messagerie API - Tests de sécurité", () => {
           }
         );
 
-        return sendMessage(request, { params: { id: "conv123" } });
+        return sendMessage(request, { params: Promise.resolve({ id: "conv123" }) });
       });
 
       const responses = await Promise.all(promises);

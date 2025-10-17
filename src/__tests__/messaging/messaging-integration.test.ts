@@ -421,7 +421,7 @@ describe("Messagerie - Tests d'intégration", () => {
           body: JSON.stringify({ status: "open" }),
         }
       );
-      await changeStatus(reopenRequest, { params: { id: testConversationId } });
+      await changeStatus(reopenRequest, { params: Promise.resolve({ id: testConversationId }) });
 
       const messageRequest = new NextRequest(
         `http://localhost/api/messaging/conversations/${testConversationId}/messages`,
@@ -432,7 +432,7 @@ describe("Messagerie - Tests d'intégration", () => {
           }),
         }
       );
-      await sendMessage(messageRequest, { params: { id: testConversationId } });
+      await sendMessage(messageRequest, { params: Promise.resolve({ id: testConversationId }) });
 
       // Récupérer la conversation après
       const afterRequest = new NextRequest(
@@ -510,7 +510,7 @@ describe("Messagerie - Tests d'intégration", () => {
           body: JSON.stringify({ status: "closed" }),
         }
       );
-      await changeStatus(closeRequest, { params: { id: testConversationId } });
+      await changeStatus(closeRequest, { params: Promise.resolve({ id: testConversationId }) });
 
       // Rouvrir
       const reopenRequest = new NextRequest(

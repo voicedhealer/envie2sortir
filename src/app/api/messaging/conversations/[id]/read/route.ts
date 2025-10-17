@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // PATCH /api/messaging/conversations/[id]/read - Marquer les messages comme lus
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -18,9 +18,11 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
+
     // Vérifier que la conversation existe
     const conversation = await prisma.conversation.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         professionalId: true,
@@ -52,7 +54,7 @@ export async function PATCH(
 
     const result = await prisma.message.updateMany({
       where: {
-        conversationId: params.id,
+        conversationId: id,
         senderType: senderTypeToMarkAsRead,
         isRead: false,
       },

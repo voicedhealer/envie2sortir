@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // POST /api/messaging/conversations/[id]/messages - Envoyer un message
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,6 +17,8 @@ export async function POST(
         { status: 401 }
       );
     }
+
+    const { id } = await params;
 
     const body = await request.json();
     const { content } = body;
@@ -30,7 +32,7 @@ export async function POST(
 
     // Vérifier que la conversation existe
     const conversation = await prisma.conversation.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         professionalId: true,
@@ -64,7 +66,7 @@ export async function POST(
     // Créer le message et mettre à jour la conversation
     const message = await prisma.message.create({
       data: {
-        conversationId: params.id,
+        conversationId: id,
         senderId: session.user.id,
         senderType,
         content,
@@ -81,7 +83,7 @@ export async function POST(
     }
 
     await prisma.conversation.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
     });
 

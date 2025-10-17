@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 // PATCH /api/messaging/conversations/[id]/status - Changer le statut
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,6 +17,8 @@ export async function PATCH(
         { status: 401 }
       );
     }
+
+    const { id } = await params;
 
     const body = await request.json();
     const { status } = body;
@@ -30,7 +32,7 @@ export async function PATCH(
 
     // Vérifier que la conversation existe
     const conversation = await prisma.conversation.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         professionalId: true,
@@ -59,7 +61,7 @@ export async function PATCH(
 
     // Mettre à jour le statut
     const updatedConversation = await prisma.conversation.update({
-      where: { id: params.id },
+      where: { id },
       data: { status },
       include: {
         professional: {
