@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp } from 'lucide-react';
+import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
@@ -339,52 +339,46 @@ export default function EstablishmentCard({
     isTrending: false,
     badges: []
   });
-  const isHot = trendingAnalysis.isTrending;
+  const [isHydrated, setIsHydrated] = useState(false);
+  const isHot = isHydrated && trendingAnalysis.isTrending;
 
   // Calculer l'analyse de tendance côté client pour éviter l'erreur d'hydratation
   useEffect(() => {
+    setIsHydrated(true);
     const analysis = getTrendingAnalysis(establishment);
     setTrendingAnalysis(analysis);
   }, [establishment]);
 
   // Fonction pour rendre les badges de tendance
   const renderTrendingBadges = () => {
+    // Ne pas afficher les badges avant l'hydratation pour éviter les erreurs
+    if (!isHydrated) return null;
+    
     const badges = trendingAnalysis.badges;
     if (badges.length === 0) return null;
 
-    // Afficher le premier badge (le plus important) en grand
-    const primaryBadge = badges[0];
-    const otherBadges = badges.slice(1);
+    // Prioriser les badges : Top recherches > Tendance > Populaire > Nouveau (impact business)
+    const priorityOrder = ['📈 Top 5 recherches', '🔥 Lieu Tendance', '⭐ Populaire', '🆕 Nouveau'];
+    const sortedBadges = badges.sort((a, b) => {
+      const aIndex = priorityOrder.findIndex(p => a.includes(p));
+      const bIndex = priorityOrder.findIndex(p => b.includes(p));
+      return aIndex - bIndex;
+    });
+
+    // Afficher seulement le premier badge (le plus important)
+    const primaryBadge = sortedBadges[0];
 
     return (
-      <div className="absolute bottom-2 right-2 flex flex-col gap-1">
-        {/* Badge principal */}
+      <div className="absolute bottom-2 right-2">
         <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${styles.tendanceBadge}`}>
           {primaryBadge.includes('🔥') && <Flame className="w-3 h-3 text-white" />}
           {primaryBadge.includes('⭐') && <Star className="w-3 h-3 text-white" />}
-          {primaryBadge.includes('🆕') && <span className="text-white text-xs">🆕</span>}
+          {primaryBadge.includes('🆕') && <Sparkles className="w-3 h-3 text-white" />}
           {primaryBadge.includes('📈') && <TrendingUp className="w-3 h-3 text-white" />}
           <span className="text-white text-xs font-medium">
             {primaryBadge.replace(/[🔥⭐🆕📈]/g, '').trim()}
           </span>
         </div>
-
-        {/* Badges secondaires (plus petits) */}
-        {otherBadges.length > 0 && (
-          <div className="flex flex-col gap-1">
-            {otherBadges.map((badge, index) => (
-              <div key={index} className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full ${styles.secondaryBadge}`}>
-                {badge.includes('🔥') && <Flame className="w-2 h-2 text-white" />}
-                {badge.includes('⭐') && <Star className="w-2 h-2 text-white" />}
-                {badge.includes('🆕') && <span className="text-white text-xs">🆕</span>}
-                {badge.includes('📈') && <TrendingUp className="w-2 h-2 text-white" />}
-                <span className="text-white text-xs font-medium">
-                  {badge.replace(/[🔥⭐🆕📈]/g, '').trim()}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };

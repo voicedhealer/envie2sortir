@@ -15,6 +15,10 @@ type Establishment = {
   longitude?: number;
   activities?: any;
   imageUrl?: string;
+  images?: Array<{
+    url: string;
+    isCardImage: boolean;
+  }>;
   status: string;
   avgRating?: number | null;
   googleRating?: number | null;
@@ -523,9 +527,18 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
           .addTo(map)
           .bindPopup(`
             <div style="min-width: ${popupSize.minWidth}; max-width: ${popupSize.maxWidth}; position: relative;">
-              ${establishment.imageUrl ? `
+              ${(() => {
+                // Même logique de priorité que EstablishmentCard
+                const cardImage = establishment.images?.find(img => img.isCardImage)?.url;
+                const primaryImage = cardImage || establishment.imageUrl || establishment.images?.[0]?.url;
+                return primaryImage;
+              })() ? `
                 <div style="position: relative; width: 100%; height: ${popupSize.imageHeight}; background-color: #f3f4f6;">
-                  <img src="${establishment.imageUrl}" alt="${establishment.name}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                  <img src="${(() => {
+                    // Même logique de priorité que EstablishmentCard
+                    const cardImage = establishment.images?.find(img => img.isCardImage)?.url;
+                    return cardImage || establishment.imageUrl || establishment.images?.[0]?.url;
+                  })()}" alt="${establishment.name}" style="width: 100%; height: 100%; object-fit: cover; display: block;">
                   <div 
                     class="popup-heart-icon ${window.mapFavoriteHandlers?.favorites.has(establishment.id) ? 'is-favorite' : ''}" 
                     data-establishment-id="${establishment.id}"

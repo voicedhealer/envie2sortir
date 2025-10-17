@@ -17,6 +17,12 @@ export default async function MapPage() {
       longitude: true,
       activities: true,
       imageUrl: true,
+      images: {
+        select: {
+          url: true,
+          isCardImage: true
+        }
+      },
       status: true,
       avgRating: true,
       googleRating: true,

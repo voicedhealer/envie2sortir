@@ -39,10 +39,19 @@ export default function EstablishmentHero({ establishment }: EstablishmentHeroPr
   
   const displayCategory = getDisplayCategory();
   
+  // Prioriser l'image de card pour la première image du carrousel
+  const cardImage = establishment.images?.find(img => img.isCardImage)?.url;
+  
   // Combiner imageUrl et images pour créer un carrousel
   const allImages = [
-    ...(establishment.imageUrl ? [establishment.imageUrl] : []),
+    // Priorité 1: Image de card (si elle existe)
+    ...(cardImage ? [cardImage] : []),
+    // Priorité 2: Image principale de l'établissement
+    ...(establishment.imageUrl && establishment.imageUrl !== cardImage ? [establishment.imageUrl] : []),
+    // Priorité 3: Autres images (sauf l'image de card déjà incluse)
     ...(establishment.images || [])
+      .filter(img => img.url !== cardImage && img.url !== establishment.imageUrl)
+      .map(img => img.url)
   ].filter(Boolean).filter(img => img && img.trim() !== '');
   
   // Déduplication des images (éviter les doublons)

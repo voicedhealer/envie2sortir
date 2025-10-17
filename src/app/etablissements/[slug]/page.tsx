@@ -83,6 +83,14 @@ export default async function EstablishmentPage({
       updatedAt: true,
       imageUrl: true,
       images: {
+        select: {
+          id: true,
+          url: true,
+          altText: true,
+          isCardImage: true,
+          ordre: true,
+          createdAt: true
+        },
         orderBy: { ordre: "asc" }
       },
       events: { 
