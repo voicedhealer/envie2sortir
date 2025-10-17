@@ -310,20 +310,20 @@ export default function EventsCarousel() {
                       <Link
                         key={event.id}
                         href={`/etablissements/${event.establishment.slug}`}
-                        className="flex-none w-80 group/card block flex flex-col"
+                        className="flex-none w-80 group/card block"
                       >
-                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-full">
+                        <div className="relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-[1.02] hover:-translate-y-1 flex flex-col h-[28rem]">
                           
-                          {/* Image de l'événement */}
-                          <div className="relative h-44 bg-gradient-to-br from-purple-400 to-pink-400 overflow-hidden rounded-t-2xl">
+                          {/* Image de l'événement - pleine hauteur */}
+                          <div className="relative h-full bg-gradient-to-br from-purple-400 to-pink-400 overflow-hidden rounded-2xl">
                             {event.imageUrl ? (
                               <img 
                                 src={event.imageUrl}
                                 alt={event.title}
-                                className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500 rounded-t-2xl"
+                                className="w-full h-full object-cover object-center group-hover/card:scale-105 transition-transform duration-500 rounded-2xl"
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center rounded-t-2xl">
+                              <div className="w-full h-full flex items-center justify-center rounded-2xl">
                                 <span className="text-6xl">🎪</span>
                               </div>
                             )}
@@ -347,95 +347,131 @@ export default function EventsCarousel() {
                               </div>
                             )}
 
-                            {/* Date calendrier */}
-                            <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm rounded-xl p-2 text-center min-w-[3rem]">
-                              <div className="text-white text-lg font-bold leading-none">
+                            {/* Date badge - style translucide */}
+                            <div className="absolute top-4 right-4 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 text-center shadow-lg z-10">
+                              <div className="text-2xl font-bold text-black">
                                 {new Date(event.startDate).getDate()}
                               </div>
-                              <div className="text-white/80 text-xs uppercase mt-0.5">
+                              <div className="text-sm text-black">
                                 {new Date(event.startDate).toLocaleDateString('fr-FR', { month: 'short' })}
                               </div>
                             </div>
 
+                            {/* Titre minimal toujours visible - avec gradient */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 z-10">
+                              <h3 className="text-white text-lg font-bold line-clamp-2">
+                                {event.title}
+                              </h3>
+                            </div>
+
                             {/* Badge récurrent */}
                             {event.isRecurring && (
-                              <div className="absolute bottom-3 left-3 px-2 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs rounded-full font-medium">
+                              <div className="absolute bottom-3 left-3 px-2 py-1 bg-blue-500/90 backdrop-blur-sm text-white text-xs rounded-full font-medium z-10">
                                 Récurrent
                               </div>
                             )}
+
                           </div>
 
-                          {/* Contenu */}
-                          <div className="p-4 flex-1 flex flex-col">
-                            {/* Titre de l'événement */}
-                            <h3 className="font-bold text-lg mb-2 line-clamp-2 group-hover/card:text-orange-600 transition-colors">
-                              {event.title}
-                            </h3>
-
-                            {/* Description */}
-                            {event.description && (
-                              <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                                {event.description}
-                              </p>
-                            )}
-
-                            {/* Établissement */}
-                            <div className="flex items-start gap-2 text-sm text-gray-500 mb-3">
-                              <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                              <div className="flex-1">
-                                <div className="font-medium text-gray-700 line-clamp-1">{event.establishment.name}</div>
-                                <div className="text-xs line-clamp-1">{event.establishment.city}</div>
-                              </div>
-                            </div>
-
-                            {/* Spacer pour pousser le contenu vers le bas */}
-                            <div className="flex-1"></div>
-
-                            {/* Heure, prix et capacité */}
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-auto">
-                              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
-                                <Clock className="w-4 h-4" />
-                                {new Date(event.startDate).toLocaleTimeString('fr-FR', { 
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </div>
+                          {/* Overlay au survol - animation qui monte depuis le bas de la carte */}
+                          <div className="absolute inset-0 bg-black opacity-0 group-hover/card:opacity-100 transition-all duration-500 transform translate-y-full group-hover/card:translate-y-0 rounded-2xl z-20">
+                            <div className="absolute inset-0 p-6 text-white flex flex-col">
                               
-                              {event.price !== null && event.price !== undefined ? (
-                                <div className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold text-sm ${
-                                  event.price === 0 
-                                    ? 'bg-green-100 text-green-700' 
-                                    : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
-                                }`}>
-                                  {event.price === 0 ? (
-                                    'Gratuit'
-                                  ) : (
-                                    <>
-                                      <Euro className="w-3 h-3" />
-                                      {event.price}€
-                                    </>
-                                  )}
+                              {/* Titre de l'événement - en haut à gauche en orange */}
+                              <h3 className="font-bold text-xl mb-3 line-clamp-2 text-orange-400">
+                                {event.title}
+                              </h3>
+
+                              {/* Description */}
+                              {event.description && (
+                                <p className="text-sm text-white mb-4 line-clamp-3">
+                                  {event.description}
+                                </p>
+                              )}
+
+                              {/* Détails avec icônes */}
+                              <div className="space-y-2 mb-4">
+                                {/* Établissement */}
+                                <div className="flex items-center gap-2 text-sm text-white">
+                                  <MapPin className="w-4 h-4 flex-shrink-0 text-orange-400" />
+                                  <span>{event.establishment.name}, {event.establishment.city}</span>
                                 </div>
-                              ) : null}
-                            </div>
 
-                            {/* Modalité et capacité */}
-                            <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                              {event.modality && (
-                                <span className="capitalize">{event.modality}</span>
-                              )}
-                              {event.maxCapacity && (
-                                <span>{event.maxCapacity} places max</span>
-                              )}
-                            </div>
+                                {/* Heure */}
+                                <div className="flex items-center gap-2 text-sm text-white">
+                                  <Clock className="w-4 h-4 flex-shrink-0 text-orange-400" />
+                                  <span>{new Date(event.startDate).toLocaleTimeString('fr-FR', { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}</span>
+                                </div>
 
-                            {/* Score d'engagement (visible uniquement si > 0) */}
-                            {event.engagementCount > 0 && (
-                              <div className="mt-2 text-xs text-gray-400">
-                                {event.engagementCount} {event.engagementCount === 1 ? 'personne intéressée' : 'personnes intéressées'}
+                                {/* Capacité */}
+                                {event.maxCapacity && (
+                                  <div className="flex items-center gap-2 text-sm text-white">
+                                    <div className="w-4 h-4 flex-shrink-0 flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                                      </svg>
+                                    </div>
+                                    <span>{event.maxCapacity} max</span>
+                                  </div>
+                                )}
                               </div>
-                            )}
+
+                              {/* Informations supplémentaires */}
+                              <div className="text-xs text-gray-300 mb-auto">
+                                {event.modality && (
+                                  <div className="mb-1 capitalize">{event.modality}</div>
+                                )}
+                                {event.engagementCount > 0 && (
+                                  <div className="mb-1">
+                                    {event.engagementCount} {event.engagementCount === 1 ? 'personne intéressée' : 'personnes intéressées'}
+                                  </div>
+                                )}
+                                <div className="text-gray-400">
+                                  Sous réserve de réservation et de disponibilité.
+                                </div>
+                              </div>
+
+                              {/* Prix et bouton en bas */}
+                              <div className="flex items-center justify-between mt-4">
+                                {/* Prix en bas à gauche */}
+                                {event.price !== null && event.price !== undefined ? (
+                                  <div className={`flex items-center gap-1 px-3 py-1 rounded-full font-bold text-sm ${
+                                    event.price === 0 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                                  }`}>
+                                    {event.price === 0 ? (
+                                      'Gratuit'
+                                    ) : (
+                                      <>
+                                        <Euro className="w-3 h-3" />
+                                        {event.price}
+                                      </>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div></div>
+                                )}
+
+                                {/* Bouton "Voir détails" en bas à droite */}
+                                <button 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.location.href = `/etablissements/${event.establishment.slug}`;
+                                  }}
+                                  className="px-4 py-2 text-white hover:text-orange-400 transition-colors font-medium text-sm flex items-center gap-2"
+                                >
+                                  Voir détails
+                                  <span className="text-lg">→</span>
+                                </button>
+                              </div>
+                            </div>
                           </div>
+
                         </div>
                       </Link>
                     );
