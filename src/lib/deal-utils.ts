@@ -15,6 +15,11 @@ interface DailyDeal {
   heureDebut?: string | null;
   heureFin?: string | null;
   isActive: boolean;
+  // Récurrence
+  isRecurring?: boolean;
+  recurrenceType?: string | null;
+  recurrenceDays?: number[] | null;
+  recurrenceEndDate?: Date | string | null;
 }
 
 /**
@@ -24,20 +29,47 @@ export function isDealActive(deal: DailyDeal): boolean {
   if (!deal.isActive) return false;
 
   const now = new Date();
-  const dateDebut = new Date(deal.dateDebut);
-  const dateFin = new Date(deal.dateFin);
+  
+  // Pour les bons plans récurrents
+  if (deal.isRecurring) {
+    // Vérifier si on n'a pas dépassé la date de fin de récurrence
+    if (deal.recurrenceEndDate) {
+      const recurrenceEnd = new Date(deal.recurrenceEndDate);
+      if (now > recurrenceEnd) {
+        return false;
+      }
+    }
+    
+    // Vérifier les jours de la semaine pour la récurrence hebdomadaire
+    if (deal.recurrenceType === 'weekly' && deal.recurrenceDays && deal.recurrenceDays.length > 0) {
+      const currentDay = now.getDay(); // 0 = Dimanche, 1 = Lundi, etc.
+      const adjustedDay = currentDay === 0 ? 7 : currentDay; // Convertir dimanche de 0 à 7
+      
+      if (!deal.recurrenceDays.includes(adjustedDay)) {
+        return false;
+      }
+    }
+    
+    // Pour les récurrences mensuelles, vérifier si c'est le bon jour du mois
+    if (deal.recurrenceType === 'monthly') {
+      // Logique simple : actif tous les jours pour l'instant
+      // TODO: Implémenter une logique plus sophistiquée si nécessaire
+    }
+  } else {
+    // Pour les bons plans non récurrents, vérifier les dates
+    const dateDebut = new Date(deal.dateDebut);
+    const dateFin = new Date(deal.dateFin);
 
-  // Vérifier si on est dans la période de dates
-  if (now < dateDebut || now > dateFin) {
-    return false;
+    if (now < dateDebut || now > dateFin) {
+      return false;
+    }
   }
 
-  // Si pas d'horaires spécifiques, le bon plan est actif toute la journée
+  // Vérifier les horaires (pour tous les types de bons plans)
   if (!deal.heureDebut && !deal.heureFin) {
-    return true;
+    return true; // Actif toute la journée
   }
 
-  // Vérifier si on est dans les horaires
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
   // Si seulement heure de début définie
@@ -58,6 +90,33 @@ export function isDealActive(deal: DailyDeal): boolean {
  * Formater l'affichage des horaires d'un bon plan
  */
 export function formatDealTime(deal: DailyDeal): string {
+  // Pour les bons plans récurrents
+  if (deal.isRecurring) {
+    if (deal.recurrenceType === 'weekly' && deal.recurrenceDays && deal.recurrenceDays.length > 0) {
+      const dayNames = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const selectedDays = deal.recurrenceDays.map(day => dayNames[day]).join(', ');
+      
+      if (deal.heureDebut && deal.heureFin) {
+        return `Tous les ${selectedDays} de ${deal.heureDebut} à ${deal.heureFin}`;
+      }
+      return `Tous les ${selectedDays}`;
+    }
+    
+    if (deal.recurrenceType === 'monthly') {
+      if (deal.heureDebut && deal.heureFin) {
+        return `Tous les mois de ${deal.heureDebut} à ${deal.heureFin}`;
+      }
+      return 'Tous les mois';
+    }
+    
+    // Récurrence quotidienne par défaut
+    if (deal.heureDebut && deal.heureFin) {
+      return `Tous les jours de ${deal.heureDebut} à ${deal.heureFin}`;
+    }
+    return 'Tous les jours';
+  }
+  
+  // Pour les bons plans non récurrents
   const dateDebut = new Date(deal.dateDebut);
   const dateFin = new Date(deal.dateFin);
   

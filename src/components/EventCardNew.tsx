@@ -344,7 +344,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                   eventStatus.status === 'in-progress' 
                     ? 'bg-emerald-600 text-white border border-white' 
                     : eventStatus.status === 'upcoming'
-                    ? 'bg-blue-500/30 text-blue-100'
+                    ? 'bg-yellow-400 text-black'
                     : 'bg-gray-500/30 text-gray-100'
                 }`}>
                   <span className="text-xs font-medium">{eventStatus.label}</span>

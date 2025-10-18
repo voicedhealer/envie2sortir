@@ -98,7 +98,33 @@ export function isEventInProgress(startDate: string, endDate?: string | null): b
   const eventStart = convertUTCToLocal(startDate);
   const eventEnd = endDate ? convertUTCToLocal(endDate) : eventStart;
   
-  return eventStart <= now && eventEnd >= now;
+  // Un événement est considéré comme "en cours" seulement s'il :
+  // 1. A commencé (startDate <= now)
+  // 2. N'est pas encore terminé (endDate >= now)
+  // 3. A commencé récemment (dans les dernières 24h) OU a une durée courte (moins de 6h)
+  const hasStarted = eventStart <= now;
+  const hasNotEnded = eventEnd >= now;
+  
+  if (!hasStarted || !hasNotEnded) {
+    return false;
+  }
+  
+  // Calculer la durée de l'événement
+  const eventDuration = eventEnd.getTime() - eventStart.getTime();
+  const eventDurationHours = eventDuration / (1000 * 60 * 60);
+  
+  // Calculer le temps écoulé depuis le début
+  const timeSinceStart = now.getTime() - eventStart.getTime();
+  const hoursSinceStart = timeSinceStart / (1000 * 60 * 60);
+  
+  // Un événement est "en cours" si :
+  // - Il a une durée courte (moins de 6h) ET a commencé récemment (moins de 24h)
+  // - OU il a commencé très récemment (moins de 2h) peu importe sa durée
+  const isShortEvent = eventDurationHours <= 6;
+  const startedRecently = hoursSinceStart <= 24;
+  const startedVeryRecently = hoursSinceStart <= 2;
+  
+  return (isShortEvent && startedRecently) || startedVeryRecently;
 }
 
 /**

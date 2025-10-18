@@ -24,12 +24,12 @@ model User {
   provider           String?
   providerId         String?
   avatar             String?
-  isVerified         Boolean           @default(false)
+  isVerified         Boolean              @default(false)
   favoriteCity       String?
-  role               UserRole          @default(user)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  karmaPoints        Int               @default(0)
+  role               UserRole             @default(user)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  karmaPoints        Int                  @default(0)
   gamificationBadges Json?
   adminActions       AdminAction[]
   eventEngagements   EventEngagement[]
@@ -37,6 +37,7 @@ model User {
   favorites          UserFavorite[]
   likes              UserLike[]
   adminConversations Conversation[]
+  locationPreference LocationPreference?
 
   @@map("users")
 }
@@ -569,4 +570,33 @@ enum ConversationStatus {
 enum SenderType {
   PROFESSIONAL
   ADMIN
+}
+
+/// *
+/// * LOCATION_PREFERENCE - Préférences de localisation des utilisateurs
+/// * Stocke la ville préférée et le rayon de recherche
+/// * Permet de personnaliser l'expérience selon la localisation
+model LocationPreference {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Ville par défaut
+  cityId             String   // ID de la ville (ex: 'dijon', 'paris')
+  cityName           String   // Nom de la ville
+  cityLatitude       Float    // Latitude de la ville
+  cityLongitude      Float    // Longitude de la ville
+  cityRegion         String?  // Région de la ville
+  
+  // Rayon de recherche (en km)
+  searchRadius       Int      @default(20)
+  
+  // Mode de localisation
+  mode               String   @default("manual") // 'auto', 'manual', 'ask'
+  useCurrentLocation Boolean  @default(false)
+  
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("location_preferences")
 }

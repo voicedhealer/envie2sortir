@@ -194,15 +194,21 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       
       const method = editingDeal ? 'PUT' : 'POST';
 
+      // Préparer les données selon le type de bon plan
+      const dealData = {
+        ...formData,
+        establishmentId,
+        // Pour les bons plans récurrents, utiliser des dates par défaut
+        dateDebut: formData.isRecurring ? new Date().toISOString().split('T')[0] : formData.dateDebut,
+        dateFin: formData.isRecurring ? (formData.recurrenceEndDate || '2099-12-31') : formData.dateFin
+      };
+
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...formData,
-          establishmentId
-        })
+        body: JSON.stringify(dealData)
       });
 
       const data = await response.json();
@@ -479,34 +485,52 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                 />
               </div>
 
-              {/* Dates */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de début *
-                </label>
-                <input
-                  type="date"
-                  name="dateDebut"
-                  value={formData.dateDebut}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+              {/* Dates - conditionnelles selon la récurrence */}
+              {!formData.isRecurring && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Date de début *
+                    </label>
+                    <input
+                      type="date"
+                      name="dateDebut"
+                      value={formData.dateDebut}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date de fin *
-                </label>
-                <input
-                  type="date"
-                  name="dateFin"
-                  value={formData.dateFin}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Date de fin *
+                    </label>
+                    <input
+                      type="date"
+                      name="dateFin"
+                      value={formData.dateFin}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Pour les bons plans récurrents, on utilise des dates par défaut */}
+              {formData.isRecurring && (
+                <div className="md:col-span-2">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-800">
+                      <strong>Bon plan récurrent :</strong> Ce bon plan sera actif tous les jours selon les horaires définis ci-dessous.
+                      {formData.recurrenceEndDate && (
+                        <span> Il se terminera le {new Date(formData.recurrenceEndDate).toLocaleDateString('fr-FR')}.</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Horaires */}
               <div>

@@ -24,19 +24,29 @@ export async function GET(
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     
-    // Récupérer les bons plans actifs pour aujourd'hui
+    // Récupérer les bons plans actifs
     console.log('API deals/active - Recherche des deals pour:', { establishmentId, today, tomorrow });
     
     const activeDeals = await prisma.dailyDeal.findMany({
       where: {
         establishmentId,
         isActive: true,
-        dateDebut: {
-          lte: tomorrow
-        },
-        dateFin: {
-          gte: today
-        }
+        OR: [
+          // Bons plans non récurrents avec dates spécifiques
+          {
+            isRecurring: false,
+            dateDebut: {
+              lte: tomorrow
+            },
+            dateFin: {
+              gte: today
+            }
+          },
+          // Bons plans récurrents (toujours actifs selon leur logique)
+          {
+            isRecurring: true
+          }
+        ]
       },
       select: {
         id: true,
@@ -52,7 +62,12 @@ export async function GET(
         heureDebut: true,
         heureFin: true,
         isActive: true,
-        promoUrl: true
+        promoUrl: true,
+        // Champs de récurrence
+        isRecurring: true,
+        recurrenceType: true,
+        recurrenceDays: true,
+        recurrenceEndDate: true
       },
       orderBy: {
         createdAt: 'desc'
@@ -63,7 +78,12 @@ export async function GET(
 
     // Filtrer les bons plans qui sont actifs maintenant en utilisant la fonction centralisée
     const currentActiveDeals = activeDeals.filter(deal => {
-      return isDealActive(deal);
+      // Convertir les types JSON en types appropriés
+      const dealWithCorrectTypes = {
+        ...deal,
+        recurrenceDays: Array.isArray(deal.recurrenceDays) ? deal.recurrenceDays as number[] : null
+      };
+      return isDealActive(dealWithCorrectTypes);
     });
 
     console.log('API deals/active - Deals actifs maintenant:', currentActiveDeals.length, currentActiveDeals);

@@ -19,6 +19,11 @@ interface DailyDeal {
   heureDebut?: string | null;
   heureFin?: string | null;
   isActive: boolean;
+  // Récurrence
+  isRecurring?: boolean;
+  recurrenceType?: string | null;
+  recurrenceDays?: number[] | null;
+  recurrenceEndDate?: Date | string | null;
   // Champs pour l'effet flip
   promoUrl?: string | null;
 }
@@ -39,6 +44,46 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
 
   // Fonction pour formater uniquement la date (sans l'heure)
   const formatDateForFront = (deal: DailyDeal) => {
+    // Pour les bons plans récurrents
+    if (deal.isRecurring) {
+      if (deal.recurrenceType === 'weekly' && deal.recurrenceDays && deal.recurrenceDays.length > 0) {
+        const dayNames = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const selectedDays = deal.recurrenceDays.map(day => dayNames[day]);
+        
+        // Grouper les jours de semaine et weekend
+        const weekdays = [1, 2, 3, 4, 5]; // Lundi à Vendredi
+        const weekends = [6, 7]; // Samedi et Dimanche
+        
+        const hasWeekdays = deal.recurrenceDays.some(day => weekdays.includes(day));
+        const hasWeekends = deal.recurrenceDays.some(day => weekends.includes(day));
+        
+        // Vérifier si c'est exactement tous les jours de semaine
+        const isAllWeekdays = weekdays.every(day => deal.recurrenceDays.includes(day));
+        // Vérifier si c'est exactement tous les jours de weekend
+        const isAllWeekends = weekends.every(day => deal.recurrenceDays.includes(day));
+        // Vérifier si c'est tous les jours
+        const isAllDays = isAllWeekdays && isAllWeekends;
+        
+        if (isAllDays) {
+          return 'Tous les jours';
+        } else if (isAllWeekdays && !hasWeekends) {
+          return 'En semaine';
+        } else if (isAllWeekends && !hasWeekdays) {
+          return 'Le weekend';
+        } else {
+          return `Tous les ${selectedDays.join(', ')}`;
+        }
+      }
+      
+      if (deal.recurrenceType === 'monthly') {
+        return 'Tous les mois';
+      }
+      
+      // Récurrence quotidienne par défaut
+      return 'Tous les jours';
+    }
+    
+    // Pour les bons plans non récurrents
     const startDate = new Date(deal.dateDebut);
     const day = startDate.getDate().toString().padStart(2, '0');
     const month = startDate.toLocaleDateString('fr-FR', { month: 'long' });

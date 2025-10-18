@@ -37,6 +37,8 @@ export default function EventsCarousel() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  const [blurredButton, setBlurredButton] = useState<string | null>(null);
+  const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -130,6 +132,32 @@ export default function EventsCarousel() {
         behavior: 'smooth'
       });
     }
+  };
+
+  const handleMouseEnter = () => {
+    // Annuler le timeout précédent s'il existe
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+    }
+    
+    // Réinitialiser l'effet blur
+    setBlurredButton(null);
+    
+    // Programmer l'effet blur après 3 secondes
+    const timeout = setTimeout(() => {
+      setBlurredButton('both');
+    }, 3000);
+    
+    setHoverTimeout(timeout);
+  };
+
+  const handleMouseLeave = () => {
+    // Annuler le timeout et réinitialiser
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout);
+      setHoverTimeout(null);
+    }
+    setBlurredButton(null);
   };
 
   const formatEventDate = (dateString: string) => {
@@ -281,7 +309,11 @@ export default function EventsCarousel() {
         ) : (
           <>
             {/* Carrousel avec boutons de navigation */}
-            <div className="relative group">
+            <div 
+              className="relative group"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+            >
               {/* Bouton gauche */}
               <button
                 onClick={(e) => {
@@ -289,7 +321,11 @@ export default function EventsCarousel() {
                   e.stopPropagation();
                   scrollContainer('left');
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white pointer-events-auto"
+                className={`absolute left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto ${
+                  blurredButton === 'both' 
+                    ? 'bg-transparent' 
+                    : 'bg-white/90 backdrop-blur-sm hover:bg-white'
+                }`}
                 aria-label="Précédent"
               >
                 <ChevronLeft className="w-6 h-6 text-gray-800" />
@@ -404,6 +440,14 @@ export default function EventsCarousel() {
                                     hour: '2-digit', 
                                     minute: '2-digit' 
                                   })}</span>
+                                  {event.endDate && (
+                                    <span className="text-gray-300">
+                                      - {new Date(event.endDate).toLocaleTimeString('fr-FR', { 
+                                        hour: '2-digit', 
+                                        minute: '2-digit' 
+                                      })}
+                                    </span>
+                                  )}
                                 </div>
 
                                 {/* Capacité */}
@@ -486,7 +530,11 @@ export default function EventsCarousel() {
                   e.stopPropagation();
                   scrollContainer('right');
                 }}
-                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-white pointer-events-auto"
+                className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 z-20 w-12 h-12 rounded-full shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-auto ${
+                  blurredButton === 'both' 
+                    ? 'bg-transparent' 
+                    : 'bg-white/90 backdrop-blur-sm hover:bg-white'
+                }`}
                 aria-label="Suivant"
               >
                 <ChevronRight className="w-6 h-6 text-gray-800" />
