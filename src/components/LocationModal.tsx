@@ -27,7 +27,7 @@ export default function LocationModal() {
       // Petit délai pour ne pas surcharger au chargement
       setTimeout(() => {
         tryDetectLocation();
-      }, 1000);
+      }, 1500); // Délai plus long pour éviter les conflits
     }
   }, []);
 
@@ -96,10 +96,10 @@ export default function LocationModal() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[60vh] my-8 overflow-hidden transform animate-in fade-in-0 zoom-in-95 duration-300">
         {/* Header */}
-        <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-6 text-white relative">
+        <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 text-white relative">
           <button
             onClick={handleClose}
             className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
@@ -118,7 +118,7 @@ export default function LocationModal() {
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4">
           {isDetecting ? (
             <div className="text-center py-8">
               <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import UserMenu from "./components/UserMenu";
+import LocationIndicator from "@/components/LocationIndicator";
 
 // Composant Link personnalisé pour éviter les problèmes d'hydratation
 const LinkComponent = ({ href, className, children, ...props }: any) => {
@@ -124,6 +125,7 @@ export default function Navigation() {
                 </LinkComponent>
               );
             })}
+            <LocationIndicator />
             <UserMenu />
           </div>
 

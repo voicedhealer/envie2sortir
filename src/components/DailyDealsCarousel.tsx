@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Tag, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import DailyDealCard from './DailyDealCard';
+import { useLocation } from '@/hooks/useLocation';
+import { isWithinRadius } from '@/lib/geolocation-utils';
 
 interface DailyDeal {
   id: string;
@@ -28,6 +30,8 @@ interface DailyDeal {
     city?: string;
     activities?: string[];
     imageUrl?: string;
+    latitude?: number;
+    longitude?: number;
   };
 }
 
@@ -35,6 +39,9 @@ export default function DailyDealsCarousel() {
   const [deals, setDeals] = useState<DailyDeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // 📍 Hook de localisation
+  const { currentCity, searchRadius, loading: locationLoading } = useLocation();
 
   useEffect(() => {
     setIsMounted(true);
@@ -62,6 +69,28 @@ export default function DailyDealsCarousel() {
     }
   };
 
+  // 📍 Filtrer les deals par localisation
+  const filteredDeals = useMemo(() => {
+    if (!currentCity || !searchRadius) return deals;
+    
+    return deals.filter(deal => {
+      const establishment = deal.establishment;
+      
+      // Si l'établissement a des coordonnées GPS
+      if (establishment.latitude && establishment.longitude) {
+        return isWithinRadius(
+          establishment.latitude,
+          establishment.longitude,
+          currentCity,
+          searchRadius
+        );
+      }
+      
+      // Sinon, comparer par nom de ville
+      return establishment.city?.toLowerCase() === currentCity.name.toLowerCase();
+    });
+  }, [deals, currentCity, searchRadius]);
+
   const scrollContainer = (direction: 'left' | 'right') => {
     const container = document.getElementById('deals-scroll-container');
     if (container) {
@@ -88,14 +117,25 @@ export default function DailyDealsCarousel() {
               <h2 className="text-3xl font-bold text-gray-900">
                 Bons plans du jour
               </h2>
-              <p className="text-gray-600 mt-1">
-                Profitez des offres exclusives près de chez vous
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-gray-600">
+                  Profitez des offres exclusives près de chez vous
+                </p>
+                {/* 📍 Indicateur de localisation */}
+                {currentCity && (
+                  <div className="flex items-center gap-1 text-sm">
+                    <MapPin className="w-3.5 h-3.5 text-orange-500" />
+                    <span className="font-medium text-orange-600">{currentCity.name}</span>
+                    <span className="text-gray-400">•</span>
+                    <span className="text-gray-500">{filteredDeals.length} offre{filteredDeals.length > 1 ? 's' : ''}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Bouton "Voir tous" */}
-          {deals.length >= 12 && (
+          {filteredDeals.length >= 12 && (
             <Link
               href="/bons-plans"
               className="hidden md:flex items-center gap-2 px-6 py-3 bg-white border-2 border-orange-500 text-orange-500 font-semibold rounded-xl hover:bg-orange-50 transition-all duration-300 shadow-sm hover:shadow-md"
@@ -114,7 +154,7 @@ export default function DailyDealsCarousel() {
         )}
 
         {/* État vide - Aucun bon plan */}
-        {!loading && deals.length === 0 && (
+        {!loading && filteredDeals.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
             <div className="max-w-2xl mx-auto">
               {/* Icône */}
@@ -124,11 +164,14 @@ export default function DailyDealsCarousel() {
 
               {/* Message principal */}
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Aucun bon plan disponible pour le moment
+                Aucun bon plan près de {currentCity?.name || 'vous'}
               </h3>
               
-              <p className="text-gray-600 mb-8 text-lg">
-                Revenez bientôt pour découvrir nos offres exclusives !
+              <p className="text-gray-600 mb-4 text-lg">
+                Aucune offre disponible dans un rayon de {searchRadius}km.
+              </p>
+              <p className="text-sm text-gray-500 mb-8">
+                💡 Essayez d&apos;augmenter le rayon de recherche ou de changer de ville
               </p>
 
               {/* CTA Inscription */}
@@ -161,10 +204,10 @@ export default function DailyDealsCarousel() {
         )}
 
         {/* Carousel */}
-        {!loading && deals.length > 0 && (
+        {!loading && filteredDeals.length > 0 && (
           <div className="relative group">
             {/* Boutons de navigation */}
-            {deals.length > 3 && (
+            {filteredDeals.length > 3 && (
               <>
                 <button
                   onClick={() => scrollContainer('left')}
@@ -189,7 +232,7 @@ export default function DailyDealsCarousel() {
               className="flex gap-6 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {deals.map((deal) => (
+              {filteredDeals.map((deal) => (
                 <div
                   key={deal.id}
                   className="flex-shrink-0 w-[350px]"

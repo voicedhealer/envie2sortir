@@ -34,7 +34,9 @@ export async function GET(request: NextRequest) {
             address: true,
             city: true,
             imageUrl: true,
-            activities: true
+            activities: true,
+            latitude: true,
+            longitude: true
           }
         }
       },

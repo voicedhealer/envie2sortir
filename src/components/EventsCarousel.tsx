@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { isEventInProgress } from '@/lib/date-utils';
+import { useLocation } from '@/hooks/useLocation';
+import { isWithinRadius } from '@/lib/geolocation-utils';
 
 interface Event {
   id: string;
@@ -23,6 +25,8 @@ interface Event {
     slug: string;
     city?: string;
     address: string;
+    latitude?: number;
+    longitude?: number;
   };
   engagementScore: number;
   engagementCount: number;
@@ -39,6 +43,9 @@ export default function EventsCarousel() {
   const [isMounted, setIsMounted] = useState(false);
   const [blurredButton, setBlurredButton] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // 📍 Hook de localisation
+  const { currentCity, searchRadius, loading: locationLoading } = useLocation();
 
   useEffect(() => {
     setIsMounted(true);
@@ -53,7 +60,7 @@ export default function EventsCarousel() {
 
   useEffect(() => {
     applyFilter();
-  }, [filter, allEvents]);
+  }, [filter, allEvents, currentCity, searchRadius]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -72,29 +79,50 @@ export default function EventsCarousel() {
   };
 
   const applyFilter = () => {
+    let events = allEvents;
+    
+    // 📍 FILTRE 1 : Par localisation
+    if (currentCity && searchRadius) {
+      events = events.filter(event => {
+        const establishment = event.establishment;
+        
+        // Si l'établissement a des coordonnées GPS, utiliser le calcul de distance
+        if (establishment.latitude && establishment.longitude) {
+          return isWithinRadius(
+            establishment.latitude,
+            establishment.longitude,
+            currentCity,
+            searchRadius
+          );
+        }
+        
+        // Sinon, comparer par nom de ville
+        return establishment.city?.toLowerCase() === currentCity.name.toLowerCase();
+      });
+    }
+    
+    // 🗓️ FILTRE 2 : Par période (temporel)
     const now = new Date();
     
     if (filter === 'today') {
       const todayStart = new Date(now.setHours(0, 0, 0, 0));
       const todayEnd = new Date(now.setHours(23, 59, 59, 999));
       
-      const todayEvents = allEvents.filter(event => {
+      events = events.filter(event => {
         const eventDate = new Date(event.startDate);
         return eventDate >= todayStart && eventDate <= todayEnd;
       });
-      setFilteredEvents(todayEvents);
     } else if (filter === 'week') {
       const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       
-      const weekEvents = allEvents.filter(event => {
+      events = events.filter(event => {
         const eventDate = new Date(event.startDate);
         return eventDate <= weekEnd;
       });
-      setFilteredEvents(weekEvents);
     } else if (filter === 'weekend') {
-      const weekendEvents = allEvents.filter(event => {
+      events = events.filter(event => {
         const eventDate = new Date(event.startDate);
-        const dayOfWeek = eventDate.getDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+        const dayOfWeek = eventDate.getDay();
         const hour = eventDate.getHours();
         const minutes = eventDate.getMinutes();
         
@@ -117,10 +145,9 @@ export default function EventsCarousel() {
         
         return false;
       });
-      setFilteredEvents(weekendEvents);
-    } else {
-      setFilteredEvents(allEvents);
     }
+    
+    setFilteredEvents(events);
   };
 
   const scrollContainer = (direction: 'left' | 'right') => {
@@ -186,7 +213,7 @@ export default function EventsCarousel() {
     isEventInProgress(e.startDate, e.endDate)
   ).length : 0;
 
-  if (loading) {
+  if (loading || locationLoading) {
     return (
       <section className="py-16 bg-gradient-to-b from-gray-50 to-white" style={{ minHeight: '500px' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -207,18 +234,33 @@ export default function EventsCarousel() {
         
         {/* En-tête avec filtres */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-          <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-              🎉 Événements à venir
-            </h2>
-            {/* Compteur d'événements en cours */}
-            {isMounted && liveEventsCount > 0 && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white text-sm font-bold rounded-full animate-pulse">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
+                🎉 Événements à venir
+              </h2>
+              {/* Compteur d'événements en cours */}
+              {isMounted && liveEventsCount > 0 && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white text-sm font-bold rounded-full animate-pulse">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                  </span>
+                  {liveEventsCount} EN DIRECT
+                </div>
+              )}
+            </div>
+            {/* 📍 Indicateur de localisation */}
+            {currentCity && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span>
+                  <span className="font-medium text-orange-600">{currentCity.name}</span>
+                  {' • '}
+                  <span className="text-gray-500">Rayon {searchRadius}km</span>
+                  {' • '}
+                  <span className="font-medium text-gray-900">{filteredEvents.length} résultat{filteredEvents.length > 1 ? 's' : ''}</span>
                 </span>
-                {liveEventsCount} EN DIRECT
               </div>
             )}
           </div>
@@ -276,14 +318,19 @@ export default function EventsCarousel() {
             </h3>
             <p className="text-gray-600 text-lg mb-8 max-w-2xl mx-auto">
               {filter === 'today' 
-                ? 'Aucun événement aujourd\'hui, mais de belles surprises vous attendent !'
+                ? `Aucun événement aujourd'hui près de ${currentCity?.name || 'vous'}, mais de belles surprises vous attendent !`
                 : filter === 'week' 
-                ? 'Cette semaine est calme, mais la semaine prochaine sera animée !'
+                ? `Cette semaine est calme près de ${currentCity?.name || 'vous'}, mais la semaine prochaine sera animée !`
                 : filter === 'weekend'
-                ? 'Aucun événement ce week-end, mais les professionnels préparent de belles surprises !'
-                : 'Les professionnels préparent de superbes événements pour vous. Revenez bientôt !'
+                ? `Aucun événement ce week-end près de ${currentCity?.name || 'vous'}, mais les professionnels préparent de belles surprises !`
+                : `Aucun événement trouvé près de ${currentCity?.name || 'vous'}. Les professionnels préparent de superbes événements pour vous !`
               }
             </p>
+            {currentCity && (
+              <p className="text-sm text-gray-500 mb-6">
+                💡 Essayez d&apos;augmenter le rayon de recherche ou de changer de ville via le badge dans le header
+              </p>
+            )}
             
             {/* Boutons d'action */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">

@@ -3,6 +3,7 @@ import DynamicEstablishmentsSection from "@/components/DynamicEstablishmentsSect
 import EventsCarousel from "@/components/EventsCarousel";
 import DailyDealsCarousel from "@/components/DailyDealsCarousel";
 import PageLoadingOverlay from "@/components/PageLoadingOverlay";
+import LocationModal from "@/components/LocationModal";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
@@ -10,6 +11,8 @@ export default function Home() {
     <main>
       {/* 🛡️ Bloquer les interactions pendant l'initialisation */}
       <PageLoadingOverlay />
+      {/* 📍 Modal de localisation au premier chargement */}
+      <LocationModal />
       {/* HERO */}
       <section className="relative">
         <div className="hero-gradient/10">

@@ -46,7 +46,9 @@ export async function GET(request: NextRequest) {
             name: true,
             slug: true,
             city: true,
-            address: true
+            address: true,
+            latitude: true,
+            longitude: true
           }
         },
         engagements: {

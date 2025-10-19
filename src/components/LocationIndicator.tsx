@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { MapPin, ChevronDown } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
-import LocationSelector from './LocationSelector';
+import LocationDropdown from './LocationDropdown';
 
 /**
  * Badge indicateur de localisation dans le header
@@ -12,6 +12,7 @@ import LocationSelector from './LocationSelector';
 export default function LocationIndicator() {
   const [showSelector, setShowSelector] = useState(false);
   const { currentCity, searchRadius, loading } = useLocation();
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   if (loading || !currentCity) {
     return (
@@ -22,10 +23,15 @@ export default function LocationIndicator() {
     );
   }
 
+  const handleToggle = () => {
+    setShowSelector(!showSelector);
+  };
+
   return (
-    <>
+    <div className="relative">
       <button
-        onClick={() => setShowSelector(true)}
+        ref={buttonRef}
+        onClick={handleToggle}
         className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-50 to-pink-50 hover:from-orange-100 hover:to-pink-100 border border-orange-200 rounded-lg transition-all duration-200 group"
         title="Changer de localisation"
       >
@@ -38,17 +44,18 @@ export default function LocationIndicator() {
             Rayon {searchRadius}km
           </span>
         </div>
-        <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-orange-600 transition-colors" />
+        <ChevronDown className={`w-4 h-4 text-gray-400 group-hover:text-orange-600 transition-colors ${showSelector ? 'rotate-180' : ''}`} />
       </button>
 
-      {/* Modal de sélection */}
+      {/* Dropdown de sélection */}
       {showSelector && (
-        <LocationSelector
+        <LocationDropdown
           isOpen={showSelector}
           onClose={() => setShowSelector(false)}
+          buttonRef={buttonRef}
         />
       )}
-    </>
+    </div>
   );
 }
 

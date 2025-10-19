@@ -5,6 +5,7 @@ import Navigation from "./navigation";
 import AuthProvider from "./components/AuthProvider";
 import { CSRFProvider } from "@/components/CSRFProvider";
 import FakeToaster from "@/components/FakeToaster";
+import { LocationProvider } from "@/contexts/LocationContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -26,9 +27,11 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning={true} style={{ overflowAnchor: 'none' }}>
         <AuthProvider>
           <CSRFProvider>
-            <Navigation />
-            {children}
-            <FakeToaster />
+            <LocationProvider isAuthenticated={false}>
+              <Navigation />
+              {children}
+              <FakeToaster />
+            </LocationProvider>
           </CSRFProvider>
         </AuthProvider>
       </body>

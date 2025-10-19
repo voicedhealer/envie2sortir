@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth-utils';
+import { getCurrentUser } from '@/lib/auth-utils';
 
 /**
  * GET /api/user/location-preferences
@@ -9,7 +9,7 @@ import { getUserFromRequest } from '@/lib/auth-utils';
 export async function GET(request: NextRequest) {
   try {
     // Vérifier l'authentification
-    const user = await getUserFromRequest(request);
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Vérifier l'authentification
-    const user = await getUserFromRequest(request);
+    const user = await getCurrentUser(request);
     
     if (!user) {
       return NextResponse.json(

@@ -168,7 +168,7 @@ describe('geolocation-utils', () => {
     it('devrait retourner "prompt" si l\'API n\'est pas disponible', async () => {
       // Mock navigator.permissions comme undefined
       const originalPermissions = navigator.permissions;
-      // @ts-ignore
+      // @ts-expect-error - Test volontaire de l'absence de l'API
       delete navigator.permissions;
       
       const result = await checkGeolocationPermission();

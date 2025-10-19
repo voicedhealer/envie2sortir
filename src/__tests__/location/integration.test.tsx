@@ -9,7 +9,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
 import { LocationProvider } from '@/contexts/LocationContext';
 import { useLocation } from '@/hooks/useLocation';
-import LocationIndicator from '@/components/LocationIndicator';
 import LocationSelector from '@/components/LocationSelector';
 import { City } from '@/types/location';
 
@@ -174,7 +173,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
       });
 
       // Rendre le sélecteur
-      const { rerender } = render(
+      render(
         <LocationSelector isOpen={true} onClose={() => {}} />,
         { wrapper }
       );

@@ -213,6 +213,7 @@ describe('useLocation', () => {
     });
 
     expect(result.current).toHaveProperty('error');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((result.current as any).error).toContain('LocationProvider');
   });
 });

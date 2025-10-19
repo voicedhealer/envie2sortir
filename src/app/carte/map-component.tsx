@@ -3,6 +3,7 @@
 import { useEffect, useRef, useMemo, useState } from "react";
 import Link from "next/link";
 import AuthModal from "@/components/AuthModal";
+import { useLocation } from "@/hooks/useLocation";
 
 // Types pour les établissements
 type Establishment = {
@@ -60,11 +61,18 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null); // Référence pour la carte
   const [showAuthModal, setShowAuthModal] = useState(false);
+  
+  // 📍 Hook de localisation (utilisé comme fallback si pas de props)
+  const { currentCity, searchRadius: userRadius } = useLocation();
+
+  // Utiliser searchCenter/searchRadius des props OU la localisation utilisateur
+  const effectiveCenter = searchCenter || (currentCity ? { lat: currentCity.latitude, lng: currentCity.longitude } : null);
+  const effectiveRadius = searchRadius || userRadius;
 
   // Optimisation : éviter les re-renders inutiles
   const memoizedEstablishments = useMemo(() => establishments, [establishments.length, establishments.map(e => e.id).join(',')]);
-  const memoizedSearchCenter = useMemo(() => searchCenter, [searchCenter?.lat, searchCenter?.lng]);
-  const memoizedSearchRadius = useMemo(() => searchRadius, [searchRadius]);
+  const memoizedSearchCenter = useMemo(() => effectiveCenter, [effectiveCenter?.lat, effectiveCenter?.lng]);
+  const memoizedSearchRadius = useMemo(() => effectiveRadius, [effectiveRadius]);
 
   // Écouter les événements d'authentification depuis la carte
   useEffect(() => {
