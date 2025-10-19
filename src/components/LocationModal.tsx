@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, X, Loader2 } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import { hasShownLocationPopup, markPopupAsShown } from '@/lib/location-service';

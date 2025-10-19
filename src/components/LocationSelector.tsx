@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { MapPin, X, Search, Star, Clock, Navigation, Loader2 } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import { useCityHistory } from '@/hooks/useCityHistory';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { MapPin, ChevronDown } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import LocationSelector from './LocationSelector';

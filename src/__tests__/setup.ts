@@ -2,6 +2,9 @@
  * Configuration de test Jest
  */
 
+// Ajouter les matchers de testing-library
+import '@testing-library/jest-dom';
+
 // Mock des modules Next.js
 jest.mock('next/server', () => ({
   NextRequest: jest.fn(),
