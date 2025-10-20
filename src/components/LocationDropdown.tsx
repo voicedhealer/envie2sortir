@@ -33,8 +33,48 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
   const [isSearching, setIsSearching] = useState(false);
   const [showMoreCities, setShowMoreCities] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [establishmentCount, setEstablishmentCount] = useState<number>(0);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Détecter si on est dans une grande ville avec beaucoup de résultats
+  const isLargeCity = useMemo(() => {
+    // Liste des grandes villes françaises
+    const largeCities = ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille', 'Rennes', 'Reims', 'Saint-Étienne', 'Toulon', 'Le Havre', 'Angers', 'Grenoble', 'Villeurbanne', 'Le Mans', 'Aix-en-Provence'];
+    
+    // Vérifier si la ville actuelle est dans la liste des grandes villes
+    const isInLargeCitiesList = currentCity && largeCities.some(city => 
+      currentCity.name.toLowerCase().includes(city.toLowerCase()) || 
+      city.toLowerCase().includes(currentCity.name.toLowerCase())
+    );
+    
+    // Ou si on a beaucoup d'établissements (plus de 50 dans le rayon actuel)
+    const hasManyEstablishments = establishmentCount > 50;
+    
+    return isInLargeCitiesList || hasManyEstablishments;
+  }, [currentCity, establishmentCount]);
+
+  // Options de rayon adaptatives selon la taille de la ville
+  const adaptiveRadiusOptions = useMemo(() => {
+    if (isLargeCity) {
+      // Rayons plus petits pour les grandes villes
+      return [
+        { value: 1, label: '1km' },
+        { value: 5, label: '5km' },
+        { value: 10, label: '10km' },
+        { value: 20, label: '20km' },
+        { value: 50, label: '50km' }
+      ];
+    } else {
+      // Rayons normaux pour les petites villes
+      return [
+        { value: 10, label: '10km' },
+        { value: 20, label: '20km' },
+        { value: 50, label: '50km' },
+        { value: 100, label: 'Toute la région' }
+      ];
+    }
+  }, [isLargeCity]);
 
   // Recherche dynamique avec l'API Adresse (avec debounce)
   const debouncedSearch = useMemo(
@@ -69,6 +109,33 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
       setSelectedCity(currentCity);
     }
   }, [isOpen, searchRadius, currentCity]);
+
+  // Récupérer le nombre d'établissements pour détecter les grandes villes
+  useEffect(() => {
+    const fetchEstablishmentCount = async () => {
+      if (!currentCity || !isOpen) return;
+      
+      try {
+        const params = new URLSearchParams();
+        params.set('limit', '1'); // On veut juste le count
+        params.set('lat', currentCity.latitude.toString());
+        params.set('lng', currentCity.longitude.toString());
+        params.set('radius', '50'); // Rayon large pour compter tous les établissements
+        
+        const response = await fetch(`/api/establishments/random?${params.toString()}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          setEstablishmentCount(data.count || data.establishments?.length || 0);
+        }
+      } catch (error) {
+        // En cas d'erreur, ne pas bloquer l'interface
+        setEstablishmentCount(0);
+      }
+    };
+
+    fetchEstablishmentCount();
+  }, [currentCity, isOpen]);
 
   // Fermer le dropdown si on clique à l'extérieur (mais pas sur le bouton parent)
   useEffect(() => {
@@ -114,7 +181,9 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
     // Changer le rayon si le rayon a changé
     let radiusChanged = false;
     if (selectedRadius !== searchRadius) {
-      await changeRadius(selectedRadius);
+      // S'assurer que le rayon est valide
+      const validRadius = typeof selectedRadius === 'number' ? selectedRadius : 10;
+      await changeRadius(validRadius);
       radiusChanged = true;
     }
     
@@ -134,7 +203,8 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
       
       // Mettre à jour le rayon si changé
       if (radiusChanged) {
-        params.set('rayon', selectedRadius.toString());
+        const validRadius = typeof selectedRadius === 'number' ? selectedRadius : 10;
+        params.set('rayon', validRadius.toString());
       }
       
       // Mettre à jour la ville et les coordonnées si changé
@@ -181,11 +251,18 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
 
       {/* Rayon de recherche compact */}
       <div className="px-3 py-2 bg-gray-50 border-b border-gray-200">
-        <label className="block text-xs font-medium text-gray-700 mb-2">
-          Rayon
-        </label>
-        <div className="grid grid-cols-4 gap-1">
-          {SEARCH_RADIUS_OPTIONS.map((option) => (
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-xs font-medium text-gray-700">
+            Rayon
+          </label>
+          {isLargeCity && (
+            <span className="text-xs text-orange-600 font-medium">
+              🏙️ Grande ville
+            </span>
+          )}
+        </div>
+        <div className={`grid gap-1 ${isLargeCity ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          {adaptiveRadiusOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => {
