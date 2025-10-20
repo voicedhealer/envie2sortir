@@ -10,9 +10,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '8');
     const city = searchParams.get('city');
+    const lat = parseFloat(searchParams.get('lat') || '0');
+    const lng = parseFloat(searchParams.get('lng') || '0');
+    const radius = parseFloat(searchParams.get('radius') || '20');
     
     // Clé de cache
-    const cacheKey = `random-${city || 'all'}-${limit}`;
+    const cacheKey = `random-${city || 'all'}-${limit}-${lat}-${lng}-${radius}`;
     
     // Vérifier le cache
     const cached = cache.get(cacheKey);
@@ -22,16 +25,19 @@ export async function GET(request: NextRequest) {
     
     // Construire les conditions de recherche
     const whereConditions: any = {
-      status: 'approved'
+      status: 'approved',
+      // Seulement les établissements avec coordonnées GPS
+      latitude: { not: null },
+      longitude: { not: null }
     };
     
-    // Filtrer par ville si spécifiée
-    if (city) {
+    // Filtrer par ville si spécifiée (fallback si pas de coordonnées GPS)
+    if (city && (!lat || !lng)) {
       whereConditions.city = city;
     }
     
-    // Récupérer les établissements (optimisé: moins de données)
-    const establishments = await prisma.establishment.findMany({
+    // Récupérer TOUS les établissements qui correspondent aux critères de base
+    const allEstablishments = await prisma.establishment.findMany({
       where: whereConditions,
       select: {
         id: true,
@@ -62,11 +68,34 @@ export async function GET(request: NextRequest) {
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      take: limit
+      }
     });
     
-    console.log(`✅ ${establishments.length} établissements trouvés`);
+    // Filtrer par rayon géographique si des coordonnées sont fournies
+    let establishments = allEstablishments;
+    if (lat && lng && radius) {
+      const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+        const R = 6371; // Rayon de la Terre en km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                  Math.sin(dLng/2) * Math.sin(dLng/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
+      };
+      
+      establishments = allEstablishments.filter(est => {
+        if (est.latitude && est.longitude) {
+          const distance = calculateDistance(lat, lng, est.latitude, est.longitude);
+          return distance <= radius;
+        }
+        return false;
+      });
+    }
+    
+    // Limiter le nombre de résultats
+    establishments = establishments.slice(0, limit);
     
     // Formater la réponse (optimisé: moins de champs)
     const formattedEstablishments = establishments.map(est => ({

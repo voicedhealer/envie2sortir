@@ -131,7 +131,7 @@ export default function EnvieSearchResults() {
     console.log('🔍 [EnvieSearch] useEffect triggered with:', { envie, ville, lat, lng, rayon });
     if (envie) {
       console.log('🚀 [EnvieSearch] Calling loadResults...');
-      loadResults(envie, ville, lat, lng, activeFilter, 1, true);
+      loadResults(envie, ville, lat, lng, rayon, activeFilter, 1, true);
     } else {
       console.log('⚠️ [EnvieSearch] No envie, skipping search');
     }
@@ -141,14 +141,14 @@ export default function EnvieSearchResults() {
   // Charger plus de résultats
   const loadMore = () => {
     if (!loadingMore && pagination.hasMore) {
-      loadResults(envie, ville, lat, lng, activeFilter, pagination.currentPage + 1, false);
+      loadResults(envie, ville, lat, lng, rayon, activeFilter, pagination.currentPage + 1, false);
     }
   };
 
   // Changer de filtre
   const handleFilterChange = (filter: string) => {
     setActiveFilter(filter);
-    loadResults(envie, ville, lat, lng, filter, 1, true);
+    loadResults(envie, ville, lat, lng, rayon, filter, 1, true);
   };
 
   // Fonction pour charger les résultats
@@ -157,6 +157,7 @@ export default function EnvieSearchResults() {
     ville: string, 
     lat: string, 
     lng: string, 
+    rayon: string,
     filter: string, 
     page: number, 
     reset: boolean
@@ -223,7 +224,7 @@ export default function EnvieSearchResults() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [rayon]);
+  }, []);
 
   if (loading) {
     return (

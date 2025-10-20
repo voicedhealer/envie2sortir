@@ -125,11 +125,19 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
    * Change la ville actuelle
    */
   const setCity = (city: City) => {
-    setState(prev => ({
-      ...prev,
-      currentCity: city,
-      isDetected: false,
-    }));
+    // Mettre à jour l'état en une seule fois
+    setState(prev => {
+      const newPreferences = prev.preferences.mode === 'manual' 
+        ? { ...prev.preferences, defaultCity: city }
+        : prev.preferences;
+      
+      return {
+        ...prev,
+        currentCity: city,
+        isDetected: false,
+        preferences: newPreferences,
+      };
+    });
 
     // Sauvegarder dans localStorage
     saveLastCity(city);
@@ -140,16 +148,12 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
         ...state.preferences,
         defaultCity: city,
       };
-      setState(prev => ({ ...prev, preferences: newPreferences }));
       saveLocationPreferences(newPreferences);
-    }
-
-    // Synchroniser avec l'API si authentifié
-    if (isAuthenticated) {
-      syncPreferencesWithAPI({
-        ...state.preferences,
-        defaultCity: city,
-      });
+      
+      // Synchroniser avec l'API si authentifié
+      if (isAuthenticated) {
+        syncPreferencesWithAPI(newPreferences);
+      }
     }
   };
 
@@ -157,14 +161,17 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
    * Change le rayon de recherche
    */
   const setSearchRadius = (radius: number) => {
-    setState(prev => ({
-      ...prev,
-      searchRadius: radius,
-      preferences: {
-        ...prev.preferences,
+    // Mettre à jour l'état en une seule fois
+    setState(prev => {
+      return {
+        ...prev,
         searchRadius: radius,
-      },
-    }));
+        preferences: {
+          ...prev.preferences,
+          searchRadius: radius,
+        },
+      };
+    });
 
     // Sauvegarder
     const newPreferences = {

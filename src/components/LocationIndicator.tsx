@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, ChevronDown } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import LocationDropdown from './LocationDropdown';
@@ -13,6 +13,7 @@ export default function LocationIndicator() {
   const [showSelector, setShowSelector] = useState(false);
   const { currentCity, searchRadius, loading, updatePreferences } = useLocation();
   const buttonRef = useRef<HTMLButtonElement>(null);
+
 
   if (loading || !currentCity) {
     return (
@@ -54,7 +55,9 @@ export default function LocationIndicator() {
           isOpen={showSelector}
           onClose={() => setShowSelector(false)}
           buttonRef={buttonRef}
-          updatePreferences={updatePreferences}
+          updatePreferences={() => {
+            // Sauvegarder les préférences (déjà fait par changeCity et changeRadius)
+          }}
         />
       )}
     </div>

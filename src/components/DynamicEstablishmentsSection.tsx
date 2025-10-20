@@ -57,10 +57,21 @@ export default function DynamicEstablishmentsSection() {
         // Prioriser la localisation de l'utilisateur (currentCity) sur la ville favorite de session
         const cityToUse = currentCity?.name || (session?.user as any)?.favoriteCity;
         
-        // Construire l'URL avec ou sans ville
-        const url = cityToUse 
-          ? `/api/establishments/random?city=${encodeURIComponent(cityToUse)}&limit=20`
-          : '/api/establishments/random?limit=20';
+        // Construire l'URL avec ville, coordonnées et rayon
+        const params = new URLSearchParams();
+        params.set('limit', '20');
+        
+        if (currentCity && currentCity.latitude && currentCity.longitude) {
+          // Utiliser les coordonnées GPS pour un filtrage précis
+          params.set('lat', currentCity.latitude.toString());
+          params.set('lng', currentCity.longitude.toString());
+          params.set('radius', searchRadius.toString());
+        } else if (cityToUse) {
+          // Fallback sur le nom de ville
+          params.set('city', cityToUse);
+        }
+        
+        const url = `/api/establishments/random?${params.toString()}`;
         
         const response = await fetch(url);
         const data = await response.json();
@@ -79,29 +90,13 @@ export default function DynamicEstablishmentsSection() {
     }, 100); // Délai pour décaler du chargement EventsCarousel
     
     return () => clearTimeout(timer);
-  }, [session, currentCity]);
+  }, [session, currentCity, searchRadius]);
 
-  // 📍 Filtrer les établissements par localisation et rayon
+  // 📍 Les établissements sont déjà filtrés par l'API, on limite juste l'affichage
   const filteredEstablishments = useMemo(() => {
-    if (!currentCity || !searchRadius) return allEstablishments.slice(0, 8);
-    
-    const filtered = allEstablishments.filter(establishment => {
-      // Si l'établissement a des coordonnées GPS
-      if (establishment.latitude && establishment.longitude) {
-        return isWithinRadius(
-          establishment.latitude,
-          establishment.longitude,
-          currentCity,
-          searchRadius
-        );
-      }
-      
-      // Sinon, comparer par nom de ville
-      return establishment.city?.toLowerCase() === currentCity.name.toLowerCase();
-    });
-    
-    return filtered.slice(0, 8);
-  }, [allEstablishments, currentCity, searchRadius]);
+    // L'API a déjà fait le filtrage géographique, on limite juste l'affichage
+    return allEstablishments.slice(0, 8);
+  }, [allEstablishments]);
 
   if (loading) {
     return (

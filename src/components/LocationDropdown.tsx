@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { MapPin, ChevronDown, Star, Search, Loader2 } from 'lucide-react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useLocation } from '@/hooks/useLocation';
 import { useCityHistory } from '@/hooks/useCityHistory';
 import { City, MAJOR_FRENCH_CITIES, SEARCH_RADIUS_OPTIONS } from '@/types/location';
@@ -20,6 +21,9 @@ interface LocationDropdownProps {
 export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePreferences }: LocationDropdownProps) {
   const { currentCity, searchRadius, changeCity, changeRadius } = useLocation();
   const { recentCities, favorites, isFavorite, toggleFavorite } = useCityHistory();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   
   const [selectedRadius, setSelectedRadius] = useState(searchRadius);
   const [selectedCity, setSelectedCity] = useState<City | null>(currentCity);
@@ -99,27 +103,53 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
     setSelectedCity(cityToSelect); // Pré-sélectionner sans valider
   };
 
-  const handleValidate = () => {
-    console.log('🔍 Validation:', { 
-      selectedCity: selectedCity?.name, 
-      selectedRadius, 
-      currentCity: currentCity?.name,
-      currentRadius: searchRadius 
-    });
-    
+  const handleValidate = async () => {
     // Changer la ville si une nouvelle ville est sélectionnée
+    let cityChanged = false;
     if (selectedCity && selectedCity.id !== currentCity?.id) {
-      console.log('✅ Changement de ville:', selectedCity.name);
-      changeCity(selectedCity);
+      await changeCity(selectedCity);
+      cityChanged = true;
     }
     
     // Changer le rayon si le rayon a changé
+    let radiusChanged = false;
     if (selectedRadius !== searchRadius) {
-      console.log('✅ Changement de rayon:', selectedRadius);
-      changeRadius(selectedRadius);
+      await changeRadius(selectedRadius);
+      radiusChanged = true;
+    }
+    
+    // Attendre un peu pour que le contexte se mette à jour
+    if (cityChanged || radiusChanged) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     updatePreferences?.(); // Sauvegarder les préférences (optionnel)
+    
+    // Si on est sur une page de recherche, recharger avec les nouveaux paramètres
+    const isOnSearchPage = pathname?.includes('/recherche/envie');
+    
+    if (isOnSearchPage && (cityChanged || radiusChanged)) {
+      // Construire la nouvelle URL avec les paramètres mis à jour
+      const params = new URLSearchParams(searchParams?.toString() || '');
+      
+      // Mettre à jour le rayon si changé
+      if (radiusChanged) {
+        params.set('rayon', selectedRadius.toString());
+      }
+      
+      // Mettre à jour la ville et les coordonnées si changé
+      if (cityChanged && selectedCity) {
+        params.set('ville', selectedCity.name);
+        params.set('lat', selectedCity.latitude.toString());
+        params.set('lng', selectedCity.longitude.toString());
+      }
+      
+      const newUrl = `${pathname}?${params.toString()}`;
+      
+      // Recharger la page avec les nouveaux paramètres
+      router.push(newUrl);
+    }
+    
     onClose(); // Fermer après validation
   };
 
@@ -159,7 +189,6 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
             <button
               key={option.value}
               onClick={() => {
-                console.log('🎯 Sélection du rayon:', option.value);
                 setSelectedRadius(option.value);
                 // Réinitialiser la sélection de ville si elle ne correspond plus
                 if (selectedCity && selectedCity !== currentCity) {
