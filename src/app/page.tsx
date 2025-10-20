@@ -50,7 +50,9 @@ export default function Home() {
       <DynamicEstablishmentsSection />
 
       {/* 🎉 Section Événements à venir - remplace les catégories visuelles */}
-      <EventsCarousel />
+      <section id="evenements">
+        <EventsCarousel />
+      </section>
 
       {/* Section "Comment ça marche ?" */}
       <section className="py-16 bg-white">
@@ -88,7 +90,9 @@ export default function Home() {
       </section>
 
       {/* 🎯 Section Bons Plans du Jour */}
-      <DailyDealsCarousel />
+      <section id="bons-plans">
+        <DailyDealsCarousel />
+      </section>
 
       {/* Section "Ce qu'ils disent de nous" */}
       <section className="py-16 bg-gray-50">

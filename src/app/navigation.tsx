@@ -40,6 +40,14 @@ export default function Navigation() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Fonction pour le scroll fluide vers une section
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const navItems = [
     { href: "/carte", label: "", icon: "/icone_maps_3.svg" },
     { href: "/etablissements/nouveau", label: "Ajoutez mon établissement" },
@@ -57,6 +65,23 @@ export default function Navigation() {
           
           {/* Navigation Desktop */}
           <div className="hidden md:flex items-center gap-6">
+            {/* Boutons Événements et Bons plans - uniquement sur la page d'accueil */}
+            {pathname === "/" && (
+              <>
+                <button
+                  onClick={() => scrollToSection('evenements')}
+                  className="px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-black hover:bg-black/5"
+                >
+                  Événements
+                </button>
+                <button
+                  onClick={() => scrollToSection('bons-plans')}
+                  className="px-3 py-2 rounded-md text-sm font-medium transition-colors text-gray-700 hover:text-black hover:bg-black/5"
+                >
+                  Bons plans
+                </button>
+              </>
+            )}
             {navItems.map((item) => {
               // Style spécial pour le bouton "Ajoutez mon établissement"
               if (item.label === "Ajoutez mon établissement") {
@@ -149,6 +174,29 @@ export default function Navigation() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-md">
             <div className="px-2 pt-2 pb-3 space-y-1">
+              {/* Boutons Événements et Bons plans - uniquement sur la page d'accueil */}
+              {pathname === "/" && (
+                <>
+                  <button
+                    onClick={() => {
+                      scrollToSection('evenements');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-left block px-3 py-2 rounded-md text-base font-medium transition-colors text-gray-700 hover:text-black hover:bg-black/5"
+                  >
+                    Événements
+                  </button>
+                  <button
+                    onClick={() => {
+                      scrollToSection('bons-plans');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-left block px-3 py-2 rounded-md text-base font-medium transition-colors text-gray-700 hover:text-black hover:bg-black/5"
+                  >
+                    Bons plans
+                  </button>
+                </>
+              )}
               {navItems.map((item) => (
                 <LinkComponent
                   key={item.href}
