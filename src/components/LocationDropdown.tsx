@@ -58,6 +58,14 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
     []
   );
 
+  // Synchroniser les états quand le dropdown s'ouvre
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedRadius(searchRadius);
+      setSelectedCity(currentCity);
+    }
+  }, [isOpen, searchRadius, currentCity]);
+
   // Fermer le dropdown si on clique à l'extérieur (mais pas sur le bouton parent)
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -92,12 +100,27 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
   };
 
   const handleValidate = () => {
-    if (selectedCity) {
+    console.log('🔍 Validation:', { 
+      selectedCity: selectedCity?.name, 
+      selectedRadius, 
+      currentCity: currentCity?.name,
+      currentRadius: searchRadius 
+    });
+    
+    // Changer la ville si une nouvelle ville est sélectionnée
+    if (selectedCity && selectedCity.id !== currentCity?.id) {
+      console.log('✅ Changement de ville:', selectedCity.name);
       changeCity(selectedCity);
-      changeRadius(selectedRadius);
-      updatePreferences?.(); // Sauvegarder les préférences (optionnel)
-      onClose(); // Fermer après validation
     }
+    
+    // Changer le rayon si le rayon a changé
+    if (selectedRadius !== searchRadius) {
+      console.log('✅ Changement de rayon:', selectedRadius);
+      changeRadius(selectedRadius);
+    }
+    
+    updatePreferences?.(); // Sauvegarder les préférences (optionnel)
+    onClose(); // Fermer après validation
   };
 
 
@@ -136,6 +159,7 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
             <button
               key={option.value}
               onClick={() => {
+                console.log('🎯 Sélection du rayon:', option.value);
                 setSelectedRadius(option.value);
                 // Réinitialiser la sélection de ville si elle ne correspond plus
                 if (selectedCity && selectedCity !== currentCity) {
@@ -493,7 +517,7 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
       </div>
 
       {/* Bouton de validation */}
-      {selectedCity && (
+      {(selectedCity || selectedRadius !== searchRadius) && (
         <div className="px-3 py-2 bg-green-50 border-t border-green-200">
           <button
             onClick={handleValidate}
@@ -506,7 +530,10 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePre
 
       {/* Footer compact */}
       <div className="bg-gray-50 px-3 py-2 text-xs text-gray-500 border-t border-gray-200">
-        {selectedCity ? 'Sélectionnez une ville et validez' : 'Vos préférences sont enregistrées automatiquement'}
+        {(selectedCity || selectedRadius !== searchRadius) 
+          ? 'Modifications en attente de validation' 
+          : 'Vos préférences sont enregistrées automatiquement'
+        }
       </div>
     </div>
   );

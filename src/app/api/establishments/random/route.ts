@@ -17,26 +17,17 @@ export async function GET(request: NextRequest) {
     // Vérifier le cache
     const cached = cache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log('✅ Données servies depuis le cache');
       return NextResponse.json(cached.data);
     }
     
-    console.log('🎲 Récupération d\'établissements aléatoires...');
-    
     // Construire les conditions de recherche
-    const whereConditions: {
-      status: string;
-      city?: { equals: string; mode: string };
-    } = {
+    const whereConditions: any = {
       status: 'approved'
     };
     
     // Filtrer par ville si spécifiée
     if (city) {
-      whereConditions.city = {
-        equals: city,
-        mode: 'insensitive'
-      };
+      whereConditions.city = city;
     }
     
     // Récupérer les établissements (optimisé: moins de données)
