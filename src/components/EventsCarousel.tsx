@@ -147,7 +147,8 @@ export default function EventsCarousel() {
       });
     }
     
-    setFilteredEvents(events);
+    // Limiter à 12 événements pour l'affichage
+    setFilteredEvents(events.slice(0, 12));
   };
 
   const scrollContainer = (direction: 'left' | 'right') => {

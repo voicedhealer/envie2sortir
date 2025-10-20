@@ -95,7 +95,7 @@ export default function DynamicEstablishmentsSection() {
   // 📍 Les établissements sont déjà filtrés par l'API, on limite juste l'affichage
   const filteredEstablishments = useMemo(() => {
     // L'API a déjà fait le filtrage géographique, on limite juste l'affichage
-    return allEstablishments.slice(0, 8);
+    return allEstablishments.slice(0, 12);
   }, [allEstablishments]);
 
   if (loading) {
