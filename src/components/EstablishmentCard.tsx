@@ -577,10 +577,10 @@ export default function EstablishmentCard({
             </div>
           )}
 
-          {/* Overlay événement à venir/en cours - EN BAS, HAUTEUR GÉNÉREUSE */}
+          {/* Overlay événement à venir/en cours - HAUTEUR FIXE POUR COHÉRENCE */}
           {upcomingEvent && (
             <div className={`absolute bottom-0 left-0 right-0 ${styles.overlayEvent} ${styles.overlayEventMobile}`}>
-              <div className="space-y-1">
+              <div className="space-y-1 h-20 flex flex-col justify-between">
                 {/* Première ligne : Badge + Titre */}
                 <div className="flex items-start gap-3">
                   <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${styles.eventBadge} ${
