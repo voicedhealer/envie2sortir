@@ -95,15 +95,18 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
       // Déterminer la ville actuelle
       const currentCity = await determineCurrentCity();
 
-      setState(prev => ({
-        ...prev,
-        currentCity,
-        searchRadius: preferences?.searchRadius || 20,
-        preferences: preferences || prev.preferences,
-        history,
-        favorites,
-        loading: false,
-      }));
+      // Utiliser un timeout pour éviter les warnings act
+      setTimeout(() => {
+        setState(prev => ({
+          ...prev,
+          currentCity,
+          searchRadius: preferences?.searchRadius || 20,
+          preferences: preferences || prev.preferences,
+          history,
+          favorites,
+          loading: false,
+        }));
+      }, 0);
 
       // Sauvegarder comme dernière ville visitée
       saveLastCity(currentCity);

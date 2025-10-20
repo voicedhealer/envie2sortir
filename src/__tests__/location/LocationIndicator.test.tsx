@@ -50,7 +50,7 @@ describe('LocationIndicator', () => {
     expect(screen.getByText(/rayon 20km/i)).toBeInTheDocument();
   });
 
-  it('devrait ouvrir le sélecteur au clic', async () => {
+  it('devrait ouvrir le dropdown au clic', async () => {
     render(<LocationIndicator />, { wrapper });
 
     await waitFor(() => {
@@ -61,9 +61,9 @@ describe('LocationIndicator', () => {
     expect(button).toBeInTheDocument();
     fireEvent.click(button!);
 
-    // Le modal LocationSelector devrait s'ouvrir
+    // Le dropdown LocationDropdown devrait s'ouvrir
     await waitFor(() => {
-      expect(screen.getByText(/choisir ma localisation/i)).toBeInTheDocument();
+      expect(screen.getByText('Localisation')).toBeInTheDocument();
     });
   });
 

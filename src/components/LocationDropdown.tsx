@@ -1,41 +1,36 @@
 'use client';
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { MapPin, ChevronDown, Search, Star, Navigation, Loader2 } from 'lucide-react';
+import { MapPin, ChevronDown, Star, Search, Loader2 } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import { useCityHistory } from '@/hooks/useCityHistory';
 import { City, MAJOR_FRENCH_CITIES, SEARCH_RADIUS_OPTIONS } from '@/types/location';
-import { searchCities as searchCitiesLocal } from '@/lib/geolocation-utils';
 import { searchCities, debounce, CitySearchResult } from '@/lib/city-search-service';
 
 interface LocationDropdownProps {
   isOpen: boolean;
   onClose: () => void;
   buttonRef?: React.RefObject<HTMLButtonElement>;
+  updatePreferences?: () => void;
 }
 
 /**
  * Dropdown compact de localisation pour la barre de navigation
  */
-export default function LocationDropdown({ isOpen, onClose, buttonRef }: LocationDropdownProps) {
-  const { currentCity, searchRadius, changeCity, changeRadius, detectMyLocation } = useLocation();
+export default function LocationDropdown({ isOpen, onClose, buttonRef, updatePreferences }: LocationDropdownProps) {
+  const { currentCity, searchRadius, changeCity, changeRadius } = useLocation();
   const { recentCities, favorites, isFavorite, toggleFavorite } = useCityHistory();
   
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedRadius, setSelectedRadius] = useState(searchRadius);
   const [selectedCity, setSelectedCity] = useState<City | null>(currentCity);
-  const [isDetecting, setIsDetecting] = useState(false);
   const [activeTab, setActiveTab] = useState<'search' | 'favorites' | 'recent'>('search');
+  const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<CitySearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showMoreCities, setShowMoreCities] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // Recherche avec filtrage local (villes principales)
-  const filteredCities = useMemo(() => {
-    return searchCitiesLocal(searchQuery);
-  }, [searchQuery]);
 
   // Recherche dynamique avec l'API Adresse (avec debounce)
   const debouncedSearch = useMemo(
@@ -46,12 +41,16 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
       }
       
       setIsSearching(true);
+      setSearchError(null);
       try {
+        console.log('Recherche de villes pour:', query);
         const results = await searchCities(query, 8);
+        console.log('Résultats trouvés:', results.length);
         setSearchResults(results);
       } catch (error) {
         console.error('Erreur recherche villes:', error);
         setSearchResults([]);
+        setSearchError('Erreur de connexion. Veuillez réessayer.');
       } finally {
         setIsSearching(false);
       }
@@ -96,24 +95,11 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
     if (selectedCity) {
       changeCity(selectedCity);
       changeRadius(selectedRadius);
+      updatePreferences?.(); // Sauvegarder les préférences (optionnel)
       onClose(); // Fermer après validation
     }
   };
 
-  const handleDetectLocation = async () => {
-    setIsDetecting(true);
-    try {
-      const city = await detectMyLocation();
-      setSelectedCity(city);
-      changeCity(city);
-      changeRadius(selectedRadius);
-      onClose();
-    } catch (error) {
-      console.error('Erreur détection:', error);
-    } finally {
-      setIsDetecting(false);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -138,17 +124,6 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
           </button>
         </div>
         
-        {/* Indicateur de sélection */}
-        {selectedCity && (
-          <div className="mt-2 p-2 bg-white/20 rounded-lg">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-3 h-3" />
-              <span className="text-xs font-medium">
-                {selectedCity.name} • Rayon {selectedRadius}km
-              </span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Rayon de recherche compact */}
@@ -179,26 +154,6 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
         </div>
       </div>
 
-      {/* Bouton GPS compact */}
-      <div className="px-3 py-2 bg-blue-50 border-b border-blue-100">
-        <button
-          onClick={handleDetectLocation}
-          disabled={isDetecting}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium transition-all disabled:opacity-50"
-        >
-          {isDetecting ? (
-            <>
-              <Loader2 className="w-3 h-3 animate-spin" />
-              Détection...
-            </>
-          ) : (
-            <>
-              <Navigation className="w-3 h-3" />
-              Ma position
-            </>
-          )}
-        </button>
-      </div>
 
       {/* Tabs compacts */}
       <div className="flex border-b border-gray-200">
@@ -210,8 +165,8 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
               : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Search className="w-3 h-3 inline mr-1" />
-          Recherche
+          <MapPin className="w-3 h-3 inline mr-1" />
+          Villes
         </button>
         <button
           onClick={() => setActiveTab('favorites')}
@@ -239,45 +194,32 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
       {/* Contenu scrollable */}
       <div className="max-h-64 overflow-y-auto">
         
-        {/* Tab Recherche */}
+        {/* Tab Villes principales */}
         {activeTab === 'search' && (
           <div className="p-3">
-            {/* Barre de recherche */}
-            <div className="relative mb-3">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  debouncedSearch(e.target.value);
-                }}
-                placeholder="Rechercher une ville..."
-                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-transparent"
-              />
-              {isSearching && (
-                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500 animate-spin" />
-              )}
-            </div>
-
-            {/* Liste des villes */}
+            {/* Liste des villes principales */}
             <div className="space-y-1">
-              {/* Villes principales (liste locale) */}
-              {filteredCities.length > 0 && !showMoreCities && (
+              {!showMoreCities ? (
                 <>
-                  {filteredCities.slice(0, 6).map((city) => (
+                  {MAJOR_FRENCH_CITIES.slice(0, 8).map((city) => (
                     <div
                       key={city.id}
                       className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
                         currentCity?.id === city.id
-                          ? 'bg-orange-50 border-orange-300'
+                          ? 'bg-orange-50 border-orange-300' // Ville active (actuellement configurée)
+                          : selectedCity?.id === city.id
+                          ? 'bg-blue-50 border-blue-400' // Ville sélectionnée (en attente de validation)
                           : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
                       }`}
                       onClick={() => handleSelectCity(city)}
                     >
                       <div className="flex items-center gap-2">
                         <MapPin className={`w-4 h-4 ${
-                          currentCity?.id === city.id ? 'text-orange-600' : 'text-gray-400'
+                          currentCity?.id === city.id 
+                            ? 'text-orange-600' 
+                            : selectedCity?.id === city.id 
+                            ? 'text-blue-600' 
+                            : 'text-gray-400'
                         }`} />
                         <div>
                           <p className="font-medium text-gray-900 text-sm">{city.name}</p>
@@ -310,72 +252,128 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
                     🔍 Voir + de villes
                   </button>
                 </>
-              )}
-
-              {/* Résultats de l'API (recherche dynamique) */}
-              {showMoreCities && searchResults.length > 0 && (
+              ) : (
                 <>
+                  {/* Barre de recherche pour petites villes */}
+                  <div className="relative mb-3">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        debouncedSearch(e.target.value);
+                      }}
+                      placeholder="Rechercher une ville..."
+                      className="w-full pl-8 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-1 focus:ring-orange-500 focus:border-transparent"
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500 animate-spin" />
+                    )}
+                  </div>
+
+                  {/* Bouton retour */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-500">Résultats de recherche</span>
+                    <span className="text-xs text-gray-500">Recherche de villes</span>
                     <button
-                      onClick={() => setShowMoreCities(false)}
+                      onClick={() => {
+                        setShowMoreCities(false);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                        setSearchError(null);
+                      }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
                       ← Retour
                     </button>
                   </div>
-                  
-                  {searchResults.map((city) => (
-                    <div
-                      key={city.id}
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
-                        selectedCity?.id === city.id
-                          ? 'bg-orange-50 border-orange-300'
-                          : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleSelectCity(city)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <MapPin className={`w-4 h-4 ${
-                          selectedCity?.id === city.id ? 'text-orange-600' : 'text-gray-400'
-                        }`} />
-                        <div>
-                          <p className="font-medium text-gray-900 text-sm">{city.name}</p>
-                          <p className="text-xs text-gray-500">{city.department}</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Convertir en City pour toggleFavorite
-                          const cityForFavorite: City = {
-                            id: city.id,
-                            name: city.name,
-                            latitude: city.latitude,
-                            longitude: city.longitude,
-                            region: city.region
-                          };
-                          toggleFavorite(cityForFavorite);
-                        }}
-                        className="p-1 hover:bg-white rounded-full transition-colors"
-                      >
-                        <Star
-                          className={`w-4 h-4 ${
-                            isFavorite(city.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'
+
+                  {/* Résultats de l'API (recherche dynamique) */}
+                  {searchResults.length > 0 && (
+                    <div className="space-y-1">
+                      {searchResults.map((city) => (
+                        <div
+                          key={city.id}
+                          className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
+                            currentCity?.id === city.id
+                              ? 'bg-orange-50 border-orange-300' // Ville active (actuellement configurée)
+                              : selectedCity?.id === city.id
+                              ? 'bg-blue-50 border-blue-400' // Ville sélectionnée (en attente de validation)
+                              : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
                           }`}
-                        />
+                          onClick={() => handleSelectCity(city)}
+                        >
+                          <div className="flex items-center gap-2">
+                            <MapPin className={`w-4 h-4 ${
+                              currentCity?.id === city.id 
+                                ? 'text-orange-600' 
+                                : selectedCity?.id === city.id 
+                                ? 'text-blue-600' 
+                                : 'text-gray-400'
+                            }`} />
+                            <div>
+                              <p className="font-medium text-gray-900 text-sm">{city.name}</p>
+                              <p className="text-xs text-gray-500">{city.department}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Convertir en City pour toggleFavorite
+                              const cityForFavorite: City = {
+                                id: city.id,
+                                name: city.name,
+                                latitude: city.latitude,
+                                longitude: city.longitude,
+                                region: city.region
+                              };
+                              toggleFavorite(cityForFavorite);
+                            }}
+                            className="p-1 hover:bg-white rounded-full transition-colors"
+                          >
+                            <Star
+                              className={`w-4 h-4 ${
+                                isFavorite(city.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'
+                              }`}
+                            />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Message d'erreur */}
+                  {searchError && (
+                    <div className="text-center py-4 text-red-500">
+                      <p className="text-sm">{searchError}</p>
+                      <button
+                        onClick={() => {
+                          setSearchError(null);
+                          debouncedSearch(searchQuery);
+                        }}
+                        className="text-xs text-red-400 hover:text-red-600 underline mt-1"
+                      >
+                        Réessayer
                       </button>
                     </div>
-                  ))}
-                </>
-              )}
+                  )}
 
-              {/* Message si aucun résultat */}
-              {showMoreCities && searchResults.length === 0 && !isSearching && searchQuery.length >= 2 && (
-                <div className="text-center py-4 text-gray-500">
-                  <p className="text-sm">Aucune ville trouvée</p>
-                  <p className="text-xs">Essayez avec un autre terme</p>
-                </div>
+                  {/* Message si aucun résultat */}
+                  {!searchError && searchResults.length === 0 && !isSearching && searchQuery.length >= 2 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">Aucune ville trouvée</p>
+                      <p className="text-xs">Essayez avec un autre terme</p>
+                    </div>
+                  )}
+
+                  {/* Message d'accueil */}
+                  {searchResults.length === 0 && searchQuery.length < 2 && (
+                    <div className="text-center py-4 text-gray-500">
+                      <p className="text-sm">Tapez le nom de votre ville</p>
+                      <p className="text-xs">Ex: Chevigny-Saint-Sauveur, Annecy...</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -395,11 +393,23 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
                 {favorites.map((city) => (
                   <div
                     key={city.id}
-                    className="flex items-center justify-between p-2 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-gray-50 cursor-pointer transition-all"
+                    className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
+                      currentCity?.id === city.id
+                        ? 'bg-orange-50 border-orange-300' // Ville active (actuellement configurée)
+                        : selectedCity?.id === city.id
+                        ? 'bg-blue-50 border-blue-400' // Ville sélectionnée (en attente de validation)
+                        : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                    }`}
                     onClick={() => handleSelectCity(city)}
                   >
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-orange-600" />
+                      <MapPin className={`w-4 h-4 ${
+                        currentCity?.id === city.id 
+                          ? 'text-orange-600' 
+                          : selectedCity?.id === city.id 
+                          ? 'text-blue-600' 
+                          : 'text-orange-600'
+                      }`} />
                       <div>
                         <p className="font-medium text-gray-900 text-sm">{city.name}</p>
                         {city.region && (
@@ -434,31 +444,43 @@ export default function LocationDropdown({ isOpen, onClose, buttonRef }: Locatio
               </div>
             ) : (
               <div className="space-y-1">
-                {recentCities.slice(0, 5).map((city) => (
+                {recentCities.slice(0, 5).map((cityHistory) => (
                   <div
-                    key={city.id}
-                    className="flex items-center justify-between p-2 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-gray-50 cursor-pointer transition-all"
-                    onClick={() => handleSelectCity(city)}
+                    key={cityHistory.city.id}
+                    className={`flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer ${
+                      currentCity?.id === cityHistory.city.id
+                        ? 'bg-orange-50 border-orange-300' // Ville active (actuellement configurée)
+                        : selectedCity?.id === cityHistory.city.id
+                        ? 'bg-blue-50 border-blue-400' // Ville sélectionnée (en attente de validation)
+                        : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                    }`}
+                    onClick={() => handleSelectCity(cityHistory.city)}
                   >
                     <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
+                      <MapPin className={`w-4 h-4 ${
+                        currentCity?.id === cityHistory.city.id 
+                          ? 'text-orange-600' 
+                          : selectedCity?.id === cityHistory.city.id 
+                          ? 'text-blue-600' 
+                          : 'text-gray-400'
+                      }`} />
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">{city.name}</p>
-                        {city.region && (
-                          <p className="text-xs text-gray-500">{city.region}</p>
+                        <p className="font-medium text-gray-900 text-sm">{cityHistory.city.name}</p>
+                        {cityHistory.city.region && (
+                          <p className="text-xs text-gray-500">{cityHistory.city.region}</p>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleFavorite(city);
+                        toggleFavorite(cityHistory.city);
                       }}
                       className="p-1 hover:bg-white rounded-full transition-colors"
                     >
                       <Star
                         className={`w-4 h-4 ${
-                          isFavorite(city.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'
+                          isFavorite(cityHistory.city.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'
                         }`}
                       />
                     </button>

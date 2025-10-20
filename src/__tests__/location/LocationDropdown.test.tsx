@@ -20,13 +20,13 @@ const mockUseCityHistory = useCityHistory as jest.MockedFunction<typeof useCityH
 const mockCity = {
   id: 'dijon',
   name: 'Dijon',
-  latitude: 47.3220,
-  longitude: 5.0415,
+  latitude: 47.322,
+  longitude: 5.041,
   region: 'Bourgogne-Franche-Comté'
 };
 
 const mockFavorites = [mockCity];
-const mockRecentCities = [mockCity];
+const mockRecentCities = [{ city: mockCity, timestamp: Date.now() }];
 
 describe('LocationDropdown', () => {
   const defaultProps = {
@@ -72,7 +72,7 @@ describe('LocationDropdown', () => {
       renderWithProvider();
       
       expect(screen.getByText('Localisation')).toBeInTheDocument();
-      expect(screen.getByText('Recherche')).toBeInTheDocument();
+      expect(screen.getByText('Villes')).toBeInTheDocument();
       expect(screen.getByText('Favoris (1)')).toBeInTheDocument();
       expect(screen.getByText('Récents (1)')).toBeInTheDocument();
     });
@@ -86,16 +86,20 @@ describe('LocationDropdown', () => {
     test('affiche les boutons de rayon de recherche', () => {
       renderWithProvider();
       
-      expect(screen.getByText('10km')).toBeInTheDocument();
-      expect(screen.getByText('20km')).toBeInTheDocument();
-      expect(screen.getByText('50km')).toBeInTheDocument();
-      expect(screen.getByText('100km')).toBeInTheDocument();
+      expect(screen.getByText('10 km')).toBeInTheDocument();
+      expect(screen.getByText('20 km')).toBeInTheDocument();
+      expect(screen.getByText('50 km')).toBeInTheDocument();
+      expect(screen.getByText('Toute la région')).toBeInTheDocument();
     });
 
-    test('affiche le bouton de détection GPS', () => {
+    test('affiche le bouton de validation après sélection', () => {
       renderWithProvider();
       
-      expect(screen.getByText('Ma position')).toBeInTheDocument();
+      // Sélectionner une ville d'abord
+      fireEvent.click(screen.getByText('Dijon'));
+      
+      // Maintenant le bouton Valider devrait apparaître
+      expect(screen.getByText('✓ Valider la sélection')).toBeInTheDocument();
     });
   });
 
@@ -103,31 +107,27 @@ describe('LocationDropdown', () => {
     test('permet de changer d\'onglet', () => {
       renderWithProvider();
       
-      // Onglet Recherche par défaut
-      expect(screen.getByPlaceholderText('Rechercher une ville...')).toBeInTheDocument();
+      // Onglet Villes par défaut
+      expect(screen.getByText('Villes')).toHaveClass('text-orange-600');
       
       // Cliquer sur Favoris
       fireEvent.click(screen.getByText('Favoris (1)'));
-      expect(screen.getByText('Dijon')).toBeInTheDocument();
+      expect(screen.getByText('Favoris (1)')).toHaveClass('text-orange-600');
       
       // Cliquer sur Récents
       fireEvent.click(screen.getByText('Récents (1)'));
-      expect(screen.getByText('Dijon')).toBeInTheDocument();
+      expect(screen.getByText('Récents (1)')).toHaveClass('text-orange-600');
     });
   });
 
   describe('Recherche de villes', () => {
-    test('filtre les villes selon la recherche', () => {
+    test('affiche le bouton "Voir + de villes"', () => {
       renderWithProvider();
       
-      const searchInput = screen.getByPlaceholderText('Rechercher une ville...');
-      fireEvent.change(searchInput, { target: { value: 'Paris' } });
-      
-      // Vérifier que la recherche fonctionne
-      expect(searchInput).toHaveValue('Paris');
+      expect(screen.getByText('🔍 Voir + de villes')).toBeInTheDocument();
     });
 
-    test('affiche les villes filtrées', () => {
+    test('affiche les villes principales', () => {
       renderWithProvider();
       
       // Vérifier que les villes principales sont affichées
@@ -136,7 +136,7 @@ describe('LocationDropdown', () => {
   });
 
   describe('Sélection de ville', () => {
-    test('appelle changeCity et changeRadius lors de la sélection', () => {
+    test('appelle changeCity et changeRadius lors de la validation', () => {
       const mockChangeCity = jest.fn();
       const mockChangeRadius = jest.fn();
       const mockOnClose = jest.fn();
@@ -153,8 +153,11 @@ describe('LocationDropdown', () => {
 
       renderWithProvider({ onClose: mockOnClose });
       
-      // Cliquer sur une ville
+      // Sélectionner une ville d'abord
       fireEvent.click(screen.getByText('Dijon'));
+      
+      // Cliquer sur le bouton Valider
+      fireEvent.click(screen.getByText('✓ Valider la sélection'));
       
       expect(mockChangeCity).toHaveBeenCalledWith(mockCity);
       expect(mockChangeRadius).toHaveBeenCalledWith(20);
@@ -179,63 +182,28 @@ describe('LocationDropdown', () => {
       // Aller sur l'onglet Favoris
       fireEvent.click(screen.getByText('Favoris (1)'));
       
-      // Cliquer sur l'étoile
-      const starButton = screen.getAllByRole('button').find(btn => 
-        btn.querySelector('svg') // Étoile SVG
-      );
-      
-      if (starButton) {
-        fireEvent.click(starButton);
-        expect(mockToggleFavorite).toHaveBeenCalledWith(mockCity);
-      }
+      // Cliquer sur l'étoile (chercher par le bouton avec l'icône étoile)
+      const starButton = screen.getByRole('button', { name: '' }); // Le bouton sans nom accessible
+      fireEvent.click(starButton);
+      expect(mockToggleFavorite).toHaveBeenCalledWith(mockCity);
     });
   });
 
-  describe('Détection GPS', () => {
-    test('affiche le loader pendant la détection', async () => {
-      const mockDetectLocation = jest.fn().mockResolvedValue(mockCity);
-      
-      mockUseLocation.mockReturnValue({
-        currentCity: mockCity,
-        searchRadius: 20,
-        changeCity: jest.fn(),
-        changeRadius: jest.fn(),
-        detectMyLocation: mockDetectLocation,
-        loading: false,
-        updatePreferences: jest.fn()
-      });
-
+  describe('Recherche avancée', () => {
+    test('affiche le bouton "Voir + de villes"', () => {
       renderWithProvider();
       
-      // Cliquer sur le bouton GPS
-      fireEvent.click(screen.getByText('Ma position'));
-      
-      // Vérifier que la détection est appelée
-      expect(mockDetectLocation).toHaveBeenCalled();
+      expect(screen.getByText('🔍 Voir + de villes')).toBeInTheDocument();
     });
 
-    test('gère les erreurs de détection GPS', async () => {
-      const mockDetectLocation = jest.fn().mockRejectedValue(new Error('GPS non disponible'));
-      
-      mockUseLocation.mockReturnValue({
-        currentCity: mockCity,
-        searchRadius: 20,
-        changeCity: jest.fn(),
-        changeRadius: jest.fn(),
-        detectMyLocation: mockDetectLocation,
-        loading: false,
-        updatePreferences: jest.fn()
-      });
-
+    test('ouvre la recherche avancée au clic', () => {
       renderWithProvider();
       
-      // Cliquer sur le bouton GPS
-      fireEvent.click(screen.getByText('Ma position'));
+      // Cliquer sur "Voir + de villes"
+      fireEvent.click(screen.getByText('🔍 Voir + de villes'));
       
-      // Vérifier que l'erreur est gérée (pas de crash)
-      await waitFor(() => {
-        expect(mockDetectLocation).toHaveBeenCalled();
-      });
+      // Vérifier que la recherche avancée s'ouvre
+      expect(screen.getByText('Recherche de villes')).toBeInTheDocument();
     });
   });
 
@@ -244,10 +212,10 @@ describe('LocationDropdown', () => {
       renderWithProvider();
       
       // Cliquer sur un autre rayon
-      fireEvent.click(screen.getByText('50km'));
+      fireEvent.click(screen.getByText('50 km'));
       
       // Vérifier que le rayon est mis à jour (sera testé lors de la sélection)
-      expect(screen.getByText('50km')).toBeInTheDocument();
+      expect(screen.getByText('50 km')).toBeInTheDocument();
     });
   });
 
@@ -262,12 +230,15 @@ describe('LocationDropdown', () => {
       expect(mockOnClose).toHaveBeenCalled();
     });
 
-    test('ferme le dropdown après sélection d\'une ville', () => {
+    test('ferme le dropdown après validation', () => {
       const mockOnClose = jest.fn();
       renderWithProvider({ onClose: mockOnClose });
       
-      // Sélectionner une ville
+      // Sélectionner une ville d'abord
       fireEvent.click(screen.getByText('Dijon'));
+      
+      // Cliquer sur Valider
+      fireEvent.click(screen.getByText('✓ Valider la sélection'));
       
       expect(mockOnClose).toHaveBeenCalled();
     });
@@ -309,3 +280,4 @@ describe('LocationDropdown', () => {
     });
   });
 });
+

@@ -52,6 +52,8 @@ export function getLocationPreferences(): LocationPreferences | null {
     };
   } catch (error) {
     console.error('Erreur lors de la récupération des préférences:', error);
+    // Nettoyer le localStorage corrompu
+    localStorage.removeItem(STORAGE_KEYS.PREFERENCES);
     return null;
   }
 }

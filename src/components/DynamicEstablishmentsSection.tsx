@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import EstablishmentCard from './EstablishmentCard';
 import Link from 'next/link';
+import { useLocation } from '@/hooks/useLocation';
+import { isWithinRadius } from '@/lib/geolocation-utils';
+import { MapPin } from 'lucide-react';
 
 interface Establishment {
   id: string;
@@ -41,7 +44,8 @@ interface Establishment {
 
 export default function DynamicEstablishmentsSection() {
   const { data: session } = useSession();
-  const [establishments, setEstablishments] = useState<Establishment[]>([]);
+  const { currentCity, searchRadius, loading: locationLoading } = useLocation();
+  const [allEstablishments, setAllEstablishments] = useState<Establishment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,19 +54,19 @@ export default function DynamicEstablishmentsSection() {
       try {
         setLoading(true);
         
-        // Déterminer la ville favorite de l'utilisateur
-        const favoriteCity = (session?.user as any)?.favoriteCity;
+        // Prioriser la localisation de l'utilisateur (currentCity) sur la ville favorite de session
+        const cityToUse = currentCity?.name || (session?.user as any)?.favoriteCity;
         
         // Construire l'URL avec ou sans ville
-        const url = favoriteCity 
-          ? `/api/establishments/random?city=${encodeURIComponent(favoriteCity)}&limit=8`
-          : '/api/establishments/random?limit=8';
+        const url = cityToUse 
+          ? `/api/establishments/random?city=${encodeURIComponent(cityToUse)}&limit=20`
+          : '/api/establishments/random?limit=20';
         
         const response = await fetch(url);
         const data = await response.json();
         
         if (data.success) {
-          setEstablishments(data.establishments);
+          setAllEstablishments(data.establishments);
         } else {
           setError('Erreur lors du chargement des établissements');
         }
@@ -75,7 +79,29 @@ export default function DynamicEstablishmentsSection() {
     }, 100); // Délai pour décaler du chargement EventsCarousel
     
     return () => clearTimeout(timer);
-  }, [session]);
+  }, [session, currentCity]);
+
+  // 📍 Filtrer les établissements par localisation et rayon
+  const filteredEstablishments = useMemo(() => {
+    if (!currentCity || !searchRadius) return allEstablishments.slice(0, 8);
+    
+    const filtered = allEstablishments.filter(establishment => {
+      // Si l'établissement a des coordonnées GPS
+      if (establishment.latitude && establishment.longitude) {
+        return isWithinRadius(
+          establishment.latitude,
+          establishment.longitude,
+          currentCity,
+          searchRadius
+        );
+      }
+      
+      // Sinon, comparer par nom de ville
+      return establishment.city?.toLowerCase() === currentCity.name.toLowerCase();
+    });
+    
+    return filtered.slice(0, 8);
+  }, [allEstablishments, currentCity, searchRadius]);
 
   if (loading) {
     return (
@@ -109,13 +135,26 @@ export default function DynamicEstablishmentsSection() {
     );
   }
 
-  if (establishments.length === 0) {
+  if (filteredEstablishments.length === 0) {
     return (
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">Nos meilleurs endroits</h2>
+          <div className="flex flex-col items-center mb-12">
+            <h2 className="text-3xl font-bold text-center">Nos meilleurs endroits</h2>
+            {currentCity && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span>
+                  <span className="font-medium text-orange-600">{currentCity.name}</span>
+                  {' • '}
+                  <span className="text-gray-500">Rayon {searchRadius}km</span>
+                </span>
+              </div>
+            )}
+          </div>
           <div className="text-center text-gray-500">
-            <p>Aucun établissement trouvé pour le moment.</p>
+            <p className="mb-4">Aucun établissement trouvé dans un rayon de {searchRadius}km autour de {currentCity?.name}.</p>
+            <p className="text-sm text-gray-400">💡 Essayez d'augmenter le rayon de recherche via le badge de localisation dans le header</p>
           </div>
         </div>
       </section>
@@ -125,15 +164,25 @@ export default function DynamicEstablishmentsSection() {
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-12">
-          <h2 className="text-3xl font-bold">
-            Nos meilleurs endroits
-            {session?.user && (session.user as any)?.favoriteCity && (
-              <span className="text-lg font-normal text-gray-600 ml-2">
-                à {(session.user as any).favoriteCity}
-              </span>
+        <div className="flex justify-between items-start mb-12">
+          <div className="flex flex-col">
+            <h2 className="text-3xl font-bold">
+              Nos meilleurs endroits
+            </h2>
+            {/* 📍 Indicateur de localisation */}
+            {currentCity && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                <MapPin className="w-4 h-4 text-orange-500" />
+                <span>
+                  <span className="font-medium text-orange-600">{currentCity.name}</span>
+                  {' • '}
+                  <span className="text-gray-500">Rayon {searchRadius}km</span>
+                  {' • '}
+                  <span className="font-medium text-gray-900">{filteredEstablishments.length} résultat{filteredEstablishments.length > 1 ? 's' : ''}</span>
+                </span>
+              </div>
             )}
-          </h2>
+          </div>
           <Link 
             href="/recherche" 
             className="text-orange-500 hover:text-orange-600 font-medium transition-colors"
@@ -146,7 +195,7 @@ export default function DynamicEstablishmentsSection() {
         <div className="relative overflow-hidden">
           <div className="flex animate-scroll space-x-6">
             {/* Affichage unique des établissements avec animation */}
-            {establishments.map((establishment, index) => (
+            {filteredEstablishments.map((establishment, index) => (
               <div 
                 key={establishment.id} 
                 className="flex-shrink-0 w-80"

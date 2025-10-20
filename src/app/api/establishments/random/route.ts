@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Construire les conditions de recherche
     const whereConditions: {
       status: string;
-      city?: { contains: string; mode: string };
+      city?: { equals: string; mode: string };
     } = {
       status: 'approved'
     };
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     // Filtrer par ville si spécifiée
     if (city) {
       whereConditions.city = {
-        contains: city,
+        equals: city,
         mode: 'insensitive'
       };
     }

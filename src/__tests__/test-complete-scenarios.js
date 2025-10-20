@@ -296,3 +296,4 @@ console.log('   ✅ Gestion des bons plans ponctuels');
 console.log('   ✅ Formatage des prix');
 console.log('   ✅ Affichage des modalités');
 
+

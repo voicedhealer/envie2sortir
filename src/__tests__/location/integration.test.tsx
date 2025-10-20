@@ -66,8 +66,10 @@ describe('Système de localisation - Tests d\'intégration', () => {
         expect(screen.getByTestId('current-city')).toHaveTextContent('Dijon');
       });
 
-      // Cliquer sur le bouton
-      fireEvent.click(screen.getByText('Changer vers Paris'));
+      // Cliquer sur le bouton avec act
+      await act(async () => {
+        fireEvent.click(screen.getByText('Changer vers Paris'));
+      });
 
       // Vérifier le changement
       await waitFor(() => {
@@ -82,7 +84,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.changeCity(paris);
       });
 
@@ -196,7 +198,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
       expect(Array.isArray(result.current.history)).toBe(true);
 
       // Changer de ville
-      act(() => {
+      await act(async () => {
         result.current.changeCity(paris);
       });
 
@@ -224,7 +226,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
       expect(result.current.searchRadius).toBe(20);
 
       // Changer le rayon
-      act(() => {
+      await act(async () => {
         result.current.changeRadius(50);
       });
 
@@ -254,7 +256,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
         expect(result.current.loading).toBe(false);
       });
 
-      act(() => {
+      await act(async () => {
         result.current.changeCity(paris);
       });
 
@@ -298,7 +300,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
       expect(step1.current.currentCity?.name).toBe('Paris');
 
       // 3. Ajouter aux favoris
-      act(() => {
+      await act(async () => {
         step1.current.addFavorite(paris);
       });
 
@@ -307,7 +309,7 @@ describe('Système de localisation - Tests d\'intégration', () => {
       });
 
       // 4. Changer le rayon
-      act(() => {
+      await act(async () => {
         step1.current.changeRadius(50);
       });
 
@@ -322,14 +324,14 @@ describe('Système de localisation - Tests d\'intégration', () => {
   });
 
   describe('Gestion des erreurs', () => {
-    it('devrait gérer gracieusement un localStorage corrompu', () => {
+    it('devrait gérer gracieusement un localStorage corrompu', async () => {
       // Mettre des données invalides
       localStorageMock.setItem('envie2sortir_location_preferences', 'invalid json');
 
       const { result } = renderHook(() => useLocation(), { wrapper });
 
       // Ne devrait pas crasher
-      waitFor(() => {
+      await waitFor(() => {
         expect(result.current.loading).toBe(false);
         expect(result.current.currentCity).toBeDefined();
       });

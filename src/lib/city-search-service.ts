@@ -23,32 +23,63 @@ export async function searchCitiesAPI(query: string, limit: number = 10): Promis
   if (query.length < 2) return [];
   
   try {
-    const response = await fetch(
-      `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(query)}&type=municipality&limit=${limit}`
-    );
+    // Nettoyer la requête pour éviter les caractères problématiques
+    const cleanQuery = query.trim().replace(/[^\w\s\-'àâäéèêëïîôöùûüÿçñ]/gi, '');
+    
+    if (cleanQuery.length < 2) {
+      console.warn('Requête trop courte après nettoyage:', query);
+      return [];
+    }
+    
+    const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(cleanQuery)}&type=municipality&limit=${Math.min(limit, 20)}`;
+    
+    console.log('Recherche API Adresse:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Envie2Sortir/1.0'
+      }
+    });
     
     if (!response.ok) {
-      throw new Error(`Erreur API: ${response.status}`);
+      const errorText = await response.text();
+      console.error('Erreur API Adresse:', response.status, errorText);
+      throw new Error(`Erreur API: ${response.status} - ${errorText}`);
     }
     
     const data = await response.json();
     
-    if (!data.features) {
+    if (!data.features || !Array.isArray(data.features)) {
+      console.warn('Format de réponse API invalide:', data);
       return [];
     }
     
-    return data.features.map((feature: any) => ({
-      id: feature.properties.id || `${feature.properties.city}-${feature.properties.postcode}`,
-      name: feature.properties.city,
-      latitude: feature.geometry.coordinates[1],
-      longitude: feature.geometry.coordinates[0],
-      region: extractRegion(feature.properties.context),
-      department: extractDepartment(feature.properties.context),
-      postalCode: feature.properties.postcode,
-      context: feature.properties.context || ''
-    }));
+    const results = data.features
+      .filter((feature: any) => 
+        feature.properties && 
+        feature.properties.city && 
+        feature.geometry && 
+        feature.geometry.coordinates
+      )
+      .map((feature: any) => ({
+        id: feature.properties.id || `${feature.properties.city}-${feature.properties.postcode || 'unknown'}`,
+        name: feature.properties.city,
+        latitude: feature.geometry.coordinates[1],
+        longitude: feature.geometry.coordinates[0],
+        region: extractRegion(feature.properties.context),
+        department: extractDepartment(feature.properties.context),
+        postalCode: feature.properties.postcode || '',
+        context: feature.properties.context || ''
+      }));
+    
+    console.log(`Trouvé ${results.length} villes pour "${query}"`);
+    return results;
+    
   } catch (error) {
     console.error('Erreur lors de la recherche de villes:', error);
+    // Retourner un résultat vide au lieu de propager l'erreur
     return [];
   }
 }

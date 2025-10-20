@@ -11,7 +11,7 @@ import LocationDropdown from './LocationDropdown';
  */
 export default function LocationIndicator() {
   const [showSelector, setShowSelector] = useState(false);
-  const { currentCity, searchRadius, loading } = useLocation();
+  const { currentCity, searchRadius, loading, updatePreferences } = useLocation();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   if (loading || !currentCity) {
@@ -32,7 +32,8 @@ export default function LocationIndicator() {
       <button
         ref={buttonRef}
         onClick={handleToggle}
-        className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-50 to-pink-50 hover:from-orange-100 hover:to-pink-100 border border-orange-200 rounded-lg transition-all duration-200 group"
+        className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-orange-50 to-pink-50 hover:from-orange-100 hover:to-pink-100 border rounded-lg transition-all duration-200 group"
+        style={{ borderColor: '#EA916EFF', borderWidth: '1px', borderStyle: 'solid' }}
         title="Changer de localisation"
       >
         <MapPin className="w-4 h-4 text-orange-600 group-hover:scale-110 transition-transform" />
@@ -53,6 +54,7 @@ export default function LocationIndicator() {
           isOpen={showSelector}
           onClose={() => setShowSelector(false)}
           buttonRef={buttonRef}
+          updatePreferences={updatePreferences}
         />
       )}
     </div>
