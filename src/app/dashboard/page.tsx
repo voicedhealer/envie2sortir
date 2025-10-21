@@ -57,6 +57,7 @@ export default async function DashboardPage() {
         instagram: true,
         facebook: true,
         tiktok: true,
+        youtube: true,
         imageUrl: true,
         status: true,
         subscription: true,

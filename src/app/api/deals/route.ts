@@ -5,13 +5,24 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 API /api/deals - Début de la requête POST');
+    
     const session = await getServerSession(authOptions);
+    console.log('👤 Session utilisateur:', session?.user?.id, session?.user?.email);
 
     if (!session?.user) {
+      console.error('❌ Utilisateur non authentifié');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
     const body = await request.json();
+    console.log('📦 Corps de la requête reçu:', {
+      establishmentId: body.establishmentId,
+      title: body.title,
+      hasImage: !!body.imageUrl,
+      hasPdf: !!body.pdfUrl
+    });
+
     const {
       establishmentId,
       title,
@@ -39,12 +50,22 @@ export async function POST(request: NextRequest) {
 
     // Validation des champs requis
     if (!establishmentId || !title || !description || !dateDebut || !dateFin) {
+      const missingFields = [];
+      if (!establishmentId) missingFields.push('establishmentId');
+      if (!title) missingFields.push('title');
+      if (!description) missingFields.push('description');
+      if (!dateDebut) missingFields.push('dateDebut');
+      if (!dateFin) missingFields.push('dateFin');
+      
+      console.error('❌ Champs requis manquants:', missingFields);
       return NextResponse.json({ 
-        error: 'Champs requis manquants' 
+        error: `Champs requis manquants: ${missingFields.join(', ')}` 
       }, { status: 400 });
     }
 
     // Vérifier que l'utilisateur est propriétaire de l'établissement
+    console.log('🔍 Vérification de l\'établissement:', establishmentId, 'pour l\'utilisateur:', session.user.id);
+    
     const establishment = await prisma.establishment.findFirst({
       where: { 
         id: establishmentId,
@@ -52,11 +73,15 @@ export async function POST(request: NextRequest) {
       },
       select: { 
         id: true, 
-        subscription: true
+        subscription: true,
+        name: true
       }
     });
 
+    console.log('🏢 Établissement trouvé:', establishment);
+
     if (!establishment) {
+      console.error('❌ Établissement introuvable ou accès refusé');
       return NextResponse.json({ 
         error: 'Établissement introuvable ou accès refusé' 
       }, { status: 404 });
@@ -64,10 +89,13 @@ export async function POST(request: NextRequest) {
 
     // Vérifier que l'établissement est premium
     if (establishment.subscription !== 'PREMIUM') {
+      console.error('❌ Établissement non premium:', establishment.subscription);
       return NextResponse.json({ 
         error: 'Cette fonctionnalité est réservée aux comptes Premium' 
       }, { status: 403 });
     }
+
+    console.log('✅ Création du bon plan pour:', establishment.name);
 
     // Créer le bon plan
     const deal = await prisma.dailyDeal.create({
@@ -95,16 +123,24 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('✅ Bon plan créé avec succès:', deal.id);
+
     return NextResponse.json({ 
       success: true,
       deal
     });
 
   } catch (error) {
-    console.error('Erreur lors de la création du bon plan:', error);
+    console.error('❌ Erreur lors de la création du bon plan:', error);
+    
+    // Log détaillé de l'erreur
+    if (error instanceof Error) {
+      console.error('Message d\'erreur:', error.message);
+      console.error('Stack trace:', error.stack);
+    }
     
     return NextResponse.json({ 
-      error: 'Erreur lors de la création du bon plan' 
+      error: error instanceof Error ? error.message : 'Erreur lors de la création du bon plan' 
     }, { status: 500 });
   }
 }

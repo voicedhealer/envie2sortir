@@ -42,8 +42,8 @@ export default function DailyDealModal({ deal, onClose }: DailyDealModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] border-2 border-orange-500 shadow-2xl shadow-orange-500/50 overflow-hidden">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="relative bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] border-2 border-orange-500 shadow-2xl shadow-orange-500/50 overflow-hidden transform transition-all duration-300 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 mx-auto">
         {/* Bouton fermer */}
         <button
           onClick={handleClose}

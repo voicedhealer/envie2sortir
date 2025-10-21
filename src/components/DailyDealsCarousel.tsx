@@ -26,6 +26,7 @@ interface DailyDeal {
   establishment: {
     id: string;
     name: string;
+    slug: string;
     address: string;
     city?: string;
     activities?: string[];
@@ -38,14 +39,11 @@ interface DailyDeal {
 export default function DailyDealsCarousel() {
   const [deals, setDeals] = useState<DailyDeal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
   
   // 📍 Hook de localisation
   const { currentCity, searchRadius, loading: locationLoading } = useLocation();
 
   useEffect(() => {
-    setIsMounted(true);
-    
     // Petit délai pour éviter la surcharge au montage initial
     const timer = setTimeout(() => {
       fetchDeals();
@@ -101,8 +99,6 @@ export default function DailyDealsCarousel() {
       });
     }
   };
-
-  if (!isMounted) return null;
 
   return (
     <section className="py-16 bg-gradient-to-br from-orange-50 via-white to-pink-50" style={{ minHeight: '500px' }}>
@@ -241,6 +237,7 @@ export default function DailyDealsCarousel() {
                     deal={deal}
                     redirectToEstablishment={true}
                     establishmentId={deal.establishmentId}
+                    establishmentSlug={deal.establishment.slug}
                   />
                 </div>
               ))}

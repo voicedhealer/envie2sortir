@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import Link from 'next/link';
 import { isEventInProgress } from '@/lib/date-utils';
@@ -40,16 +40,20 @@ export default function EventsCarousel() {
   const [trendingEvents, setTrendingEvents] = useState<Event[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [loading, setLoading] = useState(true);
-  const [isMounted, setIsMounted] = useState(false);
   const [blurredButton, setBlurredButton] = useState<string | null>(null);
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null);
   
   // 📍 Hook de localisation
   const { currentCity, searchRadius, loading: locationLoading } = useLocation();
 
+  // ✅ Calculer dynamiquement les événements en cours avec useMemo
+  const liveEventsCount = useMemo(() => {
+    return filteredEvents.filter(e => 
+      isEventInProgress(e.startDate, e.endDate)
+    ).length;
+  }, [filteredEvents]);
+
   useEffect(() => {
-    setIsMounted(true);
-    
     // Petit délai pour éviter la surcharge au montage initial
     const timer = setTimeout(() => {
       fetchEvents();
@@ -58,27 +62,7 @@ export default function EventsCarousel() {
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    applyFilter();
-  }, [filter, allEvents, currentCity, searchRadius]);
-
-  const fetchEvents = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch('/api/events/upcoming');
-      if (response.ok) {
-        const data = await response.json();
-        setAllEvents(data.events || []);
-        setTrendingEvents(data.trending || []);
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des événements:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const applyFilter = () => {
+  const applyFilter = useCallback(() => {
     let events = allEvents;
     
     // 📍 FILTRE 1 : Par localisation
@@ -149,6 +133,26 @@ export default function EventsCarousel() {
     
     // Limiter à 12 événements pour l'affichage
     setFilteredEvents(events.slice(0, 12));
+  }, [allEvents, filter, currentCity, searchRadius]);
+
+  useEffect(() => {
+    applyFilter();
+  }, [applyFilter]);
+
+  const fetchEvents = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/events/upcoming');
+      if (response.ok) {
+        const data = await response.json();
+        setAllEvents(data.events || []);
+        setTrendingEvents(data.trending || []);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des événements:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const scrollContainer = (direction: 'left' | 'right') => {
@@ -209,11 +213,6 @@ export default function EventsCarousel() {
     }
   };
 
-  // Compter les événements en cours (seulement côté client)
-  const liveEventsCount = isMounted ? filteredEvents.filter(e => 
-    isEventInProgress(e.startDate, e.endDate)
-  ).length : 0;
-
   if (loading || locationLoading) {
     return (
       <section className="py-16 bg-gradient-to-b from-gray-50 to-white" style={{ minHeight: '500px' }}>
@@ -241,7 +240,7 @@ export default function EventsCarousel() {
                 🎉 Événements à venir
               </h2>
               {/* Compteur d'événements en cours */}
-              {isMounted && liveEventsCount > 0 && (
+              {liveEventsCount > 0 && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-red-500 text-white text-sm font-bold rounded-full animate-pulse">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
@@ -387,7 +386,7 @@ export default function EventsCarousel() {
               >
                 <div className="flex gap-6 py-4 px-4 items-stretch">
                   {filteredEvents.map((event) => {
-                const isLive = isMounted ? isEventInProgress(event.startDate, event.endDate) : false;
+                const isLive = isEventInProgress(event.startDate, event.endDate);
                 const isTrending = trendingEvents.some(t => t.id === event.id);
 
                     return (

@@ -10,13 +10,7 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
   const { data: session, status } = useSession();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAdminSubmenu, setShowAdminSubmenu] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Gérer l'hydratation
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   // Fermer le menu quand on clique ailleurs
   useEffect(() => {
@@ -35,8 +29,8 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
 
   const isLoading = status === 'loading';
 
-  // Ne pas afficher le contenu tant que l'hydratation n'est pas terminée
-  if (!isHydrated || isLoading) {
+  // Afficher un skeleton cliquable pendant le chargement
+  if (isLoading) {
     return (
       <div className={`flex items-center space-x-2 ${isMobile ? 'py-2' : ''}`}>
         <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>

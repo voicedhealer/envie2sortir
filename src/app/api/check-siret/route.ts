@@ -25,11 +25,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         companyName: true,
-        user: {
-          select: {
-            email: true
-          }
-        }
+        email: true
       }
     });
 
@@ -39,8 +35,8 @@ export async function POST(request: NextRequest) {
         message: 'Ce SIRET est déjà enregistré.',
         companyName: existingProfessional.companyName,
         // Ne pas renvoyer l'email complet pour des raisons de sécurité
-        emailHint: existingProfessional.user?.email 
-          ? existingProfessional.user.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+        emailHint: existingProfessional.email 
+          ? existingProfessional.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
           : null
       });
     }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock, MessageSquare } from "lucide-react";
+import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock, MessageSquare, Youtube, Music } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
@@ -34,6 +34,8 @@ interface Establishment {
   website: string | null;
   instagram: string | null;
   facebook: string | null;
+  youtube: string | null;
+  tiktok: string | null;
   imageUrl: string | null;
   status: string;
   subscription: string;
@@ -386,7 +388,7 @@ export default function DashboardContent({ user, establishment, professional }: 
       </div>
 
       {/* Réseaux sociaux */}
-      {(establishment.website || establishment.instagram || establishment.facebook) && (
+      {(establishment.website || establishment.instagram || establishment.facebook || establishment.youtube || establishment.tiktok) && (
         <div className="bg-white shadow rounded-lg mb-8">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">
@@ -433,6 +435,34 @@ export default function DashboardContent({ user, establishment, professional }: 
                 >
                   <Facebook className="w-5 h-5 mr-2" />
                   Facebook
+                </a>
+              )}
+              
+              {establishment.youtube && (
+                <a
+                  href={establishment.youtube.startsWith('http') 
+                    ? establishment.youtube 
+                    : `https://youtube.com/${establishment.youtube}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-red-600 hover:text-red-800"
+                >
+                  <Youtube className="w-5 h-5 mr-2" />
+                  YouTube
+                </a>
+              )}
+              
+              {establishment.tiktok && (
+                <a
+                  href={establishment.tiktok.startsWith('http') 
+                    ? establishment.tiktok 
+                    : `https://tiktok.com/@${establishment.tiktok}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-gray-800 hover:text-black"
+                >
+                  <Music className="w-5 h-5 mr-2" />
+                  TikTok
                 </a>
               )}
             </div>

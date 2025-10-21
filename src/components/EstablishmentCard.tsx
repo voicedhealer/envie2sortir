@@ -333,28 +333,15 @@ export default function EstablishmentCard({
   // Déterminer le statut d'ouverture (déterministe basé sur l'ID)
   const isOpen = establishment.id.charCodeAt(establishment.id.length - 1) % 10 < 7; // 70% de chance d'être ouvert
 
-  // État pour l'analyse de tendance (calcul côté client uniquement)
-  const [trendingAnalysis, setTrendingAnalysis] = useState<TrendingScore>({
-    score: 0,
-    isTrending: false,
-    badges: []
-  });
-  const [isHydrated, setIsHydrated] = useState(false);
-  const isHot = isHydrated && trendingAnalysis.isTrending;
-
-  // Calculer l'analyse de tendance côté client pour éviter l'erreur d'hydratation
-  useEffect(() => {
-    setIsHydrated(true);
-    const analysis = getTrendingAnalysis(establishment);
-    setTrendingAnalysis(analysis);
-  }, [establishment]);
+  // Calculer l'analyse de tendance immédiatement (pas besoin d'attendre l'hydratation)
+  const trendingAnalysis = getTrendingAnalysis(establishment);
+  const isHot = trendingAnalysis.isTrending;
 
   // Fonction pour rendre les badges de tendance
   const renderTrendingBadges = () => {
-    // Ne pas afficher les badges avant l'hydratation pour éviter les erreurs
-    if (!isHydrated) return null;
-    
     const badges = trendingAnalysis.badges;
+    
+    // Si pas de badges, ne rien afficher
     if (badges.length === 0) return null;
 
     // Prioriser les badges : Top recherches > Tendance > Populaire > Nouveau (impact business)

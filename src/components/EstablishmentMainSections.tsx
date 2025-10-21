@@ -44,6 +44,7 @@ function parseJsonField(field: any): string[] {
   return Array.isArray(field) ? field : [];
 }
 
+
 // ✅ FONCTION POUR NETTOYER LES MARQUEURS DE RUBRIQUE
 function cleanItemDisplay(item: string): string {
   // Enlever les marqueurs de rubrique (ex: "Déjeuner|populaire-pour" -> "Déjeuner")
@@ -478,6 +479,7 @@ export default function EstablishmentMainSections({ establishment, className = "
   
   // Hook de tracking des sections
   const { trackSectionOpen, trackSectionClose, trackSubsectionClick } = useSectionTracking(establishment.id || '');
+
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);

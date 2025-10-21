@@ -33,9 +33,10 @@ interface DailyDealCardProps {
   onClick?: () => void;
   redirectToEstablishment?: boolean; // Si true, redirige vers la page établissement au lieu d'ouvrir le modal
   establishmentId?: string; // ID de l'établissement pour la redirection
+  establishmentSlug?: string; // Slug de l'établissement pour la redirection
 }
 
-export default function DailyDealCard({ deal, onClick, redirectToEstablishment = false, establishmentId }: DailyDealCardProps) {
+export default function DailyDealCard({ deal, onClick, redirectToEstablishment = false, establishmentId, establishmentSlug }: DailyDealCardProps) {
   const router = useRouter();
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
   const [userEngagement, setUserEngagement] = useState<'liked' | 'disliked' | null>(null);
@@ -142,8 +143,8 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
     if (isFlipped) return; // Ne pas ouvrir le modal/rediriger si la carte est retournée
     
     // Si redirection vers établissement activée
-    if (redirectToEstablishment && establishmentId) {
-      router.push(`/etablissement/${establishmentId}`);
+    if (redirectToEstablishment && establishmentSlug) {
+      router.push(`/etablissements/${establishmentSlug}`);
       return;
     }
     

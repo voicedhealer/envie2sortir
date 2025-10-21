@@ -116,9 +116,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       const formDataToSend = new FormData();
       formDataToSend.append('file', file);
       formDataToSend.append('establishmentId', establishmentId);
-      formDataToSend.append('fileType', 'image');
+      formDataToSend.append('imageType', 'deals'); // Type pour l'optimisation
 
-      const response = await fetch('/api/upload/deal-media', {
+      const response = await fetch('/api/upload/optimized-image', {
         method: 'POST',
         body: formDataToSend
       });
@@ -126,11 +126,21 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       const data = await response.json();
       
       if (data.success) {
+        // Utiliser la variante 'main' pour l'affichage principal
+        const mainImageUrl = data.variants.main || data.variants.hero;
+        
         setFormData(prev => ({ 
           ...prev, 
-          imageUrl: data.fileUrl,
+          imageUrl: mainImageUrl,
           pdfUrl: '' // Effacer le PDF si une image est ajoutée
         }));
+        
+        // Afficher les économies réalisées
+        if (data.totalSavingsPercentage > 0) {
+          console.log(`✅ Image optimisée: ${data.totalSavingsPercentage.toFixed(1)}% d'économie d'espace`);
+          // Optionnel: afficher une notification à l'utilisateur
+          // alert(`Image optimisée ! ${data.totalSavingsPercentage.toFixed(1)}% d'économie d'espace`);
+        }
       } else {
         alert(data.error || 'Erreur lors de l\'upload de l\'image');
       }
@@ -187,6 +197,14 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       return;
     }
     
+    // Validation des dates pour les bons plans non récurrents
+    if (!formData.isRecurring) {
+      if (!formData.dateDebut || !formData.dateFin) {
+        alert('Veuillez renseigner les dates de début et de fin');
+        return;
+      }
+    }
+    
     try {
       const url = editingDeal 
         ? `/api/deals/${editingDeal.id}` 
@@ -208,12 +226,29 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(dealData)
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        
+        alert(errorData.error || `Erreur ${response.status}: ${response.statusText}`);
+        return;
+      }
 
       const data = await response.json();
       
       if (data.success) {
+        alert(editingDeal ? 'Bon plan mis à jour avec succès !' : 'Bon plan créé avec succès !');
+        
         await loadDeals();
         resetForm();
         setShowForm(false);
@@ -222,7 +257,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde du bon plan');
+      alert('Erreur lors de la sauvegarde du bon plan: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
     }
   };
 
@@ -347,9 +382,22 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
 
   // Catégoriser les bons plans
   const now = new Date();
-  const activeDeals = deals.filter(deal => isDealActive(deal));
-  const upcomingDeals = deals.filter(deal => new Date(deal.dateDebut) > now && deal.isActive);
-  const pastDeals = deals.filter(deal => new Date(deal.dateFin) < now || !deal.isActive);
+  
+  const activeDeals = deals.filter(deal => {
+    const startDate = new Date(deal.dateDebut);
+    const endDate = new Date(deal.dateFin);
+    return deal.isActive && startDate <= now && endDate >= now;
+  });
+  
+  const upcomingDeals = deals.filter(deal => {
+    const startDate = new Date(deal.dateDebut);
+    return deal.isActive && startDate > now;
+  });
+  
+  const pastDeals = deals.filter(deal => {
+    const endDate = new Date(deal.dateFin);
+    return !deal.isActive || endDate < now;
+  });
 
   return (
     <div className="space-y-6">
@@ -818,6 +866,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
               </div>
             </div>
           )}
+
 
           {deals.length === 0 && (
             <div className="bg-white shadow rounded-lg p-6 text-center">

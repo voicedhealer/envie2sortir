@@ -297,3 +297,5 @@ console.log('   ✅ Formatage des prix');
 console.log('   ✅ Affichage des modalités');
 
 
+
+

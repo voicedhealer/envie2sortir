@@ -437,7 +437,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {/* Moyens de paiement du formulaire - PRIORITÉ aux données manuelles */}
+          {/* Moyens de paiement validés par le pro à l'étape 4 */}
           {data.paymentMethods && convertPaymentMethodsObjectToArray(data.paymentMethods).length > 0 ? (
             convertPaymentMethodsObjectToArray(data.paymentMethods).map((method, index) => (
               <span
@@ -447,20 +447,8 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 {method}
               </span>
             ))
-          ) : data.smartEnrichmentData?.paymentMethodsArray && data.smartEnrichmentData.paymentMethodsArray.length > 0 ? (
-            /* Moyens de paiement d'enrichissement intelligent - seulement si pas de données manuelles */
-            data.smartEnrichmentData.paymentMethodsArray.map((method: string, index: number) => (
-              <span
-                key={`enrichment-${index}`}
-                className="inline-flex items-center px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-full"
-              >
-                {method}
-              </span>
-            ))
-          ) : null}
-          
-          {/* Moyens de paiement d'enrichissement manuel */}
-          {data.hybridDetailedPayments ? (
+          ) : data.hybridDetailedPayments ? (
+            /* Fallback : Moyens de paiement d'enrichissement manuel si pas de données étape 4 */
             Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
               enabled ? (
                 <span
@@ -471,12 +459,7 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
                 </span>
               ) : null
             ))
-          ) : null}
-          
-          {/* Message si aucun moyen de paiement */}
-          {(!data.paymentMethods || convertPaymentMethodsObjectToArray(data.paymentMethods).length === 0) && 
-           (!data.smartEnrichmentData?.paymentMethodsArray || data.smartEnrichmentData.paymentMethodsArray.length === 0) &&
-           (!data.hybridDetailedPayments) && (
+          ) : (
             <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
           )}
         </div>

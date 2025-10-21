@@ -8,29 +8,6 @@ import { Menu, X } from "lucide-react";
 import UserMenu from "./components/UserMenu";
 import LocationIndicator from "@/components/LocationIndicator";
 
-// Composant Link personnalisé pour éviter les problèmes d'hydratation
-const LinkComponent = ({ href, className, children, ...props }: any) => {
-  const [isClient, setIsClient] = useState(false);
-  
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-  
-  if (!isClient) {
-    return (
-      <div className={className} {...props}>
-        {children}
-      </div>
-    );
-  }
-  
-  return (
-    <Link href={href} className={className} {...props}>
-      {children}
-    </Link>
-  );
-};
-
 export default function Navigation() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -58,9 +35,16 @@ export default function Navigation() {
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           <div className="flex-shrink-0">
-            <LinkComponent href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
-              <Image src="/logo.svg" alt="Envie2Sortir" width={135} height={150} priority />
-            </LinkComponent>
+            <Link href="/" className="flex items-center" aria-label="Envie2Sortir - Accueil">
+              <Image 
+                src="/logo.svg" 
+                alt="Envie2Sortir" 
+                width={135} 
+                height={150} 
+                priority
+                className="h-[140px] w-auto"
+              />
+            </Link>
           </div>
           
           {/* Navigation Desktop */}
@@ -86,7 +70,7 @@ export default function Navigation() {
               // Style spécial pour le bouton "Ajoutez mon établissement"
               if (item.label === "Ajoutez mon établissement") {
                 return (
-                  <LinkComponent
+                  <Link
                     key={item.href}
                     href={item.href}
                     className="rounded-md text-sm font-normal transition-colors flex items-center justify-center text-neutral-900 bg-white border border-orange-400 hover:bg-white hover:text-neutral-900 active:bg-white active:text-neutral-900 disabled:opacity-40"
@@ -122,13 +106,13 @@ export default function Navigation() {
                       />
                     )}
                     {item.label}
-                  </LinkComponent>
+                  </Link>
                 );
               }
               
               // Style par défaut pour les autres éléments
               return (
-                <LinkComponent
+                <Link
                   key={item.href}
                   href={item.href}
                   className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
@@ -147,7 +131,7 @@ export default function Navigation() {
                     />
                   )}
                   {item.label}
-                </LinkComponent>
+                </Link>
               );
             })}
             <LocationIndicator />
@@ -194,13 +178,13 @@ export default function Navigation() {
                     className="w-full text-left block px-3 py-2 rounded-md text-base font-medium transition-colors text-gray-700 hover:text-black hover:bg-black/5"
                   >
                     Bons plans
-                  </button>
-                </>
-              )}
-              {navItems.map((item) => (
-                <LinkComponent
-                  key={item.href}
-                  href={item.href}
+                </button>
+              </>
+            )}
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
                   className={`block px-3 py-2 rounded-md text-base font-medium transition-colors flex items-center gap-2 ${
                     pathname === item.href
                       ? "bg-black/5 text-black"
@@ -214,13 +198,13 @@ export default function Navigation() {
                       alt="" 
                       width={10} 
                       height={10} 
-                      className="w-7 h-7"
-                    />
-                  )}
-                  {item.label}
-                </LinkComponent>
-              ))}
-              <UserMenu isMobile={true} />
+                    className="w-7 h-7"
+                  />
+                )}
+                {item.label}
+              </Link>
+            ))}
+            <UserMenu isMobile={true} />
             </div>
           </div>
         )}

@@ -95,28 +95,53 @@ export async function POST(request: NextRequest) {
 
     // Le fichier a déjà été validé avec validateFile() plus haut
 
-    // Créer le dossier uploads s'il n'existe pas
+    // Créer le dossier temporaire pour l'optimisation
+    const tempDir = join(process.cwd(), 'temp', 'uploads');
+    if (!existsSync(tempDir)) {
+      await mkdir(tempDir, { recursive: true });
+    }
+
+    // Sauvegarder le fichier temporaire
+    const timestamp = Date.now();
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const extension = file.name.split('.').pop();
+    const tempFileName = `${timestamp}_${randomString}.${extension}`;
+    const tempFilePath = join(tempDir, tempFileName);
+    
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    await writeFile(tempFilePath, buffer);
+
+    // Créer le dossier de sortie pour les images d'établissement
     const uploadsDir = join(process.cwd(), 'public', 'uploads');
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
     }
 
-    // Générer un nom de fichier unique
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = file.name.split('.').pop();
-    const fileName = `${timestamp}_${randomString}.${extension}`;
-    
-    // Chemin complet du fichier
-    const filePath = join(uploadsDir, fileName);
-    
-    // Convertir le fichier en buffer et l'écrire
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    // Optimiser l'image pour les établissements
+    const { generateAllImageVariants } = await import('@/lib/image-management');
+    const result = await generateAllImageVariants(
+      tempFilePath, 
+      uploadsDir, 
+      'establishment'
+    );
 
-    // Retourner l'URL publique
+    // Nettoyer le fichier temporaire
+    const { unlink } = await import('fs/promises');
+    await unlink(tempFilePath);
+
+    if (!result.success) {
+      return NextResponse.json({ 
+        error: 'Erreur lors de l\'optimisation de l\'image' 
+      }, { status: 500 });
+    }
+
+    // Utiliser la variante 'hero' pour l'image principale
+    const heroImagePath = result.variants.hero;
+    const fileName = heroImagePath.split('/').pop() || '';
     const imageUrl = `/uploads/${fileName}`;
+
+    console.log(`🏢 Image d'établissement optimisée: ${result.totalSavingsPercentage.toFixed(1)}% d'économie`);
     
     // Créer l'entrée en base de données
     const imageRecord = await prisma.image.create({
