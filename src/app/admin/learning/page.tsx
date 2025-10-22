@@ -41,48 +41,136 @@ export default function LearningDashboard() {
   const [editingPattern, setEditingPattern] = useState<string | null>(null);
   const [correctedType, setCorrectedType] = useState<string>('');
 
-  // Options de types d'établissements (organisées par catégories)
+  // Options de types d'établissements (organisées par catégories) - LISTE COMPLÈTE
   const typeOptions: TypeOption[] = [
     // 🏢 TYPES GÉNÉRIQUES
     { value: 'restaurant_general', label: '🏢 Restaurant (général)' },
     { value: 'bar_general', label: '🏢 Bar (général)' },
     
     // 🍽️ RESTAURANTS SPÉCIALISÉS
+    { value: 'restaurant_gastronomique', label: '⭐ Restaurant gastronomique' },
+    { value: 'restaurant_traditionnel', label: '🍽️ Restaurant traditionnel' },
+    { value: 'restaurant_familial', label: '👨‍👩‍👧‍👦 Restaurant familial' },
+    { value: 'bistrot', label: '🍽️ Bistrot' },
+    
+    // 🌍 CUISINES DU MONDE
     { value: 'restaurant_italien', label: '🍝 Restaurant italien' },
     { value: 'restaurant_japonais', label: '🍣 Restaurant japonais' },
     { value: 'restaurant_chinois', label: '🥢 Restaurant chinois' },
     { value: 'restaurant_thai', label: '🌶️ Restaurant thaï' },
+    { value: 'restaurant_vietnamien', label: '🍜 Restaurant vietnamien' },
+    { value: 'restaurant_coreen', label: '🥢 Restaurant coréen' },
+    { value: 'restaurant_asiatique', label: '🍜 Restaurant asiatique' },
+    { value: 'restaurant_oriental', label: '🥢 Restaurant oriental' },
     { value: 'restaurant_indien', label: '🍛 Restaurant indien' },
-    { value: 'restaurant_gastronomique', label: '⭐ Restaurant gastronomique' },
+    { value: 'restaurant_libanais', label: '🥙 Restaurant libanais' },
+    { value: 'restaurant_turc', label: '🥙 Restaurant turc' },
+    { value: 'restaurant_grec', label: '🫒 Restaurant grec' },
+    { value: 'restaurant_espagnol', label: '🥘 Restaurant espagnol' },
+    { value: 'restaurant_portugais', label: '🐟 Restaurant portugais' },
+    { value: 'restaurant_allemand', label: '🍺 Restaurant allemand' },
+    { value: 'restaurant_russe', label: '🥟 Restaurant russe' },
+    { value: 'restaurant_marocain', label: '🥘 Restaurant marocain' },
+    { value: 'restaurant_ethiopien', label: '🍽️ Restaurant éthiopien' },
+    { value: 'restaurant_brasilien', label: '🌴 Restaurant brésilien' },
+    { value: 'restaurant_peruvien', label: '🌶️ Restaurant péruvien' },
+    { value: 'restaurant_mexicain', label: '🌮 Restaurant mexicain' },
     
-    // 🍹 BARS SPÉCIALISÉS
+    // 🥙 FAST FOOD & STREET FOOD
+    { value: 'kebab', label: '🥙 Kebab' },
+    { value: 'tacos_mexicain', label: '🌮 Tacos mexicain' },
+    { value: 'burger', label: '🍔 Burger' },
+    { value: 'pizzeria', label: '🍕 Pizzeria' },
+    
+    // 🍹 BARS & BOISSONS
+    { value: 'bar_ambiance', label: '🍹 Bar d\'ambiance' },
+    { value: 'bar_lounge', label: '🛋️ Bar lounge' },
     { value: 'bar_cocktails', label: '🍹 Bar à cocktails' },
     { value: 'bar_vins', label: '🍷 Bar à vins' },
+    { value: 'bar_sports', label: '⚽ Bar sportif' },
+    { value: 'rooftop_bar', label: '🏢 Rooftop bar' },
+    { value: 'bar_karaoke', label: '🎤 Bar karaoké' },
+    { value: 'bar_bières', label: '🍺 Bar à bières' },
+    { value: 'bar_jus_smoothies', label: '🥤 Bar jus & smoothies' },
+    { value: 'bar_tapas', label: '🥘 Bar tapas' },
+    { value: 'bar_plage', label: '🏖️ Bar de plage' },
+    { value: 'bar_rooftop', label: '🏢 Bar rooftop' },
+    { value: 'bar_brasserie', label: '🍺 Bar brasserie' },
     { value: 'bar_whisky', label: '🥃 Bar à whisky' },
-    { value: 'bar_tapas', label: '🥘 Bar à tapas' },
+    { value: 'bar_rhum', label: '🥃 Bar à rhum' },
+    { value: 'bar_gin', label: '🥃 Bar à gin' },
+    { value: 'bar_tequila', label: '🥃 Bar à tequila' },
+    { value: 'bar_champagne', label: '🥂 Bar à champagne' },
+    { value: 'bar_apéritif', label: '🍸 Bar apéritif' },
+    { value: 'bar_afterwork', label: '💼 Bar afterwork' },
+    { value: 'bar_brunch', label: '🥞 Bar brunch' },
+    { value: 'bar_glacé', label: '🍦 Bar glacé' },
+    { value: 'bar_healthy', label: '🥗 Bar healthy' },
+    { value: 'bar_vegan', label: '🌱 Bar vegan' },
+    { value: 'bar_gluten_free', label: '🌾 Bar sans gluten' },
+    { value: 'bar_halal', label: '☪️ Bar halal' },
+    { value: 'bar_kosher', label: '✡️ Bar kosher' },
+    { value: 'bar_jeux', label: '🎮 Bar à jeux' },
     { value: 'pub_traditionnel', label: '🍺 Pub traditionnel' },
+    { value: 'brasserie_artisanale', label: '🍺 Brasserie artisanale' },
     
-    // 🎮 ACTIVITÉS & LOISIRS
-    { value: 'parc_loisir_indoor', label: '🎪 Parc de loisirs indoor' },
-    { value: 'escape_game', label: '🔍 Escape Game' },
-    { value: 'karaoke', label: '🎤 Karaoké' },
+    // 🎉 SORTIES NOCTURNES
+    { value: 'discotheque', label: '💃 Discothèque' },
+    { value: 'club_techno', label: '🎧 Club techno' },
+    { value: 'boite_nuit_mainstream', label: '🌙 Boîte de nuit mainstream' },
+    
+    // 🎯 SPORTS & ACTIVITÉS
     { value: 'bowling', label: '🎳 Bowling' },
-    { value: 'laser_game', label: '🔫 Laser Game' },
+    { value: 'billard_americain', label: '🎱 Billard américain' },
+    { value: 'billard_francais', label: '🎱 Billard français' },
+    { value: 'roller_indoor', label: '🛼 Roller indoor' },
+    { value: 'moto_electrique_indoor', label: '🏍️ Moto électrique indoor' },
+    { value: 'futsal', label: '⚽ Futsal' },
     { value: 'karting', label: '🏎️ Karting' },
+    { value: 'laser_game', label: '🔫 Laser Game' },
+    { value: 'vr_experience', label: '🥽 VR Experience' },
     
-    // 🎵 NOUVELLES ACTIVITÉS
+    // 🎮 ESCAPE GAMES
+    { value: 'escape_game', label: '🔍 Escape Game' },
+    { value: 'escape_game_horreur', label: '👻 Escape Game Horreur' },
+    { value: 'escape_game_aventure', label: '🏴‍☠️ Escape Game Aventure' },
+    { value: 'escape_game_mystere', label: '🕵️ Escape Game Mystère' },
+    { value: 'escape_game_sf', label: '🚀 Escape Game Science-Fiction' },
+    { value: 'escape_game_fantasy', label: '🧙 Escape Game Fantasy' },
+    { value: 'escape_game_familial', label: '👨‍👩‍👧‍👦 Escape Game Familial' },
+    
+    // 🎵 BLIND TEST & QUIZ
     { value: 'blind_test', label: '🎵 Blind Test' },
     { value: 'quiz_room', label: '🧠 Quiz Room' },
     { value: 'salle_jeux_amis', label: '🎮 Salle de jeux entre amis' },
     { value: 'complexe_multiactivites', label: '🏢 Complexe multiactivités' },
     
+    // 👶 ENFANTS & FAMILLE
+    { value: 'trampoline_parc', label: '🤸 Trampoline parc' },
+    { value: 'parc_loisirs_enfants', label: '🎠 Parc de loisirs enfants' },
+    { value: 'centre_aquatique', label: '🏊 Centre aquatique' },
+    { value: 'parc_aventure_enfants', label: '🌳 Parc d\'aventure enfants' },
+    { value: 'ludotheque', label: '🧸 Ludothèque' },
+    { value: 'centre_loisirs_enfants', label: '🏫 Centre de loisirs enfants' },
+    { value: 'ferme_pedagogique', label: '🐄 Ferme pédagogique' },
+    { value: 'musee_enfants', label: '🏛️ Musée enfants' },
+    { value: 'parc_theme_enfants', label: '🎭 Parc à thème enfants' },
+    { value: 'centre_sportif_enfants', label: '🏃 Centre sportif enfants' },
+    { value: 'atelier_creatif_enfants', label: '🎨 Atelier créatif enfants' },
+    { value: 'parc_jeux_interieur', label: '🏠 Parc de jeux intérieur' },
+    { value: 'mini_golf', label: '⛳ Mini-golf' },
+    { value: 'parc_attractions_familial', label: '🎡 Parc d\'attractions familial' },
+    { value: 'centre_anniversaires', label: '🎂 Centre d\'anniversaires' },
+    { value: 'parc_animalier', label: '🐾 Parc animalier' },
+    { value: 'parc_plage_enfants', label: '🏖️ Parc de plage enfants' },
+    { value: 'centre_equitation_enfants', label: '🐴 Centre d\'équitation enfants' },
+    { value: 'parc_skate_enfants', label: '🛹 Parc de skate enfants' },
+    { value: 'centre_cirque_enfants', label: '🎪 Centre de cirque enfants' },
+    { value: 'parc_loisir_indoor', label: '🎪 Parc de loisir indoor' },
+    
     // 🎭 CULTURE & SPECTACLES
     { value: 'cinema', label: '🎬 Cinéma' },
     { value: 'theatre', label: '🎭 Théâtre' },
-    
-    // 🌙 SORTIES NOCTURNES
-    { value: 'discotheque', label: '💃 Discothèque' },
-    { value: 'club_techno', label: '🎧 Club techno' },
     
     // 🏃 SPORTS & BIEN-ÊTRE
     { value: 'sport', label: '⚽ Sport' },
@@ -90,7 +178,7 @@ export default function LearningDashboard() {
     
     // ❓ AUTRES
     { value: 'cafe', label: '☕ Café' },
-    { value: 'other', label: '❓ Autre' }
+    { value: 'autre', label: '❓ Autre' }
   ];
 
   useEffect(() => {

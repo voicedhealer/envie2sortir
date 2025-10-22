@@ -12,20 +12,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Calculer les métriques système
+    // Métriques système réelles uniquement
     const memoryUsage = process.memoryUsage();
-    const memoryTotal = 512 * 1024 * 1024; // 512 MB (simulation)
+    
+    // Mémoire réelle du processus Node.js
     const memoryUsed = memoryUsage.heapUsed;
-    const memoryPercentage = (memoryUsed / memoryTotal) * 100;
+    const memoryTotal = memoryUsage.heapTotal;
+    const memoryPercentage = memoryTotal > 0 ? (memoryUsed / memoryTotal) * 100 : 0;
 
-    // Simulation du CPU (en production, utiliser une vraie bibliothèque)
-    const cpuUsage = 8 + Math.random() * 15; // Simulation entre 8-23%
+    // CPU : Pas de vraie mesure disponible sans bibliothèque externe
+    // On retourne null pour indiquer que cette métrique n'est pas disponible
+    const cpuUsage = null;
 
-    // Simuler des métriques API réalistes
-    const totalRequests = 15 + Math.floor(Math.random() * 10); // 15-25 requêtes
-    const errorCount = 2 + Math.floor(Math.random() * 3); // 2-4 erreurs
-    const avgResponseTime = 150 + Math.floor(Math.random() * 100); // 150-250ms
-    const errorRate = (errorCount / totalRequests) * 100;
+    // Métriques API réelles : compter les vraies requêtes depuis la base
+    // Pour l'instant, on retourne des valeurs par défaut réalistes
+    const totalRequests = 0; // À implémenter avec un vrai système de monitoring
+    const errorCount = 0;
+    const avgResponseTime = 0;
+    const errorRate = 0;
 
     // Récupérer les statistiques d'établissements
     const [pendingCount, activeCount] = await Promise.all([

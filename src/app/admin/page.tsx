@@ -215,14 +215,14 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Métriques système */}
+      {/* Métriques système réelles uniquement */}
       {metrics && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Mémoire */}
+          {/* Mémoire - Réelle */}
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-500">Mémoire</p>
+                <p className="text-sm font-medium text-gray-500">Mémoire Node.js</p>
                 <p className="text-2xl font-semibold text-gray-900">
                   {metrics.memory.percentage.toFixed(1)}%
                 </p>
@@ -244,70 +244,50 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* CPU */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          {/* CPU - Non disponible */}
+          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">CPU</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {metrics.cpu.usage.toFixed(1)}%
+                <p className="text-lg font-semibold text-gray-400">
+                  Non disponible
                 </p>
-                <p className="text-xs text-gray-400">Utilisation</p>
+                <p className="text-xs text-gray-400">Monitoring requis</p>
               </div>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                metrics.cpu.usage > 80 ? 'bg-red-100' : 
-                metrics.cpu.usage > 60 ? 'bg-yellow-100' : 'bg-green-100'
-              }`}>
-                <span className={`text-lg ${
-                  metrics.cpu.usage > 80 ? 'text-red-600' : 
-                  metrics.cpu.usage > 60 ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                  ⚡
-                </span>
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-lg text-gray-400">⚡</span>
               </div>
             </div>
           </div>
 
-          {/* API Requests */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          {/* API Requests - Non disponible */}
+          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Requêtes API</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {metrics.api.totalRequests.toLocaleString()}
+                <p className="text-lg font-semibold text-gray-400">
+                  Non disponible
                 </p>
-                <p className="text-xs text-gray-400">
-                  Moyenne: {metrics.api.avgResponseTime}ms
-                </p>
+                <p className="text-xs text-gray-400">Monitoring requis</p>
               </div>
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-lg text-blue-600">📡</span>
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-lg text-gray-400">📡</span>
               </div>
             </div>
           </div>
 
-          {/* Taux d'erreur */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
+          {/* Taux d'erreur - Non disponible */}
+          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-500">Taux d'erreur</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {metrics.api.errorRate.toFixed(2)}%
+                <p className="text-lg font-semibold text-gray-400">
+                  Non disponible
                 </p>
-                <p className="text-xs text-gray-400">
-                  {metrics.security.blockedRequests} bloquées
-                </p>
+                <p className="text-xs text-gray-400">Monitoring requis</p>
               </div>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                metrics.api.errorRate > 5 ? 'bg-red-100' : 
-                metrics.api.errorRate > 2 ? 'bg-yellow-100' : 'bg-green-100'
-              }`}>
-                <span className={`text-lg ${
-                  metrics.api.errorRate > 5 ? 'text-red-600' : 
-                  metrics.api.errorRate > 2 ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                  🚨
-                </span>
+              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                <span className="text-lg text-gray-400">🚨</span>
               </div>
             </div>
           </div>
@@ -315,62 +295,80 @@ export default function AdminDashboard() {
       )}
 
       {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Établissements en attente */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                <span className="text-orange-600 text-sm font-semibold">
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
+          📊 Statistiques des établissements
+        </h3>
+        <p className="text-sm text-gray-600 mb-6">
+          Vue d'ensemble du nombre d'établissements selon leur statut d'approbation
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Établissements en attente */}
+          <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                  <span className="text-orange-600 text-sm font-semibold">
+                    {stats?.pendingCount || 0}
+                  </span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">
+                  En attente
+                </p>
+                <p className="text-2xl font-semibold text-gray-900">
                   {stats?.pendingCount || 0}
-                </span>
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Établissements en cours de validation
+                </p>
               </div>
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">
-                En attente
-              </p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats?.pendingCount || 0}
-              </p>
-            </div>
           </div>
-        </div>
 
-        {/* Établissements actifs */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                <span className="text-green-600 text-sm font-semibold">
+          {/* Établissements actifs */}
+          <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-green-600 text-sm font-semibold">
+                    {stats?.activeCount || 0}
+                  </span>
+                </div>
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Actifs</p>
+                <p className="text-2xl font-semibold text-gray-900">
                   {stats?.activeCount || 0}
-                </span>
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Établissements approuvés et visibles
+                </p>
               </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Actifs</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {stats?.activeCount || 0}
-              </p>
             </div>
           </div>
-        </div>
 
-        {/* Total */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <span className="text-blue-600 text-sm font-semibold">
-                  {(stats?.pendingCount || 0) + (stats?.activeCount || 0)}
-                </span>
+          {/* Total */}
+          <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-sm font-semibold">
+                    {(stats?.pendingCount || 0) + (stats?.activeCount || 0)}
+                  </span>
+                </div>
               </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">Total</p>
-              <p className="text-2xl font-semibold text-gray-900">
-                {(stats?.pendingCount || 0) + (stats?.activeCount || 0)}
-              </p>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500">Total</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {(stats?.pendingCount || 0) + (stats?.activeCount || 0)}
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Nombre total d'établissements
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -380,8 +378,11 @@ export default function AdminDashboard() {
       <div className="bg-white rounded-lg shadow-sm border">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-medium text-gray-900">
-            Dernières inscriptions
+            📝 Dernières inscriptions d'établissements
           </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Liste des nouveaux établissements enregistrés récemment
+          </p>
         </div>
         <div className="divide-y divide-gray-200">
           {stats?.recentEstablishments?.length ? (
@@ -396,7 +397,7 @@ export default function AdminDashboard() {
                       {establishment.name}
                     </h4>
                     <p className="text-sm text-gray-500">
-                      {establishment.owner.firstName} {establishment.owner.lastName}
+                      Propriétaire : {establishment.owner.firstName} {establishment.owner.lastName}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       Inscrit le{" "}
@@ -416,9 +417,398 @@ export default function AdminDashboard() {
             ))
           ) : (
             <div className="px-6 py-8 text-center text-gray-500">
-              Aucune inscription récente
+              <div className="text-4xl mb-2">📭</div>
+              <p className="text-gray-500">Aucune inscription récente</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Les nouveaux établissements apparaîtront ici
+              </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Patterns d'Apprentissage Récents */}
+      <div className="bg-white rounded-lg shadow-sm border">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">
+            🧠 Patterns d'Apprentissage Récents
+          </h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Détection et correction automatique des types d'activités
+          </p>
+        </div>
+        <div className="p-6">
+          {/* Tableau des patterns */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TYPE DÉTECTÉ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    TYPE CORRIGÉ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    CONFIANCE
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    STATUT
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    DATE
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ACTIONS
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {/* Exemples de patterns - à remplacer par des données réelles */}
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    parc_loisir_indoor
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '95%'}}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">95%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      En attente
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    22/10/2025
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="text-green-600 hover:text-green-900">Valider</button>
+                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
+                      <button className="text-red-600 hover:text-red-900">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    restaurant
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '91%'}}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">91%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      En attente
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    21/10/2025
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="text-green-600 hover:text-green-900">Valider</button>
+                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
+                      <button className="text-red-600 hover:text-red-900">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    escape_game
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '95%'}}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">95%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      En attente
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    21/10/2025
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex space-x-2">
+                      <button className="text-green-600 hover:text-green-900">Valider</button>
+                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
+                      <button className="text-red-600 hover:text-red-900">🗑️</button>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    other
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    -
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="bg-red-500 h-2 rounded-full" style={{width: '35%'}}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">35%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      En attente
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    20/10/2025
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <select className="text-sm border border-gray-300 rounded px-2 py-1">
+                      <option>Sélectionner...</option>
+                      <option>restaurant_general</option>
+                      <option>bar_general</option>
+                      <option>parc_loisir_indoor</option>
+                      <option>escape_game</option>
+                      <option>bowling</option>
+                      <option>karting</option>
+                      <option>laser_game</option>
+                      <option>autre</option>
+                    </select>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    bar
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    bar_general
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '92%'}}></div>
+                      </div>
+                      <span className="text-sm text-gray-600">92%</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                      Corrigé
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    14/10/2025
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <span className="text-green-600">✅ Corrigé</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Dropdown avec toutes les activités disponibles */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">
+              📋 Liste complète des activités disponibles
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+              {/* Bars & Boissons */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🍹 Bars & Boissons</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• bar_ambiance</div>
+                  <div>• bar_lounge</div>
+                  <div>• bar_cocktails</div>
+                  <div>• bar_vins</div>
+                  <div>• bar_sports</div>
+                  <div>• rooftop_bar</div>
+                  <div>• bar_karaoke</div>
+                  <div>• bar_bières</div>
+                  <div>• bar_jus_smoothies</div>
+                  <div>• bar_tapas</div>
+                  <div>• bar_plage</div>
+                  <div>• bar_rooftop</div>
+                  <div>• bar_brasserie</div>
+                  <div>• bar_whisky</div>
+                  <div>• bar_rhum</div>
+                  <div>• bar_gin</div>
+                  <div>• bar_tequila</div>
+                  <div>• bar_champagne</div>
+                  <div>• bar_apéritif</div>
+                  <div>• bar_afterwork</div>
+                  <div>• bar_brunch</div>
+                  <div>• bar_glacé</div>
+                  <div>• bar_healthy</div>
+                  <div>• bar_vegan</div>
+                  <div>• bar_gluten_free</div>
+                  <div>• bar_halal</div>
+                  <div>• bar_kosher</div>
+                  <div>• bar_jeux</div>
+                  <div>• pub_traditionnel</div>
+                  <div>• brasserie_artisanale</div>
+                  <div>• bar_general</div>
+                </div>
+              </div>
+
+              {/* Restaurants */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🍽️ Restaurants</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• restaurant_gastronomique</div>
+                  <div>• restaurant_traditionnel</div>
+                  <div>• restaurant_familial</div>
+                  <div>• bistrot</div>
+                  <div>• restaurant_general</div>
+                </div>
+              </div>
+
+              {/* Cuisines du monde */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🌍 Cuisines du monde</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• restaurant_italien</div>
+                  <div>• restaurant_chinois</div>
+                  <div>• restaurant_japonais</div>
+                  <div>• restaurant_thai</div>
+                  <div>• restaurant_vietnamien</div>
+                  <div>• restaurant_coreen</div>
+                  <div>• restaurant_asiatique</div>
+                  <div>• restaurant_oriental</div>
+                  <div>• restaurant_indien</div>
+                  <div>• restaurant_libanais</div>
+                  <div>• restaurant_turc</div>
+                  <div>• restaurant_grec</div>
+                  <div>• restaurant_espagnol</div>
+                  <div>• restaurant_portugais</div>
+                  <div>• restaurant_allemand</div>
+                  <div>• restaurant_russe</div>
+                  <div>• restaurant_marocain</div>
+                  <div>• restaurant_ethiopien</div>
+                  <div>• restaurant_brasilien</div>
+                  <div>• restaurant_peruvien</div>
+                  <div>• restaurant_mexicain</div>
+                </div>
+              </div>
+
+              {/* Fast Food & Street Food */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🥙 Fast Food</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• kebab</div>
+                  <div>• tacos_mexicain</div>
+                  <div>• burger</div>
+                  <div>• pizzeria</div>
+                </div>
+              </div>
+
+              {/* Sorties nocturnes */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎉 Sorties nocturnes</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• discotheque</div>
+                  <div>• club_techno</div>
+                  <div>• boite_nuit_mainstream</div>
+                </div>
+              </div>
+
+              {/* Sports & Activités */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎯 Sports & Activités</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• bowling</div>
+                  <div>• billard_americain</div>
+                  <div>• billard_francais</div>
+                  <div>• roller_indoor</div>
+                  <div>• moto_electrique_indoor</div>
+                  <div>• futsal</div>
+                  <div>• karting</div>
+                  <div>• laser_game</div>
+                  <div>• vr_experience</div>
+                </div>
+              </div>
+
+              {/* Escape Games */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎮 Escape Games</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• escape_game</div>
+                  <div>• escape_game_horreur</div>
+                  <div>• escape_game_aventure</div>
+                  <div>• escape_game_mystere</div>
+                  <div>• escape_game_sf</div>
+                  <div>• escape_game_fantasy</div>
+                  <div>• escape_game_familial</div>
+                </div>
+              </div>
+
+              {/* Blind Test & Quiz */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎵 Blind Test & Quiz</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• blind_test</div>
+                  <div>• quiz_room</div>
+                  <div>• salle_jeux_amis</div>
+                  <div>• complexe_multiactivites</div>
+                </div>
+              </div>
+
+              {/* Enfants & Famille */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">👶 Enfants & Famille</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• trampoline_parc</div>
+                  <div>• parc_loisirs_enfants</div>
+                  <div>• centre_aquatique</div>
+                  <div>• parc_aventure_enfants</div>
+                  <div>• ludotheque</div>
+                  <div>• centre_loisirs_enfants</div>
+                  <div>• ferme_pedagogique</div>
+                  <div>• musee_enfants</div>
+                  <div>• parc_theme_enfants</div>
+                  <div>• centre_sportif_enfants</div>
+                  <div>• atelier_creatif_enfants</div>
+                  <div>• parc_jeux_interieur</div>
+                  <div>• mini_golf</div>
+                  <div>• parc_attractions_familial</div>
+                  <div>• centre_anniversaires</div>
+                  <div>• parc_animalier</div>
+                  <div>• parc_plage_enfants</div>
+                  <div>• centre_equitation_enfants</div>
+                  <div>• parc_skate_enfants</div>
+                  <div>• centre_cirque_enfants</div>
+                  <div>• parc_loisir_indoor</div>
+                </div>
+              </div>
+
+              {/* Autres */}
+              <div className="space-y-1">
+                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">❓ Autres</h5>
+                <div className="space-y-1 text-xs text-gray-600">
+                  <div>• autre</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -427,14 +817,7 @@ export default function AdminDashboard() {
         <h3 className="text-lg font-medium text-gray-900 mb-4">
           Actions rapides
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link
-            href="/api/monitoring/metrics"
-            target="_blank"
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
-          >
-            Métriques JSON
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Link
             href="/api/monitoring/health"
             target="_blank"
