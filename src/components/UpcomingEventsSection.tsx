@@ -57,13 +57,25 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
         const allEvents = data.events || [];
         console.log('📅 Événements trouvés:', allEvents.length);
         
-        // 🔧 CORRECTION: Filtrer les événements à venir ET en cours (pas les événements passés)
+        // 🔧 DEBUG: Voir ce qui se passe avec le filtrage
+        console.log('🔍 UpcomingEventsSection - Tous les événements:', allEvents.length);
+        allEvents.forEach((event, index) => {
+          console.log(`🔍 Événement ${index + 1}:`, {
+            title: event.title,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            isUpcoming: isEventUpcoming(event.startDate),
+            isInProgress: isEventInProgress(event.startDate, event.endDate)
+          });
+        });
+        
+        // 🔧 SIMPLIFICATION: Utiliser la même logique que l'API (déjà filtrée)
+        // L'API filtre déjà les événements à venir et en cours, on utilise directement les données
         const upcomingEvents = allEvents
-          .filter((event: Event) => isEventUpcoming(event.startDate) || isEventInProgress(event.startDate, event.endDate))
           .sort((a: Event, b: Event) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
           .slice(0, maxEvents);
         
-        console.log('🎯 Événements à venir:', upcomingEvents.length);
+        console.log('🎯 Événements à venir après filtrage:', upcomingEvents.length);
         setEvents(upcomingEvents);
         
         // Récupérer les infos de l'établissement

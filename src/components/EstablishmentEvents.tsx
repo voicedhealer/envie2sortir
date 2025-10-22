@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, Euro, MapPin } from 'lucide-react';
 import AddToCalendar from './AddToCalendar';
 import { getEstablishmentInfo } from '../lib/calendar-utils';
+import { isEventUpcoming, isEventInProgress } from '../lib/date-utils';
 
 interface Event {
   id: string;
@@ -95,6 +96,19 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
     );
   }
 
+  // L'API filtre déjà les événements, on utilise directement les événements retournés
+  // Ajoutons juste un log pour debug
+  console.log('🔍 EstablishmentEvents - Événements reçus:', events.length);
+  events.forEach((event, index) => {
+    console.log(`🔍 Événement ${index + 1}:`, {
+      title: event.title,
+      startDate: event.startDate,
+      endDate: event.endDate,
+      isUpcoming: isEventUpcoming(event.startDate),
+      isInProgress: isEventInProgress(event.startDate, event.endDate)
+    });
+  });
+
   if (events.length === 0) {
     return null; // Ne pas afficher la section s'il n'y a pas d'événements
   }
@@ -103,7 +117,7 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
     <div className="events-section">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
         <Calendar className="w-5 h-5 text-orange-500 mr-2" />
-        Événements à venir
+        Événements à venir et en cours
       </h3>
       
       <div className="space-y-4">
