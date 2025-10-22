@@ -106,3 +106,4 @@ if (!fs.existsSync('./temp')) {
 
 testOptimization(imagePath);
 
+

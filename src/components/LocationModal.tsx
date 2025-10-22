@@ -97,7 +97,7 @@ export default function LocationModal() {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[60vh] my-8 overflow-hidden transform animate-in fade-in-0 zoom-in-95 duration-300">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[85vh] my-8 overflow-y-auto transform animate-in fade-in-0 zoom-in-95 duration-300">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-pink-500 p-4 text-white relative">
           <button
@@ -118,7 +118,7 @@ export default function LocationModal() {
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-6">
           {isDetecting ? (
             <div className="text-center py-8">
               <Loader2 className="w-12 h-12 text-orange-500 animate-spin mx-auto mb-4" />
@@ -220,7 +220,7 @@ export default function LocationModal() {
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 text-xs text-gray-500">
+        <div className="bg-gray-50 px-6 py-4 text-xs text-gray-500 border-t border-gray-200">
           💡 Vous pourrez modifier ce paramètre à tout moment dans votre profil
         </div>
       </div>

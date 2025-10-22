@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp, Sparkles } from 'lucide-react';
+import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp, Sparkles, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { toast } from '@/lib/fake-toast';
@@ -248,6 +248,7 @@ export default function EstablishmentCard({
   const [isLoading, setIsLoading] = useState(false);
   const [upcomingEvent, setUpcomingEvent] = useState<any>(null);
   const [isEventCurrentlyInProgress, setIsEventCurrentlyInProgress] = useState(false);
+  const [eventEngagementData, setEventEngagementData] = useState<any>(null);
 
   // Récupérer les bons plans actifs
   const { activeDeal } = useActiveDeals(establishment.id);
@@ -303,6 +304,10 @@ export default function EstablishmentCard({
             
             setUpcomingEvent(nextEvent);
             setIsEventCurrentlyInProgress(inProgress);
+            
+            // Charger les données d'engagement de l'événement
+            console.log('🔍 Chargement engagement pour événement:', nextEvent.id, nextEvent.title);
+            fetchEventEngagement(nextEvent.id);
           }
         }
       } catch (error) {
@@ -312,6 +317,22 @@ export default function EstablishmentCard({
 
     fetchUpcomingEvent();
   }, [establishment.slug]);
+
+  // Fonction pour récupérer les données d'engagement de l'événement
+  const fetchEventEngagement = async (eventId: string) => {
+    try {
+      const response = await fetch(`/api/events/${eventId}/engage`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🔍 Données d\'engagement récupérées:', data);
+        setEventEngagementData(data);
+      } else {
+        console.error('❌ Erreur API engagement:', response.status, response.statusText);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'engagement:', error);
+    }
+  };
   
   // Calculer la distance si on a les coordonnées
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -400,6 +421,13 @@ export default function EstablishmentCard({
       const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
       return `${dayName} ${dayNumber} ${monthName} • ${time}`;
     }
+  };
+
+  // Formater l'heure de fin de l'événement
+  const formatEventEndTime = (endDateString: string) => {
+    if (!endDateString) return null;
+    const date = new Date(endDateString);
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
   // Déterminer si l'établissement est en période de mise en avant (Premium + événement)
@@ -567,7 +595,7 @@ export default function EstablishmentCard({
           {/* Overlay événement à venir/en cours - HAUTEUR FIXE POUR COHÉRENCE */}
           {upcomingEvent && (
             <div className={`absolute bottom-0 left-0 right-0 ${styles.overlayEvent} ${styles.overlayEventMobile}`}>
-              <div className="space-y-1 h-20 flex flex-col justify-between">
+              <div className="space-y-2 h-24 flex flex-col justify-between">
                 {/* Première ligne : Badge + Titre */}
                 <div className="flex items-start gap-3">
                   <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${styles.eventBadge} ${
@@ -586,19 +614,63 @@ export default function EstablishmentCard({
                   </h4>
                 </div>
 
-                {/* Deuxième ligne : Date/heure et prix */}
+                {/* Deuxième ligne : Date/heure et système de vote */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-white text-sm">
                     <Clock className="w-4 h-4" />
-                    <span className={styles.eventDate}>{formatEventDate(upcomingEvent.startDate)}</span>
+                    <div className="flex items-center gap-1">
+                      <span className={styles.eventDate}>{formatEventDate(upcomingEvent.startDate)}</span>
+                      {upcomingEvent.endDate && (
+                        <>
+                          <span className="text-white/60">•</span>
+                          <span className="text-white/80">
+                            {formatEventEndTime(upcomingEvent.endDate)}
+                          </span>
+                        </>
+                      )}
+                    </div>
                   </div>
 
+                  {/* Système de vote - Affichage simple icône + pourcentage */}
+                  {eventEngagementData && (
+                    <div className="flex items-center gap-1 text-white ml-3">
+                      {/* Icône basée sur le badge de l'événement */}
+                      <span className="text-sm">
+                        {eventEngagementData.eventBadge?.type === 'fire' && '🔥'}
+                        {eventEngagementData.eventBadge?.type === 'gold' && '🏆'}
+                        {eventEngagementData.eventBadge?.type === 'silver' && '⭐'}
+                        {eventEngagementData.eventBadge?.type === 'bronze' && '👍'}
+                        {!eventEngagementData.eventBadge && '❄️'}
+                      </span>
+                      {/* Pourcentage */}
+                      <span className="text-sm font-semibold">
+                        {Math.round(eventEngagementData.gaugePercentage || 0)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Troisième ligne : Prix et bouton Voir plus */}
+                <div className="flex items-center justify-between">
                   {upcomingEvent.price && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-black-100 bg-opacity-50 rounded-full text-white text-sm font-medium">
+                    <div className="flex items-center gap-1 px-3 py-1 bg-black/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
                       <Euro className="w-4 h-4" />
                       <span>{upcomingEvent.price}€</span>
                     </div>
                   )}
+
+                  {/* Bouton Voir plus - sans badge, discret */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open(`/etablissements/${establishment.slug}#events-section`, '_blank');
+                    }}
+                    className="flex items-center gap-1 text-white/70 text-xs hover:text-white transition-colors duration-200"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    Voir plus
+                  </button>
                 </div>
               </div>
             </div>

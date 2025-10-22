@@ -106,3 +106,4 @@ if (!fs.existsSync(imagePath)) {
 
 testEstablishmentOptimization(imagePath);
 
+

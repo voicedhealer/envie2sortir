@@ -54,13 +54,13 @@ interface LocationProviderProps {
 export function LocationProvider({ children, isAuthenticated = false }: LocationProviderProps) {
   const [state, setState] = useState<LocationState>({
     currentCity: null,
-    searchRadius: 20, // 20km par défaut
+    searchRadius: 10, // 10km par défaut
     loading: true,
     error: null,
     isDetected: false,
     preferences: {
       defaultCity: null,
-      searchRadius: 20,
+      searchRadius: 10,
       mode: 'manual',
       useCurrentLocation: false,
     },
@@ -77,6 +77,9 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
   useEffect(() => {
     if (isAuthenticated) {
       syncWithAPI();
+    } else {
+      // Utilisateur déconnecté, réinitialiser à Dijon + 10km
+      resetToDefault();
     }
   }, [isAuthenticated]);
 
@@ -100,7 +103,7 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
         setState(prev => ({
           ...prev,
           currentCity,
-          searchRadius: preferences?.searchRadius || 20,
+          searchRadius: preferences?.searchRadius || 10,
           preferences: preferences || prev.preferences,
           history,
           favorites,
@@ -275,13 +278,32 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
    * Réinitialise à la ville par défaut
    */
   const resetToDefault = () => {
+    console.log('🔄 Réinitialisation à Dijon + 10km...');
+    
     setState(prev => ({
       ...prev,
       currentCity: DEFAULT_CITY,
-      searchRadius: 20,
+      searchRadius: 10, // 10km par défaut
       isDetected: false,
+      preferences: {
+        defaultCity: null,
+        searchRadius: 10,
+        mode: 'manual',
+        useCurrentLocation: false,
+      },
+      history: [],
+      favorites: [],
     }));
+    
+    // Vider le localStorage pour une réinitialisation complète
+    localStorage.removeItem('locationPreferences');
+    localStorage.removeItem('lastCity');
+    localStorage.removeItem('cityHistory');
+    localStorage.removeItem('cityFavorites');
+    
     saveLastCity(DEFAULT_CITY);
+    
+    console.log('✅ Réinitialisation terminée - Dijon + 10km');
   };
 
   /**
@@ -317,6 +339,12 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
     }
   };
 
+  // Fonction de test temporaire pour forcer la réinitialisation
+  const forceResetToDefault = () => {
+    console.log('🧪 FORCE RESET - Réinitialisation forcée à Dijon + 10km');
+    resetToDefault();
+  };
+
   const contextValue: LocationContextType = {
     ...state,
     setCity,
@@ -327,6 +355,8 @@ export function LocationProvider({ children, isAuthenticated = false }: Location
     detectLocation,
     resetToDefault,
     syncWithAPI,
+    // Exposer la fonction de test temporairement
+    forceResetToDefault,
   };
 
   return (
