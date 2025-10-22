@@ -163,26 +163,21 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
         <div className="promo-card-front">
           <div className="relative">
             {/* Badge "Bon plan du jour" */}
-            <div className="absolute top-0 left-0 right-0 bg-orange-500 text-white text-center py-2 font-bold text-sm z-10">
+            <div className="absolute top-0 left-20 right-20 bg-orange-500 text-white text-center py-1 font-bold text-sm z-10 rounded-b-lg">
               🎯 BON PLAN DU JOUR
             </div>
 
             {/* Image */}
             {deal.imageUrl ? (
-              <div className="relative h-40 mt-10">
+              <div className="relative h-48 mt-0">
                 <img
                   src={deal.imageUrl}
                   alt={deal.title}
                   className="w-full h-full object-cover"
                 />
-                {discount > 0 && (
-                  <div className="absolute top-2 right-2 bg-orange-500 text-white px-3 py-1 rounded-full font-bold shadow-lg">
-                    -{discount}%
-                  </div>
-                )}
               </div>
             ) : (
-              <div className="h-16 mt-10 bg-gradient-to-br from-orange-100 to-orange-50" />
+              <div className="h-48 mt-8 bg-gradient-to-br from-orange-100 to-orange-50" />
             )}
           </div>
 
@@ -201,7 +196,7 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
 
             {/* Prix */}
             {(deal.originalPrice || deal.discountedPrice) && (
-              <div className="flex items-baseline gap-2 mb-3">
+              <div className="flex items-center gap-2 mb-3">
                 {deal.originalPrice && (
                   <span className="text-sm text-gray-400 line-through">
                     {formatPrice(deal.originalPrice)}
@@ -211,6 +206,11 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
                   <span className="text-2xl font-bold text-orange-600">
                     {formatPrice(deal.discountedPrice)}
                   </span>
+                )}
+                {discount > 0 && (
+                  <div className="bg-orange-500 text-white px-3 py-1 rounded-full font-bold text-sm">
+                    -{discount}%
+                  </div>
                 )}
               </div>
             )}
@@ -278,7 +278,7 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
               {/* Bouton flip */}
               <button 
                 onClick={handleFlip}
-                className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 rounded-lg transition-colors text-sm"
+                className="w-full border-2 border-orange-500 hover:border-orange-600 text-orange-500 hover:text-orange-600 font-semibold py-2 rounded-lg transition-colors text-sm shadow-md hover:shadow-lg"
               >
                 Voir les détails
               </button>

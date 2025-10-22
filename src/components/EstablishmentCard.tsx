@@ -254,6 +254,7 @@ export default function EstablishmentCard({
 
   // Récupérer les bons plans actifs
   const { activeDeal } = useActiveDeals(establishment.id);
+  
 
   // ✅ PRIORITÉ : 1) Image de card (isCardImage), 2) imageUrl, 3) Première image
   const cardImage = establishment.images?.find(img => img.isCardImage)?.url;
@@ -621,30 +622,30 @@ export default function EstablishmentCard({
 
           {/* Overlay événement à venir/en cours - HAUTEUR FIXE POUR COHÉRENCE */}
           {upcomingEvent && (
-            <div className={`absolute bottom-0 left-0 right-0 ${isCompact ? styles.overlayEventCompact : styles.overlayEvent} ${styles.overlayEventMobile}`}>
-              <div className={`flex flex-col justify-between ${isCompact ? 'space-y-1 h-15' : 'space-y-2 h-24'}`}>
+            <div className={`absolute bottom-0 left-0 right-0 ${styles.overlayEventCompact} ${styles.overlayEventMobile}`}>
+              <div className="flex flex-col justify-between space-y-1 h-15">
                 {/* Première ligne : Badge + Titre */}
-                <div className={`flex items-start ${isCompact ? 'gap-2' : 'gap-3'}`}>
+                <div className="flex items-start gap-2">
                   <div className={`inline-flex items-center gap-1 rounded-full font-medium ${styles.eventBadge} ${
                     isEventCurrentlyInProgress 
                       ? 'bg-green-500 text-white' 
                       : 'bg-yellow-400 text-black'
-                  } ${isCompact ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-xs'}`}>
-                    <Calendar className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
-                    {isEventCurrentlyInProgress ? 'En cours' : 'À venir'}
+                  } px-1.5 py-0.5 text-xs`}>
+                    <Calendar className="w-2.5 h-2.5" />
+                    {isEventCurrentlyInProgress ? 'Évent en cours' : 'Évent à venir'}
                   </div>
                   
-                  <h4 className={`font-bold leading-tight flex-1 ${isCompact ? styles.eventTitleCompact : styles.eventTitle} ${
+                  <h4 className={`font-bold leading-tight flex-1 ${styles.eventTitleCompact} ${
                     isEventCurrentlyInProgress ? 'text-green-400' : 'text-yellow-400'
-                  } ${isCompact ? 'text-sm' : 'text-lg'}`}>
+                  } text-sm`}>
                     {upcomingEvent.title}
                   </h4>
                 </div>
 
                 {/* Deuxième ligne : Date/heure et système de vote */}
                 <div className="flex items-center justify-between">
-                  <div className={`flex items-center gap-2 text-white ${isCompact ? 'text-xs' : 'text-sm'}`}>
-                    <Clock className={isCompact ? 'w-3 h-3' : 'w-4 h-4'} />
+                  <div className="flex items-center gap-2 text-white text-xs">
+                    <Clock className="w-3 h-3" />
                     <div className="flex items-center gap-1">
                       <span className={styles.eventDate}>{formatEventDate(upcomingEvent.startDate)}</span>
                       {upcomingEvent.endDate && (
@@ -660,9 +661,9 @@ export default function EstablishmentCard({
 
                   {/* Système de vote - Affichage simple icône + pourcentage */}
                   {eventEngagementData && (
-                    <div className={`flex items-center gap-1 text-white ${isCompact ? 'ml-1' : 'ml-2'}`}>
+                    <div className="flex items-center gap-1 text-white ml-1">
                       {/* Icône basée sur le badge de l'événement */}
-                      <span className={isCompact ? 'text-xs' : 'text-xs'}>
+                      <span className="text-xs">
                         {eventEngagementData.eventBadge?.type === 'fire' && '🔥'}
                         {eventEngagementData.eventBadge?.type === 'gold' && '🏆'}
                         {eventEngagementData.eventBadge?.type === 'silver' && '⭐'}
@@ -670,7 +671,7 @@ export default function EstablishmentCard({
                         {!eventEngagementData.eventBadge && '❄️'}
                       </span>
                       {/* Pourcentage */}
-                      <span className={`font-semibold ${isCompact ? 'text-xs' : 'text-xs'}`}>
+                      <span className="text-xs font-semibold">
                         {Math.round(eventEngagementData.gaugePercentage || 0)}%
                       </span>
                     </div>
@@ -680,22 +681,22 @@ export default function EstablishmentCard({
                 {/* Troisième ligne : Prix et bouton Voir plus */}
                 <div className="flex items-center justify-between">
                   {upcomingEvent.price && (
-                    <div className={`flex items-center gap-1 bg-black/20 backdrop-blur-sm rounded-full text-white font-medium ${isCompact ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'}`}>
-                      <Euro className={isCompact ? 'w-3 h-3' : 'w-4 h-4'} />
+                    <div className="flex items-center gap-1 bg-black/20 backdrop-blur-sm rounded-full text-white font-medium px-2 py-1 text-xs">
+                      <Euro className="w-3 h-3" />
                       <span>{upcomingEvent.price}</span>
                     </div>
                   )}
 
-                  {/* Bouton Voir plus - sans badge, discret */}
+                  {/* Bouton Voir plus - toujours en bas à droite */}
                   <button
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
                       window.open(`/etablissements/${establishment.slug}#events-section`, '_blank');
                     }}
-                    className={`flex items-center gap-1 text-white/70 hover:text-white transition-colors duration-200 ${isCompact ? 'text-xs' : 'text-xs'}`}
+                    className="flex items-center gap-1 text-white/70 hover:text-white transition-colors duration-200 text-xs ml-auto"
                   >
-                    <ExternalLink className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
+                    <ExternalLink className="w-2.5 h-2.5" />
                     Voir plus
                   </button>
                 </div>
