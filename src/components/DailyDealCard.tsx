@@ -154,7 +154,7 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
 
   return (
     <div 
-      className={`promo-card ${isFlipped ? 'flipped' : ''}`}
+      className={`promo-card ${isFlipped ? 'flipped' : ''} shadow-lg`}
       onClick={handleCardClick}
     >
       <div className="promo-card-inner">

@@ -898,8 +898,7 @@ body {
         
         /* Ombre pour la face arrière */
         .promo-card.flipped {
-          box-shadow: 0 20px 40px rgba(255, 102, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
-          transform: translateY(-2px);
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
           transition: all 0.3s ease;
         }
 

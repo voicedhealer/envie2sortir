@@ -124,7 +124,11 @@ function SortableImage({
             backgroundColor: '#f3f4f6'
           }}
           onError={(e) => {
-            console.error('Erreur chargement image:', e);
+            console.error('Erreur chargement image:', {
+              imageUrl: fullUrl,
+              error: e,
+              target: e.target
+            });
           }}
         />
       </div>
@@ -484,7 +488,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       // Si c'est la première image, la définir comme image principale
       if (!primaryImage) {
         setPrimaryImage(imageUrl);
-        await updatePrimaryImage(imageUrl);
+        // Pas besoin d'appeler updatePrimaryImage car la position 1 = image principale automatiquement
         console.log('📸 Image principale définie:', imageUrl);
       }
       
@@ -606,13 +610,13 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       const newImages = images.filter(img => img !== imageUrl);
       setImages(newImages);
       
-      // Si c'était l'image principale, en choisir une autre ou la vider
-      if (primaryImage === imageUrl) {
-        const newPrimary = newImages.length > 0 ? newImages[0] : null;
-        setPrimaryImage(newPrimary);
-        if (newPrimary) {
-          await updatePrimaryImage(newPrimary);
-        }
+      // Mettre à jour l'image principale : la première image devient automatiquement principale
+      const newPrimary = newImages.length > 0 ? newImages[0] : null;
+      setPrimaryImage(newPrimary);
+      
+      // Mettre à jour l'image de card si c'était celle-ci qui était supprimée
+      if (cardImageUrl === imageUrl) {
+        setCardImageUrl(null);
       }
       
       toast.success('Image supprimée avec succès !');

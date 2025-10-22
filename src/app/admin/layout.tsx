@@ -162,12 +162,8 @@ export default function AdminLayout({
             {/* Logo et titre */}
             <div className="flex items-center space-x-8">
               <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">A</span>
-                </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
-                  <p className="text-xs text-gray-500">Envie2Sortir</p>
+                  <h1 className="text-xl font-bold text-orange-500">Admin</h1>
                 </div>
               </div>
               
