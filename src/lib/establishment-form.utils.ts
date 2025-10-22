@@ -194,18 +194,28 @@ export const getActivitiesServicesAndAmbiance = (activities: string[]) => {
 
 // Fonction pour convertir un objet de moyens de paiement en tableau
 export function convertPaymentMethodsObjectToArray(paymentMethodsObj: any) {
-  if (!paymentMethodsObj || typeof paymentMethodsObj !== 'object') return [];
+  if (!paymentMethodsObj) return [];
   
-  const methods: string[] = [];
+  // Si c'est déjà un tableau de strings, le retourner tel quel
+  if (Array.isArray(paymentMethodsObj)) {
+    return paymentMethodsObj;
+  }
   
-  if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit');
-  if (paymentMethodsObj.debitCards) methods.push('Cartes de débit');
-  if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC');
-  if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
-  if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant');
-  if (paymentMethodsObj.pluxee) methods.push('Pluxee');
+  // Si c'est un objet, le convertir en tableau
+  if (typeof paymentMethodsObj === 'object') {
+    const methods: string[] = [];
+    
+    if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit');
+    if (paymentMethodsObj.debitCards) methods.push('Cartes de débit');
+    if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC');
+    if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
+    if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant');
+    if (paymentMethodsObj.pluxee) methods.push('Pluxee');
+    
+    return methods;
+  }
   
-  return methods;
+  return [];
 }
 
 // Fonction pour convertir un tableau de moyens de paiement en objet

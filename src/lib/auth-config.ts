@@ -94,6 +94,10 @@ export const authOptions = {
           }
 
           console.log('❌ Aucun utilisateur trouvé avec ces identifiants:', credentials.email);
+          console.log('🔍 DEBUG - User trouvé:', user ? 'Oui' : 'Non');
+          console.log('🔍 DEBUG - Professional trouvé:', professional ? 'Oui' : 'Non');
+          if (user) console.log('🔍 DEBUG - User passwordHash:', user.passwordHash ? 'Présent' : 'Absent');
+          if (professional) console.log('🔍 DEBUG - Professional passwordHash:', professional.passwordHash ? 'Présent' : 'Absent');
           return null;
         } catch (error) {
           console.error('❌ Erreur authentification:', error);

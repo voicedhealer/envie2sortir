@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { SmartEnrichmentData, EnrichmentPriority } from '@/lib/smart-enrichment-service';
-import { convertPaymentMethodsObjectToArray } from '@/lib/establishment-form.utils';
 
 // Types pour les données du formulaire
 export interface EstablishmentFormData {
@@ -438,30 +437,69 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
         <div className="flex flex-wrap gap-2">
           {/* Moyens de paiement validés par le pro à l'étape 4 */}
-          {data.paymentMethods && convertPaymentMethodsObjectToArray(data.paymentMethods).length > 0 ? (
-            convertPaymentMethodsObjectToArray(data.paymentMethods).map((method, index) => (
-              <span
-                key={index}
-                className="inline-flex items-center px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full"
-              >
-                {method}
-              </span>
-            ))
-          ) : data.hybridDetailedPayments ? (
-            /* Fallback : Moyens de paiement d'enrichissement manuel si pas de données étape 4 */
-            Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
-              enabled ? (
+          {(() => {
+            // Logique identique à EstablishmentInfo.tsx
+            if (!data.paymentMethods) return null;
+            
+            let paymentMethods: string[] = [];
+            
+            // Si c'est un array de strings (format direct)
+            if (Array.isArray(data.paymentMethods)) {
+              paymentMethods = data.paymentMethods.map(item => {
+                const strItem = String(item);
+                // Nettoyer les marqueurs de rubrique si présents
+                return strItem.replace(/\|[^|]*$/, '');
+              });
+            }
+            // Si c'est un objet JSON (format clé-valeur)
+            else if (typeof data.paymentMethods === 'object') {
+              const paymentObj = data.paymentMethods as any;
+              paymentMethods = Object.entries(paymentObj)
+                .filter(([key, value]) => value === true)
+                .map(([key]) => {
+                  // Convertir les clés en libellés lisibles
+                  const labels: { [key: string]: string } = {
+                    creditCards: 'Cartes de crédit',
+                    debitCards: 'Cartes de débit',
+                    cash: 'Espèces',
+                    nfc: 'Paiement mobile NFC',
+                    pluxee: 'Pluxee',
+                    checks: 'Chèques',
+                    visa: 'Visa',
+                    mastercard: 'Mastercard',
+                    amex: 'American Express'
+                  };
+                  return labels[key] || key;
+                });
+            }
+            
+            if (paymentMethods.length > 0) {
+              return paymentMethods.map((method, index) => (
                 <span
-                  key={`manual-${index}`}
-                  className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+                  key={index}
+                  className="inline-flex items-center px-3 py-1 text-xs bg-green-100 text-green-800 rounded-full"
                 >
                   {method}
                 </span>
-              ) : null
-            ))
-          ) : (
-            <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>
-          )}
+              ));
+            }
+            
+            // Fallback : Moyens de paiement d'enrichissement manuel si pas de données étape 4
+            if (data.hybridDetailedPayments) {
+              return Object.entries(JSON.parse(data.hybridDetailedPayments)).map(([method, enabled], index) => (
+                enabled ? (
+                  <span
+                    key={`manual-${index}`}
+                    className="inline-flex items-center px-3 py-1 text-xs bg-orange-100 text-orange-800 rounded-full"
+                  >
+                    {method}
+                  </span>
+                ) : null
+              ));
+            }
+            
+            return <span className="text-gray-500 italic text-sm">Aucun moyen de paiement défini</span>;
+          })()}
         </div>
       </div>
 
