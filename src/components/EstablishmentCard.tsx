@@ -234,13 +234,15 @@ interface EstablishmentCardProps {
     lng?: string;
     rayon?: string;
   };
+  isCompact?: boolean; // Pour les cartes plus petites (résultats de recherche)
 }
 
 export default function EstablishmentCard({ 
   establishment, 
   searchCenter, 
   from = 'recherche',
-  searchParams
+  searchParams,
+  isCompact = false
 }: EstablishmentCardProps) {
   const { data: session } = useSession();
   const [isLiked, setIsLiked] = useState(false);
@@ -282,16 +284,30 @@ export default function EstablishmentCard({
     const fetchUpcomingEvent = async () => {
       if (!establishment.slug) return;
       
+      console.log('🔍 [EstablishmentCard] Chargement événements pour:', establishment.name, establishment.slug);
+      
       try {
         const response = await fetch(`/api/etablissements/${establishment.slug}/events`);
         if (response.ok) {
           const data = await response.json();
+          console.log('🔍 [EstablishmentCard] Données reçues pour', establishment.name, ':', data);
           const now = new Date();
           
           // Trouver les événements en cours et futurs avec gestion du fuseau horaire
           const upcomingEvents = data.events?.filter((event: any) => {
-            return isEventInProgress(event.startDate, event.endDate) || isEventUpcoming(event.startDate);
+            const isUpcoming = isEventUpcoming(event.startDate);
+            const isInProgress = isEventInProgress(event.startDate, event.endDate);
+            console.log(`🔍 [EstablishmentCard] Événement "${event.title}":`, {
+              startDate: event.startDate,
+              endDate: event.endDate,
+              isUpcoming,
+              isInProgress,
+              willShow: isUpcoming || isInProgress
+            });
+            return isUpcoming || isInProgress;
           }) || [];
+          
+          console.log('🔍 [EstablishmentCard] Événements filtrés pour', establishment.name, ':', upcomingEvents.length);
           
           if (upcomingEvents.length > 0) {
             // Trier par date de début et prendre le premier
@@ -302,16 +318,27 @@ export default function EstablishmentCard({
             // Vérifier si l'événement est en cours avec gestion du fuseau horaire
             const inProgress = isEventInProgress(nextEvent.startDate, nextEvent.endDate);
             
+            console.log('🔍 [EstablishmentCard] Événement sélectionné pour', establishment.name, ':', {
+              title: nextEvent.title,
+              startDate: nextEvent.startDate,
+              endDate: nextEvent.endDate,
+              inProgress
+            });
+            
             setUpcomingEvent(nextEvent);
             setIsEventCurrentlyInProgress(inProgress);
             
             // Charger les données d'engagement de l'événement
             console.log('🔍 Chargement engagement pour événement:', nextEvent.id, nextEvent.title);
             fetchEventEngagement(nextEvent.id);
+          } else {
+            console.log('🔍 [EstablishmentCard] Aucun événement trouvé pour', establishment.name);
           }
+        } else {
+          console.error('❌ [EstablishmentCard] Erreur API pour', establishment.name, ':', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des événements:', error);
+        console.error('❌ [EstablishmentCard] Erreur lors du chargement des événements pour', establishment.name, ':', error);
       }
     };
 
@@ -594,30 +621,30 @@ export default function EstablishmentCard({
 
           {/* Overlay événement à venir/en cours - HAUTEUR FIXE POUR COHÉRENCE */}
           {upcomingEvent && (
-            <div className={`absolute bottom-0 left-0 right-0 ${styles.overlayEvent} ${styles.overlayEventMobile}`}>
-              <div className="space-y-2 h-24 flex flex-col justify-between">
+            <div className={`absolute bottom-0 left-0 right-0 ${isCompact ? styles.overlayEventCompact : styles.overlayEvent} ${styles.overlayEventMobile}`}>
+              <div className={`flex flex-col justify-between ${isCompact ? 'space-y-1 h-15' : 'space-y-2 h-24'}`}>
                 {/* Première ligne : Badge + Titre */}
-                <div className="flex items-start gap-3">
-                  <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${styles.eventBadge} ${
+                <div className={`flex items-start ${isCompact ? 'gap-2' : 'gap-3'}`}>
+                  <div className={`inline-flex items-center gap-1 rounded-full font-medium ${styles.eventBadge} ${
                     isEventCurrentlyInProgress 
                       ? 'bg-green-500 text-white' 
                       : 'bg-yellow-400 text-black'
-                  }`}>
-                    <Calendar className="w-3 h-3" />
+                  } ${isCompact ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-xs'}`}>
+                    <Calendar className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
                     {isEventCurrentlyInProgress ? 'En cours' : 'À venir'}
                   </div>
                   
-                  <h4 className={`font-bold text-lg leading-tight flex-1 ${styles.eventTitle} ${
+                  <h4 className={`font-bold leading-tight flex-1 ${isCompact ? styles.eventTitleCompact : styles.eventTitle} ${
                     isEventCurrentlyInProgress ? 'text-green-400' : 'text-yellow-400'
-                  }`}>
+                  } ${isCompact ? 'text-sm' : 'text-lg'}`}>
                     {upcomingEvent.title}
                   </h4>
                 </div>
 
                 {/* Deuxième ligne : Date/heure et système de vote */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-white text-sm">
-                    <Clock className="w-4 h-4" />
+                  <div className={`flex items-center gap-2 text-white ${isCompact ? 'text-xs' : 'text-sm'}`}>
+                    <Clock className={isCompact ? 'w-3 h-3' : 'w-4 h-4'} />
                     <div className="flex items-center gap-1">
                       <span className={styles.eventDate}>{formatEventDate(upcomingEvent.startDate)}</span>
                       {upcomingEvent.endDate && (
@@ -633,9 +660,9 @@ export default function EstablishmentCard({
 
                   {/* Système de vote - Affichage simple icône + pourcentage */}
                   {eventEngagementData && (
-                    <div className="flex items-center gap-1 text-white ml-3">
+                    <div className={`flex items-center gap-1 text-white ${isCompact ? 'ml-1' : 'ml-2'}`}>
                       {/* Icône basée sur le badge de l'événement */}
-                      <span className="text-sm">
+                      <span className={isCompact ? 'text-xs' : 'text-xs'}>
                         {eventEngagementData.eventBadge?.type === 'fire' && '🔥'}
                         {eventEngagementData.eventBadge?.type === 'gold' && '🏆'}
                         {eventEngagementData.eventBadge?.type === 'silver' && '⭐'}
@@ -643,7 +670,7 @@ export default function EstablishmentCard({
                         {!eventEngagementData.eventBadge && '❄️'}
                       </span>
                       {/* Pourcentage */}
-                      <span className="text-sm font-semibold">
+                      <span className={`font-semibold ${isCompact ? 'text-xs' : 'text-xs'}`}>
                         {Math.round(eventEngagementData.gaugePercentage || 0)}%
                       </span>
                     </div>
@@ -653,9 +680,9 @@ export default function EstablishmentCard({
                 {/* Troisième ligne : Prix et bouton Voir plus */}
                 <div className="flex items-center justify-between">
                   {upcomingEvent.price && (
-                    <div className="flex items-center gap-1 px-3 py-1 bg-black/20 backdrop-blur-sm rounded-full text-white text-sm font-medium">
-                      <Euro className="w-4 h-4" />
-                      <span>{upcomingEvent.price}€</span>
+                    <div className={`flex items-center gap-1 bg-black/20 backdrop-blur-sm rounded-full text-white font-medium ${isCompact ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'}`}>
+                      <Euro className={isCompact ? 'w-3 h-3' : 'w-4 h-4'} />
+                      <span>{upcomingEvent.price}</span>
                     </div>
                   )}
 
@@ -666,9 +693,9 @@ export default function EstablishmentCard({
                       e.stopPropagation();
                       window.open(`/etablissements/${establishment.slug}#events-section`, '_blank');
                     }}
-                    className="flex items-center gap-1 text-white/70 text-xs hover:text-white transition-colors duration-200"
+                    className={`flex items-center gap-1 text-white/70 hover:text-white transition-colors duration-200 ${isCompact ? 'text-xs' : 'text-xs'}`}
                   >
-                    <ExternalLink className="w-3 h-3" />
+                    <ExternalLink className={isCompact ? 'w-2.5 h-2.5' : 'w-3 h-3'} />
                     Voir plus
                   </button>
                 </div>

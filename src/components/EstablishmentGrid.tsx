@@ -86,6 +86,7 @@ export default function EstablishmentGrid({
             searchCenter={searchCenter}
             from={from}
             searchParams={searchParams}
+            isCompact={true}
           />
         ))}
       </div>
