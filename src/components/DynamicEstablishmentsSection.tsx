@@ -188,13 +188,22 @@ export default function DynamicEstablishmentsSection() {
           </Link>
         </div>
         
-        {/* Container avec animation de défilement */}
+        {/* Container avec animation de défilement continue (tapis roulant) */}
         <div className="relative overflow-hidden">
-          <div className="flex animate-scroll space-x-6">
-            {/* Affichage unique des établissements avec animation */}
+          <div className="flex animate-scroll-infinite space-x-6" style={{ width: `${filteredEstablishments.length * 2 * (320 + 24)}px` }}>
+            {/* Première série d'établissements */}
             {filteredEstablishments.map((establishment, index) => (
               <div 
-                key={establishment.id} 
+                key={`first-${establishment.id}`} 
+                className="flex-shrink-0 w-80"
+              >
+                <EstablishmentCard establishment={establishment} from="homepage" />
+              </div>
+            ))}
+            {/* Deuxième série d'établissements (pour l'effet de boucle) */}
+            {filteredEstablishments.map((establishment, index) => (
+              <div 
+                key={`second-${establishment.id}`} 
                 className="flex-shrink-0 w-80"
               >
                 <EstablishmentCard establishment={establishment} from="homepage" />
@@ -205,20 +214,20 @@ export default function DynamicEstablishmentsSection() {
       </div>
       
       <style jsx>{`
-        @keyframes scroll {
+        @keyframes scroll-infinite {
           0% {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-100%);
+            transform: translateX(-50%);
           }
         }
         
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
+        .animate-scroll-infinite {
+          animation: scroll-infinite 60s linear infinite;
         }
         
-        .animate-scroll:hover {
+        .animate-scroll-infinite:hover {
           animation-play-state: paused;
         }
       `}</style>
