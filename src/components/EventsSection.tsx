@@ -15,6 +15,7 @@ interface Event {
   imageUrl: string | null;
   price: number | null;
   maxCapacity: number | null;
+  status?: 'ongoing' | 'upcoming';
 }
 
 interface EventsSectionProps {
@@ -35,7 +36,7 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch(`/api/etablissements/${establishmentSlug}/events`);
+        const response = await fetch(`/api/etablissements/${establishmentSlug}/events?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
           setEvents(data.events || []);
@@ -74,10 +75,36 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
     });
   };
 
-  // Filtrer les événements à venir
-  const upcomingEvents = events.filter(event => 
-    new Date(event.startDate) > new Date()
-  ).slice(0, 3); // Afficher seulement les 3 prochains
+  // Filtrer les événements selon leur statut (utiliser le champ status de l'API)
+  console.log('🔍 [EventsSection] Tous les événements reçus:', events);
+  events.forEach((event, index) => {
+    console.log(`🔍 [EventsSection] Événement ${index + 1}:`, {
+      title: event.title,
+      status: event.status,
+      startDate: event.startDate,
+      endDate: event.endDate
+    });
+  });
+
+  const ongoingEvents = events.filter(event => {
+    const isOngoing = event.status === 'ongoing';
+    console.log(`🔍 [EventsSection] Événement "${event.title}" - status: ${event.status} - isOngoing: ${isOngoing}`);
+    return isOngoing;
+  });
+  
+  const upcomingEvents = events.filter(event => {
+    const isUpcoming = event.status === 'upcoming';
+    console.log(`🔍 [EventsSection] Événement "${event.title}" - status: ${event.status} - isUpcoming: ${isUpcoming}`);
+    return isUpcoming;
+  }).slice(0, 3); // Afficher seulement les 3 prochains
+
+  console.log('🔍 [EventsSection] Résultats du filtrage:', {
+    totalEvents: events.length,
+    ongoingEvents: ongoingEvents.length,
+    upcomingEvents: upcomingEvents.length,
+    ongoingTitles: ongoingEvents.map(e => e.title),
+    upcomingTitles: upcomingEvents.map(e => e.title)
+  });
 
   if (loading) {
     return (
@@ -93,27 +120,103 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
     );
   }
 
-  if (upcomingEvents.length === 0) {
+  if (ongoingEvents.length === 0 && upcomingEvents.length === 0) {
     return null; // Ne pas afficher la section s'il n'y a pas d'événements
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-gray-900">
-          Événements à venir
-        </h3>
-        <Link
-          href={`/etablissements/${establishmentSlug}/evenements`}
-          className="text-orange-600 hover:text-orange-700 font-medium"
-        >
-          Voir tous les événements
-        </Link>
-      </div>
+    <div className="space-y-6">
+      {/* Section Événements en cours */}
+      {ongoingEvents.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Événements en cours
+            </h3>
+            <span className="text-sm text-gray-500">
+              {ongoingEvents.length} événement{ongoingEvents.length > 1 ? 's' : ''} en cours
+            </span>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {upcomingEvents.map((event) => (
-          <div key={event.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {ongoingEvents.map((event) => (
+              <div key={event.id} className="border border-green-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow bg-green-50">
+                {event.imageUrl && (
+                  <div className="aspect-video bg-gray-200">
+                    <img
+                      src={event.imageUrl}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      En cours
+                    </span>
+                  </div>
+                  
+                  <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">
+                    {event.title}
+                  </h4>
+                  
+                  {event.description && (
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-3">
+                      {event.description}
+                    </p>
+                  )}
+                  
+                  {event.modality && (
+                    <p className="text-xs text-gray-500 mb-3 italic line-clamp-2">
+                      {event.modality}
+                    </p>
+                  )}
+                  
+                  <div className="space-y-1 text-sm text-gray-500">
+                    <div className="flex items-center">
+                      <span className="font-medium">Début:</span>
+                      <span className="ml-2">{formatDate(event.startDate)}</span>
+                    </div>
+                    {event.endDate && (
+                      <div className="flex items-center">
+                        <span className="font-medium">Fin:</span>
+                        <span className="ml-2">{formatDate(event.endDate)}</span>
+                      </div>
+                    )}
+                    {event.price && (
+                      <div className="flex items-center">
+                        <span className="font-medium">Prix:</span>
+                        <span className="ml-2">{event.price}€</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Section Événements à venir */}
+      {upcomingEvents.length > 0 && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Événements à venir
+            </h3>
+            <Link
+              href={`/etablissements/${establishmentSlug}/evenements`}
+              className="text-orange-600 hover:text-orange-700 font-medium"
+            >
+              Voir tous les événements
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {upcomingEvents.map((event) => (
+              <div key={event.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
             {event.imageUrl && (
               <div className="aspect-video bg-gray-200">
                 <img
@@ -195,8 +298,10 @@ export default function EventsSection({ establishmentId, establishmentSlug }: Ev
               </div>
             </div>
           </div>
-        ))}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

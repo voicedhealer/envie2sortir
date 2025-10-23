@@ -16,6 +16,7 @@ interface Event {
   price?: number;
   imageUrl?: string;
   location?: string;
+  status?: 'ongoing' | 'upcoming';
 }
 
 interface EstablishmentEventsProps {
@@ -37,7 +38,7 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const response = await fetch(`/api/etablissements/${establishmentSlug}/events`);
+        const response = await fetch(`/api/etablissements/${establishmentSlug}/events?t=${Date.now()}`);
         if (response.ok) {
           const data = await response.json();
           setEvents(data.events || []);
@@ -104,8 +105,7 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
       title: event.title,
       startDate: event.startDate,
       endDate: event.endDate,
-      isUpcoming: isEventUpcoming(event.startDate),
-      isInProgress: isEventInProgress(event.startDate, event.endDate)
+      status: event.status
     });
   });
 

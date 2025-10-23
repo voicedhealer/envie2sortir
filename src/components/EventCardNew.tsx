@@ -20,6 +20,7 @@ interface EventCardNewProps {
     location?: string;
     modality?: string;
     establishmentId?: string;
+    status?: 'ongoing' | 'upcoming';
   };
   establishment?: {
     name?: string;
@@ -212,8 +213,18 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
     }
   };
 
-  // Déterminer le statut de l'événement
+  // Déterminer le statut de l'événement (utiliser le champ status de l'API)
   const getEventStatus = () => {
+    // Si l'API fournit un statut, l'utiliser directement
+    if (event.status) {
+      if (event.status === 'ongoing') {
+        return { status: 'in-progress', label: 'Événement en cours' };
+      } else if (event.status === 'upcoming') {
+        return { status: 'upcoming', label: 'Événement à venir' };
+      }
+    }
+    
+    // Fallback : calculer le statut localement si l'API ne fournit pas de statut
     const now = new Date();
     const eventStart = new Date(event.startDate);
     const eventEnd = event.endDate ? new Date(event.endDate) : eventStart;

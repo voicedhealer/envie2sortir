@@ -20,9 +20,14 @@ export async function GET(
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Récupérer les événements de l'établissement (événements à venir ET en cours)
+    // Récupérer les événements de l'établissement avec filtrage par horaires quotidiens
     const now = new Date();
-    const events = await prisma.event.findMany({
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute; // Convertir en minutes depuis minuit
+    
+    // Récupérer tous les événements de l'établissement
+    const allEvents = await prisma.event.findMany({
       where: { 
         establishmentId: establishment.id,
         OR: [
@@ -53,13 +58,111 @@ export async function GET(
         price: true,
         maxCapacity: true,
         isRecurring: true,
-        modality: true, // ✅ Ajout du champ modality
+        modality: true,
         createdAt: true
       },
       orderBy: { startDate: 'asc' }
     });
 
-    return NextResponse.json({ events });
+    // Filtrer les événements par horaires quotidiens
+    const events = allEvents.filter(event => {
+      console.log(`🕐 [API Events] Filtrage événement: "${event.title}"`);
+      console.log(`🕐 [API Events] Heure actuelle: ${currentHour}:${currentMinute} (${currentTime} minutes)`);
+      console.log(`🕐 [API Events] Événement récurrent (DB): ${event.isRecurring}`);
+      
+      // 🔍 DÉTECTION AUTOMATIQUE : Est-ce un événement récurrent ?
+      const startDate = new Date(event.startDate);
+      const endDate = event.endDate ? new Date(event.endDate) : null;
+      
+      // Calculer la durée en jours
+      const durationInDays = endDate ? 
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      
+      // Extraire les heures de début et fin
+      const eventStartHour = startDate.getHours();
+      const eventStartMinute = startDate.getMinutes();
+      const eventEndHour = endDate ? endDate.getHours() : 23;
+      const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+      
+      // 🎯 LOGIQUE SIMPLIFIÉE : Tout événement multi-jours est récurrent pour le filtrage
+      // Si un événement dure plus d'1 jour, il doit respecter ses horaires quotidiens
+      const isActuallyRecurring = event.isRecurring || durationInDays > 1;
+      
+      console.log(`🕐 [API Events] Durée: ${durationInDays} jours`);
+      console.log(`🕐 [API Events] Horaires: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
+      console.log(`🕐 [API Events] Finalement récurrent: ${isActuallyRecurring}`);
+      
+      // Si l'événement n'est pas récurrent (ni en DB ni auto-détecté), utiliser la logique normale
+      if (!isActuallyRecurring) {
+        console.log(`✅ [API Events] Événement non-récurrent - Affiché`);
+        return true;
+      }
+
+      // Pour les événements récurrents, vérifier les horaires quotidiens
+      const eventStartTime = eventStartHour * 60 + eventStartMinute;
+      const eventEndTime = eventEndHour * 60 + eventEndMinute;
+      
+      console.log(`🕐 [API Events] Horaires événement: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
+      console.log(`🕐 [API Events] Plage horaire: ${eventStartTime} - ${eventEndTime} minutes`);
+      
+      // Vérifier si l'heure actuelle est dans la plage horaire de l'événement
+      const isWithinDailyHours = currentTime >= eventStartTime && currentTime <= eventEndTime;
+      
+      // Vérifier si l'événement est encore valide (pas expiré)
+      const isStillValid = !endDate || endDate >= now;
+      
+      console.log(`🕐 [API Events] Dans les horaires: ${isWithinDailyHours}`);
+      console.log(`🕐 [API Events] Encore valide: ${isStillValid}`);
+      console.log(`🕐 [API Events] Résultat final: ${isStillValid ? 'AFFICHÉ' : 'MASQUÉ'}`);
+      
+      // Pour les événements récurrents, toujours afficher s'ils sont encore valides
+      // Le statut (en cours/à venir) sera géré côté frontend
+      return isStillValid;
+    });
+
+    // 🎯 AJOUTER LE STATUT À CHAQUE ÉVÉNEMENT
+    const eventsWithStatus = events.map(event => {
+      // Déterminer le statut : "en cours" ou "à venir"
+      let eventStatus = 'upcoming'; // Par défaut "à venir"
+      
+      // Si c'est un événement récurrent, vérifier les horaires quotidiens
+      const isRecurring = event.isRecurring || (event.endDate && 
+        Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60 * 24)) > 1);
+      
+      if (isRecurring) {
+        const startDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        const eventStartHour = startDate.getHours();
+        const eventStartMinute = startDate.getMinutes();
+        const eventEndHour = endDate ? endDate.getHours() : 23;
+        const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+        
+        const eventStartTime = eventStartHour * 60 + eventStartMinute;
+        const eventEndTime = eventEndHour * 60 + eventEndMinute;
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        
+        // Si on est dans les horaires quotidiens, l'événement est "en cours"
+        if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+          eventStatus = 'ongoing';
+        }
+      } else {
+        // Pour les événements ponctuels, vérifier si on est dans la période
+        const startDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        if (now >= startDate && (!endDate || now <= endDate)) {
+          eventStatus = 'ongoing';
+        }
+      }
+
+      return {
+        ...event,
+        status: eventStatus
+      };
+    });
+
+    return NextResponse.json({ events: eventsWithStatus });
 
   } catch (error) {
     console.error('Erreur lors de la récupération des événements:', error);

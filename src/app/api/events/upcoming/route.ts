@@ -63,8 +63,68 @@ export async function GET(request: NextRequest) {
       take: limit
     });
 
-    // Calculer le score d'engagement pour chaque événement
-    const eventsWithScore = events.map(event => {
+    // 🔍 FILTRAGE PAR HORAIRES QUOTIDIENS pour les événements récurrents
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute; // Convertir en minutes depuis minuit
+    
+    const filteredEvents = events.filter(event => {
+      console.log(`🕐 [API Upcoming] Filtrage événement: "${event.title}"`);
+      console.log(`🕐 [API Upcoming] Heure actuelle: ${currentHour}:${currentMinute} (${currentTime} minutes)`);
+      console.log(`🕐 [API Upcoming] Événement récurrent (DB): ${event.isRecurring}`);
+      
+      // 🔍 DÉTECTION AUTOMATIQUE : Est-ce un événement récurrent ?
+      const startDate = new Date(event.startDate);
+      const endDate = event.endDate ? new Date(event.endDate) : null;
+      
+      // Calculer la durée en jours
+      const durationInDays = endDate ? 
+        Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+      
+      // Extraire les heures de début et fin
+      const eventStartHour = startDate.getHours();
+      const eventStartMinute = startDate.getMinutes();
+      const eventEndHour = endDate ? endDate.getHours() : 23;
+      const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+      
+      // 🎯 LOGIQUE SIMPLIFIÉE : Tout événement multi-jours est récurrent pour le filtrage
+      // Si un événement dure plus d'1 jour, il doit respecter ses horaires quotidiens
+      const isActuallyRecurring = event.isRecurring || durationInDays > 1;
+      
+      console.log(`🕐 [API Upcoming] Durée: ${durationInDays} jours`);
+      console.log(`🕐 [API Upcoming] Horaires: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
+      console.log(`🕐 [API Upcoming] Finalement récurrent: ${isActuallyRecurring}`);
+      
+      // Si l'événement n'est pas récurrent (ni en DB ni auto-détecté), utiliser la logique normale
+      if (!isActuallyRecurring) {
+        console.log(`✅ [API Upcoming] Événement non-récurrent - Affiché`);
+        return true;
+      }
+
+      // Pour les événements récurrents, vérifier les horaires quotidiens
+      const eventStartTime = eventStartHour * 60 + eventStartMinute;
+      const eventEndTime = eventEndHour * 60 + eventEndMinute;
+      
+      console.log(`🕐 [API Upcoming] Horaires événement: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
+      console.log(`🕐 [API Upcoming] Plage horaire: ${eventStartTime} - ${eventEndTime} minutes`);
+      
+      // Vérifier si l'heure actuelle est dans la plage horaire de l'événement
+      const isWithinDailyHours = currentTime >= eventStartTime && currentTime <= eventEndTime;
+      
+      // Vérifier si l'événement est encore valide (pas expiré)
+      const isStillValid = !endDate || endDate >= now;
+      
+      console.log(`🕐 [API Upcoming] Dans les horaires: ${isWithinDailyHours}`);
+      console.log(`🕐 [API Upcoming] Encore valide: ${isStillValid}`);
+      console.log(`🕐 [API Upcoming] Résultat final: ${isStillValid ? 'AFFICHÉ' : 'MASQUÉ'}`);
+      
+      // Pour les événements récurrents, toujours afficher s'ils sont encore valides
+      // Le statut (en cours/à venir) sera géré côté frontend
+      return isStillValid;
+    });
+
+    // Calculer le score d'engagement et le statut pour chaque événement
+    const eventsWithScore = filteredEvents.map(event => {
       const SCORES = {
         'envie': 1,
         'grande-envie': 3,
@@ -78,10 +138,45 @@ export async function GET(request: NextRequest) {
 
       const { engagements, ...eventData } = event;
 
+      // 🎯 DÉTERMINER LE STATUT : "en cours" ou "à venir"
+      let eventStatus = 'upcoming'; // Par défaut "à venir"
+      
+      // Si c'est un événement récurrent, vérifier les horaires quotidiens
+      const isRecurring = event.isRecurring || (event.endDate && 
+        Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60 * 24)) > 1);
+      
+      if (isRecurring) {
+        const startDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        const eventStartHour = startDate.getHours();
+        const eventStartMinute = startDate.getMinutes();
+        const eventEndHour = endDate ? endDate.getHours() : 23;
+        const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+        
+        const eventStartTime = eventStartHour * 60 + eventStartMinute;
+        const eventEndTime = eventEndHour * 60 + eventEndMinute;
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        
+        // Si on est dans les horaires quotidiens, l'événement est "en cours"
+        if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+          eventStatus = 'ongoing';
+        }
+      } else {
+        // Pour les événements ponctuels, vérifier si on est dans la période
+        const startDate = new Date(event.startDate);
+        const endDate = event.endDate ? new Date(event.endDate) : null;
+        
+        if (now >= startDate && (!endDate || now <= endDate)) {
+          eventStatus = 'ongoing';
+        }
+      }
+
       return {
         ...eventData,
         engagementScore: score,
-        engagementCount: engagements.length
+        engagementCount: engagements.length,
+        status: eventStatus
       };
     });
 

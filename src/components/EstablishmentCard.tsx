@@ -288,23 +288,31 @@ export default function EstablishmentCard({
       console.log('🔍 [EstablishmentCard] Chargement événements pour:', establishment.name, establishment.slug);
       
       try {
-        const response = await fetch(`/api/etablissements/${establishment.slug}/events`);
+        const response = await fetch(`/api/etablissements/${establishment.slug}/events?t=${Date.now()}&r=${Math.random()}&force=${Math.random()}`);
         if (response.ok) {
           const data = await response.json();
           console.log('🔍 [EstablishmentCard] Données reçues pour', establishment.name, ':', data);
+          console.log('🔍 [EstablishmentCard] Événements bruts:', data.events);
+          console.log('🔍 [EstablishmentCard] Premier événement brut:', data.events?.[0]);
+          console.log('🔍 [EstablishmentCard] Premier événement status:', data.events?.[0]?.status);
+          console.log('🔍 [EstablishmentCard] Premier événement complet:', JSON.stringify(data.events?.[0], null, 2));
           const now = new Date();
           
-          // Trouver les événements en cours et futurs avec gestion du fuseau horaire
+          // Trouver les événements en cours et futurs en utilisant le statut de l'API
           const upcomingEvents = data.events?.filter((event: any) => {
-            const isUpcoming = isEventUpcoming(event.startDate);
-            const isInProgress = isEventInProgress(event.startDate, event.endDate);
+            // Utiliser le statut fourni par l'API (qui prend en compte les horaires quotidiens)
+            const isUpcoming = event.status === 'upcoming';
+            const isInProgress = event.status === 'ongoing';
             console.log(`🔍 [EstablishmentCard] Événement "${event.title}":`, {
               startDate: event.startDate,
               endDate: event.endDate,
+              status: event.status,
               isUpcoming,
               isInProgress,
-              willShow: isUpcoming || isInProgress
+              willShow: isUpcoming || isInProgress,
+              fullEvent: event
             });
+            console.log(`🔍 [EstablishmentCard] DÉTAILS ÉVÉNEMENT "${event.title}":`, event);
             return isUpcoming || isInProgress;
           }) || [];
           
@@ -316,14 +324,21 @@ export default function EstablishmentCard({
               new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
             )[0];
             
-            // Vérifier si l'événement est en cours avec gestion du fuseau horaire
-            const inProgress = isEventInProgress(nextEvent.startDate, nextEvent.endDate);
+            // Utiliser le statut fourni par l'API (qui prend en compte les horaires quotidiens)
+            const inProgress = nextEvent.status === 'ongoing';
             
             console.log('🔍 [EstablishmentCard] Événement sélectionné pour', establishment.name, ':', {
               title: nextEvent.title,
               startDate: nextEvent.startDate,
               endDate: nextEvent.endDate,
+              status: nextEvent.status,
               inProgress
+            });
+            console.log('🔍 [EstablishmentCard] STATUT FINAL:', {
+              eventTitle: nextEvent.title,
+              apiStatus: nextEvent.status,
+              isEventCurrentlyInProgress: inProgress,
+              badgeText: inProgress ? 'Évent en cours' : 'Évent à venir'
             });
             
             setUpcomingEvent(nextEvent);
@@ -431,23 +446,59 @@ export default function EstablishmentCard({
     return text.substring(0, maxLength).trim() + '...';
   };
 
-  // Formater la date de l'événement
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
+  // Formater la date de l'événement avec détection des événements récurrents
+  const formatEventDate = (event: any) => {
+    const startDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const isTomorrow = date.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
     
-    if (isToday) {
-      return `Aujourd'hui • ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (isTomorrow) {
-      return `Demain • ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    // Calculer la durée en jours
+    const durationInDays = endDate ? 
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    
+    // Détecter si c'est un événement récurrent (durée > 1 jour)
+    const isRecurringEvent = durationInDays > 1;
+    
+    if (isRecurringEvent) {
+      // Pour les événements récurrents, afficher la plage de dates + horaires
+      const startDay = startDate.getDate();
+      const startMonth = startDate.toLocaleDateString('fr-FR', { month: 'short' });
+      const endDay = endDate ? endDate.getDate() : startDay;
+      const endMonth = endDate ? endDate.toLocaleDateString('fr-FR', { month: 'short' }) : startMonth;
+      
+      // Extraire les horaires
+      const startTime = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const endTime = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : startTime;
+      
+      // Format compact pour les événements récurrents avec horaires
+      let dateRange;
+      if (startMonth === endMonth) {
+        dateRange = `${startDay}-${endDay} ${startMonth}`;
+      } else {
+        dateRange = `${startDay} ${startMonth} - ${endDay} ${endMonth}`;
+      }
+      
+      // Ajouter les horaires de manière compacte
+      return `${dateRange} • ${startTime}-${endTime}`;
     } else {
-      const dayName = date.toLocaleDateString('fr-FR', { weekday: 'short' });
-      const dayNumber = date.getDate();
-      const monthName = date.toLocaleDateString('fr-FR', { month: 'short' });
-      const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-      return `${dayName} ${dayNumber} ${monthName} • ${time}`;
+      // Pour les événements ponctuels, utiliser le format original avec heure de fin
+      const isToday = startDate.toDateString() === now.toDateString();
+      const isTomorrow = startDate.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+      
+      // Extraire l'heure de fin si disponible
+      const endTime = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null;
+      const startTime = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      
+      if (isToday) {
+        return endTime ? `Aujourd'hui • ${startTime}-${endTime}` : `Aujourd'hui • ${startTime}`;
+      } else if (isTomorrow) {
+        return endTime ? `Demain • ${startTime}-${endTime}` : `Demain • ${startTime}`;
+      } else {
+        const dayName = startDate.toLocaleDateString('fr-FR', { weekday: 'short' });
+        const dayNumber = startDate.getDate();
+        const monthName = startDate.toLocaleDateString('fr-FR', { month: 'short' });
+        return endTime ? `${dayName} ${dayNumber} ${monthName} • ${startTime}-${endTime}` : `${dayName} ${dayNumber} ${monthName} • ${startTime}`;
+      }
     }
   };
 
@@ -647,15 +698,7 @@ export default function EstablishmentCard({
                   <div className="flex items-center gap-2 text-white text-xs">
                     <Clock className="w-3 h-3" />
                     <div className="flex items-center gap-1">
-                      <span className={styles.eventDate}>{formatEventDate(upcomingEvent.startDate)}</span>
-                      {upcomingEvent.endDate && (
-                        <>
-                          <span className="text-white/60">•</span>
-                          <span className="text-white/80">
-                            {formatEventEndTime(upcomingEvent.endDate)}
-                          </span>
-                        </>
-                      )}
+                      <span className={styles.eventDate}>{formatEventDate(upcomingEvent)}</span>
                     </div>
                   </div>
 

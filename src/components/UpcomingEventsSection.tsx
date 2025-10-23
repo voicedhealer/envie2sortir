@@ -20,6 +20,7 @@ interface Event {
   isRecurring?: boolean;
   modality?: string;
   createdAt: string;
+  status?: 'ongoing' | 'upcoming';
 }
 
 interface EstablishmentInfo {
@@ -47,7 +48,7 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
         
         console.log('🔍 Chargement des événements pour:', establishmentSlug);
         
-        const response = await fetch(`/api/etablissements/${establishmentSlug}/events`);
+        const response = await fetch(`/api/etablissements/${establishmentSlug}/events?t=${Date.now()}`);
         if (!response.ok) {
           throw new Error(`Erreur ${response.status}: ${response.statusText}`);
         }
@@ -64,18 +65,18 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
             title: event.title,
             startDate: event.startDate,
             endDate: event.endDate,
-            isUpcoming: isEventUpcoming(event.startDate),
-            isInProgress: isEventInProgress(event.startDate, event.endDate)
+            status: event.status
           });
         });
         
-        // 🔧 SIMPLIFICATION: Utiliser la même logique que l'API (déjà filtrée)
-        // L'API filtre déjà les événements à venir et en cours, on utilise directement les données
+        // 🔧 SIMPLIFICATION: Utiliser le champ status de l'API
+        // L'API fournit déjà le bon statut (ongoing/upcoming), on utilise directement les données
         const upcomingEvents = allEvents
           .sort((a: Event, b: Event) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
           .slice(0, maxEvents);
         
         console.log('🎯 Événements à venir après filtrage:', upcomingEvents.length);
+        console.log('🔍 [UpcomingEventsSection] Événements reçus avec statuts:', upcomingEvents.map(e => ({ title: e.title, status: e.status })));
         setEvents(upcomingEvents);
         
         // Récupérer les infos de l'établissement
@@ -127,14 +128,9 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
 
   console.log('Événements à venir trouvés:', events.length, events);
 
-  // Déterminer le statut des événements pour le titre dynamique
-  const now = new Date();
-  const hasInProgressEvents = events.some(event => {
-    const eventStart = new Date(event.startDate);
-    const eventEnd = event.endDate ? new Date(event.endDate) : eventStart;
-    return eventStart <= now && eventEnd >= now;
-  });
-  const hasUpcomingEvents = events.some(event => new Date(event.startDate) > now);
+  // Déterminer le statut des événements pour le titre dynamique (utiliser le champ status de l'API)
+  const hasInProgressEvents = events.some(event => event.status === 'ongoing');
+  const hasUpcomingEvents = events.some(event => event.status === 'upcoming');
 
   const getSectionTitle = () => {
     if (events.length === 0) {
@@ -192,7 +188,8 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
                 price: event.price || 0,
                 imageUrl: event.imageUrl || '',
                 modality: event.modality || '',
-                establishmentId: establishmentSlug // Utiliser le slug comme ID temporaire
+                establishmentId: establishmentSlug, // Utiliser le slug comme ID temporaire
+                status: event.status // Passer le statut de l'API
               }}
               establishment={establishmentInfo}
             />

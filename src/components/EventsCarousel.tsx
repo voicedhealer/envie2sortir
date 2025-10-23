@@ -30,6 +30,7 @@ interface Event {
   };
   engagementScore: number;
   engagementCount: number;
+  status?: 'ongoing' | 'upcoming';
 }
 
 type FilterType = 'all' | 'today' | 'week' | 'weekend';
@@ -49,7 +50,7 @@ export default function EventsCarousel() {
   // ✅ Calculer dynamiquement les événements en cours avec useMemo
   const liveEventsCount = useMemo(() => {
     return filteredEvents.filter(e => 
-      isEventInProgress(e.startDate, e.endDate)
+      e.status === 'ongoing'
     ).length;
   }, [filteredEvents]);
 
@@ -145,6 +146,8 @@ export default function EventsCarousel() {
       const response = await fetch('/api/events/upcoming');
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 [EventsCarousel] Données reçues de l\'API:', data);
+        console.log('🔍 [EventsCarousel] Premier événement:', data.events?.[0]);
         setAllEvents(data.events || []);
         setTrendingEvents(data.trending || []);
       }
@@ -192,24 +195,89 @@ export default function EventsCarousel() {
     setBlurredButton(null);
   };
 
-  const formatEventDate = (dateString: string) => {
-    const date = new Date(dateString);
+  // Formater la date de l'événement avec détection des événements récurrents
+  const formatEventDate = (event: Event) => {
+    const startDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const isTomorrow = date.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
     
-    if (isToday) {
-      return `Aujourd'hui • ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (isTomorrow) {
-      return `Demain • ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    // Calculer la durée en jours
+    const durationInDays = endDate ? 
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    
+    // Détecter si c'est un événement récurrent (durée > 1 jour)
+    const isRecurringEvent = durationInDays > 1;
+    
+    if (isRecurringEvent) {
+      // Pour les événements récurrents, afficher la plage de dates + horaires
+      const startDay = startDate.getDate();
+      const startMonth = startDate.toLocaleDateString('fr-FR', { month: 'short' });
+      const endDay = endDate ? endDate.getDate() : startDay;
+      const endMonth = endDate ? endDate.toLocaleDateString('fr-FR', { month: 'short' }) : startMonth;
+      
+      // Extraire les horaires
+      const startTime = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const endTime = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : startTime;
+      
+      // Format compact pour les événements récurrents avec horaires
+      let dateRange;
+      if (startMonth === endMonth) {
+        dateRange = `${startDay}-${endDay} ${startMonth.replace('.', '')}`;
+      } else {
+        dateRange = `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
+      }
+      
+      // Ajouter les horaires de manière compacte
+      return `${dateRange} • ${startTime}-${endTime}`;
     } else {
-      return date.toLocaleDateString('fr-FR', { 
-        weekday: 'short', 
-        day: 'numeric', 
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      // Pour les événements ponctuels, utiliser le format original avec heure de fin
+      const isToday = startDate.toDateString() === now.toDateString();
+      const isTomorrow = startDate.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+      
+      // Extraire l'heure de fin si disponible
+      const endTime = endDate ? endDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : null;
+      const startTime = startDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      
+      if (isToday) {
+        return endTime ? `Aujourd'hui • ${startTime}-${endTime}` : `Aujourd'hui • ${startTime}`;
+      } else if (isTomorrow) {
+        return endTime ? `Demain • ${startTime}-${endTime}` : `Demain • ${startTime}`;
+      } else {
+        const dayName = startDate.toLocaleDateString('fr-FR', { weekday: 'short' });
+        const dayNumber = startDate.getDate();
+        const monthName = startDate.toLocaleDateString('fr-FR', { month: 'short' });
+        return endTime ? `${dayName} ${dayNumber} ${monthName} • ${startTime}-${endTime}` : `${dayName} ${dayNumber} ${monthName} • ${startTime}`;
+      }
+    }
+  };
+
+  // Formater la date pour le badge (version compacte)
+  const formatEventDateBadge = (event: Event) => {
+    const startDate = new Date(event.startDate);
+    const endDate = event.endDate ? new Date(event.endDate) : null;
+    
+    // Calculer la durée en jours
+    const durationInDays = endDate ? 
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+    
+    // Détecter si c'est un événement récurrent (durée > 1 jour)
+    const isRecurringEvent = durationInDays > 1;
+    
+    if (isRecurringEvent) {
+      // Pour les événements récurrents, afficher la plage de dates
+      const startDay = startDate.getDate();
+      const startMonth = startDate.toLocaleDateString('fr-FR', { month: 'short' });
+      const endDay = endDate ? endDate.getDate() : startDay;
+      const endMonth = endDate ? endDate.toLocaleDateString('fr-FR', { month: 'short' }) : startMonth;
+      
+      if (startMonth === endMonth) {
+        return `${startDay}-${endDay} ${startMonth.replace('.', '')}`;
+      } else {
+        return `${startDay} ${startMonth.replace('.', '')} - ${endDay} ${endMonth.replace('.', '')}`;
+      }
+    } else {
+      // Pour les événements ponctuels, afficher seulement la date de début
+      return `${startDate.getDate()} ${startDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}`;
     }
   };
 
@@ -386,8 +454,18 @@ export default function EventsCarousel() {
               >
                 <div className="flex gap-6 py-4 px-4 items-stretch">
                   {filteredEvents.map((event) => {
-                const isLive = isEventInProgress(event.startDate, event.endDate);
+                const isLive = event.status === 'ongoing';
                 const isTrending = trendingEvents.some(t => t.id === event.id);
+                
+                console.log('🔍 [EventsCarousel] Événement:', {
+                  title: event.title,
+                  status: event.status,
+                  isLive,
+                  startDate: event.startDate,
+                  endDate: event.endDate,
+                  badgeDate: formatEventDateBadge(event),
+                  fullDate: formatEventDate(event)
+                });
 
                     return (
                       <Link
@@ -430,13 +508,10 @@ export default function EventsCarousel() {
                               </div>
                             )}
 
-                            {/* Date badge - style translucide */}
+                            {/* Date badge - style translucide avec plage de dates */}
                             <div className="absolute top-4 right-4 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 text-center shadow-lg z-10">
-                              <div className="text-2xl font-bold text-black">
-                                {new Date(event.startDate).getDate()}
-                              </div>
-                              <div className="text-sm text-black">
-                                {new Date(event.startDate).toLocaleDateString('fr-FR', { month: 'short' })}
+                              <div className="text-lg font-bold text-black">
+                                {formatEventDateBadge(event)}
                               </div>
                             </div>
 
@@ -480,21 +555,10 @@ export default function EventsCarousel() {
                                   <span>{event.establishment.name}, {event.establishment.city}</span>
                                 </div>
 
-                                {/* Heure */}
+                                {/* Heure avec plage de dates pour les événements multi-jours */}
                                 <div className="flex items-center gap-2 text-sm text-white">
                                   <Clock className="w-4 h-4 flex-shrink-0 text-orange-400" />
-                                  <span>{new Date(event.startDate).toLocaleTimeString('fr-FR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}</span>
-                                  {event.endDate && (
-                                    <span className="text-gray-300">
-                                      - {new Date(event.endDate).toLocaleTimeString('fr-FR', { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit' 
-                                      })}
-                                    </span>
-                                  )}
+                                  <span>{formatEventDate(event)}</span>
                                 </div>
 
                                 {/* Capacité */}
