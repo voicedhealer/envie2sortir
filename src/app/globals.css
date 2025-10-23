@@ -925,6 +925,17 @@ body {
   overflow: hidden;
 }
 
+/* Amélioration de l'affichage des images */
+.promo-card-front img {
+  object-fit: cover;
+  object-position: center center;
+  transition: transform 0.3s ease;
+}
+
+.promo-card-front:hover img {
+  transform: scale(1.05);
+}
+
 /* === FACE ARRIÈRE === */
 .promo-card-back {
   padding: 24px;
@@ -932,6 +943,7 @@ body {
 }
 
 .promo-back-header {
+  position: relative;
   border-bottom: 2px solid #ff6600;
   padding-bottom: 12px;
   margin-bottom: 20px;

@@ -15,6 +15,10 @@ export default function SocialStep({
   formData,
   onInputChange
 }: SocialStepProps) {
+  // Debug temporaire pour YouTube
+  console.log('🔍 SocialStep - formData.youtube:', formData.youtube);
+  console.log('🔍 SocialStep - formData:', formData);
+  
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">

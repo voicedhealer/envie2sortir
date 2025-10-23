@@ -1,6 +1,6 @@
 "use client";
 
-import { Tag, Clock, FileText, ThumbsUp, ThumbsDown, MapPin, Calendar, ArrowLeft } from 'lucide-react';
+import { Tag, Clock, FileText, ThumbsUp, ThumbsDown, MapPin, Calendar, ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDealTime, formatDealDate, formatPrice, calculateDiscount } from '@/lib/deal-utils';
@@ -169,11 +169,14 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
 
             {/* Image */}
             {deal.imageUrl ? (
-              <div className="relative h-48 mt-0">
+              <div className="relative h-48 mt-0 overflow-hidden">
                 <img
                   src={deal.imageUrl}
                   alt={deal.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
+                  style={{
+                    objectPosition: 'center 40%'
+                  }}
                 />
               </div>
             ) : (
@@ -287,7 +290,14 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
         </div>
 
         {/* FACE ARRIÈRE */}
-        <div className="promo-card-back">
+        <div className="promo-card-back relative">
+          <button 
+            onClick={handleFlipBack}
+            className="absolute top-1/2 -left-3 -translate-y-1/2 p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-colors z-10"
+            title="Retour"
+          >
+            <ChevronLeft className="w-8 h-8" />
+          </button>
           <div className="promo-back-header">
             <h3 className="promo-back-title">Détails de l'offre</h3>
           </div>
@@ -361,16 +371,6 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
                 </div>
               )}
             </div>
-          </div>
-          
-          <div className="promo-back-actions">
-            <button 
-              onClick={handleFlipBack}
-              className="btn-secondary"
-            >
-              <ArrowLeft className="w-4 h-4 inline mr-2" />
-              Retour
-            </button>
           </div>
         </div>
         

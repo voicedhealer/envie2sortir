@@ -85,6 +85,10 @@ interface SmartSummaryStepProps {
 }
 
 export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps) {
+  // Debug temporaire pour YouTube
+  console.log('🔍 SmartSummaryStep - data.youtube:', data.youtube);
+  console.log('🔍 SmartSummaryStep - data keys:', Object.keys(data));
+  
   // Fonction pour nettoyer les tags avec barres de séparation
   const cleanTagText = (text: string): string => {
     if (!text) return '';
@@ -342,22 +346,22 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             </div>
           )}
           <div className="flex flex-wrap gap-4">
-            {data.instagram && (
+            {data.instagram && data.instagram.trim() !== '' && (
               <a href={data.instagram} target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-800">
                  Instagram
               </a>
             )}
-            {data.facebook && (
+            {data.facebook && data.facebook.trim() !== '' && (
               <a href={data.facebook} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
                 Facebook
               </a>
             )}
-            {data.tiktok && (
+            {data.tiktok && data.tiktok.trim() !== '' && (
               <a href={data.tiktok} target="_blank" rel="noopener noreferrer" className="text-black hover:text-gray-800">
                  TikTok
               </a>
             )}
-            {data.youtube && (
+            {data.youtube && data.youtube.trim() !== '' && (
               <a href={data.youtube} target="_blank" rel="noopener noreferrer" className="text-red-600 hover:text-red-800">
                  YouTube
               </a>
