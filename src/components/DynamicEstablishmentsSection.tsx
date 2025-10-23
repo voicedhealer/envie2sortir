@@ -40,6 +40,8 @@ interface Establishment {
   priceMax?: number;
   rating?: number;
   reviewCount?: number;
+  avgRating?: number;
+  totalComments?: number;
 }
 
 export default function DynamicEstablishmentsSection() {

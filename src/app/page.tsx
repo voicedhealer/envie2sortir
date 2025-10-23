@@ -103,11 +103,11 @@ export default function Home() {
             <div className="bg-white rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center mb-4">
                 <div className="flex text-yellow-400">
-                  {[...Array(5)].map((_, i) => (
+                  {[...Array(4)].map((_, i) => (
                     <span key={i} className="text-lg">⭐</span>
                   ))}
                 </div>
-                <span className="ml-2 text-sm text-gray-500">5.0</span>
+                <span className="ml-2 text-sm text-gray-500">4.1</span>
               </div>
               <p className="text-gray-700 mb-4">"Envie2Sortir m'a permis de découvrir des endroits incroyables dans ma ville que je ne connaissais pas ! L'interface est intuitive et les recommandations sont parfaites."</p>
               <div className="flex items-center">

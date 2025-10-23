@@ -218,6 +218,8 @@ interface EstablishmentCardProps {
     // Pour les notes (à implémenter plus tard)
     rating?: number;
     reviewCount?: number;
+    avgRating?: number;
+    totalComments?: number;
     // Nouvelles propriétés
     isHot?: boolean;
     description?: string;
@@ -570,11 +572,42 @@ export default function EstablishmentCard({
     }
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsShared(true);
-    setTimeout(() => setIsShared(false), 1000);
+    
+    try {
+      const url = `${window.location.origin}/etablissements/${establishment.slug}`;
+      const title = `${establishment.name} - ${establishment.city || 'Dijon'}`;
+      const text = `Découvrez ${establishment.name} sur Envie2Sortir !`;
+      
+      // Vérifier si l'API Web Share est disponible (mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title,
+          text,
+          url
+        });
+        toast.success('Partagé avec succès !');
+        setIsShared(true);
+        setTimeout(() => setIsShared(false), 2000);
+      } else {
+        // Fallback : copier l'URL dans le presse-papiers
+        await navigator.clipboard.writeText(url);
+        toast.success('Lien copié dans le presse-papiers !');
+        setIsShared(true);
+        setTimeout(() => setIsShared(false), 2000);
+      }
+    } catch (error) {
+      // Ne pas afficher d'erreur si l'utilisateur a annulé le partage
+      if (error.name === 'AbortError') {
+        console.log('Partage annulé par l\'utilisateur');
+        return;
+      }
+      
+      console.error('Erreur lors du partage:', error);
+      toast.error('Erreur lors du partage');
+    }
   };
 
   // Construire l'URL avec les paramètres de recherche
@@ -765,12 +798,28 @@ export default function EstablishmentCard({
               )}
             </div>
 
-            {/* 2ème ligne : Note + Avis */}
-            <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 text-yellow-400 fill-current" />
-              <span className="font-semibold text-gray-900 text-sm">4.2</span>
-              <span className="text-gray-500 text-xs">(24 avis)</span>
-            </div>
+            {/* 2ème ligne : Note + Avis (vrais avis ou CTA) */}
+            {(() => {
+              console.log('🔍 [EstablishmentCard] Données avis pour', establishment.name, ':', {
+                rating: establishment.rating,
+                reviewCount: establishment.reviewCount,
+                avgRating: establishment.avgRating,
+                totalComments: establishment.totalComments
+              });
+              
+              return establishment.rating && establishment.reviewCount && establishment.reviewCount > 0 ? (
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 text-yellow-400 fill-current" />
+                  <span className="font-semibold text-gray-900 text-sm">{establishment.rating.toFixed(1)}</span>
+                  <span className="text-gray-500 text-xs">({establishment.reviewCount} avis)</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 text-gray-400 text-xs">
+                  <Star className="w-3 h-3" />
+                  <span>Aucun avis, laissez le vôtre ?</span>
+                </div>
+              );
+            })()}
 
             {/* 3ème ligne : Description courte */}
             {establishment.description && (
