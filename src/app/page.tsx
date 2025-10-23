@@ -4,6 +4,8 @@ import EventsCarousel from "@/components/EventsCarousel";
 import DailyDealsCarousel from "@/components/DailyDealsCarousel";
 import PageLoadingOverlay from "@/components/PageLoadingOverlay";
 import LocationModal from "@/components/LocationModal";
+import NewsletterForm from "@/components/NewsletterForm";
+import CookieConsent from "@/components/CookieConsent";
 import { Facebook, Instagram, Twitter } from "lucide-react";
 
 export default function Home() {
@@ -13,6 +15,8 @@ export default function Home() {
       <PageLoadingOverlay />
       {/* 📍 Modal de localisation au premier chargement */}
       <LocationModal />
+      {/* 🍪 Modal de consentement aux cookies */}
+      <CookieConsent />
       {/* HERO */}
       <section className="relative">
         <div className="hero-gradient/10">
@@ -240,26 +244,7 @@ export default function Home() {
             </div>
 
             {/* Newsletter */}
-            <div className="bg-gray-50 rounded-2xl p-8">
-              <h3 className="text-xl font-semibold mb-4">Restez informé !</h3>
-              <p className="text-gray-600 mb-6">Recevez nos meilleures découvertes et offres exclusives</p>
-              <form className="space-y-4">
-                <input
-                  type="email"
-                  placeholder="Votre adresse email"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-                <button
-                  type="submit"
-                  className="w-full px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-lg hover:from-orange-600 hover:to-pink-600 transition-all duration-300"
-                >
-                  S'abonner à la newsletter
-                </button>
-              </form>
-              <p className="text-xs text-gray-500 mt-3">
-                En vous inscrivant, vous acceptez de recevoir nos communications. Vous pouvez vous désinscrire à tout moment.
-              </p>
-            </div>
+            <NewsletterForm />
           </div>
         </div>
       </section>
@@ -309,10 +294,10 @@ export default function Home() {
             <div>
               <h3 className="text-white font-semibold mb-4">Liens rapides</h3>
               <ul className="space-y-2">
-                <li><a href="/etablissements" className="hover:text-white transition-colors">Établissements</a></li>
                 <li><a href="/carte" className="hover:text-white transition-colors">Carte interactive</a></li>
                 <li><a href="/etablissements/nouveau" className="hover:text-white transition-colors">Ajouter un établissement</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">À propos</a></li>
+                <li><a href="/a-propos" className="hover:text-white transition-colors">À propos</a></li>
+                <li><a href="/recherche" className="hover:text-white transition-colors">Rechercher</a></li>
               </ul>
             </div>
 
@@ -320,10 +305,10 @@ export default function Home() {
             <div>
               <h3 className="text-white font-semibold mb-4">Support</h3>
               <ul className="space-y-2">
-                <li><a href="#" className="hover:text-white transition-colors">Centre d'aide</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Signaler un problème</a></li>
+                <li><a href="/support" className="hover:text-white transition-colors">Centre d'aide</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
+                <li><a href="/faq" className="hover:text-white transition-colors">FAQ</a></li>
+                <li><a href="/support/signaler" className="hover:text-white transition-colors">Signaler un problème</a></li>
               </ul>
             </div>
           </div>
@@ -331,8 +316,8 @@ export default function Home() {
           <div className="border-t border-gray-700 mt-8 pt-8 text-center">
             <p className="text-gray-400">
               © 2025 Envie2Sortir. Tous droits réservés. | 
-              <a href="#" className="hover:text-white transition-colors ml-2">Mentions légales</a> | 
-              <a href="#" className="hover:text-white transition-colors ml-2">Politique de confidentialité</a>
+              <a href="/mentions-legales" className="hover:text-white transition-colors ml-2">Mentions légales</a> | 
+              <a href="/politique-confidentialite" className="hover:text-white transition-colors ml-2">Politique de confidentialité</a>
             </p>
           </div>
         </div>

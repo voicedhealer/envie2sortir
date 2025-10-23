@@ -12,7 +12,8 @@ import {
   BarChart3, 
   Search,
   Brain,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from "lucide-react";
 import MessageBadge from "@/components/messaging/MessageBadge";
 
@@ -148,6 +149,13 @@ export default function AdminLayout({
       href: '/admin/learning',
       label: 'Intelligence',
       icon: Brain,
+      badge: null,
+      customBadge: false
+    },
+    {
+      href: '/admin/newsletter',
+      label: 'Newsletter',
+      icon: Mail,
       badge: null,
       customBadge: false
     }

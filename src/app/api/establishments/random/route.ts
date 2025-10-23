@@ -55,6 +55,10 @@ export async function GET(request: NextRequest) {
         imageUrl: true,
         avgRating: true,
         totalComments: true,
+        viewsCount: true,
+        clicksCount: true,
+        createdAt: true,
+        lastModifiedAt: true,
         images: {
           take: 5,
           select: {
@@ -114,7 +118,11 @@ export async function GET(request: NextRequest) {
       imageUrl: est.imageUrl,
       images: est.images,
       rating: est.avgRating,
-      reviewCount: est.totalComments
+      reviewCount: est.totalComments,
+      viewsCount: est.viewsCount,
+      clicksCount: est.clicksCount,
+      createdAt: est.createdAt,
+      lastModifiedAt: est.lastModifiedAt
     }));
     
     const response = {

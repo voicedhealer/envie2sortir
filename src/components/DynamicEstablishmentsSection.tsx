@@ -42,6 +42,10 @@ interface Establishment {
   reviewCount?: number;
   avgRating?: number;
   totalComments?: number;
+  viewsCount?: number;
+  clicksCount?: number;
+  createdAt?: string;
+  lastModifiedAt?: string;
 }
 
 export default function DynamicEstablishmentsSection() {
