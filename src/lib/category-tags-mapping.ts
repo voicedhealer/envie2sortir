@@ -336,6 +336,262 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     relatedTags: ["italienne", "conviviale", "rapide", "familiale"]
   },
 
+  // ☕ CAFÉS & CAFÉS - Système hiérarchique complet
+  cafe_traditionnel: {
+    primaryTags: ["café", "traditionnel", "expresso", "barista", "artisanal"],
+    secondaryTags: ["pâtisseries", "croissants", "petit-déjeuner", "terrasse", "chaleureux"],
+    relatedTags: ["authentique", "quartier", "convivial", "matinal", "décontracté"]
+  },
+  cafe_brasserie: {
+    primaryTags: ["café", "brasserie", "restaurant", "plats", "jour"],
+    secondaryTags: ["menu", "déjeuner", "dîner", "terrasse", "convivial"],
+    relatedTags: ["familial", "traditionnel", "quartier", "chaleureux", "accessible"]
+  },
+  cafe_lounge: {
+    primaryTags: ["café", "lounge", "détente", "confortable", "sofa"],
+    secondaryTags: ["musique", "douce", "wifi", "travail", "calme"],
+    relatedTags: ["relaxation", "sophistiqué", "rendez-vous", "intimiste", "premium"]
+  },
+  cafe_rooftop: {
+    primaryTags: ["café", "rooftop", "terrasse", "vue", "panoramique"],
+    secondaryTags: ["hauteur", "coucher", "soleil", "premium", "exclusif"],
+    relatedTags: ["romantique", "instagram", "haut", "vue", "ville", "élégant"]
+  },
+  cafe_artisanal: {
+    primaryTags: ["café", "artisanal", "torréfaction", "grains", "spécialisé"],
+    secondaryTags: ["dégustation", "origines", "méthodes", "expert", "premium"],
+    relatedTags: ["connaisseur", "raffiné", "authentique", "découverte", "passionné"]
+  },
+  cafe_healthy: {
+    primaryTags: ["café", "healthy", "santé", "bio", "naturel"],
+    secondaryTags: ["smoothies", "jus", "détox", "légumes", "fruits"],
+    relatedTags: ["bien-être", "sport", "léger", "pur", "équilibré"]
+  },
+  cafe_vegan: {
+    primaryTags: ["café", "vegan", "végétal", "sans", "animal"],
+    secondaryTags: ["lait", "végétal", "alternatives", "éthique", "responsable"],
+    relatedTags: ["écologique", "conscient", "moderne", "sain", "engagé"]
+  },
+  cafe_gluten_free: {
+    primaryTags: ["café", "sans", "gluten", "intolérance", "allergie"],
+    secondaryTags: ["alternatives", "précaution", "santé", "spécialisé", "attention"],
+    relatedTags: ["précaution", "inclusif", "attention", "soin", "adapté"]
+  },
+  cafe_halal: {
+    primaryTags: ["café", "halal", "musulman", "islamique", "religieux"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "traditionnel", "inclusif"],
+    relatedTags: ["communauté", "respect", "diversité", "inclusif", "culturel"]
+  },
+  cafe_kosher: {
+    primaryTags: ["café", "kosher", "juif", "religieux", "traditionnel"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
+    relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
+  },
+  cafe_jeux: {
+    primaryTags: ["café", "jeux", "société", "board", "games"],
+    secondaryTags: ["ludothèque", "prêt", "jeux", "tournois", "événements"],
+    relatedTags: ["ludique", "convivial", "entre amis", "décontracté", "amusant"]
+  },
+  cafe_livres: {
+    primaryTags: ["café", "livres", "librairie", "lecture", "culturel"],
+    secondaryTags: ["bibliothèque", "silence", "intellectuel", "détente", "calme"],
+    relatedTags: ["culturel", "intellectuel", "calme", "découverte", "sophistiqué"]
+  },
+  cafe_enfants: {
+    primaryTags: ["café", "enfants", "familial", "aire", "jeux"],
+    secondaryTags: ["chaises", "hautes", "animations", "sécurisé", "coloré"],
+    relatedTags: ["familial", "enfants", "amusant", "sécurisé", "chaleureux"]
+  },
+  cafe_afterwork: {
+    primaryTags: ["café", "afterwork", "travail", "bureau", "soirée"],
+    secondaryTags: ["collègues", "détente", "happy hour", "convivial", "professionnel"],
+    relatedTags: ["réseautage", "décompression", "collaboration", "moderne", "urbain"]
+  },
+  cafe_brunch: {
+    primaryTags: ["café", "brunch", "weekend", "matin", "déjeuner"],
+    secondaryTags: ["œufs", "benedict", "pancakes", "mimosa", "détente"],
+    relatedTags: ["famille", "paresseux", "gourmand", "chaleureux", "dominical"]
+  },
+  cafe_glacé: {
+    primaryTags: ["café", "glacé", "glace", "dessert", "sucré"],
+    secondaryTags: ["parfums", "cônes", "sundae", "milkshake", "gourmandise"],
+    relatedTags: ["enfants", "famille", "été", "rafraîchissant", "amusant"]
+  },
+  cafe_emporter: {
+    primaryTags: ["café", "emporter", "takeaway", "rapide", "pratique"],
+    secondaryTags: ["express", "mobile", "bureau", "déplacement", "efficace"],
+    relatedTags: ["pratique", "rapide", "urbain", "moderne", "efficace"]
+  },
+  cafe_terrasse: {
+    primaryTags: ["café", "terrasse", "extérieur", "plein", "air"],
+    secondaryTags: ["soleil", "été", "vue", "rue", "passants"],
+    relatedTags: ["naturel", "romantique", "familial", "détente", "saisonnier"]
+  },
+  cafe_nuit: {
+    primaryTags: ["café", "nuit", "nocturne", "tard", "soirée"],
+    secondaryTags: ["ambiance", "éclairage", "intimiste", "romantique", "spécial"],
+    relatedTags: ["romantique", "intimiste", "spécial", "nocturne", "unique"]
+  },
+
+  // 🏛️ MUSÉES - Système hiérarchique complet
+  musee_art: {
+    primaryTags: ["musée", "art", "peinture", "sculpture", "exposition"],
+    secondaryTags: ["collections", "permanente", "temporaire", "culturel", "artistique"],
+    relatedTags: ["culturel", "sophistiqué", "intellectuel", "découverte", "raffiné"]
+  },
+  musee_histoire: {
+    primaryTags: ["musée", "histoire", "historique", "patrimoine", "archéologie"],
+    secondaryTags: ["collections", "objets", "civilisations", "époques", "découverte"],
+    relatedTags: ["éducatif", "culturel", "traditionnel", "découverte", "intellectuel"]
+  },
+  musee_science: {
+    primaryTags: ["musée", "science", "technologie", "innovation", "découverte"],
+    secondaryTags: ["expériences", "interactif", "éducatif", "futuriste", "expérimental"],
+    relatedTags: ["éducatif", "interactif", "futuriste", "découverte", "innovant"]
+  },
+  musee_nature: {
+    primaryTags: ["musée", "nature", "histoire", "naturelle", "animaux"],
+    secondaryTags: ["fossiles", "minéraux", "biodiversité", "environnement", "découverte"],
+    relatedTags: ["naturel", "éducatif", "découverte", "environnemental", "authentique"]
+  },
+  musee_enfants: {
+    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
+    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
+    relatedTags: ["éducatif", "interactif", "découverte", "intellectuel", "familial"]
+  },
+  musee_contemporain: {
+    primaryTags: ["musée", "contemporain", "art", "moderne", "création"],
+    secondaryTags: ["installations", "performances", "multimédia", "innovant", "créatif"],
+    relatedTags: ["moderne", "innovant", "créatif", "artistique", "avant-garde"]
+  },
+  musee_ethnographie: {
+    primaryTags: ["musée", "ethnographie", "cultures", "peuples", "traditions"],
+    secondaryTags: ["artisanat", "coutumes", "objets", "sociétés", "diversité"],
+    relatedTags: ["culturel", "diversité", "traditionnel", "authentique", "découverte"]
+  },
+  musee_maritime: {
+    primaryTags: ["musée", "maritime", "navire", "océan", "navigation"],
+    secondaryTags: ["bateaux", "exploration", "commerce", "pêche", "aventures"],
+    relatedTags: ["océan", "aventure", "exploration", "historique", "découverte"]
+  },
+  musee_militaire: {
+    primaryTags: ["musée", "militaire", "guerre", "armée", "histoire"],
+    secondaryTags: ["armes", "uniformes", "véhicules", "batailles", "mémoire"],
+    relatedTags: ["historique", "patriotique", "mémoire", "traditionnel", "éducatif"]
+  },
+  musee_automobile: {
+    primaryTags: ["musée", "automobile", "voitures", "véhicules", "collection"],
+    secondaryTags: ["vintage", "sportives", "classiques", "moteurs", "design"],
+    relatedTags: ["mécanique", "vintage", "collection", "passion", "technologique"]
+  },
+  musee_ferroviaire: {
+    primaryTags: ["musée", "ferroviaire", "trains", "chemin", "fer"],
+    secondaryTags: ["locomotives", "wagons", "gares", "transport", "histoire"],
+    relatedTags: ["transport", "historique", "mécanique", "nostalgique", "éducatif"]
+  },
+  musee_aviation: {
+    primaryTags: ["musée", "aviation", "avions", "aéronautique", "vol"],
+    secondaryTags: ["avions", "hélicoptères", "moteurs", "pilotes", "histoire"],
+    relatedTags: ["aéronautique", "technologique", "aventure", "historique", "innovant"]
+  },
+  musee_espace: {
+    primaryTags: ["musée", "espace", "astronomie", "cosmos", "planètes"],
+    secondaryTags: ["fusées", "satellites", "exploration", "scientifique", "futuriste"],
+    relatedTags: ["futuriste", "scientifique", "découverte", "innovant", "éducatif"]
+  },
+  musee_photographie: {
+    primaryTags: ["musée", "photographie", "photos", "images", "art"],
+    secondaryTags: ["expositions", "artistes", "techniques", "histoire", "création"],
+    relatedTags: ["artistique", "créatif", "visuel", "culturel", "moderne"]
+  },
+  musee_musique: {
+    primaryTags: ["musée", "musique", "instruments", "compositeurs", "sons"],
+    secondaryTags: ["concerts", "enregistrements", "histoire", "artistes", "culturel"],
+    relatedTags: ["musical", "culturel", "artistique", "créatif", "émotionnel"]
+  },
+  musee_architecture: {
+    primaryTags: ["musée", "architecture", "bâtiments", "design", "construction"],
+    secondaryTags: ["maquettes", "plans", "techniques", "histoire", "création"],
+    relatedTags: ["créatif", "technique", "historique", "artistique", "innovant"]
+  },
+  musee_archéologie: {
+    primaryTags: ["musée", "archéologie", "fouilles", "civilisations", "antiquité"],
+    secondaryTags: ["artefacts", "fossiles", "vestiges", "découvertes", "histoire"],
+    relatedTags: ["historique", "découverte", "authentique", "éducatif", "culturel"]
+  },
+  musee_ethnologie: {
+    primaryTags: ["musée", "ethnologie", "anthropologie", "sociétés", "cultures"],
+    secondaryTags: ["traditions", "coutumes", "objets", "peuples", "diversité"],
+    relatedTags: ["culturel", "diversité", "traditionnel", "authentique", "éducatif"]
+  },
+  musee_technologie: {
+    primaryTags: ["musée", "technologie", "innovation", "machines", "industrie"],
+    secondaryTags: ["inventions", "développement", "futuriste", "expérimental", "scientifique"],
+    relatedTags: ["technologique", "innovant", "futuriste", "scientifique", "éducatif"]
+  },
+  musee_virtuel: {
+    primaryTags: ["musée", "virtuel", "numérique", "en ligne", "interactif"],
+    secondaryTags: ["visite", "virtuelle", "multimédia", "technologie", "accessible"],
+    relatedTags: ["moderne", "technologique", "accessible", "innovant", "futuriste"]
+  },
+
+  // 🎬 CINÉMA - Système hiérarchique complet
+  cinema_multiplexe: {
+    primaryTags: ["cinéma", "multiplexe", "films", "salles", "blockbusters"],
+    secondaryTags: ["popcorn", "boissons", "confort", "grand", "écran"],
+    relatedTags: ["familial", "accessible", "populaire", "divertissement", "sortie"]
+  },
+  cinema_art_essai: {
+    primaryTags: ["cinéma", "art", "essai", "indépendant", "auteur"],
+    secondaryTags: ["festival", "découverte", "culturel", "intellectuel", "raffiné"],
+    relatedTags: ["cinéphile", "culturel", "sophistiqué", "original", "artistique"]
+  },
+  cinema_imax: {
+    primaryTags: ["cinéma", "imax", "grand", "écran", "immersion"],
+    secondaryTags: ["spectaculaire", "technologie", "expérience", "premium", "sensation"],
+    relatedTags: ["impressionnant", "technologique", "immersif", "unique", "mémorable"]
+  },
+  drive_in: {
+    primaryTags: ["drive-in", "voiture", "cinéma", "extérieur", "vintage"],
+    secondaryTags: ["rétro", "original", "voiture", "été", "familial"],
+    relatedTags: ["nostalgique", "unique", "décontracté", "romantique", "original"]
+  },
+  cinema_4dx: {
+    primaryTags: ["cinéma", "4dx", "mouvement", "effets", "sensoriel"],
+    secondaryTags: ["vibration", "vent", "eau", "odeurs", "immersion"],
+    relatedTags: ["sensoriel", "innovant", "expérience", "unique", "technologique"]
+  },
+  cinema_dolby_atmos: {
+    primaryTags: ["cinéma", "dolby", "atmos", "son", "premium"],
+    secondaryTags: ["audio", "qualité", "immersion", "technologie", "expérience"],
+    relatedTags: ["audio", "qualité", "technologique", "premium", "immersif"]
+  },
+  cinema_3d: {
+    primaryTags: ["cinéma", "3d", "stéréoscopique", "lunettes", "effet"],
+    secondaryTags: ["immersion", "technologie", "spectaculaire", "visuel", "expérience"],
+    relatedTags: ["visuel", "technologique", "immersif", "spectaculaire", "moderne"]
+  },
+  cinema_retro: {
+    primaryTags: ["cinéma", "rétro", "vintage", "classique", "nostalgie"],
+    secondaryTags: ["ancien", "traditionnel", "authentique", "charme", "histoire"],
+    relatedTags: ["nostalgique", "authentique", "charmant", "traditionnel", "unique"]
+  },
+  cinema_open_air: {
+    primaryTags: ["cinéma", "plein", "air", "extérieur", "été"],
+    secondaryTags: ["terrasse", "nature", "romantique", "familial", "détente"],
+    relatedTags: ["naturel", "romantique", "familial", "détente", "saisonnier"]
+  },
+  cinema_marathon: {
+    primaryTags: ["cinéma", "marathon", "saga", "séries", "longue"],
+    secondaryTags: ["passionné", "intensif", "gourmand", "expérience", "unique"],
+    relatedTags: ["passionné", "intensif", "gourmand", "expérience", "communauté"]
+  },
+  cinema_theme: {
+    primaryTags: ["cinéma", "thème", "spécialisé", "genre", "programmation"],
+    secondaryTags: ["sélection", "curation", "expert", "passionné", "communauté"],
+    relatedTags: ["spécialisé", "curation", "expert", "communauté", "passionné"]
+  },
+
   // 🎉 Sorties nocturnes
   discotheque: {
     primaryTags: ["discothèque", "danse", "dj", "piste"],
@@ -471,11 +727,6 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     primaryTags: ["ferme", "pédagogique", "animaux", "enfants", "nature"],
     secondaryTags: ["découverte", "éducatif", "contact", "animaux", "famille"],
     relatedTags: ["nature", "éducatif", "découverte", "famille", "authentique"]
-  },
-  musee_enfants: {
-    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
-    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
-    relatedTags: ["culturel", "éducatif", "interactif", "découverte", "intellectuel"]
   },
   parc_theme_enfants: {
     primaryTags: ["parc", "thème", "enfants", "attractions", "spectacles"],
@@ -1138,6 +1389,412 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["italienne", "conviviale", "rapide", "familiale"]
   },
 
+  // ☕ CAFÉS - Informations complètes
+  cafe_traditionnel: {
+    label: "Café traditionnel",
+    services: ["Expresso", "Cappuccino", "Pâtisseries", "Petit-déjeuner", "Terrasse"],
+    ambiance: ["Authentique", "Chaleureuse", "Conviviale", "Quartier"],
+    primaryTags: ["café", "traditionnel", "expresso", "barista", "artisanal"],
+    secondaryTags: ["pâtisseries", "croissants", "petit-déjeuner", "terrasse", "chaleureux"],
+    relatedTags: ["authentique", "quartier", "convivial", "matinal", "décontracté"]
+  },
+  cafe_brasserie: {
+    label: "Café brasserie",
+    services: ["Café", "Plats du jour", "Déjeuner", "Dîner", "Terrasse"],
+    ambiance: ["Familiale", "Traditionnelle", "Chaleureuse", "Accessible"],
+    primaryTags: ["café", "brasserie", "restaurant", "plats", "jour"],
+    secondaryTags: ["menu", "déjeuner", "dîner", "terrasse", "convivial"],
+    relatedTags: ["familial", "traditionnel", "quartier", "chaleureux", "accessible"]
+  },
+  cafe_lounge: {
+    label: "Café lounge",
+    services: ["Café premium", "Sofas", "WiFi", "Musique douce", "Ambiance détente"],
+    ambiance: ["Sophistiquée", "Intimiste", "Détendue", "Premium"],
+    primaryTags: ["café", "lounge", "détente", "confortable", "sofa"],
+    secondaryTags: ["musique", "douce", "wifi", "travail", "calme"],
+    relatedTags: ["relaxation", "sophistiqué", "rendez-vous", "intimiste", "premium"]
+  },
+  cafe_rooftop: {
+    label: "Café rooftop",
+    services: ["Vue panoramique", "Café premium", "Terrasse", "Coucher de soleil"],
+    ambiance: ["Exclusive", "Romantique", "Panoramique", "Élégante"],
+    primaryTags: ["café", "rooftop", "terrasse", "vue", "panoramique"],
+    secondaryTags: ["hauteur", "coucher", "soleil", "premium", "exclusif"],
+    relatedTags: ["romantique", "instagram", "haut", "vue", "ville", "élégant"]
+  },
+  cafe_artisanal: {
+    label: "Café artisanal",
+    services: ["Torréfaction maison", "Grains sélectionnés", "Dégustation", "Expert conseil"],
+    ambiance: ["Authentique", "Passionnée", "Raffinée", "Connaisseur"],
+    primaryTags: ["café", "artisanal", "torréfaction", "grains", "spécialisé"],
+    secondaryTags: ["dégustation", "origines", "méthodes", "expert", "premium"],
+    relatedTags: ["connaisseur", "raffiné", "authentique", "découverte", "passionné"]
+  },
+  cafe_healthy: {
+    label: "Café healthy",
+    services: ["Café bio", "Smoothies", "Jus détox", "Boissons naturelles", "Bien-être"],
+    ambiance: ["Saine", "Énergisante", "Pure", "Équilibrée"],
+    primaryTags: ["café", "healthy", "santé", "bio", "naturel"],
+    secondaryTags: ["smoothies", "jus", "détox", "légumes", "fruits"],
+    relatedTags: ["bien-être", "sport", "léger", "pur", "équilibré"]
+  },
+  cafe_vegan: {
+    label: "Café vegan",
+    services: ["Lait végétal", "Alternatives", "Café éthique", "Végétal", "Responsable"],
+    ambiance: ["Consciente", "Moderne", "Engagée", "Responsable"],
+    primaryTags: ["café", "vegan", "végétal", "sans", "animal"],
+    secondaryTags: ["lait", "végétal", "alternatives", "éthique", "responsable"],
+    relatedTags: ["écologique", "conscient", "moderne", "sain", "engagé"]
+  },
+  cafe_gluten_free: {
+    label: "Café sans gluten",
+    services: ["Alternatives sans gluten", "Précaution", "Spécialisé", "Attention"],
+    ambiance: ["Attentionnée", "Inclusive", "Soignée", "Adaptée"],
+    primaryTags: ["café", "sans", "gluten", "intolérance", "allergie"],
+    secondaryTags: ["alternatives", "précaution", "santé", "spécialisé", "attention"],
+    relatedTags: ["précaution", "inclusif", "attention", "soin", "adapté"]
+  },
+  cafe_halal: {
+    label: "Café halal",
+    services: ["Café halal", "Respectueux", "Culturel", "Communauté"],
+    ambiance: ["Respectueuse", "Culturelle", "Inclusive", "Communautaire"],
+    primaryTags: ["café", "halal", "musulman", "islamique", "religieux"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "traditionnel", "inclusif"],
+    relatedTags: ["communauté", "respect", "diversité", "inclusif", "culturel"]
+  },
+  cafe_kosher: {
+    label: "Café kosher",
+    services: ["Café kosher", "Respectueux", "Traditionnel", "Culturel"],
+    ambiance: ["Respectueuse", "Traditionnelle", "Culturelle", "Spirituelle"],
+    primaryTags: ["café", "kosher", "juif", "religieux", "traditionnel"],
+    secondaryTags: ["respectueux", "culturel", "communauté", "tradition", "spirituel"],
+    relatedTags: ["religieux", "respect", "diversité", "inclusif", "culturel"]
+  },
+  cafe_jeux: {
+    label: "Café à jeux",
+    services: ["Jeux de société", "Ludothèque", "Tournois", "Événements", "Prêt de jeux"],
+    ambiance: ["Ludique", "Conviviale", "Décontractée", "Amusante"],
+    primaryTags: ["café", "jeux", "société", "board", "games"],
+    secondaryTags: ["ludothèque", "prêt", "jeux", "tournois", "événements"],
+    relatedTags: ["ludique", "convivial", "entre amis", "décontracté", "amusant"]
+  },
+  cafe_livres: {
+    label: "Café librairie",
+    services: ["Librairie", "Lecture", "Silence", "Culture", "Détente"],
+    ambiance: ["Culturelle", "Intellectuelle", "Calme", "Sophistiquée"],
+    primaryTags: ["café", "livres", "librairie", "lecture", "culturel"],
+    secondaryTags: ["bibliothèque", "silence", "intellectuel", "détente", "calme"],
+    relatedTags: ["culturel", "intellectuel", "calme", "découverte", "sophistiqué"]
+  },
+  cafe_enfants: {
+    label: "Café enfants",
+    services: ["Aire de jeux", "Chaises hautes", "Animations", "Sécurisé", "Familial"],
+    ambiance: ["Familiale", "Amusante", "Sécurisée", "Colorée"],
+    primaryTags: ["café", "enfants", "familial", "aire", "jeux"],
+    secondaryTags: ["chaises", "hautes", "animations", "sécurisé", "coloré"],
+    relatedTags: ["familial", "enfants", "amusant", "sécurisé", "chaleureux"]
+  },
+  cafe_afterwork: {
+    label: "Café afterwork",
+    services: ["Happy hour", "Réseautage", "Détente", "Professionnel"],
+    ambiance: ["Moderne", "Urbaine", "Conviviale", "Professionnelle"],
+    primaryTags: ["café", "afterwork", "travail", "bureau", "soirée"],
+    secondaryTags: ["collègues", "détente", "happy hour", "convivial", "professionnel"],
+    relatedTags: ["réseautage", "décompression", "collaboration", "moderne", "urbain"]
+  },
+  cafe_brunch: {
+    label: "Café brunch",
+    services: ["Brunch weekend", "Œufs Benedict", "Pancakes", "Mimosa", "Détente"],
+    ambiance: ["Chaleureuse", "Familiale", "Détendue", "Dominicale"],
+    primaryTags: ["café", "brunch", "weekend", "matin", "déjeuner"],
+    secondaryTags: ["œufs", "benedict", "pancakes", "mimosa", "détente"],
+    relatedTags: ["famille", "paresseux", "gourmand", "chaleureux", "dominical"]
+  },
+  cafe_glacé: {
+    label: "Café glacé",
+    services: ["Glaces artisanales", "Sundae", "Milkshakes", "Desserts", "Rafraîchissant"],
+    ambiance: ["Amusante", "Familiale", "Rafraîchissante", "Gourmande"],
+    primaryTags: ["café", "glacé", "glace", "dessert", "sucré"],
+    secondaryTags: ["parfums", "cônes", "sundae", "milkshake", "gourmandise"],
+    relatedTags: ["enfants", "famille", "été", "rafraîchissant", "amusant"]
+  },
+  cafe_emporter: {
+    label: "Café emporter",
+    services: ["Café express", "Takeaway", "Mobile", "Rapide", "Pratique"],
+    ambiance: ["Pratique", "Rapide", "Urbaine", "Moderne"],
+    primaryTags: ["café", "emporter", "takeaway", "rapide", "pratique"],
+    secondaryTags: ["express", "mobile", "bureau", "déplacement", "efficace"],
+    relatedTags: ["pratique", "rapide", "urbain", "moderne", "efficace"]
+  },
+  cafe_terrasse: {
+    label: "Café terrasse",
+    services: ["Terrasse extérieure", "Vue", "Plein air", "Soleil", "Été"],
+    ambiance: ["Naturelle", "Romantique", "Familiale", "Détendue"],
+    primaryTags: ["café", "terrasse", "extérieur", "plein", "air"],
+    secondaryTags: ["soleil", "été", "vue", "rue", "passants"],
+    relatedTags: ["naturel", "romantique", "familial", "détente", "saisonnier"]
+  },
+  cafe_nuit: {
+    label: "Café de nuit",
+    services: ["Ouverture tardive", "Ambiance intimiste", "Éclairage doux", "Romantique"],
+    ambiance: ["Romantique", "Intimiste", "Spéciale", "Nocturne"],
+    primaryTags: ["café", "nuit", "nocturne", "tard", "soirée"],
+    secondaryTags: ["ambiance", "éclairage", "intimiste", "romantique", "spécial"],
+    relatedTags: ["romantique", "intimiste", "spécial", "nocturne", "unique"]
+  },
+
+  // 🏛️ MUSÉES - Informations complètes
+  musee_art: {
+    label: "Musée d'art",
+    services: ["Collections permanentes", "Expositions temporaires", "Visites guidées", "Ateliers", "Conférences"],
+    ambiance: ["Culturelle", "Sophistiquée", "Intellectuelle", "Raffinée"],
+    primaryTags: ["musée", "art", "peinture", "sculpture", "exposition"],
+    secondaryTags: ["collections", "permanente", "temporaire", "culturel", "artistique"],
+    relatedTags: ["culturel", "sophistiqué", "intellectuel", "découverte", "raffiné"]
+  },
+  musee_histoire: {
+    label: "Musée d'histoire",
+    services: ["Collections historiques", "Objets d'époque", "Expositions thématiques", "Visites guidées", "Éducatif"],
+    ambiance: ["Éducative", "Culturelle", "Traditionnelle", "Intellectuelle"],
+    primaryTags: ["musée", "histoire", "historique", "patrimoine", "archéologie"],
+    secondaryTags: ["collections", "objets", "civilisations", "époques", "découverte"],
+    relatedTags: ["éducatif", "culturel", "traditionnel", "découverte", "intellectuel"]
+  },
+  musee_science: {
+    label: "Musée des sciences",
+    services: ["Expériences interactives", "Expositions scientifiques", "Ateliers", "Démonstrations", "Éducatif"],
+    ambiance: ["Éducative", "Interactive", "Futuriste", "Innovante"],
+    primaryTags: ["musée", "science", "technologie", "innovation", "découverte"],
+    secondaryTags: ["expériences", "interactif", "éducatif", "futuriste", "expérimental"],
+    relatedTags: ["éducatif", "interactif", "futuriste", "découverte", "innovant"]
+  },
+  musee_nature: {
+    label: "Musée d'histoire naturelle",
+    services: ["Collections naturelles", "Fossiles", "Minéraux", "Biodiversité", "Environnement"],
+    ambiance: ["Naturelle", "Éducative", "Authentique", "Découverte"],
+    primaryTags: ["musée", "nature", "histoire", "naturelle", "animaux"],
+    secondaryTags: ["fossiles", "minéraux", "biodiversité", "environnement", "découverte"],
+    relatedTags: ["naturel", "éducatif", "découverte", "environnemental", "authentique"]
+  },
+  musee_enfants: {
+    label: "Musée pour enfants",
+    services: ["Expositions interactives", "Ateliers créatifs", "Jeux éducatifs", "Apprentissage", "Famille"],
+    ambiance: ["Éducative", "Interactive", "Familiale", "Amusante"],
+    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
+    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
+    relatedTags: ["éducatif", "interactif", "découverte", "intellectuel", "familial"]
+  },
+  musee_contemporain: {
+    label: "Musée d'art contemporain",
+    services: ["Installations", "Performances", "Art multimédia", "Expositions innovantes", "Création"],
+    ambiance: ["Moderne", "Innovante", "Créative", "Avant-garde"],
+    primaryTags: ["musée", "contemporain", "art", "moderne", "création"],
+    secondaryTags: ["installations", "performances", "multimédia", "innovant", "créatif"],
+    relatedTags: ["moderne", "innovant", "créatif", "artistique", "avant-garde"]
+  },
+  musee_ethnographie: {
+    label: "Musée d'ethnographie",
+    services: ["Collections culturelles", "Objets traditionnels", "Artisanat", "Coutumes", "Diversité"],
+    ambiance: ["Culturelle", "Diverse", "Authentique", "Traditionnelle"],
+    primaryTags: ["musée", "ethnographie", "cultures", "peuples", "traditions"],
+    secondaryTags: ["artisanat", "coutumes", "objets", "sociétés", "diversité"],
+    relatedTags: ["culturel", "diversité", "traditionnel", "authentique", "découverte"]
+  },
+  musee_maritime: {
+    label: "Musée maritime",
+    services: ["Collections navales", "Bateaux", "Histoire maritime", "Exploration", "Navigation"],
+    ambiance: ["Océane", "Aventure", "Historique", "Exploration"],
+    primaryTags: ["musée", "maritime", "navire", "océan", "navigation"],
+    secondaryTags: ["bateaux", "exploration", "commerce", "pêche", "aventures"],
+    relatedTags: ["océan", "aventure", "exploration", "historique", "découverte"]
+  },
+  musee_militaire: {
+    label: "Musée militaire",
+    services: ["Collections militaires", "Armes", "Uniformes", "Véhicules", "Mémoire"],
+    ambiance: ["Historique", "Patriotique", "Traditionnelle", "Éducative"],
+    primaryTags: ["musée", "militaire", "guerre", "armée", "histoire"],
+    secondaryTags: ["armes", "uniformes", "véhicules", "batailles", "mémoire"],
+    relatedTags: ["historique", "patriotique", "mémoire", "traditionnel", "éducatif"]
+  },
+  musee_automobile: {
+    label: "Musée automobile",
+    services: ["Collections de voitures", "Véhicules vintage", "Sportives", "Moteurs", "Design"],
+    ambiance: ["Mécanique", "Vintage", "Passionnée", "Technologique"],
+    primaryTags: ["musée", "automobile", "voitures", "véhicules", "collection"],
+    secondaryTags: ["vintage", "sportives", "classiques", "moteurs", "design"],
+    relatedTags: ["mécanique", "vintage", "collection", "passion", "technologique"]
+  },
+  musee_ferroviaire: {
+    label: "Musée ferroviaire",
+    services: ["Collections ferroviaires", "Locomotives", "Wagons", "Histoire du rail", "Transport"],
+    ambiance: ["Nostalgique", "Historique", "Mécanique", "Éducative"],
+    primaryTags: ["musée", "ferroviaire", "trains", "chemin", "fer"],
+    secondaryTags: ["locomotives", "wagons", "gares", "transport", "histoire"],
+    relatedTags: ["transport", "historique", "mécanique", "nostalgique", "éducatif"]
+  },
+  musee_aviation: {
+    label: "Musée de l'aviation",
+    services: ["Collections aéronautiques", "Avions", "Hélicoptères", "Histoire du vol", "Pilotes"],
+    ambiance: ["Aéronautique", "Technologique", "Aventure", "Innovante"],
+    primaryTags: ["musée", "aviation", "avions", "aéronautique", "vol"],
+    secondaryTags: ["avions", "hélicoptères", "moteurs", "pilotes", "histoire"],
+    relatedTags: ["aéronautique", "technologique", "aventure", "historique", "innovant"]
+  },
+  musee_espace: {
+    label: "Musée de l'espace",
+    services: ["Collections spatiales", "Fusées", "Satellites", "Exploration", "Scientifique"],
+    ambiance: ["Futuriste", "Scientifique", "Innovante", "Éducative"],
+    primaryTags: ["musée", "espace", "astronomie", "cosmos", "planètes"],
+    secondaryTags: ["fusées", "satellites", "exploration", "scientifique", "futuriste"],
+    relatedTags: ["futuriste", "scientifique", "découverte", "innovant", "éducatif"]
+  },
+  musee_photographie: {
+    label: "Musée de la photographie",
+    services: ["Expositions photos", "Artistes", "Techniques", "Histoire", "Création"],
+    ambiance: ["Artistique", "Créative", "Visuelle", "Culturelle"],
+    primaryTags: ["musée", "photographie", "photos", "images", "art"],
+    secondaryTags: ["expositions", "artistes", "techniques", "histoire", "création"],
+    relatedTags: ["artistique", "créatif", "visuel", "culturel", "moderne"]
+  },
+  musee_musique: {
+    label: "Musée de la musique",
+    services: ["Collections musicales", "Instruments", "Concerts", "Enregistrements", "Histoire"],
+    ambiance: ["Musicale", "Culturelle", "Artistique", "Émotionnelle"],
+    primaryTags: ["musée", "musique", "instruments", "compositeurs", "sons"],
+    secondaryTags: ["concerts", "enregistrements", "histoire", "artistes", "culturel"],
+    relatedTags: ["musical", "culturel", "artistique", "créatif", "émotionnel"]
+  },
+  musee_architecture: {
+    label: "Musée d'architecture",
+    services: ["Collections architecturales", "Maquettes", "Plans", "Techniques", "Histoire"],
+    ambiance: ["Créative", "Technique", "Historique", "Innovante"],
+    primaryTags: ["musée", "architecture", "bâtiments", "design", "construction"],
+    secondaryTags: ["maquettes", "plans", "techniques", "histoire", "création"],
+    relatedTags: ["créatif", "technique", "historique", "artistique", "innovant"]
+  },
+  musee_archéologie: {
+    label: "Musée d'archéologie",
+    services: ["Collections archéologiques", "Artefacts", "Fouilles", "Civilisations", "Découvertes"],
+    ambiance: ["Historique", "Authentique", "Éducative", "Découverte"],
+    primaryTags: ["musée", "archéologie", "fouilles", "civilisations", "antiquité"],
+    secondaryTags: ["artefacts", "fossiles", "vestiges", "découvertes", "histoire"],
+    relatedTags: ["historique", "découverte", "authentique", "éducatif", "culturel"]
+  },
+  musee_ethnologie: {
+    label: "Musée d'ethnologie",
+    services: ["Collections ethnologiques", "Traditions", "Coutumes", "Sociétés", "Diversité"],
+    ambiance: ["Culturelle", "Diverse", "Authentique", "Éducative"],
+    primaryTags: ["musée", "ethnologie", "anthropologie", "sociétés", "cultures"],
+    secondaryTags: ["traditions", "coutumes", "objets", "peuples", "diversité"],
+    relatedTags: ["culturel", "diversité", "traditionnel", "authentique", "éducatif"]
+  },
+  musee_technologie: {
+    label: "Musée de la technologie",
+    services: ["Collections technologiques", "Inventions", "Machines", "Innovation", "Industrie"],
+    ambiance: ["Technologique", "Innovante", "Futuriste", "Scientifique"],
+    primaryTags: ["musée", "technologie", "innovation", "machines", "industrie"],
+    secondaryTags: ["inventions", "développement", "futuriste", "expérimental", "scientifique"],
+    relatedTags: ["technologique", "innovant", "futuriste", "scientifique", "éducatif"]
+  },
+  musee_virtuel: {
+    label: "Musée virtuel",
+    services: ["Visites virtuelles", "Expositions numériques", "Multimédia", "Accessible", "Innovant"],
+    ambiance: ["Moderne", "Technologique", "Accessible", "Innovante"],
+    primaryTags: ["musée", "virtuel", "numérique", "en ligne", "interactif"],
+    secondaryTags: ["visite", "virtuelle", "multimédia", "technologie", "accessible"],
+    relatedTags: ["moderne", "technologique", "accessible", "innovant", "futuriste"]
+  },
+
+  // 🎬 CINÉMA - Informations complètes
+  cinema_multiplexe: {
+    label: "Cinéma multiplexe",
+    services: ["Films blockbusters", "Popcorn", "Boissons", "Salles multiples", "Confort"],
+    ambiance: ["Familiale", "Accessible", "Populaire", "Divertissement"],
+    primaryTags: ["cinéma", "multiplexe", "films", "salles", "blockbusters"],
+    secondaryTags: ["popcorn", "boissons", "confort", "grand", "écran"],
+    relatedTags: ["familial", "accessible", "populaire", "divertissement", "sortie"]
+  },
+  cinema_art_essai: {
+    label: "Cinéma d'art et d'essai",
+    services: ["Films indépendants", "Festivals", "Découvertes", "Programmation culturelle"],
+    ambiance: ["Culturelle", "Intellectuelle", "Sophistiquée", "Cinéphile"],
+    primaryTags: ["cinéma", "art", "essai", "indépendant", "auteur"],
+    secondaryTags: ["festival", "découverte", "culturel", "intellectuel", "raffiné"],
+    relatedTags: ["cinéphile", "culturel", "sophistiqué", "original", "artistique"]
+  },
+  cinema_imax: {
+    label: "Cinéma IMAX",
+    services: ["Grand écran", "Technologie IMAX", "Expérience immersive", "Films spectaculaires"],
+    ambiance: ["Spectaculaire", "Technologique", "Immersive", "Premium"],
+    primaryTags: ["cinéma", "imax", "grand", "écran", "immersion"],
+    secondaryTags: ["spectaculaire", "technologie", "expérience", "premium", "sensation"],
+    relatedTags: ["impressionnant", "technologique", "immersif", "unique", "mémorable"]
+  },
+  drive_in: {
+    label: "Drive-in",
+    services: ["Cinéma en voiture", "Son radio", "Snacks", "Expérience vintage"],
+    ambiance: ["Rétro", "Originale", "Familiale", "Nostalgique"],
+    primaryTags: ["drive-in", "voiture", "cinéma", "extérieur", "vintage"],
+    secondaryTags: ["rétro", "original", "voiture", "été", "familial"],
+    relatedTags: ["nostalgique", "unique", "décontracté", "romantique", "original"]
+  },
+  cinema_4dx: {
+    label: "Cinéma 4DX",
+    services: ["Effets sensoriels", "Mouvement", "Vent", "Odeurs", "Immersion totale"],
+    ambiance: ["Sensorielle", "Innovante", "Unique", "Technologique"],
+    primaryTags: ["cinéma", "4dx", "mouvement", "effets", "sensoriel"],
+    secondaryTags: ["vibration", "vent", "eau", "odeurs", "immersion"],
+    relatedTags: ["sensoriel", "innovant", "expérience", "unique", "technologique"]
+  },
+  cinema_dolby_atmos: {
+    label: "Cinéma Dolby Atmos",
+    services: ["Son spatial", "Audio premium", "Technologie Dolby", "Expérience audio"],
+    ambiance: ["Audio", "Premium", "Technologique", "Immersive"],
+    primaryTags: ["cinéma", "dolby", "atmos", "son", "premium"],
+    secondaryTags: ["audio", "qualité", "immersion", "technologie", "expérience"],
+    relatedTags: ["audio", "qualité", "technologique", "premium", "immersif"]
+  },
+  cinema_3d: {
+    label: "Cinéma 3D",
+    services: ["Projection 3D", "Lunettes 3D", "Effets stéréoscopiques", "Films 3D"],
+    ambiance: ["Visuelle", "Technologique", "Immersive", "Spectaculaire"],
+    primaryTags: ["cinéma", "3d", "stéréoscopique", "lunettes", "effet"],
+    secondaryTags: ["immersion", "technologie", "spectaculaire", "visuel", "expérience"],
+    relatedTags: ["visuel", "technologique", "immersif", "spectaculaire", "moderne"]
+  },
+  cinema_retro: {
+    label: "Cinéma rétro",
+    services: ["Films classiques", "Ambiance vintage", "Programmation nostalgique", "Charme d'époque"],
+    ambiance: ["Nostalgique", "Authentique", "Charmante", "Traditionnelle"],
+    primaryTags: ["cinéma", "rétro", "vintage", "classique", "nostalgie"],
+    secondaryTags: ["ancien", "traditionnel", "authentique", "charme", "histoire"],
+    relatedTags: ["nostalgique", "authentique", "charmant", "traditionnel", "unique"]
+  },
+  cinema_open_air: {
+    label: "Cinéma plein air",
+    services: ["Projection extérieure", "Terrasse", "Nature", "Expérience estivale"],
+    ambiance: ["Naturelle", "Romantique", "Familiale", "Détendue"],
+    primaryTags: ["cinéma", "plein", "air", "extérieur", "été"],
+    secondaryTags: ["terrasse", "nature", "romantique", "familial", "détente"],
+    relatedTags: ["naturel", "romantique", "familial", "détente", "saisonnier"]
+  },
+  cinema_marathon: {
+    label: "Cinéma marathon",
+    services: ["Séances longues", "Sagas complètes", "Programmation spéciale", "Expérience intensive"],
+    ambiance: ["Passionnée", "Intensive", "Gourmande", "Communautaire"],
+    primaryTags: ["cinéma", "marathon", "saga", "séries", "longue"],
+    secondaryTags: ["passionné", "intensif", "gourmand", "expérience", "unique"],
+    relatedTags: ["passionné", "intensif", "gourmand", "expérience", "communauté"]
+  },
+  cinema_theme: {
+    label: "Cinéma thématique",
+    services: ["Programmation spécialisée", "Genres spécifiques", "Curations expertes", "Communauté"],
+    ambiance: ["Spécialisée", "Expert", "Communautaire", "Passionnée"],
+    primaryTags: ["cinéma", "thème", "spécialisé", "genre", "programmation"],
+    secondaryTags: ["sélection", "curation", "expert", "passionné", "communauté"],
+    relatedTags: ["spécialisé", "curation", "expert", "communauté", "passionné"]
+  },
+
   // 🎉 Sorties nocturnes
   discotheque: {
     label: "Discothèque",
@@ -1352,14 +2009,6 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     secondaryTags: ["découverte", "éducatif", "contact", "animaux", "famille"],
     relatedTags: ["nature", "éducatif", "découverte", "famille", "authentique"]
   },
-  musee_enfants: {
-    label: "Musée enfants",
-    services: ["Expositions interactives", "Ateliers", "Jeux éducatifs", "Visites guidées", "Découverte"],
-    ambiance: ["Culturelle", "Éducative", "Interactive", "Intellectuelle", "Familiale"],
-    primaryTags: ["musée", "enfants", "interactif", "découverte", "éducatif"],
-    secondaryTags: ["ateliers", "expositions", "jeux", "apprentissage", "famille"],
-    relatedTags: ["culturel", "éducatif", "interactif", "découverte", "intellectuel"]
-  },
   parc_theme_enfants: {
     label: "Parc à thème enfants",
     services: ["Attractions thématiques", "Spectacles", "Personnages", "Anniversaires", "Boutiques"],
@@ -1540,6 +2189,25 @@ export function getGroupedActivities() {
     ],
     "🥙 Fast Food & Street Food": [
       "kebab", "tacos_mexicain", "burger", "pizzeria"
+    ],
+    "☕ Cafés": [
+      "cafe_traditionnel", "cafe_brasserie", "cafe_lounge", "cafe_rooftop", 
+      "cafe_artisanal", "cafe_healthy", "cafe_vegan", "cafe_gluten_free", 
+      "cafe_halal", "cafe_kosher", "cafe_jeux", "cafe_livres", "cafe_enfants", 
+      "cafe_afterwork", "cafe_brunch", "cafe_glacé", "cafe_emporter", 
+      "cafe_terrasse", "cafe_nuit"
+    ],
+    "🏛️ Musées": [
+      "musee_art", "musee_histoire", "musee_science", "musee_nature", "musee_enfants",
+      "musee_contemporain", "musee_ethnographie", "musee_maritime", "musee_militaire",
+      "musee_automobile", "musee_ferroviaire", "musee_aviation", "musee_espace",
+      "musee_photographie", "musee_musique", "musee_architecture", "musee_archéologie",
+      "musee_ethnologie", "musee_technologie", "musee_virtuel"
+    ],
+    "🎬 Cinéma": [
+      "cinema_multiplexe", "cinema_art_essai", "cinema_imax", "drive_in", 
+      "cinema_4dx", "cinema_dolby_atmos", "cinema_3d", "cinema_retro", 
+      "cinema_open_air", "cinema_marathon", "cinema_theme"
     ],
     "🎉 Sorties nocturnes": [
       "discotheque", "club_techno", "boite_nuit_mainstream"

@@ -46,6 +46,9 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
 
   // Debounce pour l'autocomplete
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
+  
+  // Timer pour le géocodage automatique
+  const [geocodeTimer, setGeocodeTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Ref pour stocker la fonction de callback et éviter les boucles infinies
   const onValidationChangeRef = useRef(onValidationChange);
@@ -91,9 +94,15 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
     }
   }, [value.street, value.postalCode, value.city, value.latitude, value.longitude]);
 
-  // Fonction de géocodage automatique
+  // Fonction de géocodage automatique avec gestion d'erreur améliorée
   const geocodeAddress = useCallback(async (street: string, postalCode: string, city: string, currentAddress?: AddressData) => {
     if (!street.trim() || !postalCode.trim() || !city.trim()) {
+      return;
+    }
+
+    // Éviter les appels multiples simultanés
+    if (isGeocoding) {
+      console.log('⏳ Géocodage déjà en cours, annulation de la nouvelle requête');
       return;
     }
 
@@ -111,7 +120,18 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
 
     try {
       const response = await fetch(`/api/geocode?address=${encodeURIComponent(fullAddress)}`);
-      const result = await response.json();
+      
+      // Vérifier si la réponse est OK avant de parser le JSON
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Réponse vide de l\'API');
+      }
+      
+      const result = JSON.parse(text);
 
       if (result.success && result.data) {
         // Mise à jour des coordonnées - utiliser currentAddress si fourni, sinon value
@@ -134,14 +154,18 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
         console.error("❌ Erreur géocodage:", result);
       }
     } catch (error) {
-      setGeocodeError("Erreur de connexion lors du géocodage");
       console.error("❌ Erreur géocodage:", error);
+      if (error instanceof SyntaxError && error.message.includes('JSON')) {
+        setGeocodeError("Erreur de format de réponse de l'API de géocodage");
+      } else {
+        setGeocodeError("Erreur de connexion lors du géocodage");
+      }
     } finally {
       setIsGeocoding(false);
     }
   }, [value, onChange, onValidationChange]);
 
-  // Fonction d'autocomplete avec debounce
+  // Fonction d'autocomplete avec debounce amélioré
   const fetchSuggestions = useCallback(async (query: string) => {
     if (query.length < 3) {
       setSuggestions([]);
@@ -154,13 +178,24 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       clearTimeout(debounceTimer);
     }
 
-    // Nouveau timer avec debounce de 300ms
+    // Nouveau timer avec debounce de 500ms (augmenté pour éviter les appels trop fréquents)
     const timer = setTimeout(async () => {
       setIsLoadingSuggestions(true);
       
       try {
         const response = await fetch(`/api/geocode?address=${encodeURIComponent(query)}&limit=5`);
-        const result = await response.json();
+        
+        // Vérifier si la réponse est OK avant de parser le JSON
+        if (!response.ok) {
+          throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          throw new Error('Réponse vide de l\'API');
+        }
+        
+        const result = JSON.parse(text);
 
         if (result.success && Array.isArray(result.data)) {
           setSuggestions(result.data);
@@ -176,12 +211,12 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       } finally {
         setIsLoadingSuggestions(false);
       }
-    }, 300);
+    }, 500); // Debounce augmenté à 500ms
 
     setDebounceTimer(timer);
   }, [debounceTimer]);
 
-  // Gestion des changements de champs
+  // Gestion des changements de champs avec optimisation
   const handleFieldChange = (field: keyof AddressData, fieldValue: string) => {
     const newAddress = { ...value, [field]: fieldValue };
     onChange(newAddress);
@@ -191,17 +226,34 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       setGeocodeError(null);
     }
 
-    // Géocodage automatique si tous les champs sont remplis ET si le géocodage automatique n'est pas désactivé
-    if (!disableAutoGeocode && (field === 'street' || field === 'postalCode' || field === 'city')) {
+    // Géocodage automatique seulement si tous les champs sont remplis ET si le géocodage automatique n'est pas désactivé
+    // ET seulement si l'utilisateur a arrêté de taper (pas de géocodage en cours)
+    if (!disableAutoGeocode && !isGeocoding && (field === 'street' || field === 'postalCode' || field === 'city')) {
       const { street, postalCode, city } = newAddress;
       if (street && street.trim() && postalCode && postalCode.trim() && city && city.trim()) {
-        geocodeAddress(street, postalCode, city);
+        // Annuler le timer précédent
+        if (geocodeTimer) {
+          clearTimeout(geocodeTimer);
+        }
+        
+        // Nouveau timer avec délai pour éviter les appels trop fréquents
+        const timer = setTimeout(() => {
+          if (!isGeocoding) { // Vérifier qu'on n'est pas déjà en train de géocoder
+            geocodeAddress(street, postalCode, city);
+          }
+        }, 1500); // Délai de 1.5 seconde
+        
+        setGeocodeTimer(timer);
       }
     }
 
-    // Autocomplete sur le champ rue
-    if (field === 'street') {
+    // Autocomplete sur le champ rue seulement si on a au moins 3 caractères
+    if (field === 'street' && fieldValue.length >= 3) {
       fetchSuggestions(fieldValue);
+    } else if (field === 'street' && fieldValue.length < 3) {
+      // Fermer les suggestions si moins de 3 caractères
+      setShowSuggestions(false);
+      setSuggestions([]);
     }
   };
 
@@ -315,8 +367,11 @@ export default function AdresseStep({ value, onChange, error, disableAutoGeocode
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
+      if (geocodeTimer) {
+        clearTimeout(geocodeTimer);
+      }
     };
-  }, [debounceTimer]);
+  }, [debounceTimer, geocodeTimer]);
 
   return (
     <div className="space-y-4">

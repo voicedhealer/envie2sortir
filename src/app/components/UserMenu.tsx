@@ -134,11 +134,38 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
             onClick={async () => {
               setShowUserMenu(false);
               
-              // Utiliser uniquement signOut de NextAuth
-              await signOut({ 
-                callbackUrl: '/',
-                redirect: true 
-              });
+              try {
+                console.log('🚪 Déconnexion en cours...');
+                
+                // Méthode 1: signOut avec redirection manuelle
+                await signOut({ 
+                  callbackUrl: '/',
+                  redirect: false // Désactiver la redirection automatique
+                });
+                
+                console.log('✅ SignOut réussi, redirection manuelle...');
+                
+                // Attendre un peu pour que la session soit bien nettoyée
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Redirection manuelle après signOut
+                window.location.href = '/';
+                
+              } catch (error) {
+                console.error('❌ Erreur lors de la déconnexion:', error);
+                
+                // Fallback: appel direct à l'API de déconnexion
+                try {
+                  console.log('🔄 Tentative de fallback avec API directe...');
+                  await fetch('/api/auth/signout', { method: 'POST' });
+                  console.log('✅ API signout appelée avec succès');
+                } catch (apiError) {
+                  console.error('❌ API signout échoué:', apiError);
+                }
+                
+                // Redirection forcée dans tous les cas
+                window.location.href = '/';
+              }
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >

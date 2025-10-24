@@ -151,7 +151,7 @@ export async function GET(request: NextRequest) {
 
     // Délai uniquement pour Nominatim (rate limiting)
     if (!isGouvernementAPI) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 500)); // Réduit de 1000ms à 500ms
     }
 
     // Appel à l'API
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
         // Fallback vers Nominatim avec délai
         if (isGouvernementAPI) {
           console.log('🔄 Fallback vers Nominatim...');
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Délai plus long
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Réduit de 2000ms à 1000ms
           
           const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=${limit}&addressdetails=1&countrycodes=fr&accept-language=fr`;
           

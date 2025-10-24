@@ -1039,3 +1039,65 @@ body {
     min-height: 450px;
   }
 }
+
+/* Masquer la barre de défilement tout en gardant la fonctionnalité de scroll */
+.scrollbar-hide {
+  /* Pour Firefox */
+  scrollbar-width: none !important;
+  
+  /* Pour IE et Edge */
+  -ms-overflow-style: none !important;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;  /* Chrome, Safari et Opera */
+}
+
+/* Version plus agressive pour forcer la disparition */
+.scrollbar-hide {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+/* Alternative avec Tailwind si la classe ci-dessus ne fonctionne pas */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE et Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari et Opera */
+}
+
+/* Bouton d'aide flottant */
+.floating-help-button {
+  position: fixed;
+  bottom: 25px;
+  right: 95px;
+  z-index: 40;
+  width: 200px;
+  height: 250px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+  /* Supprimer border-radius et box-shadow pour éviter le fond */
+  /* border-radius: 50%; */
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); */
+  /* Ajouter pour garantir la transparence */
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.floating-help-button:hover {
+  transform: scale(1.05);
+}
+
+.floating-help-button:active {
+  transform: scale(0.95);
+}

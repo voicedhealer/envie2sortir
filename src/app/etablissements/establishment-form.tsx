@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { useEstablishmentForm } from '@/hooks/useEstablishmentForm';
 import { EstablishmentFormProps, FormStep } from '@/types/establishment-form.types';
 import { convertPaymentMethodsObjectToArray } from '@/lib/establishment-form.utils';
@@ -12,8 +13,40 @@ import TagsStep from '@/components/forms/steps/TagsStep';
 import SubscriptionStep from '@/components/forms/steps/SubscriptionStep';
 import SocialStep from '@/components/forms/steps/SocialStep';
 import SummaryStepWrapper from '@/components/forms/steps/SummaryStep';
+import ProfessionalWelcomeModal from '@/components/ProfessionalWelcomeModal';
+import HelpModal from '@/components/HelpModal';
 
 export default function ProfessionalRegistrationForm({ establishment, isEditMode = false }: EstablishmentFormProps) {
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Détecter la première visite de l'espace professionnel
+  useEffect(() => {
+    // Vérifier que nous sommes côté client
+    if (typeof window !== 'undefined') {
+      const hasSeenWelcome = localStorage.getItem('professional-welcome-seen');
+      if (!hasSeenWelcome) {
+        setShowWelcomeModal(true);
+      }
+    }
+  }, []);
+
+  const handleCloseWelcomeModal = () => {
+    setShowWelcomeModal(false);
+    // Vérifier que nous sommes côté client
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('professional-welcome-seen', 'true');
+    }
+  };
+
+  const handleShowHelpModal = () => {
+    setShowHelpModal(true);
+  };
+
+  const handleCloseHelpModal = () => {
+    setShowHelpModal(false);
+  };
+
   const {
     // États
     currentStep,
@@ -40,7 +73,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
     handleSubmit,
     handleEnrichmentDataChange,
     setShowPhoneModal,
-    setCurrentStep
+    setCurrentStep,
+    submitProgress
   } = useEstablishmentForm({ establishment, isEditMode });
 
   /**
@@ -297,6 +331,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
       )}
 
       <div className="bg-white rounded-lg shadow-lg p-8">
+        {/* Bouton d'aide flottant - sera positionné en bas à droite */}
+
         {renderStep()}
 
         <div className="flex justify-between mt-8 pt-6 border-t">
@@ -339,7 +375,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting 
-                ? (isEditMode ? 'Modification en cours...' : 'Création en cours...') 
+                ? (submitProgress || (isEditMode ? 'Modification en cours...' : 'Création en cours...'))
                 : (isEditMode ? "Sauvegarder les modifications" : "Créer l'établissement")
               }
             </button>
@@ -351,13 +387,37 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting 
-                ? (isEditMode ? 'Modification en cours...' : 'Inscription en cours...') 
+                ? (submitProgress || (isEditMode ? 'Modification en cours...' : 'Inscription en cours...'))
                 : (isEditMode ? 'Sauvegarder les modifications' : 'Finaliser l\'inscription')
               }
             </button>
           )}
         </div>
       </div>
+
+      {/* Modal de bienvenue */}
+      <ProfessionalWelcomeModal 
+        isOpen={showWelcomeModal}
+        onClose={handleCloseWelcomeModal}
+      />
+
+      {/* Modal d'aide */}
+      <HelpModal 
+        isOpen={showHelpModal}
+        onClose={handleCloseHelpModal}
+        currentStep={currentStep}
+      />
+
+      {/* Bouton d'aide flottant */}
+      <img
+        src="/Perso_aide.png"
+        alt="Besoin d'aide ?"
+        onClick={handleShowHelpModal}
+        className="floating-help-button"
+        style={{
+          objectFit: 'contain'
+        }}
+      />
     </div>
   );
 }

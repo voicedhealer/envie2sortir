@@ -50,11 +50,11 @@ const faqData = [
       },
       {
         question: "Quels types d'établissements sont acceptés ?",
-        answer: "Nous acceptons tous les établissements de divertissement : restaurants, bars, cafés, boîtes de nuit, salles de sport, centres de loisirs, cinémas, théâtres, musées, parcs d'attractions, et bien plus encore !"
+        answer: "Nous acceptons tous les établissements de divertissement : restaurants, bars, cafés, boîtes de nuit, cinémas, théâtres, musées, parcs d'attractions, parc de loisirs indoor, établissements de sport indoor, bowling, réalité virtuelle et bien plus encore !"
       },
       {
         question: "Combien coûte le référencement ?",
-        answer: "Le référencement de base est gratuit ! Nous proposons également des options premium pour augmenter votre visibilité et accéder à des statistiques détaillées. Consultez nos tarifs dans votre espace professionnel."
+        answer: "Le référencement basique est gratuit ! Nous proposons également une option premium pour augmenter votre visibilité et accéder à une suite d'outils pour gérer votre établissement de facon optimale. Consultez nos tarifs dans votre espace professionnel."
       },
       {
         question: "Comment gérer mon établissement une fois référencé ?",

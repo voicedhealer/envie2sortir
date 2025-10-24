@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock, MessageSquare, Youtube, Music } from "lucide-react";
 import EventsManager from "./EventsManager";
@@ -12,6 +12,7 @@ import DetailedAnalyticsDashboard from "@/components/analytics/DetailedAnalytics
 import DealsManager from "./DealsManager";
 import DealsGlobalStats from "@/components/DealsGlobalStats";
 import MessageBadge from "@/components/messaging/MessageBadge";
+// import ProfessionalWelcomeModal from "@/components/ProfessionalWelcomeModal";
 
 interface User {
   id: string;
@@ -73,6 +74,26 @@ interface DashboardContentProps {
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'deals' | 'analytics' | 'parametres'>('overview');
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'overview' | 'detailed'>('overview');
+  // const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // // Détecter la première visite de l'espace professionnel
+  // useEffect(() => {
+  //   const hasSeenWelcome = localStorage.getItem('professional-welcome-seen');
+  //   if (!hasSeenWelcome) {
+  //     setShowWelcomeModal(true);
+  //   }
+  // }, []);
+
+  // const handleCloseWelcomeModal = () => {
+  //   setShowWelcomeModal(false);
+  //   localStorage.setItem('professional-welcome-seen', 'true');
+  // };
+
+  // // Fonction de test pour forcer l'affichage du modal
+  // const forceShowWelcomeModal = () => {
+  //   localStorage.removeItem('professional-welcome-seen');
+  //   setShowWelcomeModal(true);
+  // };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -113,6 +134,13 @@ export default function DashboardContent({ user, establishment, professional }: 
               <p className="text-gray-600 mt-1">
                 Bienvenue, {user.firstName} {user.lastName}
               </p>
+              {/* Bouton de test temporaire - À supprimer en production */}
+              {/* <button
+                onClick={forceShowWelcomeModal}
+                className="mt-2 px-3 py-1 bg-orange-500 text-white text-sm rounded hover:bg-orange-600 transition-colors"
+              >
+                🧪 Tester le modal de bienvenue
+              </button> */}
               <p className={`text-sm mt-1 ${
                 professional.subscriptionPlan === 'PREMIUM' 
                   ? 'text-orange-600 font-medium' 
@@ -602,6 +630,12 @@ export default function DashboardContent({ user, establishment, professional }: 
           professional={professional}
         />
       )}
+
+      {/* Modal de bienvenue - Déplacé vers establishment-form */}
+      {/* <ProfessionalWelcomeModal 
+        isOpen={showWelcomeModal}
+        onClose={handleCloseWelcomeModal}
+      /> */}
     </div>
   );
 }

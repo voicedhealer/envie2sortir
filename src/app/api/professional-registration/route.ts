@@ -267,8 +267,8 @@ export async function POST(request: NextRequest) {
     if (!finalCoordinates) {
       console.log('🌍 Géocodage automatique de l\'adresse:', establishmentData.address);
       
-      // Fonction de géocodage avec retry
-      const geocodeWithRetry = async (address, maxRetries = 3) => {
+      // Fonction de géocodage optimisée (délais réduits)
+      const geocodeWithRetry = async (address, maxRetries = 2) => {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
           try {
             console.log(`🔄 Tentative de géocodage ${attempt}/${maxRetries}`);
@@ -280,15 +280,15 @@ export async function POST(request: NextRequest) {
             }
             
             if (attempt < maxRetries) {
-              console.log(`⏳ Attente avant retry (${attempt * 1000}ms)...`);
-              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+              console.log(`⏳ Attente avant retry (${attempt * 500}ms)...`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 500)); // Réduit de 1000ms à 500ms
             }
           } catch (error) {
             console.warn(`⚠️ Erreur tentative ${attempt}:`, error.message);
             
             if (attempt < maxRetries) {
-              console.log(`⏳ Attente avant retry (${attempt * 1000}ms)...`);
-              await new Promise(resolve => setTimeout(resolve, attempt * 1000));
+              console.log(`⏳ Attente avant retry (${attempt * 500}ms)...`);
+              await new Promise(resolve => setTimeout(resolve, attempt * 500)); // Réduit de 1000ms à 500ms
             }
           }
         }

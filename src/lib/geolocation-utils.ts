@@ -12,6 +12,12 @@ export async function getCurrentPosition(): Promise<GeolocationResult> {
       return;
     }
 
+    // Vérifier si nous sommes en HTTPS ou localhost
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      reject(new Error('La géolocalisation nécessite HTTPS en production'));
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         resolve({
@@ -33,6 +39,7 @@ export async function getCurrentPosition(): Promise<GeolocationResult> {
             errorMessage = 'Délai de géolocalisation dépassé';
             break;
         }
+        console.warn('Erreur de géolocalisation:', errorMessage);
         reject(new Error(errorMessage));
       },
       {

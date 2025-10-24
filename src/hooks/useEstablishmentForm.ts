@@ -37,6 +37,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
   
   // États principaux
   const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 2 : 0);
+  const [submitProgress, setSubmitProgress] = useState<string>('');
   const [formData, setFormData] = useState<ProfessionalData>(() => {
     // Pré-remplir avec les données existantes si en mode édition
     if (isEditMode && establishment) {
@@ -780,6 +781,14 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     console.log('✅ Validation réussie, début de la soumission...');
     setIsSubmitting(true);
     setSubmitError(''); // Réinitialiser l'erreur
+    setSubmitProgress('Préparation des données...');
+    
+    // Timeout global de 30 secondes pour éviter les blocages
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ Timeout de soumission atteint (30s)');
+      setSubmitError('La soumission prend plus de temps que prévu. Veuillez réessayer.');
+      setIsSubmitting(false);
+    }, 30000);
     
     try {
       if (isEditMode && establishment) {
@@ -883,6 +892,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         });
         
         console.log('📤 FormData construit, envoi vers API...');
+        setSubmitProgress('Envoi des données au serveur...');
         console.log('📤 Données FormData:');
         for (const [key, value] of formDataToSend.entries()) {
           console.log(`  ${key}:`, value);
@@ -893,6 +903,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           body: formDataToSend,
         });
         
+        setSubmitProgress('Traitement des données...');
         const result = await response.json();
         
         if (!response.ok) {
@@ -902,6 +913,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         if (result.autoLogin && result.professional) {
           try {
             console.log('🔄 Tentative de connexion automatique...');
+            setSubmitProgress('Connexion automatique...');
             const signInResult = await signIn('credentials', {
               email: result.professional.email,
               password: formData.accountPassword,
@@ -936,6 +948,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       // Scroller vers le haut pour voir l'erreur
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
+      clearTimeout(timeoutId); // Nettoyer le timeout
       setIsSubmitting(false);
     }
   };
@@ -1010,6 +1023,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     prevStep,
     handleSubmit,
     handleEnrichmentDataChange,
-    setShowPhoneModal
+    setShowPhoneModal,
+    submitProgress
   };
 }
