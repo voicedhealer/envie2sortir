@@ -18,27 +18,43 @@ export async function POST(request: NextRequest) {
     // Nettoyer l'email (trim et lowercase)
     const cleanedEmail = email.trim().toLowerCase();
     
-    // Vérifier si l'email existe déjà
+    // Vérifier si l'email existe déjà dans User
     const existingUser = await prisma.user.findUnique({
       where: { email: cleanedEmail },
       select: {
         id: true,
         firstName: true,
+        lastName: true
+      }
+    });
+
+    // Vérifier si l'email existe déjà dans Professional
+    const existingProfessional = await prisma.professional.findUnique({
+      where: { email: cleanedEmail },
+      select: {
+        id: true,
+        firstName: true,
         lastName: true,
-        professional: {
-          select: {
-            companyName: true
-          }
-        }
+        companyName: true
       }
     });
 
     if (existingUser) {
       return NextResponse.json({ 
         exists: true,
-        message: 'Cet email est déjà utilisé.',
+        message: 'Cet email est déjà utilisé par un utilisateur.',
         userName: `${existingUser.firstName} ${existingUser.lastName}`,
-        companyName: existingUser.professional?.companyName || null
+        userType: 'user'
+      });
+    }
+
+    if (existingProfessional) {
+      return NextResponse.json({ 
+        exists: true,
+        message: 'Cet email est déjà utilisé par un professionnel.',
+        userName: `${existingProfessional.firstName} ${existingProfessional.lastName}`,
+        companyName: existingProfessional.companyName,
+        userType: 'professional'
       });
     }
 

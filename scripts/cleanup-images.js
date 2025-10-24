@@ -5,7 +5,7 @@
  * Usage: node scripts/cleanup-images.js [--dry-run] [--type=orphaned|old] [--days=30]
  */
 
-const { cleanupOrphanedFiles, cleanupOldFiles } = require('../src/lib/image-cleanup');
+const { cleanupOrphanedFiles, cleanupOldFiles } = require('../src/lib/image-cleanup.ts');
 
 async function main() {
   const args = process.argv.slice(2);
