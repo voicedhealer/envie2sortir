@@ -317,7 +317,9 @@ export default function Home() {
             <p className="text-gray-400">
               © 2025 Envie2Sortir. Tous droits réservés. | 
               <a href="/mentions-legales" className="hover:text-white transition-colors ml-2">Mentions légales</a> | 
-              <a href="/politique-confidentialite" className="hover:text-white transition-colors ml-2">Politique de confidentialité</a>
+              <a href="/politique-confidentialite" className="hover:text-white transition-colors ml-2">Politique de confidentialité</a> | 
+              <a href="/conditions" className="hover:text-white transition-colors ml-2">CGU</a> | 
+              <a href="/cgv" className="hover:text-white transition-colors ml-2">CGV</a>
             </p>
           </div>
         </div>

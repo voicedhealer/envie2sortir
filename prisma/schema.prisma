@@ -192,6 +192,11 @@ model UserComment {
   rating          Int
   userId          String
   establishmentId String
+  establishmentReply String?    // Réponse du professionnel à l'avis
+  repliedAt       DateTime?     // Date de la réponse
+  isReported      Boolean       @default(false) // Avis signalé
+  reportReason    String?       // Raison du signalement
+  reportedAt      DateTime?     // Date du signalement
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Cascade)

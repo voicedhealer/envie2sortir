@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Star, MessageCircle, X } from 'lucide-react';
+import { Star, MessageCircle, X, Flag } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
 
 interface Review {
@@ -13,6 +13,9 @@ interface Review {
   comment: string;
   date: string;
   avatar?: string;
+  establishmentReply?: string;
+  repliedAt?: string;
+  isReported?: boolean;
 }
 
 interface EstablishmentReviewsProps {
@@ -40,6 +43,17 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
   const [existingUserReview, setExistingUserReview] = useState<any>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  
+  // États pour le signalement
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportCommentId, setReportCommentId] = useState<string | null>(null);
+  const [isReporting, setIsReporting] = useState(false);
+  
+  // États pour la réponse du professionnel
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
 
   // Récupérer les avis depuis l'API
   useEffect(() => {
@@ -56,7 +70,10 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
             rating: comment.rating || 0,
             comment: comment.content,
             date: comment.createdAt,
-            avatar: comment.user.avatar
+            avatar: comment.user.avatar,
+            establishmentReply: comment.establishmentReply,
+            repliedAt: comment.repliedAt,
+            isReported: comment.isReported
           }));
           setReviews(formattedReviews);
         } else {
@@ -197,13 +214,100 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
         window.location.reload();
       } else {
         const error = await response.json();
-        toast.error(error.error || (isEditMode ? 'Erreur lors de la modification de l\'avis' : 'Erreur lors de l\'ajout de l\'avis'));
+        // 🔒 Afficher un message d'erreur spécifique pour les contenus inappropriés
+        if (error.error && error.error.includes('inappropriés')) {
+          toast.error('⚠️ ' + error.error, { duration: 5000 });
+        } else {
+          toast.error(error.error || (isEditMode ? 'Erreur lors de la modification de l\'avis' : 'Erreur lors de l\'ajout de l\'avis'));
+        }
       }
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'avis:', error);
       toast.error('Erreur lors de l\'ajout de l\'avis');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Ouvrir le modal de signalement
+  const handleOpenReportModal = (commentId: string) => {
+    setReportCommentId(commentId);
+    setShowReportModal(true);
+    setReportReason('');
+  };
+
+  // Signaler un avis
+  const handleReportComment = async () => {
+    if (!reportCommentId || !reportReason.trim() || reportReason.trim().length < 10) {
+      toast.error('Veuillez indiquer la raison du signalement (minimum 10 caractères)');
+      return;
+    }
+
+    setIsReporting(true);
+    try {
+      const response = await fetch(`/api/comments/${reportCommentId}/report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reason: reportReason.trim()
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message || 'Avis signalé avec succès');
+        setShowReportModal(false);
+        setReportReason('');
+        setReportCommentId(null);
+        // Recharger les avis
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erreur lors du signalement');
+      }
+    } catch (error) {
+      console.error('Erreur lors du signalement:', error);
+      toast.error('Erreur lors du signalement');
+    } finally {
+      setIsReporting(false);
+    }
+  };
+
+  // Répondre à un avis (pour les professionnels)
+  const handleReplyToComment = async (commentId: string) => {
+    if (!replyText.trim() || replyText.trim().length < 5) {
+      toast.error('Veuillez entrer une réponse (minimum 5 caractères)');
+      return;
+    }
+
+    setIsReplying(true);
+    try {
+      const response = await fetch(`/api/comments/${commentId}/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          reply: replyText.trim()
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Réponse publiée avec succès');
+        setReplyingTo(null);
+        setReplyText('');
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Erreur lors de la publication de la réponse');
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi de la réponse:', error);
+      toast.error('Erreur lors de l\'envoi de la réponse');
+    } finally {
+      setIsReplying(false);
     }
   };
 
@@ -290,17 +394,93 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                 <div className="review-content">
                   <div className="review-header flex items-center justify-between">
                     <span className="review-name">{review.userName}</span>
-                    <div className="review-rating flex items-center gap-1">
-                      {renderStars(review.rating)}
-                      <span className="text-sm font-medium text-gray-700 ml-1">
-                        {review.rating}/5
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="review-rating flex items-center gap-1">
+                        {renderStars(review.rating)}
+                        <span className="text-sm font-medium text-gray-700 ml-1">
+                          {review.rating}/5
+                        </span>
+                      </div>
+                      {session?.user && (
+                        <button
+                          onClick={() => handleOpenReportModal(review.id)}
+                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                          title="Signaler cet avis"
+                        >
+                          <Flag className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <p className="review-text">{review.comment}</p>
                   <p className="text-xs text-gray-500 mt-2">
                     {formatDate(review.date)}
                   </p>
+                  
+                  {/* Réponse du professionnel */}
+                  {review.establishmentReply && (
+                    <div className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-semibold text-blue-900">
+                          Réponse de l'établissement
+                        </span>
+                        {review.repliedAt && (
+                          <span className="text-xs text-blue-600">
+                            {formatDate(review.repliedAt)}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-blue-800">
+                        {review.establishmentReply}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bouton de réponse pour le professionnel (seulement si pas de réponse existante) */}
+                  {!review.establishmentReply && 
+                   session?.user?.userType === 'professional' && (
+                    <div className="mt-3">
+                      {replyingTo === review.id ? (
+                        <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                          <textarea
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
+                            placeholder="Écrivez votre réponse (minimum 5 caractères)..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-sm"
+                            rows={3}
+                            maxLength={500}
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyText('');
+                              }}
+                              disabled={isReplying}
+                              className="text-xs px-3 py-1 text-gray-600 hover:text-gray-800 disabled:opacity-50"
+                            >
+                              Annuler
+                            </button>
+                            <button
+                              onClick={() => handleReplyToComment(review.id)}
+                              disabled={isReplying || !replyText.trim() || replyText.trim().length < 5}
+                              className="text-xs px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+                            >
+                              {isReplying ? 'Publication...' : 'Publier la réponse'}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setReplyingTo(review.id)}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                        >
+                          <MessageCircle className="w-3 h-3" />
+                          Répondre à cet avis
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -366,11 +546,16 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                 placeholder="Partagez votre expérience..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
                 rows={4}
-                maxLength={500}
+                maxLength={1000}
               />
-              <p className="text-xs text-gray-500 mt-1">
-                {comment.length}/500 caractères
-              </p>
+              <div className="flex justify-between items-start mt-1">
+                <p className="text-xs text-gray-500">
+                  {comment.length}/1000 caractères (minimum 10)
+                </p>
+                <p className="text-xs text-blue-600 italic font-medium">
+                  🔒 Modération multilingue active
+                </p>
+              </div>
             </div>
 
             {/* Boutons */}
@@ -425,6 +610,75 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                   S'inscrire
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de signalement */}
+      {showReportModal && (
+        <div 
+          className="fixed inset-0 backdrop-blur-sm bg-black/30 flex items-center justify-center z-[9999] p-4"
+          onClick={() => setShowReportModal(false)}
+        >
+          <div 
+            className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Flag className="w-5 h-5 text-red-500" />
+                Signaler cet avis
+              </h3>
+              <button
+                onClick={() => setShowReportModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Raison du signalement *
+              </label>
+              <textarea
+                value={reportReason}
+                onChange={(e) => setReportReason(e.target.value)}
+                placeholder="Expliquez pourquoi vous signalez cet avis (contenu inapproprié, propos offensants, etc.)..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                rows={4}
+                maxLength={500}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {reportReason.length}/500 caractères (minimum 10)
+              </p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+              <p className="text-sm text-yellow-800">
+                ⚠️ Notre équipe va examiner votre signalement. L'avis pourrait être supprimé s'il ne respecte pas nos conditions d'utilisation.
+              </p>
+            </div>
+
+            {/* Boutons */}
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                disabled={isReporting}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleReportComment}
+                disabled={isReporting || !reportReason.trim() || reportReason.trim().length < 10}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isReporting ? 'Envoi...' : 'Signaler'}
+              </button>
             </div>
           </div>
         </div>

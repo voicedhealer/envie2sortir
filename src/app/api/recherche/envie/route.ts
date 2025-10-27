@@ -218,14 +218,22 @@ export async function GET(request: NextRequest) {
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
       
+      // Vérifier si c'est un mot-clé "nourriture" pour augmenter la pertinence
+      const foodKeywords = ['pizza', 'burger', 'sushi', 'restaurant', 'pasta', 'tacos', 'chinese', 'indian', 'french', 'italian', 'mexican', 'asian', 'food'];
+      const isFoodKeyword = keywords.some(kw => foodKeywords.some(fk => kw.includes(fk) || fk.includes(kw)));
+      
       keywords.forEach(keyword => {
         if (intelligentMatch(nameNormalized, keyword)) {
-          thematicScore += 20; // Nom contient le mot-clé
-          console.log(`  📛 Nom "${establishment.name}" contient "${keyword}" → +20 points`);
+          const baseScore = 20;
+          const bonusScore = isFoodKeyword && establishment.activities?.some((a: any) => a?.toLowerCase()?.includes('restaurant')) ? 30 : 0;
+          thematicScore += baseScore + bonusScore;
+          console.log(`  📛 Nom "${establishment.name}" contient "${keyword}" → +${baseScore + bonusScore} points`);
         }
         if (intelligentMatch(descriptionNormalized, keyword)) {
-          thematicScore += 10; // Description contient le mot-clé
-          console.log(`  📄 Description contient "${keyword}" → +10 points`);
+          const baseScore = 10;
+          const bonusScore = isFoodKeyword && establishment.activities?.some((a: any) => a?.toLowerCase()?.includes('restaurant')) ? 20 : 0;
+          thematicScore += baseScore + bonusScore;
+          console.log(`  📄 Description contient "${keyword}" → +${baseScore + bonusScore} points`);
         }
       });
 
@@ -266,6 +274,9 @@ export async function GET(request: NextRequest) {
 
       if (thematicScore > 0) {
         console.log(`  ✅ ${establishment.name}: Score thématique=${thematicScore}, Final=${finalScore.toFixed(1)}, Distance=${distance.toFixed(2)}km, Tags=[${matchedTags.join(', ')}]`);
+      } else {
+        // Log des établissements NON pertinents pour debug
+        console.log(`  ❌ ${establishment.name}: Score thématique=${thematicScore}, Pas de correspondance avec les mots-clés [${keywords.join(', ')}]`);
       }
 
       return {
@@ -279,9 +290,31 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 5. Filtrer par pertinence thématique (score thématique > 0)
+    // 5. Filtrer par pertinence thématique (score thématique minimal requis)
+    const MINIMUM_THEMATIC_SCORE = 5; // Score minimum pour être considéré comme pertinent
+    
+    // Filtre supplémentaire: pour les mots-clés de nourriture, s'assurer que c'est un restaurant
+    const foodKeywords = ['pizza', 'burger', 'sushi', 'restaurant', 'pasta', 'tacos', 'chinese', 'indian', 'french', 'italian', 'mexican', 'asian', 'food', 'manger'];
+    const searchIsForFood = keywords.some(kw => foodKeywords.some(fk => kw.includes(fk) || fk.includes(kw)));
+    
     const filteredEstablishments = scoredEstablishments
-      .filter(est => est.thematicScore > 0) // Seulement ceux qui correspondent à l'envie
+      .filter(est => {
+        if (est.thematicScore < MINIMUM_THEMATIC_SCORE) return false;
+        
+        // Si la recherche est pour de la nourriture, vérifier que c'est un restaurant
+        if (searchIsForFood) {
+          const isRestaurant = est.activities?.some((a: any) => 
+            typeof a === 'string' && a.toLowerCase().includes('restaurant')
+          ) || est.description?.toLowerCase().includes('restaurant');
+          
+          if (!isRestaurant) {
+            console.log(`  🚫 ${est.name}: Écarté car la recherche est pour de la nourriture mais ce n'est pas un restaurant`);
+            return false;
+          }
+        }
+        
+        return true;
+      })
       .sort((a, b) => {
         // Tri principal par score décroissant
         if (b.score !== a.score) {

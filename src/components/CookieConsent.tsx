@@ -288,6 +288,14 @@ export default function CookieConsent() {
               <a href="/politique-confidentialite" className="text-orange-600 hover:text-orange-700 underline">
                 politique de confidentialité
               </a>
+              , nos{' '}
+              <a href="/conditions" className="text-orange-600 hover:text-orange-700 underline">
+                CGU
+              </a>
+              , nos{' '}
+              <a href="/cgv" className="text-orange-600 hover:text-orange-700 underline">
+                CGV
+              </a>
               {' '}et nos{' '}
               <a href="/mentions-legales" className="text-orange-600 hover:text-orange-700 underline">
                 mentions légales
