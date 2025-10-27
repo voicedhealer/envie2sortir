@@ -121,6 +121,40 @@ export function isEventUpcoming(startDate: string): boolean {
 }
 
 /**
+ * Vérifie si un événement se produit aujourd'hui (commence aujourd'hui ou est en cours aujourd'hui)
+ * @param startDate - Date de début (UTC)
+ * @param endDate - Date de fin (UTC, optionnelle)
+ * @returns true si l'événement a lieu aujourd'hui
+ */
+export function isEventHappeningToday(startDate: string, endDate?: string | null): boolean {
+  const now = new Date();
+  const todayStart = new Date(now.setHours(0, 0, 0, 0));
+  const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+  
+  const eventStart = convertUTCToLocal(startDate);
+  const eventEnd = endDate ? convertUTCToLocal(endDate) : null;
+  
+  // Cas 1: L'événement commence aujourd'hui
+  if (eventStart >= todayStart && eventStart <= todayEnd) {
+    return true;
+  }
+  
+  // Cas 2: L'événement a commencé avant aujourd'hui mais se termine aujourd'hui ou après
+  // (événements en cours qui durent plusieurs jours)
+  if (eventEnd && eventStart < todayStart && eventEnd >= todayStart) {
+    return true;
+  }
+  
+  // Cas 3: L'événement a commencé avant aujourd'hui et se termine après aujourd'hui
+  // (événements multi-jours en cours)
+  if (eventEnd && eventStart < todayStart && eventEnd > todayEnd) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
  * Formate une durée d'événement
  * @param startDate - Date de début (UTC)
  * @param endDate - Date de fin (UTC)

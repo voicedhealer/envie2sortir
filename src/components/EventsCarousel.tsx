@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 import Link from 'next/link';
-import { isEventInProgress } from '@/lib/date-utils';
+import { isEventInProgress, isEventHappeningToday } from '@/lib/date-utils';
 import { useLocation } from '@/hooks/useLocation';
 import { isWithinRadius } from '@/lib/geolocation-utils';
 
@@ -90,12 +90,8 @@ export default function EventsCarousel() {
     const now = new Date();
     
     if (filter === 'today') {
-      const todayStart = new Date(now.setHours(0, 0, 0, 0));
-      const todayEnd = new Date(now.setHours(23, 59, 59, 999));
-      
       events = events.filter(event => {
-        const eventDate = new Date(event.startDate);
-        return eventDate >= todayStart && eventDate <= todayEnd;
+        return isEventHappeningToday(event.startDate, event.endDate);
       });
     } else if (filter === 'week') {
       const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);

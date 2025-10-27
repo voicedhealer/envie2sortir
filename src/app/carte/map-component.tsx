@@ -463,10 +463,13 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
         }
 
         // Créer un marqueur personnalisé avec l'icône PNG
+        // Encodage URL nécessaire pour les caractères accentués
+        const iconUrl = encodeURI('/localisé_4.png');
+        
         const establishmentIcon = window.L.divIcon({
           html: `
             <div class="w-10 h-10 flex items-center justify-center">
-              <img src="/localisé_4.png" alt="Marqueur" class="w-full h-full object-contain">
+              <img src="${iconUrl}" alt="Marqueur" class="w-full h-full object-contain">
             </div>
           `,
           className: 'custom-div-icon',
