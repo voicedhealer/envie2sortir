@@ -54,6 +54,84 @@ const ACTIVITY_ASSOCIATIONS: { [key: string]: string[] } = {
   'tapas': ['tapas', 'bar', 'restaurant']
 };
 
+// Mots-clés critiques qui nécessitent un filtre strict par activité
+const CRITICAL_KEYWORDS: { [key: string]: string[] } = {
+  // Cuisine spécifique
+  'tandoori': ['restaurant_indien', 'cuisine_indienne'],
+  'indien': ['restaurant_indien', 'cuisine_indienne'],
+  'sushi': ['restaurant_japonais', 'cuisine_japonaise'],
+  'pizza': ['restaurant_italien', 'pizzeria'],
+  'burger': ['burger', 'fast_food'],
+  'tapas': ['tapas', 'restaurant_espagnol'],
+  'chinois': ['restaurant_chinois', 'cuisine_chinoise'],
+  
+  // Activités spécifiques
+  'karting': ['karting'],
+  'kart': ['karting'],
+  'bowling': ['bowling'],
+  'laser': ['laser_game'],
+  'escape': ['escape_game'],
+  'vr': ['realite_virtuelle'],
+  'paintball': ['paintball_exterieur', 'paintball_interieur'],
+  'tir': ['tir'],
+  'piscine': ['piscine'],
+  'cinema': ['cinema_mainstream', 'cinema_art_essai', 'cinema_imax'],
+  'theatre': ['theatre_classique', 'theatre_cafe'],
+  
+  // Types de lieux spécifiques
+  'bar': ['bar_ambiance', 'pub_traditionnel', 'bar_cocktails'],
+  'cafe': ['cafe'],
+  'discotheque': ['discotheque', 'boite_nuit_mainstream', 'club_prive'],
+};
+
+/**
+ * Filtre préliminaire : exclut les établissements non pertinents avant le scoring
+ * @param establishment - L'établissement à vérifier
+ * @param keywords - Les mots-clés de la recherche
+ * @returns true si l'établissement doit être gardé
+ */
+function shouldIncludeEstablishment(establishment: any, keywords: string[]): boolean {
+  const establishmentActivities = establishment.activities || [];
+  
+  for (const keyword of keywords) {
+    const requiredActivities = CRITICAL_KEYWORDS[keyword];
+    
+    if (requiredActivities) {
+      // Si le mot-clé est critique, l'établissement DOIT avoir au moins une activité requise
+      const hasRequiredActivity = establishmentActivities.some((activity: string) => 
+        requiredActivities.includes(activity)
+      );
+      
+      if (!hasRequiredActivity) {
+        console.log(`❌ FILTRÉ (critique): ${establishment.name} - pas d'activité requise pour "${keyword}"`);
+        return false;
+      }
+    }
+  }
+  
+  // Filtrage spécial pour "manger" + aliment spécifique
+  const hasManger = keywords.includes('manger');
+  const hasFoodKeyword = keywords.some(k => 
+    ['tandoori', 'sushi', 'pizza', 'burger', 'tapas', 'indien', 'chinois', 'italien', 'japonais', 
+     'poulet', 'poisson', 'viande', 'vegetarien'].includes(k)
+  );
+  
+  if (hasManger && hasFoodKeyword) {
+    // Si recherche alimentaire spécifique, exclure les non-restaurants
+    const hasRestaurantActivity = establishmentActivities.some((activity: string) => 
+      activity.includes('restaurant') || activity.includes('cuisine') || 
+      activity === 'burger' || activity === 'fast_food'
+    );
+    
+    if (!hasRestaurantActivity) {
+      console.log(`❌ FILTRÉ (alimentation): ${establishment.name} - pas d'activité restaurant`);
+      return false;
+    }
+  }
+  
+  return true;
+}
+
 // Fonction pour extraire les mots-clés significatifs avec priorité
 function extractKeywords(envie: string): { keywords: string[], primaryKeywords: string[], contextKeywords: string[] } {
   const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'faire', 'découvrir', 'avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux', 'envie', 'sortir', 'aller', 'voir', 'trouver', 'ai', 'as', 'a', 'et', 'ou', 'si', 'on', 'il', 'je', 'tu', 'nous', 'vous', 'ils', 'elle', 'elles'];
@@ -279,8 +357,17 @@ export async function GET(request: NextRequest) {
       return true;
     });
 
-    // Calculer les scores pour la pertinence thématique
-    const scoredEstablishments = establishmentsInRadius.map(establishment => {
+    console.log(`📍 Établissements dans le rayon de ${rayon}km: ${establishmentsInRadius.length}`);
+
+    // FILTRAGE PRÉLIMINAIRE (avant le scoring)
+    const preFilteredEstablishments = establishmentsInRadius.filter(est => {
+      return shouldIncludeEstablishment(est, keywords);
+    });
+
+    console.log(`✅ Après filtrage préliminaire (activités critiques): ${preFilteredEstablishments.length} établissements`);
+
+    // Calculer les scores pour la pertinence thématique (seulement sur les établissements pré-filtrés)
+    const scoredEstablishments = preFilteredEstablishments.map(establishment => {
       let thematicScore = 0;
       let matchedTags: string[] = [];
       let distance = 0;
@@ -305,7 +392,13 @@ export async function GET(request: NextRequest) {
         primaryKeywords.forEach(keyword => {
           // Vérifier si le tag contient le mot-clé (uniquement dans ce sens)
           if (intelligentMatch(tagNormalized, keyword)) {
-            const tagScore = 150; // Score très élevé pour les mots-clés primaires
+            // Réduire drastiquement le score pour les tags génériques "envie de manger..."
+            let tagScore = 150; // Score très élevé pour les mots-clés primaires
+            if (tag.tag.toLowerCase().includes('envie de manger') || 
+                tag.tag.toLowerCase().includes('envie de boire') ||
+                tag.tag.toLowerCase().includes('envie de faire')) {
+              tagScore = 20; // Score très faible pour les tags génériques
+            }
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
             tagMatchedKeywords.add(keyword);
@@ -356,15 +449,19 @@ export async function GET(request: NextRequest) {
         const isPrimary = primaryKeywords.includes(keyword);
         const isContext = contextKeywords.includes(keyword);
         
+        // Bonus pour les mots spécifiques (pas "manger", "faire", etc.)
+        const isGenericWord = ['manger', 'faire', 'boire', 'voir', 'découvrir'].includes(keyword);
+        const specificBonus = !isGenericWord && !isContext ? 50 : 0;
+        
         if (intelligentMatch(nameNormalized, keyword)) {
-          const score = isPrimary ? 50 : (isContext ? 5 : 20);
-          thematicScore += score;
-          console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
+          const score = isPrimary ? (isGenericWord ? 50 : 150) : (isContext ? 5 : 20);
+          thematicScore += score + specificBonus;
+          console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +${score}${specificBonus > 0 ? ` +${specificBonus} (bonus spécifique)` : ''} (total: ${thematicScore})`);
         }
         if (intelligentMatch(descriptionNormalized, keyword)) {
-          const score = isPrimary ? 30 : (isContext ? 3 : 10);
-          thematicScore += score;
-          console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
+          const score = isPrimary ? (isGenericWord ? 30 : 100) : (isContext ? 3 : 10);
+          thematicScore += score + specificBonus;
+          console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +${score}${specificBonus > 0 ? ` +${specificBonus} (bonus spécifique)` : ''} (total: ${thematicScore})`);
         }
       });
 
