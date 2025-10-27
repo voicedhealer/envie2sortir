@@ -135,6 +135,8 @@ export default function BonsPlansPage() {
                     deal={deal}
                     redirectToEstablishment={true}
                     establishmentId={deal.establishmentId}
+                    establishmentSlug={deal.establishment?.slug}
+                    establishmentName={deal.establishment?.name}
                   />
                 ))}
               </div>

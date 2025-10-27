@@ -765,10 +765,28 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
               Modifier
             </button>
           </div>
-          <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full">
-              {(data as any).subscriptionPlan}
-            </span>
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <span className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-full">
+                {(data as any).subscriptionPlan}
+              </span>
+            </div>
+            
+            {/* Message d'acceptation des CGV pour Premium */}
+            {(data as any).subscriptionPlan === 'premium' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  ✓ Vous acceptez les{' '}
+                  <a href="/cgv" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">
+                    Conditions Générales de Vente (CGV)
+                  </a>
+                  {' '}et les{' '}
+                  <a href="/conditions" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">
+                    Conditions Générales d'Utilisation (CGU)
+                  </a>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}

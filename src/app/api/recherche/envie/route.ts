@@ -14,6 +14,31 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Fonction intelligente de matching pour éviter les faux positifs
+// Priorise les correspondances exactes et par mots entiers
+function intelligentMatch(text: string, keyword: string): boolean {
+  // 1. Correspondance exacte (priorité maximale)
+  if (text === keyword) {
+    return true;
+  }
+  
+  // 2. Correspondance par mot entier (mot entouré de limites de mots)
+  // Utiliser \b pour s'assurer que c'est un mot complet
+  const wordBoundaryRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  if (wordBoundaryRegex.test(text)) {
+    return true;
+  }
+  
+  // 3. Correspondance partielle uniquement pour les mots-clés de 4+ caractères
+  // Cela permet "karting" contient "kart" mais pas "art" contient "art" si art est un mot de 3 caractères
+  if (keyword.length >= 4 && text.includes(keyword)) {
+    return true;
+  }
+  
+  // Pas de correspondance
+  return false;
+}
+
 // Fonction pour extraire les mots-clés significatifs
 function extractKeywords(envie: string): string[] {
   const stopWords = ['de', 'le', 'la', 'les', 'un', 'une', 'des', 'du', 'manger', 'boire', 'faire','avec', 'mes', 'mon', 'ma', 'pour', 'l', 'd', 'au', 'aux'];
@@ -166,7 +191,8 @@ export async function GET(request: NextRequest) {
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "");
         keywords.forEach(keyword => {
-          if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
+          // Vérifier si le tag contient le mot-clé (uniquement dans ce sens)
+          if (intelligentMatch(tagNormalized, keyword)) {
             // Ajuster le poids pour les tags "envie de" génériques
             let adjustedPoids = tag.poids;
             if (tag.tag.toLowerCase().includes('envie de découvrir') || 
@@ -193,11 +219,11 @@ export async function GET(request: NextRequest) {
         .replace(/[\u0300-\u036f]/g, "");
       
       keywords.forEach(keyword => {
-        if (nameNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
+        if (intelligentMatch(nameNormalized, keyword)) {
           thematicScore += 20; // Nom contient le mot-clé
           console.log(`  📛 Nom "${establishment.name}" contient "${keyword}" → +20 points`);
         }
-        if (descriptionNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
+        if (intelligentMatch(descriptionNormalized, keyword)) {
           thematicScore += 10; // Description contient le mot-clé
           console.log(`  📄 Description contient "${keyword}" → +10 points`);
         }
@@ -212,7 +238,7 @@ export async function GET(request: NextRequest) {
               .normalize("NFD")
               .replace(/[\u0300-\u036f]/g, "");
             keywords.forEach(keyword => {
-              if (activityNormalized.split(/\s+/).some(w => w.startsWith(keyword))) {
+              if (intelligentMatch(activityNormalized, keyword)) {
                 thematicScore += 25; // Activité correspondante (score élevé)
                 console.log(`  🎯 Activité "${activity}" correspond à "${keyword}" → +25 points`);
               }

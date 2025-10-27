@@ -14,6 +14,31 @@ function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
+// Fonction intelligente de matching pour éviter les faux positifs
+// Priorise les correspondances exactes et par mots entiers
+function intelligentMatch(text: string, keyword: string): boolean {
+  // 1. Correspondance exacte (priorité maximale)
+  if (text === keyword) {
+    return true;
+  }
+  
+  // 2. Correspondance par mot entier (mot entouré de limites de mots)
+  // Utiliser \b pour s'assurer que c'est un mot complet
+  const wordBoundaryRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  if (wordBoundaryRegex.test(text)) {
+    return true;
+  }
+  
+  // 3. Correspondance partielle uniquement pour les mots-clés de 4+ caractères
+  // Cela permet "karting" contient "kart" mais pas "art" contient "art" si art est un mot de 3 caractères
+  if (keyword.length >= 4 && text.includes(keyword)) {
+    return true;
+  }
+  
+  // Pas de correspondance
+  return false;
+}
+
 // Associations mot-clé -> activités (pour améliorer le matching sémantique)
 const ACTIVITY_ASSOCIATIONS: { [key: string]: string[] } = {
   'boire': ['bar', 'cocktails', 'bieres', 'cafe'],
@@ -278,7 +303,8 @@ export async function GET(request: NextRequest) {
         
         // Vérifier d'abord les mots-clés primaires (poids très élevé)
         primaryKeywords.forEach(keyword => {
-          if (tagNormalized.includes(keyword) || keyword.includes(tagNormalized)) {
+          // Vérifier si le tag contient le mot-clé (uniquement dans ce sens)
+          if (intelligentMatch(tagNormalized, keyword)) {
             const tagScore = 150; // Score très élevé pour les mots-clés primaires
             thematicScore += tagScore;
             matchedTags.push(tag.tag);
@@ -292,7 +318,8 @@ export async function GET(request: NextRequest) {
           // Ignorer les stop words dans les tags (comme "envie", "de", etc.)
           const stopWordsForTags = ['envie', 'de', 'le', 'la', 'les', 'un', 'une', 'des', 'du'];
           
-          if (!primaryKeywords.includes(keyword) && !tagMatchedKeywords.has(keyword) && !stopWordsForTags.includes(keyword) && (tagNormalized.includes(keyword) || keyword.includes(tagNormalized))) {
+          // Vérifier si le tag contient le mot-clé (uniquement dans ce sens)
+          if (!primaryKeywords.includes(keyword) && !tagMatchedKeywords.has(keyword) && !stopWordsForTags.includes(keyword) && intelligentMatch(tagNormalized, keyword)) {
             const isContext = contextKeywords.includes(keyword);
             
             // Ajuster le poids pour les tags "envie de" génériques
@@ -329,12 +356,12 @@ export async function GET(request: NextRequest) {
         const isPrimary = primaryKeywords.includes(keyword);
         const isContext = contextKeywords.includes(keyword);
         
-        if (nameNormalized.includes(keyword)) {
+        if (intelligentMatch(nameNormalized, keyword)) {
           const score = isPrimary ? 50 : (isContext ? 5 : 20);
           thematicScore += score;
           console.log(` NAME MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
         }
-        if (descriptionNormalized.includes(keyword)) {
+        if (intelligentMatch(descriptionNormalized, keyword)) {
           const score = isPrimary ? 30 : (isContext ? 3 : 10);
           thematicScore += score;
           console.log(` DESC MATCH: ${establishment.name} - "${keyword}" +${score} (total: ${thematicScore})`);
@@ -351,13 +378,13 @@ export async function GET(request: NextRequest) {
               .replace(/[\u0300-\u036f]/g, "");
             keywords.forEach(keyword => {
               // Matching plus intelligent : vérifier si le mot-clé est contenu dans l'activité ou vice versa
-              const keywordInActivity = activityNormalized.includes(keyword);
-              const activityInKeyword = keyword.includes(activityNormalized);
+              const keywordInActivity = intelligentMatch(activityNormalized, keyword);
+              const activityInKeyword = intelligentMatch(keyword, activityNormalized);
               const isExactMatch = activityNormalized === keyword;
               
               // Vérifier aussi les associations (ex: "boire" -> "bar", "cocktails", etc.)
               const associations = ACTIVITY_ASSOCIATIONS[keyword] || [];
-              const hasAssociation = associations.some(assoc => activityNormalized.includes(assoc));
+              const hasAssociation = associations.some(assoc => intelligentMatch(activityNormalized, assoc));
               
               if (keywordInActivity || activityInKeyword || isExactMatch || hasAssociation) {
                 const isPrimary = primaryKeywords.includes(keyword);

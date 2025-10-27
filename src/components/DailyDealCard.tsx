@@ -34,9 +34,10 @@ interface DailyDealCardProps {
   redirectToEstablishment?: boolean; // Si true, redirige vers la page établissement au lieu d'ouvrir le modal
   establishmentId?: string; // ID de l'établissement pour la redirection
   establishmentSlug?: string; // Slug de l'établissement pour la redirection
+  establishmentName?: string; // Nom de l'établissement à afficher sur l'image
 }
 
-export default function DailyDealCard({ deal, onClick, redirectToEstablishment = false, establishmentId, establishmentSlug }: DailyDealCardProps) {
+export default function DailyDealCard({ deal, onClick, redirectToEstablishment = false, establishmentId, establishmentSlug, establishmentName }: DailyDealCardProps) {
   const router = useRouter();
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
   const [userEngagement, setUserEngagement] = useState<'liked' | 'disliked' | null>(null);
@@ -169,7 +170,7 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
 
             {/* Image */}
             {deal.imageUrl ? (
-              <div className="relative h-48 mt-0 overflow-hidden">
+              <div className="relative h-56 mt-0 overflow-hidden">
                 <img
                   src={deal.imageUrl}
                   alt={deal.title}
@@ -178,9 +179,47 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
                     objectPosition: 'center 40%'
                   }}
                 />
+                
+                {/* Nom de l'établissement en overlay en bas à gauche - texte réduit max 25 caractères */}
+                {establishmentName && (
+                  <div className="absolute bottom-0 left-0 bg-gradient-to-r from-black/70 to-transparent p-2 pr-8">
+                    <p className="text-white font-medium text-xs drop-shadow-lg">
+                      {establishmentName.length > 25 ? establishmentName.substring(0, 25) + '...' : establishmentName}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Boutons de vote en bas à droite de l'image */}
+                <div className="absolute bottom-2 right-2 flex gap-2">
+                  <button
+                    onClick={(e) => handleEngagement('liked', e)}
+                    disabled={isSubmitting}
+                    className={`p-2 rounded-full transition-all duration-200 shadow-lg ${
+                      userEngagement === 'liked'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white/90 text-green-600 hover:bg-green-500 hover:text-white'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="Cette offre m'intéresse"
+                  >
+                    <ThumbsUp className="w-4 h-4" />
+                  </button>
+                  
+                  <button
+                    onClick={(e) => handleEngagement('disliked', e)}
+                    disabled={isSubmitting}
+                    className={`p-2 rounded-full transition-all duration-200 shadow-lg ${
+                      userEngagement === 'disliked'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-white/90 text-red-600 hover:bg-red-500 hover:text-white'
+                    } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title="Cette offre ne m'intéresse pas"
+                  >
+                    <ThumbsDown className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="h-48 mt-8 bg-gradient-to-br from-orange-100 to-orange-50" />
+              <div className="h-56 mt-8 bg-gradient-to-br from-orange-100 to-orange-50" />
             )}
           </div>
 
@@ -246,38 +285,7 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
             </div>
 
             {/* CTA */}
-            <div className="space-y-2">
-              {/* Boutons d'engagement */}
-              <div className="flex gap-2 justify-center">
-                <button
-                  onClick={(e) => handleEngagement('liked', e)}
-                  disabled={isSubmitting}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                    userEngagement === 'liked'
-                      ? 'bg-green-500 text-white shadow-md'
-                      : 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-200'
-                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Cette offre m'intéresse"
-                >
-                  <ThumbsUp className="w-3.5 h-3.5" />
-                  <span>Intéressé</span>
-                </button>
-                
-                <button
-                  onClick={(e) => handleEngagement('disliked', e)}
-                  disabled={isSubmitting}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
-                    userEngagement === 'disliked'
-                      ? 'bg-red-500 text-white shadow-md'
-                      : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
-                  } ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title="Cette offre ne m'intéresse pas"
-                >
-                  <ThumbsDown className="w-3.5 h-3.5" />
-                  <span>Pas intéressé</span>
-                </button>
-              </div>
-              
+            <div>
               {/* Bouton flip */}
               <button 
                 onClick={handleFlip}
@@ -304,6 +312,16 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
           
           <div className="promo-back-content">
             <div className="promo-details">
+              {/* Nom de l'établissement en première position - tronqué à 25 caractères */}
+              {establishmentName && (
+                <div className="detail-item">
+                  <span className="detail-icon">🏢</span>
+                  <span className="detail-text">
+                    {establishmentName.length > 25 ? establishmentName.substring(0, 25) + '...' : establishmentName}
+                  </span>
+                </div>
+              )}
+              
               <div className="detail-item">
                 <span className="detail-icon">🎯</span>
                 <span className="detail-text">{deal.title}</span>
@@ -324,7 +342,19 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
               {deal.modality && (
                 <div className="detail-item">
                   <span className="detail-icon">📋</span>
-                  <span className="detail-text">{deal.modality}</span>
+                  <span 
+                    className="detail-text"
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      maxHeight: '3rem'
+                    }}
+                  >
+                    {deal.modality}
+                  </span>
                 </div>
               )}
               
@@ -354,7 +384,17 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
             </div>
             
             <div className="promo-conditions">
-              <p className="conditions-text">
+              <p 
+                className="conditions-text"
+                style={{
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxHeight: '6rem'
+                }}
+              >
                 {deal.description}
               </p>
               

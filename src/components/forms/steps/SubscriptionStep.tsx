@@ -118,6 +118,30 @@ export default function SubscriptionStep({
         </div>
       </div>
       
+      {/* Checkbox d'acceptation des CGV */}
+      {formData.subscriptionPlan === 'premium' && (
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 mt-6">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="acceptCGV"
+              name="acceptCGV"
+              className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+            />
+            <label htmlFor="acceptCGV" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+              J'accepte les{' '}
+              <a href="/cgv" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-500 underline">
+                Conditions Générales de Vente (CGV)
+              </a>
+              {' '}et les{' '}
+              <a href="/conditions" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-500 underline">
+                Conditions Générales d'Utilisation (CGU)
+              </a>
+            </label>
+          </div>
+        </div>
+      )}
+      
       {/* Message d'erreur */}
       {errors.subscriptionPlan && (
         <p className="text-red-500 text-sm mt-1 flex items-center gap-2">
