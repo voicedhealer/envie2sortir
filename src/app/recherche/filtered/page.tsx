@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import SearchFilters from '@/components/SearchFilters';
 import LoadMoreButton from '@/components/LoadMoreButton';
@@ -98,7 +98,7 @@ interface SearchResponse {
   };
 }
 
-export default function FilteredSearchPage() {
+function FilteredSearchContent() {
   const searchParams = useSearchParams();
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,5 +265,19 @@ export default function FilteredSearchPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function FilteredSearchPage() {
+  return (
+    <Suspense fallback={
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+        </div>
+      </main>
+    }>
+      <FilteredSearchContent />
+    </Suspense>
   );
 }

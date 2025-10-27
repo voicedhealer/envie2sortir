@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn as nextAuthSignIn, signUp as nextAuthSignUp, getSession } from 'next-auth/react';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
 import Image from 'next/image';
 
-export default function AuthPage() {
+function AuthContent() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -595,5 +595,17 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    }>
+      <AuthContent />
+    </Suspense>
   );
 }
