@@ -1,6 +1,7 @@
 import { Icons } from '@/components/Icons';
 import { SiretVerification } from '@/types/establishment-form.types';
 import { useState, useEffect } from 'react';
+import { useSiretVerification } from '@/hooks/useSiretVerification';
 
 interface ProfessionalStepProps {
   formData: {
@@ -33,7 +34,16 @@ export default function ProfessionalStep({
     message: ''
   });
 
-  // Vérifier si le SIRET existe déjà dans la base de données
+  // Hook pour la vérification INSEE
+  const { 
+    isLoading: inseeLoading, 
+    error: inseeError, 
+    verificationResult: inseeResult, 
+    verifySiret: verifySiretInsee,
+    clearError: clearInseeError 
+  } = useSiretVerification();
+
+  // Vérifier si le SIRET existe déjà dans la base de données ET vérifier avec l'INSEE
   useEffect(() => {
     const checkSiretExists = async () => {
       const cleanedSiret = formData.siret.replace(/\s/g, '');
@@ -45,12 +55,14 @@ export default function ProfessionalStep({
           exists: false,
           message: ''
         });
+        clearInseeError();
         return;
       }
 
       setSiretExistsCheck({ checking: true, exists: false, message: '' });
 
       try {
+        // Vérifier si le SIRET existe déjà dans notre base
         const response = await fetch('/api/check-siret', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -73,6 +85,9 @@ export default function ProfessionalStep({
             exists: false,
             message: data.message
           });
+
+          // Si le SIRET n'existe pas dans notre base, vérifier avec l'INSEE
+          await verifySiretInsee(cleanedSiret);
         }
       } catch (error) {
         console.error('Erreur lors de la vérification du SIRET:', error);
@@ -87,7 +102,7 @@ export default function ProfessionalStep({
     // Debounce de 500ms pour éviter trop de requêtes
     const timer = setTimeout(checkSiretExists, 500);
     return () => clearTimeout(timer);
-  }, [formData.siret]);
+  }, [formData.siret, verifySiretInsee, clearInseeError]);
 
   return (
     <div className="space-y-6">
@@ -117,9 +132,9 @@ export default function ProfessionalStep({
             maxLength={14}
           />
           <div className="absolute right-3 top-3">
-            {(siretVerification.status === 'loading' || siretExistsCheck.checking) && <Icons.Spinner />}
-            {siretVerification.status === 'valid' && !siretExistsCheck.exists && <Icons.Check />}
-            {(siretVerification.status === 'invalid' || siretExistsCheck.exists) && <Icons.X />}
+            {(siretVerification.status === 'loading' || siretExistsCheck.checking || inseeLoading) && <Icons.Spinner />}
+            {(siretVerification.status === 'valid' || (inseeResult?.isValid && !siretExistsCheck.exists)) && <Icons.Check />}
+            {(siretVerification.status === 'invalid' || siretExistsCheck.exists || (inseeError && !inseeLoading)) && <Icons.X />}
           </div>
         </div>
         
@@ -148,11 +163,55 @@ export default function ProfessionalStep({
           </div>
         )}
         
-        {/* ✓ Entreprise vérifiée */}
+        {/* ✓ Entreprise vérifiée (ancien système) */}
         {siretVerification.status === 'valid' && siretVerification.data && !siretExistsCheck.exists && (
           <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
             <p className="text-sm text-green-800">
               ✓ Entreprise vérifiée: {siretVerification.data.denomination}
+            </p>
+          </div>
+        )}
+
+        {/* ✓ Entreprise vérifiée par l'INSEE */}
+        {inseeResult?.isValid && inseeResult.data && !siretExistsCheck.exists && (
+          <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <span className="text-green-600 text-lg">✓</span>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-green-800 mb-2">
+                  Entreprise vérifiée par l'INSEE
+                </p>
+                <div className="space-y-1 text-sm text-green-700">
+                  <p><strong>Raison sociale :</strong> {inseeResult.data.companyName}</p>
+                  <p><strong>Statut juridique :</strong> {inseeResult.data.legalStatusLabel}</p>
+                  <p><strong>Adresse :</strong> {inseeResult.data.address}</p>
+                  {inseeResult.data.activityLabel && (
+                    <p><strong>Activité :</strong> {inseeResult.data.activityLabel}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Pré-remplir les champs avec les données INSEE
+                    if (inseeResult.data) {
+                      onInputChange('companyName', inseeResult.data.companyName);
+                      onInputChange('legalStatus', inseeResult.data.legalStatus);
+                    }
+                  }}
+                  className="mt-2 text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
+                >
+                  Utiliser ces informations
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ❌ Erreur de vérification INSEE */}
+        {inseeError && !inseeLoading && !siretExistsCheck.exists && (
+          <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">
+              ❌ {inseeError}
             </p>
           </div>
         )}
