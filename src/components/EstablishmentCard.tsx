@@ -800,18 +800,20 @@ export default function EstablishmentCard({
 
             {/* 2ème ligne : Note + Avis (vrais avis ou CTA) */}
             {(() => {
+              // Utiliser avgRating et totalComments (noms corrects de la base de données)
+              const rating = establishment.avgRating || establishment.rating;
+              const reviewCount = establishment.totalComments || establishment.reviewCount;
+              
               console.log('🔍 [EstablishmentCard] Données avis pour', establishment.name, ':', {
-                rating: establishment.rating,
-                reviewCount: establishment.reviewCount,
-                avgRating: establishment.avgRating,
-                totalComments: establishment.totalComments
+                avgRating: rating,
+                totalComments: reviewCount
               });
               
-              return establishment.rating && establishment.reviewCount && establishment.reviewCount > 0 ? (
+              return rating && reviewCount && reviewCount > 0 ? (
                 <div className="flex items-center gap-1">
                   <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                  <span className="font-semibold text-gray-900 text-sm">{establishment.rating.toFixed(1)}</span>
-                  <span className="text-gray-500 text-xs">({establishment.reviewCount} avis)</span>
+                  <span className="font-semibold text-gray-900 text-sm">{rating.toFixed(1)}</span>
+                  <span className="text-gray-500 text-xs">({reviewCount} avis)</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1 text-gray-400 text-xs">
