@@ -1311,7 +1311,12 @@ src/
 
 ### Authentification
 - `POST /api/auth/register` - Inscription utilisateur
+- `POST /api/auth/login` - Connexion utilisateur
 - `GET /api/auth/[...nextauth]` - NextAuth endpoints
+- `POST /api/auth/verify-establishment` - Vérification établissement
+- `POST /api/verify-phone` - Vérification SMS
+- `POST /api/check-email` - Vérification disponibilité email
+- `POST /api/check-siret` - Vérification SIRET
 
 ### Catégories
 - `GET /api/categories` - Liste des catégories avec compteurs
@@ -1324,11 +1329,139 @@ src/
 - `DELETE /api/etablissements/[slug]` - Supprimer un établissement
 - `GET /api/etablissements/[slug]/events` - Événements d'un établissement
 - `POST /api/etablissements/enrich` - Enrichir via Google Places
+- `GET /api/etablissements/[slug]/images` - Images d'un établissement
+- `POST /api/etablissements/create-admin` - Création admin d'établissement
+- `GET /api/establishments/all` - Tous les établissements (admin)
+- `GET /api/establishments/random` - Établissements aléatoires
+- `POST /api/establishments/correct-type` - Correction type d'établissement
+- `POST /api/establishments/suggest-type` - Suggestion type d'établissement
+- `POST /api/establishments/save-pattern` - Sauvegarde pattern d'apprentissage
 
 ### Recherche
 - `GET /api/recherche/envie` - Recherche "envie" intelligente
 - `GET /api/recherche/filtered` - Recherche avec filtres et pagination
 - `GET /api/geocode` - Géocodage d'adresses
+- `POST /api/google-places-proxy` - Proxy Google Places
+- `POST /api/resolve-google-url` - Résolution URL Google
+
+### Dashboard Professionnel
+- `GET /api/dashboard/stats` - Statistiques dashboard
+- `GET /api/dashboard/establishments` - Établissements utilisateur
+- `GET /api/dashboard/events` - Événements utilisateur
+- `POST /api/dashboard/events` - Créer un événement
+- `PUT /api/dashboard/events/[id]` - Modifier un événement
+- `DELETE /api/dashboard/events/[id]` - Supprimer un événement
+- `GET /api/dashboard/images` - Images utilisateur
+- `POST /api/dashboard/images` - Upload d'images
+- `PUT /api/dashboard/images/[id]` - Modifier une image
+- `DELETE /api/dashboard/images/[id]` - Supprimer une image
+- `POST /api/dashboard/images/reorder` - Réorganiser les images
+- `POST /api/dashboard/images/set-card-image` - Définir image principale
+- `POST /api/dashboard/change-password` - Changer mot de passe
+
+### Bons Plans Journaliers
+- `GET /api/deals/all` - Tous les bons plans actifs
+- `POST /api/deals` - Créer un bon plan
+- `GET /api/deals/[establishmentId]` - Bons plans d'un établissement
+- `PUT /api/deals/[dealId]` - Modifier un bon plan
+- `DELETE /api/deals/[dealId]` - Supprimer un bon plan
+- `GET /api/deals/active/[establishmentId]` - Bon plan actif du jour
+- `GET /api/deals/by-establishment/[establishmentId]` - Bons plans par établissement
+- `POST /api/deals/engagement` - Engagement sur un bon plan
+- `POST /api/deals/recurrence/process` - Traitement récurrence
+- `POST /api/upload/deal-media` - Upload images/PDFs bons plans
+
+### Événements
+- `GET /api/events/upcoming` - Événements à venir
+- `POST /api/events/[eventId]/engage` - Engagement sur un événement
+
+### Messagerie
+- `GET /api/messaging/conversations` - Liste des conversations
+- `POST /api/messaging/conversations` - Créer une conversation
+- `GET /api/messaging/conversations/[id]` - Détails d'une conversation
+- `POST /api/messaging/conversations/[id]/messages` - Envoyer un message
+- `PATCH /api/messaging/conversations/[id]/read` - Marquer comme lu
+- `PATCH /api/messaging/conversations/[id]/status` - Changer le statut
+- `GET /api/messaging/unread-count` - Compter les messages non lus
+
+### Analytics et Monitoring
+- `GET /api/analytics/track` - Tracking des interactions
+- `GET /api/analytics/search` - Analytics de recherche
+- `POST /api/analytics/search/track` - Tracking recherche
+- `GET /api/analytics/detailed` - Analytics détaillées
+- `GET /api/monitoring/health` - Santé de l'application
+- `GET /api/monitoring/liveness` - Vérification de vie
+- `GET /api/monitoring/readiness` - Vérification de disponibilité
+- `GET /api/monitoring/metrics` - Métriques de performance
+
+### Administration
+- `GET /api/admin/stats` - Statistiques globales
+- `GET /api/admin/metrics` - Métriques admin
+- `GET /api/admin/pending-count` - Compteur en attente
+- `GET /api/admin/establishments` - Gestion établissements
+- `POST /api/admin/establishments/actions` - Actions sur établissements
+- `GET /api/admin/professionals` - Liste des professionnels
+- `POST /api/admin/actions` - Actions admin générales
+- `POST /api/admin/cleanup-images` - Nettoyage images orphelines
+- `GET /api/admin/learning/patterns` - Patterns d'apprentissage
+- `POST /api/admin/learning/validate` - Valider un pattern
+- `POST /api/admin/learning/correct` - Corriger un pattern
+- `DELETE /api/admin/learning/delete` - Supprimer un pattern
+- `GET /api/admin/learning/stats` - Statistiques d'apprentissage
+- `GET /api/admin/newsletter/subscribers` - Abonnés newsletter
+- `GET /api/admin/newsletter/stats` - Statistiques newsletter
+- `POST /api/admin/newsletter/toggle` - Activer/désactiver abonnement
+- `DELETE /api/admin/newsletter/delete` - Supprimer abonnement
+- `GET /api/admin/newsletter/export` - Export newsletter
+- `POST /api/admin/review-update` - Mise à jour avis
+
+### Professionnels
+- `POST /api/professional-registration` - Inscription professionnel
+- `GET /api/professional/establishment` - Établissement du professionnel
+- `POST /api/professional/request-update` - Demande de mise à jour
+- `POST /api/professional/send-verification-sms` - Envoi SMS vérification
+- `POST /api/professional/verify-sms-code` - Vérification code SMS
+- `POST /api/professional/verify-email` - Vérification email
+- `GET /api/professional/update-requests` - Demandes de mise à jour
+
+### Utilisateurs
+- `GET /api/user/favorites` - Favoris utilisateur
+- `POST /api/user/favorites/[id]` - Ajouter aux favoris
+- `DELETE /api/user/favorites/[id]` - Retirer des favoris
+- `GET /api/user/comments` - Commentaires utilisateur
+- `POST /api/user/comments` - Créer un commentaire
+- `PUT /api/user/comments/[id]` - Modifier un commentaire
+- `DELETE /api/user/comments/[id]` - Supprimer un commentaire
+- `POST /api/user/update-profile` - Mettre à jour le profil
+- `POST /api/user/delete-account` - Supprimer le compte
+- `GET /api/user/gamification` - Données de gamification
+- `POST /api/user/location-preferences` - Préférences de localisation
+
+### Commentaires et Signalements
+- `POST /api/comments/[id]/reply` - Répondre à un commentaire
+- `POST /api/comments/[id]/report` - Signaler un commentaire
+
+### Upload et Médias
+- `POST /api/upload/image` - Upload d'images
+- `POST /api/upload/optimized-image` - Upload d'images optimisées
+- `POST /api/upload/event-image` - Upload d'images d'événements
+- `POST /api/upload/deal-media` - Upload médias bons plans
+
+### Sécurité
+- `GET /api/csrf/token` - Token CSRF
+
+### Newsletter
+- `POST /api/newsletter/subscribe` - S'abonner à la newsletter
+- `POST /api/newsletter/unsubscribe` - Se désabonner
+
+### Menus et Documents
+- `GET /api/public/establishments/[slug]/menus` - Menus publics
+- `GET /api/establishments/[id]/menus` - Menus d'établissement
+- `POST /api/establishments/[id]/menus` - Créer un menu
+- `GET /api/establishments/[id]/menus/[menuId]` - Détails d'un menu
+- `PUT /api/establishments/[id]/menus/[menuId]` - Modifier un menu
+- `DELETE /api/establishments/[id]/menus/[menuId]` - Supprimer un menu
+- `POST /api/establishments/[id]/menus/upload` - Upload de menus PDF
 
 #### Exemples d'utilisation API Recherche Filtrée
 ```bash
@@ -1345,20 +1478,13 @@ GET /api/recherche/filtered?envie=restaurant&ville=Lyon&filter=premium&page=1&li
 GET /api/recherche/filtered?envie=bar&ville=Marseille&filter=popular&page=2&limit=15
 ```
 
-#### Paramètres API
+#### Paramètres API Recherche
 - `envie` (requis) : Terme de recherche
 - `ville` : Ville de recherche (optionnel)
 - `filter` : Type de filtre (popular, wanted, cheap, premium, newest, rating)
 - `page` : Numéro de page (défaut: 1)
 - `limit` : Nombre de résultats par page (défaut: 15)
 - `lat`/`lng` : Coordonnées GPS (optionnel)
-
-### Dashboard
-- `GET /api/dashboard/stats` - Statistiques dashboard
-- `GET /api/dashboard/establishments` - Établissements utilisateur
-
-### Upload
-- `POST /api/upload` - Upload d'images
 
 ## 🎯 Fonctionnalités Récentes
 
@@ -1367,34 +1493,45 @@ GET /api/recherche/filtered?envie=bar&ville=Marseille&filter=popular&page=2&limi
 - [x] Gestion des rôles (Admin, Professionnel, Utilisateur)
 - [x] Protection des routes avec middleware
 - [x] Hydratation de session optimisée
+- [x] Vérification SMS pour les professionnels
+- [x] Suppression de compte utilisateur
 
-### ✅ Espaces Utilisateurs
-- [x] Dashboard professionnel complet
-- [x] Espace admin pour la gestion
-- [x] Profil utilisateur avec favoris
+### ✅ Espaces Utilisateurs Avancés
+- [x] Dashboard professionnel complet avec analytics
+- [x] Espace admin refait avec gestion complète
+- [x] Profil utilisateur avec favoris et préférences
 - [x] Inscription simplifiée (compte + établissement)
+- [x] Gestion des préférences de localisation
+- [x] Système de badges et gamification
 
-### ✅ Système d'Enrichissement
+### ✅ Système d'Enrichissement Intelligent
 - [x] Intégration Google Places API
 - [x] Enrichissement automatique des données
 - [x] Système hybride (auto + manuel)
 - [x] Protection des données manuelles
+- [x] Système de learning patterns pour améliorer l'enrichissement
+- [x] Suggestions automatiques de type d'établissement
 
 ### ✅ Carte Interactive Avancée
 - [x] Marqueurs personnalisés
 - [x] Popups adaptatifs selon le contexte
 - [x] Marqueur de recherche central
 - [x] Système de réglages facile
+- [x] Géolocalisation améliorée avec historique des villes
 
-### ✅ Système d'Événements
+### ✅ Système d'Événements et Engagement
 - [x] Gestion complète des événements
 - [x] Filtrage temporel intelligent
 - [x] Interface utilisateur intuitive
+- [x] Système de likes/dislikes pour les événements
+- [x] Statistiques d'engagement en temps réel
+- [x] Gauge d'engagement visuelle
 
 ### ✅ Design Responsive Optimisé
 - [x] Largeur adaptative pour écrans larges
 - [x] Système de réglages de tailles
 - [x] Layout optimisé multi-écrans
+- [x] Mode mobile-first avec navigation optimisée
 
 ### ✅ Système de Filtres et Pagination
 - [x] 6 filtres intelligents avec icônes Lucide
@@ -1419,16 +1556,156 @@ GET /api/recherche/filtered?envie=bar&ville=Marseille&filter=popular&page=2&limi
 - **Chargement progressif** sans rechargement de page
 - **Compatible avec tous les filtres**
 
+### 🎯 Système de Bons Plans Journaliers (NOUVEAU)
+- [x] **Dashboard Premium** : Création et gestion des bons plans
+- [x] **Programmation** : Dates et horaires avec activation automatique
+- [x] **Upload multimédia** : Images et PDFs pour les offres
+- [x] **Affichage intelligent** : Modal automatique + card permanente
+- [x] **Page dédiée** : `/bons-plans` avec carousel et grille
+- [x] **Redirection fluide** : Clic → établissement concerné
+- [x] **Design cohérent** : Bordure orange néon sur fond blanc crème
+- [x] **API complète** : `/api/deals/*` pour toutes les opérations
+
+### 💬 Système de Messagerie Pro-Admin (NOUVEAU)
+- [x] **Communication bidirectionnelle** : Professionnels ↔ Administrateurs
+- [x] **Interface complète** : Liste des conversations avec filtres
+- [x] **Badges de notification** : Compteur de messages non lus
+- [x] **Polling automatique** : Mise à jour toutes les 30 secondes
+- [x] **Gestion des statuts** : Conversations ouvertes/fermées
+- [x] **Pages dédiées** : `/dashboard/messagerie` et `/admin/messagerie`
+- [x] **Sécurité** : Permissions strictes et validation des données
+
+### 📊 Analytics et Monitoring Avancés (NOUVEAU)
+- [x] **Dashboard analytics** : Statistiques détaillées pour les professionnels
+- [x] **Tracking des clics** : Suivi des interactions utilisateurs
+- [x] **Monitoring de santé** : Endpoints `/api/monitoring/*`
+- [x] **Métriques de performance** : Temps de réponse et logs
+- [x] **Analytics de recherche** : Tracking des requêtes et résultats
+- [x] **Statistiques d'engagement** : Likes, vues, favoris
+
+### 🔒 Sécurité Renforcée (NOUVEAU)
+- [x] **Protection CSRF** : Tokens et validation côté serveur
+- [x] **Rate limiting étendu** : Protection contre les abus
+- [x] **Validation stricte** : Sanitisation des entrées utilisateur
+- [x] **Protection XSS/SQL** : Tests de sécurité complets
+- [x] **Tests de pénétration** : Suite de tests de sécurité automatisés
+- [x] **Audit de sécurité** : Logs et monitoring des tentatives d'intrusion
+
+### 🏢 Administration Complète (NOUVEAU)
+- [x] **Interface admin refaite** : Design moderne et intuitif
+- [x] **Gestion des établissements** : Analytics et modération
+- [x] **Système de learning** : Patterns d'amélioration automatique
+- [x] **Gestion newsletter** : Abonnés et campagnes
+- [x] **Modération** : Commentaires et signalements
+- [x] **Statistiques globales** : Vue d'ensemble de la plateforme
+
+### 📄 Pages Légales et Support (NOUVEAU)
+- [x] **Pages légales** : CGV, conditions, mentions légales
+- [x] **Support utilisateur** : Page de contact et FAQ
+- [x] **Désinscription** : Page dédiée pour la newsletter
+- [x] **À propos** : Présentation de la plateforme
+- [x] **Politique de confidentialité** : Conformité RGPD
+
+### 🧪 Tests et Qualité (NOUVEAU)
+- [x] **Suite de tests complète** : 120+ tests unitaires et d'intégration
+- [x] **Tests E2E** : Playwright pour les parcours utilisateurs
+- [x] **Tests de sécurité** : Validation contre les attaques courantes
+- [x] **Tests de performance** : Mesure des temps de réponse
+- [x] **Coverage de code** : Rapport de couverture des tests
+- [x] **Tests de régression** : Prévention des régressions
+
+## 🔒 Sécurité et Qualité
+
+### Protection CSRF
+- **Tokens CSRF** : Génération et validation automatique
+- **Middleware de protection** : Validation côté serveur
+- **Endpoints sécurisés** : `/api/csrf/token` pour récupérer les tokens
+
+### Rate Limiting
+- **Protection contre les abus** : Limitation des requêtes par IP
+- **Endpoints protégés** : Upload, authentification, recherche
+- **Configuration flexible** : Limites adaptées par type d'opération
+
+### Validation et Sanitisation
+- **Validation stricte** : Tous les inputs utilisateur sont validés
+- **Sanitisation XSS** : Protection contre les injections de scripts
+- **Validation SQL** : Protection contre les injections SQL via Prisma
+- **Caractères spéciaux** : Support Unicode et émojis sécurisé
+
+### Tests de Sécurité
+- **Suite de tests complète** : 60+ tests de sécurité automatisés
+- **Tests de pénétration** : Validation contre les attaques courantes
+- **Tests d'injection** : SQL, XSS, et autres vecteurs d'attaque
+- **Tests d'autorisation** : Vérification des permissions
+
+## 🧪 Tests et Qualité
+
+### Couverture de Tests
+- **120+ tests unitaires** : Couverture complète des fonctionnalités
+- **Tests d'intégration** : Validation des flux complets
+- **Tests E2E** : Parcours utilisateurs avec Playwright
+- **Tests de performance** : Mesure des temps de réponse
+
+### Types de Tests
+- **Tests de sécurité** : Protection contre les attaques
+- **Tests de performance** : Optimisation des requêtes
+- **Tests de régression** : Prévention des bugs
+- **Tests d'accessibilité** : Conformité aux standards
+
+### Outils de Test
+- **Jest** : Tests unitaires et d'intégration
+- **Playwright** : Tests E2E avec navigateurs réels
+- **Coverage** : Rapport de couverture de code
+- **CI/CD** : Intégration continue avec GitHub Actions
+
+## 📊 Monitoring et Analytics
+
+### Monitoring de Santé
+- **Endpoints de santé** : `/api/monitoring/health`
+- **Vérifications de vie** : `/api/monitoring/liveness`
+- **Vérifications de disponibilité** : `/api/monitoring/readiness`
+- **Métriques de performance** : `/api/monitoring/metrics`
+
+### Analytics Utilisateur
+- **Tracking des clics** : Suivi des interactions utilisateurs
+- **Analytics de recherche** : Requêtes et résultats populaires
+- **Statistiques d'engagement** : Likes, vues, favoris
+- **Dashboard analytics** : Interface pour les professionnels
+
+### Logs et Debugging
+- **Logs structurés** : Format JSON pour faciliter l'analyse
+- **Niveaux de log** : Error, Warning, Info, Debug
+- **Corrélation des requêtes** : Traçabilité des actions utilisateur
+- **Monitoring des erreurs** : Détection automatique des problèmes
+
 ## 🎯 Fonctionnalités à Venir
 
-- [ ] Système de réservation en ligne
-- [ ] Notifications push et email
-- [ ] Système d'avis et notes avancé
-- [ ] Mode sombre/clair
-- [ ] Application mobile PWA
-- [ ] Intégration paiements
-- [ ] Système de messagerie
-- [ ] Analytics avancées
+### Court Terme (Q1 2025)
+- [ ] **Système de réservation en ligne** : Intégration avec calendriers et paiements
+- [ ] **Notifications push et email** : Alertes temps réel pour les utilisateurs
+- [ ] **Mode sombre/clair** : Thème adaptatif selon les préférences
+- [ ] **Application mobile PWA** : Version mobile native
+
+### Moyen Terme (Q2-Q3 2025)
+- [ ] **Intégration paiements** : Stripe/PayPal pour les réservations
+- [ ] **Système d'avis avancé** : Reviews détaillées avec photos
+- [ ] **Chat en temps réel** : WebSocket pour la messagerie instantanée
+- [ ] **Recommandations IA** : Suggestions personnalisées basées sur l'historique
+- [ ] **Système de fidélité** : Points et récompenses pour les utilisateurs
+
+### Long Terme (Q4 2025+)
+- [ ] **API publique** : Ouverture pour les partenaires tiers
+- [ ] **Marketplace** : Plateforme pour les services complémentaires
+- [ ] **Intelligence artificielle** : Chatbot et assistance automatique
+- [ ] **Reality augmentée** : Visite virtuelle des établissements
+- [ ] **Blockchain** : Système de réputation décentralisé
+
+### Améliorations Techniques
+- [ ] **Cache Redis** : Optimisation des performances
+- [ ] **CDN global** : Distribution mondiale du contenu
+- [ ] **Microservices** : Architecture distribuée
+- [ ] **Kubernetes** : Orchestration des conteneurs
+- [ ] **Monitoring avancé** : APM et alertes proactives
 
 ## 🤝 Contribution
 
@@ -1447,6 +1724,37 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 - **Développeur** : Vivien Bernardot
 - **Projet** : Envie2Sortir
 - **GitHub** : [voicedhealer/envie2sortir](https://github.com/voicedhealer/envie2sortir)
+
+---
+
+## 📈 Mise à Jour du README (Janvier 2025)
+
+### ✅ Nouvelles Fonctionnalités Documentées
+- **🎯 Système de Bons Plans Journaliers** : Gestion complète pour les établissements Premium
+- **💬 Système de Messagerie Pro-Admin** : Communication bidirectionnelle avec notifications
+- **📊 Analytics et Monitoring Avancés** : Tracking et métriques de performance
+- **🔒 Sécurité Renforcée** : Protection CSRF, rate limiting, tests de sécurité
+- **🏢 Administration Complète** : Interface admin refaite avec analytics
+- **📄 Pages Légales et Support** : CGV, FAQ, contact, conformité RGPD
+- **🧪 Tests et Qualité** : 120+ tests avec couverture complète
+
+### 📋 API Endpoints Mis à Jour
+- **80+ endpoints** documentés et organisés par catégorie
+- **Nouvelles routes** : Bons plans, messagerie, analytics, monitoring
+- **Exemples d'utilisation** : Paramètres et cas d'usage détaillés
+- **Documentation complète** : Authentification, upload, sécurité
+
+### 🔧 Sections Techniques Ajoutées
+- **Sécurité et Qualité** : CSRF, rate limiting, validation, tests
+- **Tests et Qualité** : Couverture, outils, types de tests
+- **Monitoring et Analytics** : Santé, logs, métriques de performance
+- **Fonctionnalités à Venir** : Roadmap organisée par échéances
+
+### 📊 Statistiques du Projet
+- **Technologies** : Next.js 15, React 19, TypeScript, Prisma, SQLite
+- **Tests** : 120+ tests unitaires, E2E, sécurité, performance
+- **API** : 80+ endpoints organisés en 15 catégories
+- **Fonctionnalités** : 50+ fonctionnalités implémentées et documentées
 
 ---
 
