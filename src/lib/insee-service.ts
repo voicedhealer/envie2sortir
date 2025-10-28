@@ -19,7 +19,7 @@ class INSEEService {
     }
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/token`, {
+      const response = await fetch('https://api.insee.fr/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -117,11 +117,11 @@ class INSEEService {
         };
       }
 
-      // Obtenir le token d'accès
+      // Obtenir le token d'accès OAuth2
       const token = await this.getAccessToken();
 
-      // Appel à l'API INSEE
-      const response = await fetch(`${this.config.baseUrl}/siret/${siret}`, {
+      // Appel à l'API INSEE avec le token
+      const response = await fetch(`https://api.insee.fr/entreprises/sirene/V3/siret/${siret}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -177,7 +177,7 @@ let inseeService: INSEEService | null = null;
 export function getINSEEService(): INSEEService {
   if (!inseeService) {
     const config: INSEEConfig = {
-      baseUrl: process.env.NEXT_PUBLIC_INSEE_API_URL || 'https://api.insee.fr/entreprises/sirene/V3',
+      baseUrl: 'https://api.insee.fr/api-sirene/3.11',
       consumerKey: process.env.INSEE_CONSUMER_KEY || '',
       consumerSecret: process.env.INSEE_CONSUMER_SECRET || ''
     };

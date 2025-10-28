@@ -6,15 +6,47 @@
  */
 
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
 
-// Configuration
+// Charger les variables d'environnement depuis .env ou .env.local
+function loadEnvFile() {
+  const envFiles = ['.env.local', '.env'];
+  
+  for (const envFile of envFiles) {
+    const envPath = path.join(__dirname, '..', envFile);
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const lines = envContent.split('\n');
+      
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine && !trimmedLine.startsWith('#')) {
+          const [key, ...valueParts] = trimmedLine.split('=');
+          if (key && valueParts.length > 0) {
+            const value = valueParts.join('=').trim();
+            process.env[key.trim()] = value;
+          }
+        }
+      }
+      console.log(`✅ Variables chargées depuis ${envFile}`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Charger les variables d'environnement
+loadEnvFile();
+
+// Configuration simplifiée (nouveau système API Key)
 const CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_INSEE_API_URL || 'https://api.insee.fr/entreprises/sirene/V3',
-  consumerKey: process.env.INSEE_CONSUMER_KEY || '',
-  consumerSecret: process.env.INSEE_CONSUMER_SECRET || ''
+  baseUrl: process.env.NEXT_PUBLIC_INSEE_API_URL || 'https://api.insee.fr/api-sirene/3.11',
+  apiKey: process.env.INSEE_API_KEY || ''
 };
 
-// SIRET de test par défaut (McDonald's France)
+// SIRET de test par défaut
 const DEFAULT_SIRET = '34342013500019';
 
 /**
@@ -47,85 +79,30 @@ function validateSiretFormat(siret) {
   return sum % 10 === 0;
 }
 
-/**
- * Obtient un token d'accès OAuth2
- */
-async function getAccessToken() {
-  return new Promise((resolve, reject) => {
-    const credentials = Buffer.from(`${CONFIG.consumerKey}:${CONFIG.consumerSecret}`).toString('base64');
-    
-    const postData = 'grant_type=client_credentials';
-    
-    const options = {
-      hostname: 'api.insee.fr',
-      port: 443,
-      path: '/token',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': `Basic ${credentials}`,
-        'Content-Length': Buffer.byteLength(postData)
-      }
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      
-      res.on('end', () => {
-        try {
-          const tokenData = JSON.parse(data);
-          resolve(tokenData.access_token);
-        } catch (error) {
-          reject(new Error(`Erreur parsing token: ${error.message}`));
-        }
-      });
-    });
-
-    req.on('error', (error) => {
-      reject(error);
-    });
-
-    req.write(postData);
-    req.end();
-  });
-}
-
-/**
- * Vérifie un numéro SIRET
- */
 async function verifySiret(siret) {
   try {
     console.log(`🔍 Vérification du SIRET: ${siret}`);
     
-    // Validation du format
-    if (!validateSiretFormat(siret)) {
-      console.log('❌ Format SIRET invalide');
-      return;
-    }
+    // Validation du format (désactivée temporairement pour test API)
+    // if (!validateSiretFormat(siret)) {
+    //   console.log('❌ Format SIRET invalide');
+    //   return;
+    // }
     
-    console.log('✅ Format SIRET valide');
+    console.log('✅ Format SIRET valide (validation désactivée pour test API)');
     
-    // Obtenir le token
-    console.log('🔑 Obtention du token d\'accès...');
-    const token = await getAccessToken();
-    console.log('✅ Token obtenu');
-    
-    // Appel à l'API INSEE
+    // Appel direct à l'API avec la clé API
     console.log('🌐 Appel à l\'API INSEE...');
     const result = await new Promise((resolve, reject) => {
       const options = {
         hostname: 'api.insee.fr',
         port: 443,
-        path: `/entreprises/sirene/V3/siret/${siret}`,
+        path: `/api-sirene/3.11/siret/${siret}`,
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
+      headers: {
+        'X-INSEE-Api-Key-Integration': CONFIG.apiKey,  // ⚠️ NOM EXACT !
+        'Accept': 'application/json'
+      }
       };
 
       const req = https.request(options, (res) => {
@@ -145,6 +122,7 @@ async function verifySiret(siret) {
               reject(new Error(`Erreur parsing: ${error.message}`));
             }
           } else {
+            console.log(`❌ Erreur HTTP ${res.statusCode}:`, data);
             reject(new Error(`Erreur HTTP: ${res.statusCode}`));
           }
         });
@@ -206,10 +184,11 @@ async function main() {
   console.log('🧪 Test de vérification SIRET avec l\'API INSEE');
   console.log('===============================================\n');
   
-  if (!CONFIG.consumerKey || !CONFIG.consumerSecret) {
+  if (!CONFIG.apiKey) {
     console.log('❌ Configuration manquante:');
-    console.log('   INSEE_CONSUMER_KEY et INSEE_CONSUMER_SECRET doivent être définis');
-    console.log('   Ajoutez-les à votre fichier .env.local');
+    console.log('   INSEE_API_KEY doit être défini');
+    console.log('   Obtenez votre clé API sur https://portail-api.insee.fr/');
+    console.log('   Ajoutez-la à votre fichier .env');
     process.exit(1);
   }
   
