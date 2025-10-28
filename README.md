@@ -376,16 +376,16 @@ classDiagram
 
     %% ===== RELATIONS ENTRE CLASSES =====
     
-    EstablishmentService ||--|| ValidationService : "utilise"
-    EstablishmentService ||--|| EstablishmentEnrichment : "utilise"
-    SearchService ||--|| ScoringService : "utilise"
-    SearchService ||--|| GeocodingService : "utilise"
-    ProfessionalService ||--|| SubscriptionService : "utilise"
-    EventService ||--|| SubscriptionService : "utilise"
-    ImageService ||--|| FileStorageService : "utilise"
-    ImageService ||--|| SubscriptionService : "utilise"
-    EstablishmentEnrichment ||--|| GooglePlacesService : "utilise"
-    AuthService ||--|| ValidationService : "utilise"
+    EstablishmentService --> ValidationService : "utilise"
+    EstablishmentService --> EstablishmentEnrichment : "utilise"
+    SearchService --> ScoringService : "utilise"
+    SearchService --> GeocodingService : "utilise"
+    ProfessionalService --> SubscriptionService : "utilise"
+    EventService --> SubscriptionService : "utilise"
+    ImageService --> FileStorageService : "utilise"
+    ImageService --> SubscriptionService : "utilise"
+    EstablishmentEnrichment --> GooglePlacesService : "utilise"
+    AuthService --> ValidationService : "utilise"
 ```
 
 ### Descriptions des Classes Principales
