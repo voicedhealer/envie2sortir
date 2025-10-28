@@ -64,25 +64,35 @@ const HelpModal = memo(function HelpModal({ isOpen, onClose, currentStep }: Help
           title: "Vérification SIRET et informations professionnelles",
           icon: "🏢",
           content: {
-            introduction: "Cette étape permet de vérifier votre entreprise et vos informations professionnelles.",
+            introduction: "Cette étape permet de vérifier votre entreprise et de récupérer automatiquement vos informations professionnelles via l'API gouvernementale.",
             steps: [
               {
                 title: "Numéro SIRET",
-                description: "Le SIRET est obligatoire pour vérifier votre entreprise. Vous le trouvez sur vos documents officiels (K-bis, factures, etc.)."
+                description: "Saisissez votre numéro SIRET (14 chiffres). Vous le trouvez sur vos documents officiels (K-bis, factures, etc.). La vérification se fait automatiquement."
               },
               {
-                title: "Vérification automatique",
-                description: "Une fois le SIRET saisi, nous vérifions automatiquement les informations de votre entreprise."
+                title: "Vérification automatique INSEE",
+                description: "Nous vérifions votre SIRET auprès de l'API Recherche d'Entreprises du gouvernement français. Cette vérification est gratuite et sécurisée."
               },
               {
-                title: "Confirmation des données",
-                description: "Vérifiez que les informations récupérées correspondent bien à votre entreprise."
+                title: "Récupération des données",
+                description: "Si votre SIRET est valide, nous récupérons automatiquement : raison sociale, forme juridique, adresse, activité, date de création et effectifs."
+              },
+              {
+                title: "Utilisation des informations",
+                description: "Cliquez sur 'Utiliser ces informations' pour pré-remplir automatiquement le formulaire avec les données officielles de votre entreprise."
+              },
+              {
+                title: "Vérification et modification",
+                description: "Vérifiez que toutes les informations correspondent à votre entreprise. Vous pouvez modifier tous les champs si nécessaire avant de continuer."
               }
             ],
             tips: [
               "📄 Le SIRET se trouve sur votre K-bis ou vos factures",
-              "✅ La vérification est automatique et sécurisée",
-              "🔍 Vérifiez que les informations correspondent à votre entreprise"
+              "✅ La vérification est automatique et gratuite via l'API gouvernementale",
+              "🔄 Les données sont pré-remplies automatiquement pour vous faire gagner du temps",
+              "✏️ Vous pouvez modifier tous les champs si nécessaire",
+              "⚠️ Si votre SIRET est déjà utilisé, vous devrez vous connecter à votre compte existant"
             ]
           }
         };

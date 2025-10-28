@@ -292,6 +292,65 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
         </div>
       </div>
 
+      {/* Informations SIRET de l'entreprise */}
+      {(data as any).companyName && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <span className="text-xl">🏢</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Informations SIRET de l'entreprise
+              </h3>
+            </div>
+            <button
+              onClick={() => onEdit(1)}
+              className="px-6 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+            >
+              Modifier
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Numéro SIRET</label>
+              <p className="text-gray-900 font-medium">{(data as any).siret || 'Non renseigné'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Raison sociale</label>
+              <p className="text-gray-900 font-medium">{(data as any).companyName || 'Non renseigné'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Forme juridique</label>
+              <p className="text-gray-900">{(data as any).legalStatus || 'Non renseigné'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Date de création</label>
+              <p className="text-gray-900">
+                {(data as any).siretCreationDate 
+                  ? new Date((data as any).siretCreationDate).toLocaleDateString('fr-FR')
+                  : 'Non renseigné'
+                }
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-500 mb-1">Adresse de l'entreprise</label>
+              <p className="text-gray-900">{(data as any).siretAddress || 'Non renseigné'}</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-500 mb-1">Activité</label>
+              <p className="text-gray-900">{(data as any).siretActivity || 'Non renseigné'}</p>
+            </div>
+            {(data as any).siretEffectifs && (
+              <div>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Effectifs</label>
+                <p className="text-gray-900">{(data as any).siretEffectifs}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Contact et réseaux sociaux */}
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-8">
         <div className="flex items-center justify-between mb-6">

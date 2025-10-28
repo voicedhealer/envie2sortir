@@ -149,18 +149,26 @@ export async function GET(request: NextRequest) {
         const startDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
         
-        const eventStartHour = startDate.getHours();
-        const eventStartMinute = startDate.getMinutes();
-        const eventEndHour = endDate ? endDate.getHours() : 23;
-        const eventEndMinute = endDate ? endDate.getMinutes() : 59;
-        
-        const eventStartTime = eventStartHour * 60 + eventStartMinute;
-        const eventEndTime = eventEndHour * 60 + eventEndMinute;
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        
-        // Si on est dans les horaires quotidiens, l'événement est "en cours"
-        if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
-          eventStatus = 'ongoing';
+        // D'abord vérifier si l'événement a déjà commencé selon sa date de début
+        if (now < startDate) {
+          eventStatus = 'upcoming'; // Pas encore commencé
+        } else if (endDate && now > endDate) {
+          eventStatus = 'past'; // Terminé
+        } else {
+          // L'événement est dans sa période de validité, vérifier les horaires quotidiens
+          const eventStartHour = startDate.getHours();
+          const eventStartMinute = startDate.getMinutes();
+          const eventEndHour = endDate ? endDate.getHours() : 23;
+          const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+          
+          const eventStartTime = eventStartHour * 60 + eventStartMinute;
+          const eventEndTime = eventEndHour * 60 + eventEndMinute;
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          
+          // Si on est dans les horaires quotidiens, l'événement est "en cours"
+          if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+            eventStatus = 'ongoing';
+          }
         }
       } else {
         // Pour les événements ponctuels, vérifier si on est dans la période

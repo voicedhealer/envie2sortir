@@ -115,7 +115,14 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               accountFirstName: formData.accountFirstName,
               accountLastName: formData.accountLastName,
               accountEmail: formData.accountEmail,
-              accountPhone: formData.accountPhone
+              accountPhone: formData.accountPhone,
+              // Nouvelles données SIRET enrichies
+              companyName: formData.companyName,
+              legalStatus: formData.legalStatus,
+              siretAddress: formData.siretAddress,
+              siretActivity: formData.siretActivity,
+              siretCreationDate: formData.siretCreationDate,
+              siretEffectifs: formData.siretEffectifs
             }}
             errors={errors}
             siretVerification={siretVerification}
@@ -246,6 +253,14 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               accountLastName: formData.accountLastName,
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
+              // Nouvelles données SIRET enrichies
+              siret: formData.siret,
+              companyName: formData.companyName,
+              legalStatus: formData.legalStatus,
+              siretAddress: formData.siretAddress,
+              siretActivity: formData.siretActivity,
+              siretCreationDate: formData.siretCreationDate,
+              siretEffectifs: formData.siretEffectifs,
               termsAccepted: formData.termsAccepted,
               // Données d'enrichissement
               enrichmentData: enrichmentData,

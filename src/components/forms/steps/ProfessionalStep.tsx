@@ -10,6 +10,13 @@ interface ProfessionalStepProps {
     accountLastName: string;
     accountEmail: string;
     accountPhone: string;
+    // Nouvelles données SIRET enrichies
+    companyName: string;
+    legalStatus: string;
+    siretAddress: string;
+    siretActivity: string;
+    siretCreationDate: string;
+    siretEffectifs: string;
   };
   errors: Record<string, string>;
   siretVerification: SiretVerification;
@@ -33,6 +40,10 @@ export default function ProfessionalStep({
     exists: false,
     message: ''
   });
+
+  // État pour afficher le formulaire SIRET enrichi
+  const [showSiretForm, setShowSiretForm] = useState(false);
+  const [siretDataUsed, setSiretDataUsed] = useState(false);
 
   // Hook pour la vérification INSEE
   const { 
@@ -163,17 +174,9 @@ export default function ProfessionalStep({
           </div>
         )}
         
-        {/* ✓ Entreprise vérifiée (ancien système) */}
-        {siretVerification.status === 'valid' && siretVerification.data && !siretExistsCheck.exists && (
-          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800">
-              ✓ Entreprise vérifiée: {siretVerification.data.denomination}
-            </p>
-          </div>
-        )}
 
         {/* ✓ Entreprise vérifiée par l'INSEE */}
-        {inseeResult?.isValid && inseeResult.data && !siretExistsCheck.exists && (
+        {inseeResult?.isValid && inseeResult.data && !siretExistsCheck.exists && !siretDataUsed && (
           <div className="mt-2 p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-start space-x-2">
               <span className="text-green-600 text-lg">✓</span>
@@ -202,7 +205,14 @@ export default function ProfessionalStep({
                     if (inseeResult.data) {
                       onInputChange('companyName', inseeResult.data.companyName);
                       onInputChange('legalStatus', inseeResult.data.legalStatusLabel);
+                      onInputChange('siretAddress', inseeResult.data.address);
+                      onInputChange('siretActivity', inseeResult.data.activityLabel);
+                      onInputChange('siretCreationDate', inseeResult.data.creationDate);
+                      onInputChange('siretEffectifs', inseeResult.data.effectifTranche || '');
                     }
+                    // Afficher le formulaire SIRET et masquer l'encadré vert
+                    setShowSiretForm(true);
+                    setSiretDataUsed(true);
                   }}
                   className="mt-2 text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
                 >
@@ -221,13 +231,16 @@ export default function ProfessionalStep({
             </p>
           </div>
         )}
-        
-        {/* ✓ SIRET disponible */}
-        {siretExistsCheck.message && !siretExistsCheck.exists && formData.siret.length === 14 && (
+
+        {/* Message de confirmation après utilisation des données INSEE */}
+        {siretDataUsed && (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              ✓ {siretExistsCheck.message}
-            </p>
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-600 text-lg">✓</span>
+              <p className="text-sm text-blue-800">
+                Données INSEE utilisées. Veuillez vérifier et compléter le formulaire ci-dessous.
+              </p>
+            </div>
           </div>
         )}
         
@@ -261,6 +274,150 @@ export default function ProfessionalStep({
           Ces informations ont été saisies lors de la création de votre compte.
         </p>
       </div>
+
+      {/* Formulaire SIRET enrichi */}
+      {showSiretForm && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <span className="text-xl">🏢</span>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Informations de l'entreprise
+            </h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Numéro SIRET */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Numéro SIRET *
+              </label>
+              <input
+                type="text"
+                value={formData.siret}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                readOnly
+              />
+              <p className="text-xs text-gray-500 mt-1">Numéro SIRET vérifié par l'INSEE</p>
+            </div>
+
+            {/* Raison sociale */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Raison sociale *
+              </label>
+              <input
+                type="text"
+                value={formData.companyName}
+                onChange={(e) => onInputChange('companyName', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.companyName ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Nom de l'entreprise"
+              />
+              {errors.companyName && <p className="text-red-500 text-sm mt-1">{errors.companyName}</p>}
+            </div>
+
+                   {/* Forme juridique */}
+                   <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-2">
+                       Forme juridique *
+                     </label>
+                     <input
+                       type="text"
+                       value={formData.legalStatus}
+                       onChange={(e) => onInputChange('legalStatus', e.target.value)}
+                       className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                         errors.legalStatus ? 'border-red-500' : 'border-gray-300'
+                       }`}
+                       placeholder="Ex: SARL, SAS, Auto-entrepreneur..."
+                     />
+                     {errors.legalStatus && <p className="text-red-500 text-sm mt-1">{errors.legalStatus}</p>}
+                     {!formData.legalStatus && (
+                       <p className="text-orange-600 text-xs mt-1">
+                         ℹ️ Si la forme juridique n'a pas été trouvée automatiquement, veuillez la renseigner manuellement
+                       </p>
+                     )}
+                   </div>
+
+            {/* Adresse */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Adresse *
+              </label>
+              <input
+                type="text"
+                value={formData.siretAddress}
+                onChange={(e) => onInputChange('siretAddress', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.siretAddress ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Adresse complète de l'entreprise"
+              />
+              {errors.siretAddress && <p className="text-red-500 text-sm mt-1">{errors.siretAddress}</p>}
+            </div>
+
+            {/* Activité */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Activité *
+              </label>
+              <input
+                type="text"
+                value={formData.siretActivity}
+                onChange={(e) => onInputChange('siretActivity', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.siretActivity ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Activité principale de l'entreprise"
+              />
+              {errors.siretActivity && <p className="text-red-500 text-sm mt-1">{errors.siretActivity}</p>}
+            </div>
+
+            {/* Date de création */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date de création *
+              </label>
+              <input
+                type="date"
+                value={formData.siretCreationDate}
+                onChange={(e) => onInputChange('siretCreationDate', e.target.value)}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.siretCreationDate ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.siretCreationDate && <p className="text-red-500 text-sm mt-1">{errors.siretCreationDate}</p>}
+            </div>
+
+            {/* Effectifs (optionnel) */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Effectifs (optionnel)*
+              </label>
+              <input
+                type="text"
+                value={formData.siretEffectifs}
+                onChange={(e) => onInputChange('siretEffectifs', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Ex: Tranche 42, 10-20 salariés..."
+              />
+              <p className="text-xs text-gray-500 mt-1">*Information optionnelle sur les effectifs</p>
+            </div>
+          </div>
+
+          {/* Message de confirmation */}
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-600 text-lg">ℹ️</span>
+              <p className="text-sm text-blue-800">
+                Veuillez vérifier et compléter les informations ci-dessus avant de continuer.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

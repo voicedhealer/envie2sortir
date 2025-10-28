@@ -104,10 +104,10 @@ class RechercheEntreprisesService {
       
       // Enrichir avec les nomenclatures officielles
       const legalStatusCode = etablissement.nature_juridique || '';
-      const legalStatusLabel = formesJuridiques[legalStatusCode] || 'Forme juridique inconnue';
+      const legalStatusLabel = formesJuridiques[legalStatusCode] || '';
       
       const activityCode = etablissement.activite_principale || '';
-      const activityLabel = codesNAF[activityCode] || 'Activité inconnue';
+      const activityLabel = codesNAF[activityCode] || '';
       
       // Extraire les informations enrichies
       const result: SiretVerificationResult = {
