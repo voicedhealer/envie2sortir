@@ -615,7 +615,8 @@ graph TB
 - **Google Places API** : Enrichissement automatique des établissements
 - **Google Maps** : Géolocalisation et cartes
 - **API SIRET** : Vérification des professionnels
-- **TheFork** : Intégration réservations restaurants
+- **Twilio** : Vérification du numéro du propriétaire
+- **TheFork** : Liens de réservations restaurants
 - **Uber Eats** : Liens de livraison
 
 #### 📁 **Stockage Fichiers**
@@ -668,7 +669,7 @@ graph TB
 
 **User (Utilisateurs Finaux)**
 - 👥 **Rôle** : Utilisateurs finaux du site
-- ✅ **Peuvent** : chercher, liker, commenter, mettre en favoris
+- ✅ **Peuvent** : chercher, mettre en favoris, laisser un avis, interagir avec les cards events social
 - ❌ **NE PEUVENT PAS** : créer/gérer des établissements
 - 🔗 **Relations** : UserComment, UserFavorite, UserLike
 
@@ -1223,8 +1224,8 @@ cd envie2sortir
 npm install
 
 # Configurer la base de données
-cp .env.example .env.local
-# Modifier les variables dans .env.local
+cp .env
+# Modifier les variables dans .env
 
 # Générer le client Prisma
 npx prisma generate
@@ -1727,7 +1728,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
 ---
 
-## 📈 Mise à Jour du README (Janvier 2025)
+## 📈 Mise à Jour du README (Octobre 2025)
 
 ### ✅ Nouvelles Fonctionnalités Documentées
 - **🎯 Système de Bons Plans Journaliers** : Gestion complète pour les établissements Premium
@@ -1735,7 +1736,7 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 - **📊 Analytics et Monitoring Avancés** : Tracking et métriques de performance
 - **🔒 Sécurité Renforcée** : Protection CSRF, rate limiting, tests de sécurité
 - **🏢 Administration Complète** : Interface admin refaite avec analytics
-- **📄 Pages Légales et Support** : CGV, FAQ, contact, conformité RGPD
+- **📄 Pages Légales et Support** : CGV, CGU, FAQ, contact, conformité RGPD, politique de confidentialité
 - **🧪 Tests et Qualité** : 120+ tests avec couverture complète
 
 ### 📋 API Endpoints Mis à Jour
