@@ -196,7 +196,7 @@ const ProfessionalWelcomeModal = memo(function ProfessionalWelcomeModal({ isOpen
                     </li>
                     <li className="flex items-center">
                       <span className="text-pink-500 mr-2">✓</span>
-                      ⭐ Mise en avant prioritaire dans les résultats de recherche
+                      ⭐ Mise en avant prioritaire dans les résultats de recherches, avec le filtre "Notre sélection"
                     </li>
                     <li className="flex items-center">
                       <span className="text-pink-500 mr-2">✓</span>
