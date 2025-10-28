@@ -1,47 +1,31 @@
-import { INSEEResponse, SiretVerificationResult, INSEEConfig } from '@/types/siret.types';
+import { SiretVerificationResult } from '@/types/siret.types';
+import formesJuridiques from '@/lib/nomenclatures/formes-juridiques.json';
+import codesNAF from '@/lib/nomenclatures/codes-naf.json';
 
-class INSEEService {
-  private config: INSEEConfig;
-  private accessToken: string | null = null;
-  private tokenExpiry: number = 0;
+// Types pour l'API Recherche d'Entreprises (gratuite)
+interface RechercheEntreprisesResponse {
+  results: Array<{
+    nom_complet: string;
+    siren: string;
+    siret: string;
+    siege: {
+      adresse: string;
+      code_postal: string;
+      commune: string;
+    };
+    activite_principale: string;
+    nature_juridique: string;
+    date_creation: string;
+    tranche_effectif_salarie: string;
+    etat_administratif: string;
+  }>;
+}
 
-  constructor(config: INSEEConfig) {
-    this.config = config;
-  }
+class RechercheEntreprisesService {
+  private baseUrl = 'https://recherche-entreprises.api.gouv.fr';
 
-  /**
-   * Obtient un token d'accès OAuth2 pour l'API INSEE
-   */
-  private async getAccessToken(): Promise<string> {
-    // Vérifier si le token est encore valide
-    if (this.accessToken && Date.now() < this.tokenExpiry) {
-      return this.accessToken;
-    }
-
-    try {
-      const response = await fetch('https://api.insee.fr/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Basic ${btoa(`${this.config.consumerKey}:${this.config.consumerSecret}`)}`
-        },
-        body: 'grant_type=client_credentials'
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur d'authentification INSEE: ${response.status}`);
-      }
-
-      const tokenData = await response.json();
-      this.accessToken = tokenData.access_token;
-      // Le token expire généralement en 1 heure, on le renouvelle 5 minutes avant
-      this.tokenExpiry = Date.now() + (tokenData.expires_in - 300) * 1000;
-
-      return this.accessToken;
-    } catch (error) {
-      console.error('Erreur lors de l\'obtention du token INSEE:', error);
-      throw new Error('Impossible d\'obtenir l\'accès à l\'API INSEE');
-    }
+  constructor() {
+    // Plus besoin de configuration, l'API est gratuite !
   }
 
   /**
@@ -76,35 +60,6 @@ class INSEEService {
   }
 
   /**
-   * Formate une adresse à partir des données INSEE
-   */
-  private formatAddress(etablissement: any): string {
-    const parts = [];
-    
-    if (etablissement.numeroVoieEtablissement) {
-      parts.push(etablissement.numeroVoieEtablissement);
-    }
-    
-    if (etablissement.typeVoieEtablissement) {
-      parts.push(etablissement.typeVoieEtablissement);
-    }
-    
-    if (etablissement.libelleVoieEtablissement) {
-      parts.push(etablissement.libelleVoieEtablissement);
-    }
-    
-    if (etablissement.codePostalEtablissement) {
-      parts.push(etablissement.codePostalEtablissement);
-    }
-    
-    if (etablissement.libelleCommuneEtablissement) {
-      parts.push(etablissement.libelleCommuneEtablissement);
-    }
-    
-    return parts.join(' ');
-  }
-
-  /**
    * Vérifie un numéro SIRET et récupère les informations de l'entreprise
    */
   async verifySiret(siret: string): Promise<SiretVerificationResult> {
@@ -117,45 +72,58 @@ class INSEEService {
         };
       }
 
-      // Obtenir le token d'accès OAuth2
-      const token = await this.getAccessToken();
-
-      // Appel à l'API INSEE avec le token
-      const response = await fetch(`https://api.insee.fr/entreprises/sirene/V3/siret/${siret}`, {
+      // Appel à l'API Recherche d'Entreprises (gratuite, sans authentification)
+      const response = await fetch(`${this.baseUrl}/search?q=${siret}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
         }
       });
 
-      if (response.status === 404) {
+      if (!response.ok) {
+        throw new Error(`Erreur API Recherche d'Entreprises: ${response.status}`);
+      }
+
+      const data: RechercheEntreprisesResponse = await response.json();
+      
+      // Vérifier si des résultats ont été trouvés
+      if (!data.results || data.results.length === 0) {
         return {
           isValid: false,
           error: 'Aucun établissement trouvé avec ce numéro SIRET'
         };
       }
 
-      if (!response.ok) {
-        throw new Error(`Erreur API INSEE: ${response.status}`);
-      }
-
-      const data: INSEEResponse = await response.json();
+      const etablissement = data.results[0];
       
-      // Extraire les informations pertinentes
+      // Construire l'adresse complète
+      const adresseParts = [];
+      if (etablissement.siege?.adresse) adresseParts.push(etablissement.siege.adresse);
+      if (etablissement.siege?.code_postal) adresseParts.push(etablissement.siege.code_postal);
+      if (etablissement.siege?.commune) adresseParts.push(etablissement.siege.commune);
+      const adresseComplete = adresseParts.join(' ');
+      
+      // Enrichir avec les nomenclatures officielles
+      const legalStatusCode = etablissement.nature_juridique || '';
+      const legalStatusLabel = formesJuridiques[legalStatusCode] || 'Forme juridique inconnue';
+      
+      const activityCode = etablissement.activite_principale || '';
+      const activityLabel = codesNAF[activityCode] || 'Activité inconnue';
+      
+      // Extraire les informations enrichies
       const result: SiretVerificationResult = {
         isValid: true,
         data: {
-          siret: data.etablissement.siret,
-          siren: data.etablissement.siren,
-          companyName: data.uniteLegale.denominationUniteLegale || 
-                      data.uniteLegale.denominationUsuelle1UniteLegale || 
-                      'Nom non disponible',
-          legalStatus: data.uniteLegale.categorieJuridiqueUniteLegale || '',
-          legalStatusLabel: data.uniteLegale.libelleCategorieJuridiqueUniteLegale || '',
-          address: this.formatAddress(data.etablissement),
-          activity: data.etablissement.activitePrincipaleEtablissement || '',
-          activityLabel: data.etablissement.libelleActivitePrincipaleEtablissement || '',
-          creationDate: data.uniteLegale.dateCreationUniteLegale
+          siret: etablissement.siret,
+          siren: etablissement.siren,
+          companyName: etablissement.nom_complet,
+          legalStatus: legalStatusCode,
+          legalStatusLabel: legalStatusLabel,
+          address: adresseComplete,
+          activityCode: activityCode,
+          activityLabel: activityLabel,
+          creationDate: etablissement.date_creation || '',
+          effectifTranche: etablissement.tranche_effectif_salarie || '',
+          etatAdministratif: etablissement.etat_administratif || ''
         }
       };
 
@@ -171,21 +139,18 @@ class INSEEService {
   }
 }
 
-// Instance singleton du service INSEE
-let inseeService: INSEEService | null = null;
+// Instance singleton du service
+let rechercheEntreprisesService: RechercheEntreprisesService | null = null;
 
-export function getINSEEService(): INSEEService {
-  if (!inseeService) {
-    const config: INSEEConfig = {
-      baseUrl: 'https://api.insee.fr/api-sirene/3.11',
-      consumerKey: process.env.INSEE_CONSUMER_KEY || '',
-      consumerSecret: process.env.INSEE_CONSUMER_SECRET || ''
-    };
-    
-    inseeService = new INSEEService(config);
+export function getRechercheEntreprisesService(): RechercheEntreprisesService {
+  if (!rechercheEntreprisesService) {
+    rechercheEntreprisesService = new RechercheEntreprisesService();
   }
   
-  return inseeService;
+  return rechercheEntreprisesService;
 }
 
-export default INSEEService;
+// Alias pour la compatibilité avec l'ancien code
+export const getINSEEService = getRechercheEntreprisesService;
+
+export default RechercheEntreprisesService;

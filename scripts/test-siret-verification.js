@@ -40,10 +40,10 @@ function loadEnvFile() {
 // Charger les variables d'environnement
 loadEnvFile();
 
-// Configuration simplifiée (nouveau système API Key)
+// Configuration pour l'API Recherche d'Entreprises (gratuite, sans clé API)
 const CONFIG = {
-  baseUrl: process.env.NEXT_PUBLIC_INSEE_API_URL || 'https://api.insee.fr/api-sirene/3.11',
-  apiKey: process.env.INSEE_API_KEY || ''
+  baseUrl: 'recherche-entreprises.api.gouv.fr',
+  // Plus besoin de clé API !
 };
 
 // SIRET de test par défaut
@@ -89,20 +89,19 @@ async function verifySiret(siret) {
     //   return;
     // }
     
-    console.log('✅ Format SIRET valide (validation désactivée pour test API)');
+    console.log('✅ Format SIRET valide');
+    console.log('🌐 Appel à l\'API Recherche d\'Entreprises...');
     
-    // Appel direct à l'API avec la clé API
-    console.log('🌐 Appel à l\'API INSEE...');
     const result = await new Promise((resolve, reject) => {
       const options = {
-        hostname: 'api.insee.fr',
+        hostname: CONFIG.baseUrl,
         port: 443,
-        path: `/api-sirene/3.11/siret/${siret}`,
+        path: `/search?q=${siret}`,
         method: 'GET',
-      headers: {
-        'X-INSEE-Api-Key-Integration': CONFIG.apiKey,  // ⚠️ NOM EXACT !
-        'Accept': 'application/json'
-      }
+        headers: {
+          'Accept': 'application/json'
+          // Plus besoin d'authentification !
+        }
       };
 
       const req = https.request(options, (res) => {
@@ -113,11 +112,10 @@ async function verifySiret(siret) {
         });
         
         res.on('end', () => {
-          if (res.statusCode === 404) {
-            resolve({ error: 'SIRET non trouvé' });
-          } else if (res.statusCode === 200) {
+          if (res.statusCode === 200) {
             try {
-              resolve(JSON.parse(data));
+              const jsonData = JSON.parse(data);
+              resolve(jsonData);
             } catch (error) {
               reject(new Error(`Erreur parsing: ${error.message}`));
             }
@@ -135,42 +133,22 @@ async function verifySiret(siret) {
       req.end();
     });
     
-    if (result.error) {
-      console.log(`❌ ${result.error}`);
-      return;
+    // Affichage des résultats
+    if (result.results && result.results.length > 0) {
+      const etablissement = result.results[0];
+      console.log('\n✅ SIRET trouvé !');
+      console.log('=====================================');
+      console.log('Nom:', etablissement.nom_complet);
+      console.log('SIREN:', etablissement.siren);
+      console.log('SIRET:', etablissement.siret);
+      console.log('Adresse:', etablissement.siege?.adresse);
+      console.log('Code postal:', etablissement.siege?.code_postal);
+      console.log('Ville:', etablissement.siege?.commune);
+      console.log('Code NAF:', etablissement.activite_principale);
+      console.log('Statut:', etablissement.etat_administratif);
+    } else {
+      console.log('❌ SIRET non trouvé ou établissement fermé');
     }
-    
-    // Afficher les résultats
-    console.log('\n📋 Informations de l\'entreprise:');
-    console.log('================================');
-    
-    const etablissement = result.etablissement;
-    const uniteLegale = result.uniteLegale;
-    
-    console.log(`SIRET: ${etablissement.siret}`);
-    console.log(`SIREN: ${etablissement.siren}`);
-    console.log(`Raison sociale: ${uniteLegale.denominationUniteLegale || uniteLegale.denominationUsuelle1UniteLegale || 'Non disponible'}`);
-    console.log(`Statut juridique: ${uniteLegale.libelleCategorieJuridiqueUniteLegale || 'Non disponible'}`);
-    
-    // Adresse
-    const adresse = [];
-    if (etablissement.numeroVoieEtablissement) adresse.push(etablissement.numeroVoieEtablissement);
-    if (etablissement.typeVoieEtablissement) adresse.push(etablissement.typeVoieEtablissement);
-    if (etablissement.libelleVoieEtablissement) adresse.push(etablissement.libelleVoieEtablissement);
-    if (etablissement.codePostalEtablissement) adresse.push(etablissement.codePostalEtablissement);
-    if (etablissement.libelleCommuneEtablissement) adresse.push(etablissement.libelleCommuneEtablissement);
-    
-    console.log(`Adresse: ${adresse.join(' ')}`);
-    
-    if (etablissement.libelleActivitePrincipaleEtablissement) {
-      console.log(`Activité: ${etablissement.libelleActivitePrincipaleEtablissement}`);
-    }
-    
-    if (uniteLegale.dateCreationUniteLegale) {
-      console.log(`Date de création: ${uniteLegale.dateCreationUniteLegale}`);
-    }
-    
-    console.log('\n✅ Vérification réussie !');
     
   } catch (error) {
     console.error('❌ Erreur:', error.message);
@@ -181,16 +159,9 @@ async function verifySiret(siret) {
 async function main() {
   const siret = process.argv[2] || DEFAULT_SIRET;
   
-  console.log('🧪 Test de vérification SIRET avec l\'API INSEE');
-  console.log('===============================================\n');
-  
-  if (!CONFIG.apiKey) {
-    console.log('❌ Configuration manquante:');
-    console.log('   INSEE_API_KEY doit être défini');
-    console.log('   Obtenez votre clé API sur https://portail-api.insee.fr/');
-    console.log('   Ajoutez-la à votre fichier .env');
-    process.exit(1);
-  }
+  console.log('🧪 Test de vérification SIRET avec l\'API Recherche d\'Entreprises');
+  console.log('================================================================\n');
+  console.log('✅ API gratuite et sans clé API requise !');
   
   await verifySiret(siret);
 }

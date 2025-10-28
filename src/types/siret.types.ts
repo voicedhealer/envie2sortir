@@ -52,12 +52,14 @@ export interface SiretVerificationResult {
     siret: string;
     siren: string;
     companyName: string;
-    legalStatus: string;
-    legalStatusLabel: string;
-    address: string;
-    activity: string;
-    activityLabel: string;
-    creationDate?: string;
+    legalStatus: string;           // Code (ex: "5710")
+    legalStatusLabel: string;     // Libellé (ex: "SAS")
+    address: string;              // Adresse complète reconstruite
+    activityCode: string;          // Code NAF (ex: "56.10A")
+    activityLabel: string;        // Libellé NAF (ex: "Restauration traditionnelle")
+    creationDate?: string;        // Date de création
+    effectifTranche?: string;     // Tranche d'effectifs
+    etatAdministratif?: string;   // Statut administratif (A/F)
   };
   error?: string;
 }

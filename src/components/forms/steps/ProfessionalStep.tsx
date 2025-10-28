@@ -186,16 +186,22 @@ export default function ProfessionalStep({
                   <p><strong>Statut juridique :</strong> {inseeResult.data.legalStatusLabel}</p>
                   <p><strong>Adresse :</strong> {inseeResult.data.address}</p>
                   {inseeResult.data.activityLabel && (
-                    <p><strong>Activité :</strong> {inseeResult.data.activityLabel}</p>
+                    <p><strong>Activité :</strong> {inseeResult.data.activityLabel} ({inseeResult.data.activityCode})</p>
+                  )}
+                  {inseeResult.data.creationDate && (
+                    <p><strong>Créée le :</strong> {new Date(inseeResult.data.creationDate).toLocaleDateString('fr-FR')}</p>
+                  )}
+                  {inseeResult.data.effectifTranche && (
+                    <p><strong>Effectifs :</strong> Tranche {inseeResult.data.effectifTranche}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    // Pré-remplir les champs avec les données INSEE
+                    // Pré-remplir les champs avec les données INSEE enrichies
                     if (inseeResult.data) {
                       onInputChange('companyName', inseeResult.data.companyName);
-                      onInputChange('legalStatus', inseeResult.data.legalStatus);
+                      onInputChange('legalStatus', inseeResult.data.legalStatusLabel);
                     }
                   }}
                   className="mt-2 text-xs bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 transition-colors"
