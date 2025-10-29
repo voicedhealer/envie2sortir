@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { isEventInProgress, isEventHappeningToday } from '@/lib/date-utils';
 import { useLocation } from '@/hooks/useLocation';
@@ -30,6 +30,12 @@ interface Event {
   };
   engagementScore: number;
   engagementCount: number;
+  gaugePercentage?: number;
+  eventBadge?: {
+    type: string;
+    label: string;
+    color: string;
+  } | null;
   status?: 'ongoing' | 'upcoming';
 }
 
@@ -451,7 +457,6 @@ export default function EventsCarousel() {
                 <div className="flex gap-6 py-4 px-4 items-stretch">
                   {filteredEvents.map((event) => {
                 const isLive = event.status === 'ongoing';
-                const isTrending = trendingEvents.some(t => t.id === event.id);
                 
                 console.log('🔍 [EventsCarousel] Événement:', {
                   title: event.title,
@@ -485,9 +490,9 @@ export default function EventsCarousel() {
                               </div>
                             )}
                             
-                            {/* Badge LIVE avec animation */}
+                            {/* Badge LIVE avec animation - Position en haut à gauche */}
                             {isLive && (
-                              <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-full font-bold text-sm shadow-lg">
+                              <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-full font-bold text-sm shadow-lg z-10">
                                 <span className="relative flex h-3 w-3">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                   <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
@@ -496,20 +501,30 @@ export default function EventsCarousel() {
                               </div>
                             )}
 
-                            {/* Badge Trending */}
-                            {!isLive && isTrending && event.engagementScore > 5 && (
-                              <div className="absolute top-3 left-3 flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-pink-500 text-white rounded-full font-bold text-sm shadow-lg">
-                                <Flame className="w-4 h-4" />
-                                TENDANCE
-                              </div>
-                            )}
-
-                            {/* Date badge - style translucide avec plage de dates */}
-                            <div className="absolute top-4 right-4 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 text-center shadow-lg z-10">
+                            {/* Date badge - style translucide avec plage de dates - Position en haut à droite */}
+                            <div className="absolute top-3 right-4 bg-white/60 backdrop-blur-sm rounded-xl px-4 py-2 text-center shadow-lg z-10">
                               <div className="text-lg font-bold text-black">
                                 {formatEventDateBadge(event)}
                               </div>
                             </div>
+
+                            {/* Badge Engagement - Position sous la date (en haut à droite) */}
+                            {event.gaugePercentage !== undefined && event.gaugePercentage > 0 && (
+                              <div className="absolute top-11 right-4 flex items-center gap-1.5 px-2 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-xl font-bold text-sm shadow-lg z-10">
+                                {/* Icône basée sur le badge de l'événement */}
+                                <span className="text-xs">
+                                  {event.eventBadge?.type === 'fire' && '🔥'}
+                                  {event.eventBadge?.type === 'gold' && '🏆'}
+                                  {event.eventBadge?.type === 'silver' && '⭐'}
+                                  {event.eventBadge?.type === 'bronze' && '👍'}
+                                  {!event.eventBadge && '❄️'}
+                                </span>
+                                {/* Pourcentage */}
+                                <span className="text-xs font-semibold">
+                                  {Math.round(event.gaugePercentage)}%
+                                </span>
+                              </div>
+                            )}
 
                             {/* Titre minimal toujours visible - avec gradient */}
                             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 z-10">

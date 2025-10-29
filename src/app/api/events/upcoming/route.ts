@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+// Calcul du pourcentage de la jauge (0-150%)
+function calculateGaugePercentage(totalScore: number): number {
+  // Formule : on considère qu'un score de 15 = 100%
+  // Donc 22.5 = 150%
+  const percentage = (totalScore / 15) * 100;
+  return Math.min(Math.max(percentage, 0), 150); // Clamp entre 0 et 150
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -138,6 +146,21 @@ export async function GET(request: NextRequest) {
 
       const { engagements, ...eventData } = event;
 
+      // Calculer le gaugePercentage et eventBadge pour cohérence avec les overlays
+      const gaugePercentage = calculateGaugePercentage(score);
+      
+      // Déterminer le badge de l'événement (même logique que dans /api/events/[eventId]/engage)
+      let eventBadge = null;
+      if (gaugePercentage >= 150) {
+        eventBadge = { type: 'fire', label: '🔥 C\'EST LE FEU !', color: '#9C27B0' };
+      } else if (gaugePercentage >= 100) {
+        eventBadge = { type: 'gold', label: '🏆 Coup de Cœur', color: '#FFD700' };
+      } else if (gaugePercentage >= 75) {
+        eventBadge = { type: 'silver', label: '⭐ Populaire', color: '#C0C0C0' };
+      } else if (gaugePercentage >= 50) {
+        eventBadge = { type: 'bronze', label: '👍 Apprécié', color: '#CD7F32' };
+      }
+
       // 🎯 DÉTERMINER LE STATUT : "en cours" ou "à venir"
       let eventStatus = 'upcoming'; // Par défaut "à venir"
       
@@ -184,6 +207,8 @@ export async function GET(request: NextRequest) {
         ...eventData,
         engagementScore: score,
         engagementCount: engagements.length,
+        gaugePercentage,
+        eventBadge,
         status: eventStatus
       };
     });
