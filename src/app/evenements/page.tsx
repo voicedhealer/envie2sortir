@@ -172,7 +172,7 @@ export default function EventsPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold mb-2">🎉 Tous les événements</h1>
-              <p className="text-white/90">Découvrez ce qui se passe près de chez vous</p>
+              <p className="text-white/90">Découvrez ce qui se passe près de chez vous et ailleurs</p>
             </div>
             {liveEventsCount > 0 && (
               <div className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-full font-bold animate-pulse">
@@ -252,8 +252,8 @@ export default function EventsPage() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <Flame className="w-4 h-4" />
-                Tendances
+                <TrendingUp className="w-4 h-4" />
+                Niveau D'envie Général
               </button>
             </div>
 
@@ -359,7 +359,10 @@ export default function EventsPage() {
 
                         {/* Badge Engagement - Position sous la date (en haut à droite) */}
                         {event.gaugePercentage !== undefined && event.gaugePercentage > 0 && (
-                          <div className="absolute top-11 right-4 flex items-center gap-1.5 px-2 py-1.5 bg-purple-600/60 backdrop-blur-sm text-white rounded-xl font-bold text-sm shadow-lg z-10">
+                          <div className="absolute top-11 right-4 flex items-center gap-1.5 px-2 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-xl font-bold text-sm shadow-lg z-10">
+                            {/* Icône de tendance et N.E.G */}
+                            <TrendingUp className="w-3 h-3 text-orange-400" />
+                            <span className="text-[10px] font-normal">N.E.G</span>
                             {/* Icône basée sur le badge de l'événement */}
                             <span className="text-xs">
                               {event.eventBadge?.type === 'fire' && '🔥'}

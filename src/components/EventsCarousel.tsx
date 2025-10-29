@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Euro, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { isEventInProgress, isEventHappeningToday } from '@/lib/date-utils';
 import { useLocation } from '@/hooks/useLocation';
@@ -511,6 +511,9 @@ export default function EventsCarousel() {
                             {/* Badge Engagement - Position sous la date (en haut à droite) */}
                             {event.gaugePercentage !== undefined && event.gaugePercentage > 0 && (
                               <div className="absolute top-11 right-4 flex items-center gap-1.5 px-2 py-1.5 bg-black/60 backdrop-blur-sm text-white rounded-xl font-bold text-sm shadow-lg z-10">
+                                {/* Icône de tendance et N.E.G */}
+                                <TrendingUp className="w-3 h-3 text-orange-400" />
+                                <span className="text-[10px] font-normal">N.E.G</span>
                                 {/* Icône basée sur le badge de l'événement */}
                                 <span className="text-xs">
                                   {event.eventBadge?.type === 'fire' && '🔥'}
