@@ -92,6 +92,7 @@ export default function SummaryStepWrapper({
           instagram: formData.instagram,
           facebook: formData.facebook,
           tiktok: formData.tiktok,
+          youtube: formData.youtube,
           accountFirstName: formData.accountFirstName,
           accountLastName: formData.accountLastName,
           professionalPhone: formData.accountPhone,

@@ -250,6 +250,7 @@ model Event {
   startDate       DateTime
   endDate         DateTime?
   price           Float?
+  priceUnit       String?
   maxCapacity     Int?
   isRecurring     Boolean           @default(false)
   createdAt       DateTime          @default(now())
