@@ -213,7 +213,8 @@ export async function POST(
       userEngagement: type,
       newBadge,
       userKarma: user.karmaPoints,
-      usersByEngagement
+      usersByEngagement,
+      totalEngagements: engagements.length
     });
 
   } catch (error) {
