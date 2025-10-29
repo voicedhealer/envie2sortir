@@ -4,9 +4,36 @@ Ce guide vous explique comment dockeriser et déployer l'application Envie2Sorti
 
 ## 📋 Prérequis
 
-- Docker 20.10+
-- Docker Compose 2.0+
+- Docker 20.10+ et Docker Compose 2.0+
 - Git
+
+### 🔽 Installation de Docker
+
+#### Sur macOS
+
+1. **Téléchargez Docker Desktop** :
+   - Allez sur [https://www.docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop)
+   - Téléchargez Docker Desktop pour Mac (choisissez Intel ou Apple Silicon selon votre Mac)
+   - Installez en suivant l'assistant d'installation
+
+2. **Lancez Docker Desktop** :
+   - Ouvrez Docker Desktop depuis vos applications
+   - Attendez que le statut affiche "Docker is running"
+   - L'icône Docker doit apparaître dans votre barre de menu (en haut)
+
+3. **Vérifiez l'installation** :
+```bash
+docker --version
+docker compose version
+```
+
+4. **Note sur les commandes** :
+   - **Docker Compose V2** (intégré) : Utilisez `docker compose` (sans tiret)
+   - **Docker Compose V1** (standalone) : Utilisez `docker-compose` (avec tiret)
+   
+   ⚠️ **Important** : Les fichiers de ce projet utilisent `docker-compose`. Si vous avez Docker Compose V2, vous pouvez soit :
+   - Utiliser `docker compose` (sans tiret) à la place de `docker-compose` dans toutes les commandes
+   - Ou créer un alias : `alias docker-compose='docker compose'`
 
 ## 🚀 Démarrage rapide
 
@@ -114,6 +141,19 @@ Le mode `standalone` de Next.js crée une version autonome de l'application qui 
 - Les variables sensibles doivent être configurées via `.env`
 
 ## 🐛 Dépannage
+
+### Docker n'est pas installé ou commande introuvable
+
+**Erreur** : `zsh: command not found: docker-compose` ou `command not found: docker`
+
+**Solution** :
+1. Vérifiez que Docker Desktop est installé et en cours d'exécution
+2. Si Docker est installé mais `docker-compose` ne fonctionne pas, essayez :
+   ```bash
+   docker compose up -d --build
+   ```
+   (notez l'absence de tiret : `docker compose` au lieu de `docker-compose`)
+3. Si cela ne fonctionne toujours pas, installez Docker Desktop (voir section Installation ci-dessus)
 
 ### L'application ne démarre pas
 

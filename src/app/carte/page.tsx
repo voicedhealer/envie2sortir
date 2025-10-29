@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import MapComponent from "./map-component";
 
+// Force la page à être dynamique (pas de prérendu pendant le build)
+export const dynamic = 'force-dynamic';
+
 export default async function MapPage() {
   const now = new Date();
   
