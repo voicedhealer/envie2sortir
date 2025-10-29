@@ -1,0 +1,76 @@
+# Dépendances
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build
+.next
+out
+dist
+build
+
+# Fichiers de test
+coverage
+.nyc_output
+playwright-report
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__
+tests
+e2e
+
+# Logs
+logs
+*.log
+
+# Fichiers système
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environnement
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# Documentation
+docs
+README.md
+*.md
+
+# Scripts de développement
+scripts
+
+# Fichiers temporaires
+temp
+tmp
+*.tmp
+*.temp
+
+# Cache
+.cache
+.eslintcache
+.npm
+
+# Base de données de développement (sera créée dans le container)
+prisma/dev.db
+prisma/dev.db-journal
+prisma/migrations
+
+# Fichiers Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+

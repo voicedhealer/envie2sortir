@@ -1,0 +1,32 @@
+version: '3.8'
+
+# Configuration pour le développement
+# Usage: docker-compose -f docker-compose.dev.yml up
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: envie2sortir-app-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=file:./prisma/dev.db
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-dev-secret-key}
+    volumes:
+      # Mount du code source pour le hot-reload
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      # Persister la base de données
+      - ./prisma:/app/prisma
+      # Persister les uploads
+      - ./public/uploads:/app/public/uploads
+      # Persister les logs
+      - ./logs:/app/logs
+    command: npm run dev
+    restart: unless-stopped
+
