@@ -28,6 +28,18 @@ interface SummaryStepProps {
     accountLastName?: string;
     accountPhone: string;
     accountEmail: string;
+    // Nouvelles données SIRET enrichies
+    siret?: string;
+    companyName?: string;
+    legalStatus?: string;
+    siretAddress?: string;
+    siretActivity?: string;
+    siretCreationDate?: string;
+    siretEffectifs?: string;
+    // Champs supplémentaires
+    whatsappPhone?: string;
+    messengerUrl?: string;
+    termsAccepted?: boolean;
     // Données d'enrichissement
     theForkLink?: string;
     uberEatsLink?: string;
@@ -80,10 +92,19 @@ export default function SummaryStepWrapper({
           instagram: formData.instagram,
           facebook: formData.facebook,
           tiktok: formData.tiktok,
+          youtube: formData.youtube,
           accountFirstName: formData.accountFirstName,
           accountLastName: formData.accountLastName,
           professionalPhone: formData.accountPhone,
           professionalEmail: formData.accountEmail,
+          // Nouvelles données SIRET enrichies
+          siret: formData.siret,
+          companyName: formData.companyName,
+          legalStatus: formData.legalStatus,
+          siretAddress: formData.siretAddress,
+          siretActivity: formData.siretActivity,
+          siretCreationDate: formData.siretCreationDate,
+          siretEffectifs: formData.siretEffectifs,
           // Données d'enrichissement
           theForkLink: formData.theForkLink,
           uberEatsLink: formData.uberEatsLink,

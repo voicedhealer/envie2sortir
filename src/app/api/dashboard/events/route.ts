@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, modality, startDate, endDate, imageUrl, price, maxCapacity } = body;
+    const { title, description, modality, startDate, endDate, imageUrl, price, priceUnit, maxCapacity } = body;
 
     // Validation
     if (!title || !startDate) {
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         imageUrl,
         price: price ? parseFloat(price) : null,
+        priceUnit: priceUnit || null,
         maxCapacity: maxCapacity ? parseInt(maxCapacity) : null,
         establishmentId: session.user.establishmentId
       }

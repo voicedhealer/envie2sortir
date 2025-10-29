@@ -14,6 +14,7 @@ interface Event {
   endDate: string | null;
   imageUrl: string | null;
   price: number | null;
+  priceUnit: string | null;
   maxCapacity: number | null;
   createdAt: string;
   updatedAt: string;
@@ -38,6 +39,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
     endDate: '',
     imageUrl: '',
     price: '',
+    priceUnit: '',
     maxCapacity: ''
   });
 
@@ -169,6 +171,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
       endDate: event.endDate ? formatDateForInput(event.endDate) : '',
       imageUrl: event.imageUrl || '',
       price: event.price ? event.price.toString() : '',
+      priceUnit: event.priceUnit || '',
       maxCapacity: event.maxCapacity ? event.maxCapacity.toString() : ''
     });
     setShowForm(true);
@@ -184,6 +187,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
       endDate: '',
       imageUrl: '',
       price: '',
+      priceUnit: '',
       maxCapacity: ''
     });
   };
@@ -335,7 +339,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Date de fin
@@ -360,6 +364,22 @@ export default function EventsManager({ establishmentId, isPremium, subscription
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                     placeholder="0.00"
                   />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Unité <span className="text-gray-500 text-sm">(optionnel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.priceUnit}
+                    onChange={(e) => setFormData({...formData, priceUnit: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="par personne, par session, par room..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Précisez l'unité du prix (ex: par personne, par session, par room)
+                  </p>
                 </div>
                 
                 <div>
@@ -447,7 +467,7 @@ export default function EventsManager({ establishmentId, isPremium, subscription
                         <span>⏰ Fin: {formatDate(event.endDate)}</span>
                       )}
                       {event.price && (
-                        <span>💰 {event.price}€</span>
+                        <span>💰 {event.price}€{event.priceUnit ? ` par ${event.priceUnit}` : ''}</span>
                       )}
                       {event.maxCapacity && (
                         <span>👥 {event.maxCapacity} places</span>

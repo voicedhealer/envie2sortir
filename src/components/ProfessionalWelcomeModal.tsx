@@ -134,6 +134,89 @@ const ProfessionalWelcomeModal = memo(function ProfessionalWelcomeModal({ isOpen
             </div>
           </div>
 
+          {/* Tarifs des plans */}
+          <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-6 border border-orange-200">
+            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <span className="text-orange-500 mr-2">💰</span>
+              Tarifs des plans d'abonnement
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Plan Basic */}
+              <div className="bg-white rounded-lg p-4 border-2 border-orange-200 hover:border-orange-400 transition-colors">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Plan Basic</h4>
+                  <div className="text-3xl font-bold text-orange-500 mb-2">Gratuit</div>
+                  <div className="text-sm text-gray-600 mb-4">par mois</div>
+                  <ul className="text-sm text-gray-700 space-y-2 text-left">
+                    <li className="flex items-center">
+                      <span className="text-orange-500 mr-2">✓</span>
+                      1 photo pour votre établissement
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-orange-500 mr-2">✓</span>
+                      Fiche établissement basique
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-orange-500 mr-2">✓</span>
+                      Présence sur la carte interactive
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-orange-500 mr-2">✓</span>
+                      Statistiques de consultation limitées
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Plan Premium */}
+              <div className="bg-gradient-to-br from-pink-50 to-orange-50 rounded-lg p-4 border-2 border-pink-300 hover:border-pink-400 transition-colors relative">
+                <div className="absolute -top-2 -right-2 bg-pink-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                  Recommandé
+                </div>
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">Plan Premium</h4>
+                  <div className="text-3xl font-bold text-pink-500 mb-2">29€</div>
+                  <div className="text-sm text-gray-600 mb-4">par mois</div>
+                  <ul className="text-sm text-gray-700 space-y-2 text-left">
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      🦋 Effet Papillon : jusqu'à 5 photos avec découverte progressive au survol
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      🔥 Badge Premium avec logo flamme tendance
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      📢 Créez des Événements temporaires avec visuel attractif
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      🎁 Publiez des Bons Plans quotidiens pour attirer plus de clients
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      ⭐ Mise en avant prioritaire dans les résultats de recherches, avec le filtre "Notre sélection"
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      📊 Analytics avancées : profil détaillé de vos visiteurs
+                    </li>
+                    <li className="flex items-center">
+                      <span className="text-pink-500 mr-2">✓</span>
+                      💬 Support client prioritaire et dédié
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">
+                <span className="font-medium text-orange-600">💡</span> Vous pourrez choisir votre plan à l'étape 6 du processus d'inscription
+              </p>
+            </div>
+          </div>
+
           {/* Aide disponible */}
           <div className="bg-blue-50 rounded-xl p-6">
             <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">

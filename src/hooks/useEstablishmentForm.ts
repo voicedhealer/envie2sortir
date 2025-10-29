@@ -55,6 +55,12 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         companyName: "",
         legalStatus: "",
         
+        // Données SIRET enrichies (nouvelles)
+        siretAddress: "",
+        siretActivity: "",
+        siretCreationDate: "",
+        siretEffectifs: "",
+        
         // Données de l'établissement - pré-remplies
         establishmentName: establishment.name || "",
         description: establishment.description || "",
@@ -80,7 +86,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         priceMin: establishment.priceMin || undefined,
         priceMax: establishment.priceMax || undefined,
         informationsPratiques: establishment.informationsPratiques || [],
-        subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free'
+        subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free',
+        termsAccepted: false
       };
     }
     
@@ -95,6 +102,12 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       siret: "",
       companyName: "",
       legalStatus: "",
+      
+      // Données SIRET enrichies (nouvelles)
+      siretAddress: "",
+      siretActivity: "",
+      siretCreationDate: "",
+      siretEffectifs: "",
       establishmentName: "",
       description: "",
       address: {
@@ -114,7 +127,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       priceMin: undefined,
       priceMax: undefined,
       informationsPratiques: [],
-      subscriptionPlan: "free"
+      subscriptionPlan: "free",
+      termsAccepted: false
     };
   });
 
@@ -695,6 +709,28 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       case 1:
         if (!formData.siret) newErrors.siret = "SIRET requis";
         if (siretVerification.status !== 'valid') newErrors.siret = "SIRET invalide";
+        
+        // Validation de la forme juridique - ne peut pas être "inconnue"
+        if (!formData.legalStatus || formData.legalStatus.trim() === '') {
+          newErrors.legalStatus = "Forme juridique requise";
+        } else if (formData.legalStatus.toLowerCase().includes('inconnue') || 
+                   formData.legalStatus.toLowerCase().includes('inconnu')) {
+          newErrors.legalStatus = "Veuillez renseigner la forme juridique de votre entreprise (SARL, SAS, Auto-entrepreneur, etc.)";
+        }
+        
+        // Validation des autres champs SIRET enrichis
+        if (!formData.companyName || formData.companyName.trim() === '') {
+          newErrors.companyName = "Raison sociale requise";
+        }
+        if (!formData.siretAddress || formData.siretAddress.trim() === '') {
+          newErrors.siretAddress = "Adresse de l'entreprise requise";
+        }
+        if (!formData.siretActivity || formData.siretActivity.trim() === '') {
+          newErrors.siretActivity = "Activité de l'entreprise requise";
+        }
+        if (!formData.siretCreationDate || formData.siretCreationDate.trim() === '') {
+          newErrors.siretCreationDate = "Date de création requise";
+        }
         break;
       
       case 2:

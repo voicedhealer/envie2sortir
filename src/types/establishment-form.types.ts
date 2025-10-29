@@ -17,6 +17,12 @@ export type ProfessionalData = {
   companyName: string;
   legalStatus: string;
   
+  // Données SIRET enrichies (nouvelles)
+  siretAddress: string;
+  siretActivity: string;
+  siretCreationDate: string;
+  siretEffectifs: string;
+  
   // Données de l'établissement
   establishmentName: string;
   description: string;
@@ -68,9 +74,6 @@ export type ProfessionalData = {
   specialties?: string[];
   atmosphere?: string[];
   accessibility?: string[];
-  
-  // Acceptation des conditions
-  termsAccepted?: boolean;
   
   // === NOUVELLES SECTIONS DÉTAILLÉES ===
   accessibilityInfo?: {
@@ -127,6 +130,9 @@ export type ProfessionalData = {
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
   
+  // Acceptation des conditions
+  termsAccepted?: boolean;
+  
   // === DONNÉES HYBRIDES ===
   hybridAccessibilityDetails?: any;
   hybridDetailedServices?: any;
@@ -179,6 +185,11 @@ export type ExistingEstablishment = {
     companyName: string;
     siret: string;
     legalStatus: string;
+    // Nouvelles données SIRET enrichies
+    siretAddress: string;
+    siretActivity: string;
+    siretCreationDate: string;
+    siretEffectifs: string;
   };
   status?: string;
   rejectionReason?: string;

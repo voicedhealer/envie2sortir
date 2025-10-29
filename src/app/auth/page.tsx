@@ -163,7 +163,8 @@ function AuthContent() {
             await getSession();
             // Pour les nouveaux comptes, ajouter le paramètre welcome si on va vers l'accueil
             const redirectUrl = callbackUrl === '/' ? '/?welcome=true' : decodeURIComponent(callbackUrl);
-            router.push(redirectUrl);
+            // Utiliser window.location.href pour forcer le rechargement complet de la page et synchroniser la session
+            window.location.href = redirectUrl;
           } else {
             console.log('❌ Échec connexion, redirection vers auth');
             setError('Compte créé mais connexion échouée. Veuillez vous connecter manuellement.');

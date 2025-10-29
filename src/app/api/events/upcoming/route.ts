@@ -3,6 +3,14 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+// Calcul du pourcentage de la jauge (0-150%)
+function calculateGaugePercentage(totalScore: number): number {
+  // Formule : on considère qu'un score de 15 = 100%
+  // Donc 22.5 = 150%
+  const percentage = (totalScore / 15) * 100;
+  return Math.min(Math.max(percentage, 0), 150); // Clamp entre 0 et 150
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -138,6 +146,21 @@ export async function GET(request: NextRequest) {
 
       const { engagements, ...eventData } = event;
 
+      // Calculer le gaugePercentage et eventBadge pour cohérence avec les overlays
+      const gaugePercentage = calculateGaugePercentage(score);
+      
+      // Déterminer le badge de l'événement (même logique que dans /api/events/[eventId]/engage)
+      let eventBadge = null;
+      if (gaugePercentage >= 150) {
+        eventBadge = { type: 'fire', label: '🔥 C\'EST LE FEU !', color: '#9C27B0' };
+      } else if (gaugePercentage >= 100) {
+        eventBadge = { type: 'gold', label: '🏆 Coup de Cœur', color: '#FFD700' };
+      } else if (gaugePercentage >= 75) {
+        eventBadge = { type: 'silver', label: '⭐ Populaire', color: '#C0C0C0' };
+      } else if (gaugePercentage >= 50) {
+        eventBadge = { type: 'bronze', label: '👍 Apprécié', color: '#CD7F32' };
+      }
+
       // 🎯 DÉTERMINER LE STATUT : "en cours" ou "à venir"
       let eventStatus = 'upcoming'; // Par défaut "à venir"
       
@@ -149,18 +172,26 @@ export async function GET(request: NextRequest) {
         const startDate = new Date(event.startDate);
         const endDate = event.endDate ? new Date(event.endDate) : null;
         
-        const eventStartHour = startDate.getHours();
-        const eventStartMinute = startDate.getMinutes();
-        const eventEndHour = endDate ? endDate.getHours() : 23;
-        const eventEndMinute = endDate ? endDate.getMinutes() : 59;
-        
-        const eventStartTime = eventStartHour * 60 + eventStartMinute;
-        const eventEndTime = eventEndHour * 60 + eventEndMinute;
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        
-        // Si on est dans les horaires quotidiens, l'événement est "en cours"
-        if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
-          eventStatus = 'ongoing';
+        // D'abord vérifier si l'événement a déjà commencé selon sa date de début
+        if (now < startDate) {
+          eventStatus = 'upcoming'; // Pas encore commencé
+        } else if (endDate && now > endDate) {
+          eventStatus = 'past'; // Terminé
+        } else {
+          // L'événement est dans sa période de validité, vérifier les horaires quotidiens
+          const eventStartHour = startDate.getHours();
+          const eventStartMinute = startDate.getMinutes();
+          const eventEndHour = endDate ? endDate.getHours() : 23;
+          const eventEndMinute = endDate ? endDate.getMinutes() : 59;
+          
+          const eventStartTime = eventStartHour * 60 + eventStartMinute;
+          const eventEndTime = eventEndHour * 60 + eventEndMinute;
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          
+          // Si on est dans les horaires quotidiens, l'événement est "en cours"
+          if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+            eventStatus = 'ongoing';
+          }
         }
       } else {
         // Pour les événements ponctuels, vérifier si on est dans la période
@@ -176,6 +207,8 @@ export async function GET(request: NextRequest) {
         ...eventData,
         engagementScore: score,
         engagementCount: engagements.length,
+        gaugePercentage,
+        eventBadge,
         status: eventStatus
       };
     });

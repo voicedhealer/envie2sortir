@@ -581,7 +581,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                           <div className={`w-full h-px mb-3 ${isSelected ? 'bg-white/30' : 'bg-gray-200'}`}></div>
                           <div className="flex flex-wrap gap-2">
                             {engagementData.usersByEngagement[level.id as keyof typeof engagementData.usersByEngagement]
-                              .slice(0, 5) // Limite à 5 noms
+                              .slice(0, 25) // Limite à 25 noms
                               .map((user) => (
                                 <div
                                   key={user.id}
@@ -595,8 +595,8 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                                 </div>
                               ))}
                             
-                            {/* Bouton "+X autres" si il y a plus de 5 participants */}
-                            {engagementData.usersByEngagement[level.id as keyof typeof engagementData.usersByEngagement].length > 5 && (
+                            {/* Bouton "+X autres" si il y a plus de 25 participants */}
+                            {engagementData.usersByEngagement[level.id as keyof typeof engagementData.usersByEngagement].length > 25 && (
                               <div
                                 className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   isSelected 
@@ -604,7 +604,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                                     : 'bg-gray-50 text-gray-500 border border-gray-300'
                                 }`}
                               >
-                                +{engagementData.usersByEngagement[level.id as keyof typeof engagementData.usersByEngagement].length - 5} autres
+                                +{engagementData.usersByEngagement[level.id as keyof typeof engagementData.usersByEngagement].length - 25} autres
                               </div>
                             )}
                           </div>

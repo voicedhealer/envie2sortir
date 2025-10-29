@@ -54,7 +54,7 @@ export default function EstablishmentStep({
       
       {/* Description */}
       <div>
-        <label className="block text-sm font-medium mb-2">Description de l'établissement <span className="text-xs text-gray-500 ml-1">(Pensez à aérer votre description pour une meilleure visibilité)</span></label>
+        <label className="block text-sm font-medium mb-2">Description de l'établissement <span className="text-xs text-gray-500 ml-1">(Astuce: commencez par le nom de l'établissement, ensuite une phrase d'accroche, les premières lignes apparaitront sur les cartes, ce sont les premières informations visibles par les clients)</span></label>
         <textarea
           value={formData.description}
           onChange={(e) => onInputChange('description', e.target.value)}

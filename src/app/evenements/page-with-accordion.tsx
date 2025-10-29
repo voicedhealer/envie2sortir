@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Clock, MapPin, Euro, Filter, Search, Flame, X } from 'lucide-react';
 import Link from 'next/link';
-import { isEventInProgress } from '@/lib/date-utils';
-import EventsPageAccordion from '@/components/EventsPageAccordion';
 
 interface Event {
   id: string;
@@ -24,6 +22,7 @@ interface Event {
     slug: string;
     city: string;
   };
+  status?: 'ongoing' | 'upcoming' | 'past';
 }
 
 export default function EventsPage() {
@@ -97,8 +96,9 @@ export default function EventsPage() {
   };
 
   const filteredEvents = applyFilters();
+  // Utiliser le statut calculé par l'API qui gère correctement les horaires quotidiens pour les événements récurrents
   const liveEventsCount = allEvents.filter(e => 
-    isEventInProgress(e.startDate, e.endDate)
+    e.status === 'ongoing'
   ).length;
 
   return (
