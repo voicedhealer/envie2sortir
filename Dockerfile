@@ -6,6 +6,14 @@ WORKDIR /app
 # Installer les dépendances système nécessaires pour Prisma
 RUN apk add --no-cache openssl libc6-compat
 
+# Arguments de build pour les variables d'environnement nécessaires au build
+# Note: NEXT_PUBLIC_* doit être au build car injecté dans le code côté client
+ARG NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+
+# Exporter la variable d'environnement pour le build Next.js
+# GOOGLE_MAPS_API_KEY n'est pas nécessaire au build (utilisée uniquement au runtime)
+ENV NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=$NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+
 # Copier les fichiers de dépendances
 COPY package*.json ./
 COPY prisma ./prisma/

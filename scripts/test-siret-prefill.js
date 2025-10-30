@@ -71,3 +71,4 @@ console.log('✅ Formulaire visible avec tous les champs remplis');
 console.log('✅ Utilisateur peut modifier et valider');
 
 console.log('\n🚀 Test terminé - Le pré-remplissage devrait maintenant fonctionner !');
+

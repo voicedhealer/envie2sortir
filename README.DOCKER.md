@@ -84,6 +84,10 @@ GOOGLE_CLIENT_ID="votre-google-client-id"
 GOOGLE_CLIENT_SECRET="votre-google-client-secret"
 FACEBOOK_CLIENT_ID="votre-facebook-client-id"
 FACEBOOK_CLIENT_SECRET="votre-facebook-client-secret"
+
+# API Google Places (requis pour l'enrichissement des établissements)
+NEXT_PUBLIC_GOOGLE_PLACES_API_KEY="votre-google-places-api-key"
+GOOGLE_MAPS_API_KEY="votre-google-maps-api-key"
 ```
 
 ### Initialisation de la base de données
