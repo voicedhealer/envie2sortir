@@ -111,3 +111,8 @@ console.log('✅ Service INSEE optimisé');
 console.log('✅ Données admin de qualité');
 console.log('\n🚀 Le professionnel ne peut plus passer avec des données incomplètes !');
 
+
+
+
+
+

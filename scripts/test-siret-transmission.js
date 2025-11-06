@@ -76,3 +76,8 @@ console.log('✅ Interface utilisateur mise à jour');
 console.log('✅ Données admin incluses');
 console.log('\n📊 Les informations SIRET devraient maintenant être visibles !');
 
+
+
+
+
+

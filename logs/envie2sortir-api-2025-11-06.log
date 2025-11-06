@@ -1,0 +1,2 @@
+[2025-11-06T09:32:41.410Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":13,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-06T09:32:48.340Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
