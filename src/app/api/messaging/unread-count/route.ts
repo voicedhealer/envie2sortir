@@ -1,57 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
 
 // GET /api/messaging/unread-count - Compter les messages non lus
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const supabase = createClient();
     let unreadCount = 0;
 
-    if (session.user.role === "admin") {
+    const isUserAdmin = await isAdmin();
+
+    if (isUserAdmin) {
       // Compter les messages non lus des professionnels
-      unreadCount = await prisma.message.count({
-        where: {
-          senderType: "PROFESSIONAL",
-          isRead: false,
-        },
-      });
-    } else if (session.user.userType === "professional") {
+      const { count, error: countError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('sender_type', 'PROFESSIONAL')
+        .eq('is_read', false);
+
+      if (countError) {
+        console.error('Erreur comptage messages:', countError);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+      }
+
+      unreadCount = count || 0;
+    } else if (user.userType === "professional") {
       // Compter les messages non lus de l'admin dans les conversations du pro
-      const conversations = await prisma.conversation.findMany({
-        where: {
-          professionalId: session.user.id,
-        },
-        select: {
-          id: true,
-        },
-      });
+      const { data: conversations, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('professional_id', user.id);
 
-      const conversationIds = conversations.map((c) => c.id);
+      if (conversationsError) {
+        console.error('Erreur récupération conversations:', conversationsError);
+        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+      }
 
-      unreadCount = await prisma.message.count({
-        where: {
-          conversationId: {
-            in: conversationIds,
-          },
-          senderType: "ADMIN",
-          isRead: false,
-        },
-      });
+      const conversationIds = (conversations || []).map((c: any) => c.id);
+
+      if (conversationIds.length > 0) {
+        const { count, error: countError } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true })
+          .in('conversation_id', conversationIds)
+          .eq('sender_type', 'ADMIN')
+          .eq('is_read', false);
+
+        if (countError) {
+          console.error('Erreur comptage messages:', countError);
+          return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+        }
+
+        unreadCount = count || 0;
+      }
     } else {
-      return NextResponse.json(
-        { error: "Accès non autorisé" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
     }
 
     return NextResponse.json({ unreadCount });

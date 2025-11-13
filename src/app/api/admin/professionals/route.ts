@@ -1,35 +1,42 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 
 // GET /api/admin/professionals - Récupérer la liste des professionnels (pour admin)
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
+    const userIsAdmin = await isAdmin();
     
-    if (!session?.user || session.user.role !== "admin") {
+    if (!userIsAdmin) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
       );
     }
 
-    const professionals = await prisma.professional.findMany({
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        companyName: true,
-        siret: true,
-      },
-      orderBy: {
-        companyName: "asc",
-      },
-    });
+    const supabase = createClient();
 
-    return NextResponse.json({ professionals });
+    const { data: professionals, error: professionalsError } = await supabase
+      .from('professionals')
+      .select('id, first_name, last_name, email, company_name, siret')
+      .order('company_name', { ascending: true });
+
+    if (professionalsError) {
+      console.error('Erreur récupération professionnels:', professionalsError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedProfessionals = (professionals || []).map((pro: any) => ({
+      id: pro.id,
+      firstName: pro.first_name,
+      lastName: pro.last_name,
+      email: pro.email,
+      companyName: pro.company_name,
+      siret: pro.siret
+    }));
+
+    return NextResponse.json({ professionals: formattedProfessionals });
   } catch (error) {
     console.error("Erreur lors de la récupération des professionnels:", error);
     return NextResponse.json(

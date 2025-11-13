@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 // Cache simple en mémoire
 const cache = new Map<string, { data: unknown; timestamp: number }>();
@@ -36,47 +36,66 @@ export async function GET(request: NextRequest) {
       whereConditions.city = city;
     }
     
-    // Récupérer TOUS les établissements qui correspondent aux critères de base
-    const allEstablishments = await prisma.establishment.findMany({
-      where: whereConditions,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        address: true,
-        city: true,
-        description: true,
-        latitude: true,
-        longitude: true,
-        priceMin: true,
-        priceMax: true,
-        status: true,
-        subscription: true,
-        imageUrl: true,
-        avgRating: true,
-        totalComments: true,
-        viewsCount: true,
-        clicksCount: true,
-        createdAt: true,
-        lastModifiedAt: true,
-        images: {
-          take: 5,
-          select: {
-            id: true,
-            url: true,
-            altText: true,
-            isPrimary: true,
-            isCardImage: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const supabase = createClient();
+
+    // Construire la requête Supabase
+    let query = supabase
+      .from('establishments')
+      .select(`
+        id,
+        name,
+        slug,
+        address,
+        city,
+        description,
+        latitude,
+        longitude,
+        price_min,
+        price_max,
+        status,
+        subscription,
+        image_url,
+        avg_rating,
+        total_comments,
+        views_count,
+        clicks_count,
+        created_at,
+        last_modified_at,
+        images (
+          id,
+          url,
+          alt_text,
+          is_primary,
+          is_card_image
+        )
+      `)
+      .eq('status', 'approved')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null)
+      .order('created_at', { ascending: false });
+
+    // Filtrer par ville si spécifiée
+    if (city && (!lat || !lng)) {
+      query = query.eq('city', city);
+    }
+
+    const { data: allEstablishments, error: establishmentsError } = await query;
+
+    if (establishmentsError) {
+      console.error('Erreur chargement établissements:', establishmentsError);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "Erreur lors du chargement des établissements",
+          establishments: [],
+          count: 0
+        },
+        { status: 500 }
+      );
+    }
     
     // Filtrer par rayon géographique si des coordonnées sont fournies
-    let establishments = allEstablishments;
+    let establishments = (allEstablishments || []);
     if (lat && lng && radius) {
       const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
         const R = 6371; // Rayon de la Terre en km
@@ -89,7 +108,7 @@ export async function GET(request: NextRequest) {
         return R * c;
       };
       
-      establishments = allEstablishments.filter(est => {
+      establishments = establishments.filter((est: any) => {
         if (est.latitude && est.longitude) {
           const distance = calculateDistance(lat, lng, est.latitude, est.longitude);
           return distance <= radius;
@@ -101,8 +120,8 @@ export async function GET(request: NextRequest) {
     // Limiter le nombre de résultats
     establishments = establishments.slice(0, limit);
     
-    // Formater la réponse (optimisé: moins de champs)
-    const formattedEstablishments = establishments.map(est => ({
+    // Formater la réponse (conversion snake_case -> camelCase)
+    const formattedEstablishments = establishments.map((est: any) => ({
       id: est.id,
       name: est.name,
       slug: est.slug,
@@ -111,18 +130,24 @@ export async function GET(request: NextRequest) {
       description: est.description,
       latitude: est.latitude,
       longitude: est.longitude,
-      priceMin: est.priceMin,
-      priceMax: est.priceMax,
+      priceMin: est.price_min,
+      priceMax: est.price_max,
       status: est.status,
       subscription: est.subscription,
-      imageUrl: est.imageUrl,
-      images: est.images,
-      rating: est.avgRating,
-      reviewCount: est.totalComments,
-      viewsCount: est.viewsCount,
-      clicksCount: est.clicksCount,
-      createdAt: est.createdAt,
-      lastModifiedAt: est.lastModifiedAt
+      imageUrl: est.image_url,
+      images: (est.images || []).slice(0, 5).map((img: any) => ({
+        id: img.id,
+        url: img.url,
+        altText: img.alt_text,
+        isPrimary: img.is_primary,
+        isCardImage: img.is_card_image
+      })),
+      rating: est.avg_rating,
+      reviewCount: est.total_comments,
+      viewsCount: est.views_count,
+      clicksCount: est.clicks_count,
+      createdAt: est.created_at,
+      lastModifiedAt: est.last_modified_at
     }));
     
     const response = {

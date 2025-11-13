@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment } from "@/lib/supabase/helpers";
 
 /**
  * API pour gérer un événement spécifique
@@ -12,31 +11,24 @@ import { prisma } from "@/lib/prisma";
 // PUT - Modifier un événement
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
-    }
-
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: "Aucun établissement associé" }, { status: 400 });
-    }
+    const supabase = createClient();
 
     // Vérifier que l'établissement est Premium
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { subscription: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', user.establishmentId)
+      .single();
 
-    if (!establishment || establishment.subscription !== 'PREMIUM') {
+    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
       return NextResponse.json({ error: "Fonctionnalité réservée aux abonnements Premium" }, { status: 403 });
     }
 
@@ -50,36 +42,61 @@ export async function PUT(
     }
 
     // Vérifier que l'événement appartient à l'établissement
-    const existingEvent = await prisma.event.findFirst({
-      where: { 
-        id: eventId,
-        establishmentId: session.user.establishmentId 
-      }
-    });
+    const { data: existingEvent, error: existingError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .eq('establishment_id', user.establishmentId)
+      .single();
 
-    if (!existingEvent) {
+    if (existingError || !existingEvent) {
       return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
     }
 
     // Modifier l'événement
-    const event = await prisma.event.update({
-      where: { id: eventId },
-      data: {
+    const { data: event, error: updateError } = await supabase
+      .from('events')
+      .update({
         title,
-        description,
-        modality,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        imageUrl,
+        description: description || null,
+        modality: modality || null,
+        start_date: new Date(startDate).toISOString(),
+        end_date: endDate ? new Date(endDate).toISOString() : null,
+        image_url: imageUrl || null,
         price: price ? parseFloat(price) : null,
-        priceUnit: priceUnit || null,
-        maxCapacity: maxCapacity ? parseInt(maxCapacity) : null,
-      }
-    });
+        price_unit: priceUnit || null,
+        max_capacity: maxCapacity ? parseInt(maxCapacity) : null
+      })
+      .eq('id', eventId)
+      .select()
+      .single();
+
+    if (updateError || !event) {
+      console.error('Erreur modification événement:', updateError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedEvent = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      modality: event.modality,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      imageUrl: event.image_url,
+      price: event.price,
+      priceUnit: event.price_unit,
+      maxCapacity: event.max_capacity,
+      isRecurring: event.is_recurring,
+      establishmentId: event.establishment_id,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at
+    };
 
     return NextResponse.json({ 
       success: true, 
-      event,
+      event: formattedEvent,
       message: "Événement modifié avec succès" 
     });
 
@@ -92,52 +109,51 @@ export async function PUT(
 // DELETE - Supprimer un événement
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
-    }
-
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: "Aucun établissement associé" }, { status: 400 });
-    }
+    const supabase = createClient();
 
     // Vérifier que l'établissement est Premium
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { subscription: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', user.establishmentId)
+      .single();
 
-    if (!establishment || establishment.subscription !== 'PREMIUM') {
+    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
       return NextResponse.json({ error: "Fonctionnalité réservée aux abonnements Premium" }, { status: 403 });
     }
 
     const { id: eventId } = await params;
 
     // Vérifier que l'événement appartient à l'établissement
-    const existingEvent = await prisma.event.findFirst({
-      where: { 
-        id: eventId,
-        establishmentId: session.user.establishmentId 
-      }
-    });
+    const { data: existingEvent, error: existingError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .eq('establishment_id', user.establishmentId)
+      .single();
 
-    if (!existingEvent) {
+    if (existingError || !existingEvent) {
       return NextResponse.json({ error: "Événement non trouvé" }, { status: 404 });
     }
 
     // Supprimer l'événement
-    await prisma.event.delete({
-      where: { id: eventId }
-    });
+    const { error: deleteError } = await supabase
+      .from('events')
+      .delete()
+      .eq('id', eventId);
+
+    if (deleteError) {
+      console.error('Erreur suppression événement:', deleteError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true,

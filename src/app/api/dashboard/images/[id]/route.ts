@@ -1,86 +1,95 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
-import { unlink } from 'fs/promises';
-import { join } from 'path';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
+import { deleteFile } from '@/lib/supabase/helpers';
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Vérifier l'authentification
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: 'Non authentifié ou aucun établissement associé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const { id } = await params;
     
     // Récupérer l'image avec l'établissement associé
-    const image = await prisma.image.findUnique({
-      where: { id },
-      include: {
-        establishment: {
-          select: {
-            id: true,
-            ownerId: true
-          }
-        }
-      }
-    });
+    const { data: image, error: imageError } = await supabase
+      .from('images')
+      .select(`
+        id,
+        url,
+        establishment_id,
+        establishments!images_establishment_id_fkey (
+          id,
+          owner_id
+        )
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!image) {
+    if (imageError || !image) {
       return NextResponse.json({ error: 'Image non trouvée' }, { status: 404 });
     }
 
     // Vérifier que l'utilisateur est propriétaire de l'établissement
-    if (image.establishment.ownerId !== session.user.id) {
+    const establishment = Array.isArray(image.establishments) ? image.establishments[0] : image.establishments;
+    if (!establishment || establishment.owner_id !== user.id) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Supprimer le fichier physique
-    try {
-      const filePath = join(process.cwd(), 'public', image.url);
-      await unlink(filePath);
-      console.log('🗑️ Fichier supprimé:', filePath);
-    } catch (fileError) {
-      console.warn('⚠️ Impossible de supprimer le fichier physique:', fileError);
-      // Continuer même si le fichier physique n'existe pas
+    // Extraire le chemin du fichier depuis l'URL Supabase Storage
+    // Format URL: https://...supabase.co/storage/v1/object/public/images/path/to/file.jpg
+    const urlParts = image.url.split('/');
+    const storagePathIndex = urlParts.indexOf('images') + 1;
+    const storagePath = urlParts.slice(storagePathIndex).join('/');
+
+    // Supprimer le fichier de Supabase Storage
+    if (storagePath) {
+      const deleteResult = await deleteFile('images', storagePath);
+      if (deleteResult.error) {
+        console.warn('⚠️ Impossible de supprimer le fichier de Supabase Storage:', deleteResult.error);
+        // Continuer même si le fichier n'existe pas
+      } else {
+        console.log('🗑️ Fichier supprimé de Supabase Storage:', storagePath);
+      }
     }
 
     // Supprimer l'image de la base de données
-    await prisma.image.delete({
-      where: { id }
-    });
+    const { error: deleteError } = await supabase
+      .from('images')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error('Erreur suppression image:', deleteError);
+      return NextResponse.json({ error: 'Erreur lors de la suppression de l\'image' }, { status: 500 });
+    }
 
     // Vérifier s'il reste des images pour cet établissement
-    const remainingImages = await prisma.image.findMany({
-      where: { establishmentId: image.establishment.id },
-      orderBy: { createdAt: 'desc' }
-    });
+    const { data: remainingImages, error: remainingError } = await supabase
+      .from('images')
+      .select('url')
+      .eq('establishment_id', establishment.id)
+      .order('created_at', { ascending: false });
 
     // Mettre à jour l'imageUrl de l'établissement
-    if (remainingImages.length > 0) {
+    if (remainingImages && remainingImages.length > 0) {
       // Utiliser la première image restante
-      await prisma.establishment.update({
-        where: { id: image.establishment.id },
-        data: { imageUrl: remainingImages[0].url }
-      });
+      await supabase
+        .from('establishments')
+        .update({ image_url: remainingImages[0].url })
+        .eq('id', establishment.id);
       console.log('✅ ImageUrl de l\'établissement mise à jour avec:', remainingImages[0].url);
     } else {
       // Aucune image restante, vider l'imageUrl
-      await prisma.establishment.update({
-        where: { id: image.establishment.id },
-        data: { imageUrl: null }
-      });
+      await supabase
+        .from('establishments')
+        .update({ image_url: null })
+        .eq('id', establishment.id);
       console.log('✅ ImageUrl de l\'établissement vidée (aucune image restante)');
     }
 

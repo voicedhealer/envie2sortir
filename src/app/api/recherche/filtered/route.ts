@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 // Fonction pour calculer la distance entre deux points (formule haversine)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -311,39 +311,75 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
     }
 
-    // Construire la clause WHERE
-    const where: any = {
-      status: 'approved',
-      latitude: { not: null },
-      longitude: { not: null }
-    };
+    const supabase = createClient();
+
+    // Construire la requête
+    let query = supabase
+      .from('establishments')
+      .select(`
+        *,
+        tags:etablissement_tags (*),
+        images (*),
+        events (*)
+      `)
+      .eq('status', 'approved')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
 
     // Filtre premium
     if (filter === 'premium') {
-      where.subscription = 'PREMIUM';
+      query = query.eq('subscription', 'PREMIUM');
     }
 
-    // Charger les établissements
-    const establishments = await prisma.establishment.findMany({
-      where,
-      include: { 
-        tags: true, 
-        images: { 
-          where: { isPrimary: true }, 
-          take: 1 
-        },
-        events: {
-          where: {
-            startDate: {
-              gte: new Date()
-            }
-          },
-          orderBy: {
-            startDate: 'asc'
-          },
-          take: 1
-        }
-      }
+    const { data: establishmentsData, error: establishmentsError } = await query;
+
+    if (establishmentsError) {
+      console.error('Erreur récupération établissements:', establishmentsError);
+      return NextResponse.json({ error: "Erreur lors de la recherche" }, { status: 500 });
+    }
+
+    // Traiter les établissements
+    const establishments = (establishmentsData || []).map((est: any) => {
+      // Parser les champs JSONB
+      const activities = typeof est.activities === 'string' ? JSON.parse(est.activities || '[]') : (est.activities || []);
+      const horairesOuverture = typeof est.horaires_ouverture === 'string' ? JSON.parse(est.horaires_ouverture || '{}') : (est.horaires_ouverture || {});
+
+      // Filtrer les images primaires
+      const primaryImages = (est.images || []).filter((img: any) => img.is_primary);
+      
+      // Filtrer les événements à venir
+      const upcomingEvents = (est.events || []).filter((evt: any) => {
+        const startDate = new Date(evt.start_date);
+        return startDate >= new Date();
+      }).sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+      return {
+        ...est,
+        id: est.id,
+        name: est.name,
+        description: est.description,
+        activities,
+        horairesOuverture,
+        latitude: est.latitude,
+        longitude: est.longitude,
+        subscription: est.subscription,
+        createdAt: est.created_at,
+        tags: (est.tags || []).map((tag: any) => ({
+          id: tag.id,
+          tag: tag.tag,
+          poids: tag.poids
+        })),
+        images: primaryImages.slice(0, 1).map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          isPrimary: img.is_primary
+        })),
+        events: upcomingEvents.slice(0, 1).map((evt: any) => ({
+          id: evt.id,
+          name: evt.name,
+          startDate: evt.start_date
+        }))
+      };
     });
 
     console.log(`🔍 Nombre total d'établissements trouvés: ${establishments.length}`);

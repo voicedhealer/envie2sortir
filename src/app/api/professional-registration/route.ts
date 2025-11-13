@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from 'bcryptjs';
+import { signUpProfessional } from '@/lib/supabase/auth-actions';
 import { geocodeAddress } from '@/lib/geocoding';
 import { createTagsData } from '@/lib/category-tags-mapping';
 import { logSubscriptionChange } from '@/lib/subscription-logger';
@@ -313,137 +312,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Transaction pour créer professional + établissement ensemble
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Hacher le mot de passe
-      console.log('🔐 Password type:', typeof accountData.password);
-      console.log('🔐 Password value:', accountData.password);
-      const passwordHash = await bcrypt.hash(accountData.password, 12);
-
-      // 2. Créer le professionnel (contient tout : auth + données pro)
-      const professional = await tx.professional.create({
-        data: {
-          siret: professionalData.siret,
-          firstName: accountData.firstName,
-          lastName: accountData.lastName,
-          email: accountData.email,
-          passwordHash: passwordHash,
-          phone: accountData.phone,
-          companyName: professionalData.companyName,
-          legalStatus: professionalData.legalStatus,
-          subscriptionPlan: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
-          siretVerified: false, // À vérifier plus tard
-        }
-      });
-
-      // 3. Créer l'établissement lié au professionnel
-      const establishment = await tx.establishment.create({
-        data: {
-          name: establishmentData.name,
-          slug: generateSlug(establishmentData.name),
-          description: establishmentData.description,
-          address: establishmentData.address,
-          city: establishmentData.city,
-          postalCode: establishmentData.postalCode,
-          latitude: finalCoordinates?.latitude || null, // Coordonnées GPS (priorité au formulaire)
-          longitude: finalCoordinates?.longitude || null, // Coordonnées GPS (priorité au formulaire)
-          activities: establishmentData.activities, // Activités multiples (JSON)
-          services: establishmentData.services, // Services (JSON)
-          ambiance: establishmentData.ambiance, // Ambiance (JSON)
-          paymentMethods: establishmentData.paymentMethods, // Moyens de paiement (JSON)
-          horairesOuverture: establishmentData.hours, // Horaires d'ouverture (JSON)
-          phone: establishmentData.phone,
-          email: establishmentData.email,
-          website: establishmentData.website,
-          instagram: establishmentData.instagram,
-          facebook: establishmentData.facebook,
-          tiktok: establishmentData.tiktok,
-          priceMin: establishmentData.priceMin,
-          priceMax: establishmentData.priceMax,
-          informationsPratiques: establishmentData.informationsPratiques,
-          theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
-          uberEatsLink: establishmentData.uberEatsLink, // Lien Uber Eats
-          // Données hybrides
-          accessibilityDetails: establishmentData.accessibilityDetails,
-          detailedServices: establishmentData.detailedServices,
-          clienteleInfo: establishmentData.clienteleInfo,
-          detailedPayments: establishmentData.detailedPayments,
-          childrenServices: establishmentData.childrenServices,
-          ownerId: professional.id, // Lien vers le professionnel
-          status: 'pending', // En attente de validation
-          subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE', // Plan d'abonnement
-        }
-      });
-
-      // 4. Créer les tags : automatiques (basés sur activités) + manuels (sélectionnés par l'utilisateur)
-      console.log('🏷️  Création des tags pour:', establishment.name);
-      console.log('📝 Activités:', establishmentData.activities);
-      console.log('🏷️  Tags manuels:', establishmentData.tags);
-      
-      const allTagsData: Array<{etablissementId: string, tag: string, typeTag: string, poids: number}> = [];
-      
-      // Tags automatiques basés sur les activités sélectionnées
-      for (const activityKey of establishmentData.activities) {
-        const tagsData = createTagsData(establishment.id, activityKey);
-        console.log(`  🔄 Activité "${activityKey}" → ${tagsData.length} tags automatiques`);
-        allTagsData.push(...tagsData);
-      }
-      
-      // Tags manuels sélectionnés par l'utilisateur (poids élevé car choisis explicitement)
-      for (const tagId of establishmentData.tags) {
-        console.log(`  ✏️  Tag manuel ajouté: "${tagId}"`);
-        allTagsData.push({
-          etablissementId: establishment.id,
-          tag: tagId.toLowerCase(),
-          typeTag: 'manuel',
-          poids: 10 // Poids élevé pour les tags manuels
-        });
-      }
-      
-      // Tags "envie de" personnalisés (poids modéré pour éviter les scores trop élevés)
-      for (const envieTag of establishmentData.envieTags) {
-        console.log(`  💭 Tag "envie de" ajouté: "${envieTag}"`);
-        allTagsData.push({
-          etablissementId: establishment.id,
-          tag: envieTag.toLowerCase(),
-          typeTag: 'envie',
-          poids: 3 // Poids modéré pour les tags "envie de" (3 × 10 = 30 points)
-        });
-      }
-      
-      // Supprimer les doublons (même tag avec poids différents)
-      const uniqueTags = new Map<string, {etablissementId: string, tag: string, typeTag: string, poids: number}>();
-      allTagsData.forEach(tagData => {
-        const existing = uniqueTags.get(tagData.tag);
-        if (!existing || tagData.poids > existing.poids) {
-          uniqueTags.set(tagData.tag, tagData);
-        }
-      });
-      
-      // Créer les tags en base
-      console.log(`📊 Total tags uniques à créer: ${uniqueTags.size}`);
-      if (uniqueTags.size > 0) {
-        const tagsToCreate = Array.from(uniqueTags.values());
-        console.log('🏷️  Tags finaux:', tagsToCreate.map(t => `${t.tag} (${t.typeTag}, poids: ${t.poids})`));
-        
-        await tx.etablissementTag.createMany({
-          data: tagsToCreate
-        });
-        console.log('✅ Tags créés avec succès en base de données');
-      } else {
-        console.log('⚠️  Aucun tag à créer');
-      }
-
-      return { professional, establishment };
-    });
-
-    // Logger le changement de subscription
-    await logSubscriptionChange(
-      result.establishment.id,
-      result.establishment.subscription,
-      result.professional.id,
-      'Inscription professionnelle'
+    // Utiliser signUpProfessional pour créer professional + établissement + tags
+    console.log('🔐 Création du compte professionnel avec Supabase...');
+    
+    const result = await signUpProfessional(
+      accountData,
+      professionalData,
+      {
+        ...establishmentData,
+        latitude: finalCoordinates?.latitude || null,
+        longitude: finalCoordinates?.longitude || null
+      },
+      generateSlug,
+      createTagsData
     );
+
+    // Logger le changement de subscription (si la fonction existe encore)
+    try {
+      await logSubscriptionChange(
+        result.establishment.id,
+        professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
+        result.professional.id,
+        'Inscription professionnelle'
+      );
+    } catch (logError) {
+      console.warn('Erreur lors du logging de subscription:', logError);
+      // Non bloquant
+    }
 
     // TODO: Upload des photos (prochaine étape)
     // TODO: Envoyer email de confirmation (prochaine étape)

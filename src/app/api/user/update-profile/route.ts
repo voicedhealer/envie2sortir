@@ -1,85 +1,89 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!user || user.userType !== 'user') {
+      return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const body = await request.json();
     const { firstName, lastName, email, currentPassword, newPassword } = body;
 
     console.log('🔍 API - Données reçues:', { firstName, lastName, email });
-    console.log('🔍 API - Session user:', session.user);
 
-    const userId = session.user.id;
-
-    // Vérifier si l'utilisateur existe
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
-    }
-
-    // Si changement de mot de passe, vérifier l'ancien mot de passe
+    // Si changement de mot de passe, vérifier l'ancien mot de passe avec Supabase Auth
     if (newPassword && currentPassword) {
-      if (!user.passwordHash) {
-        return NextResponse.json({ 
-          error: 'Ce compte utilise une connexion sociale. Impossible de changer le mot de passe.' 
-        }, { status: 400 });
-      }
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      });
 
-      const isValidPassword = await bcrypt.compare(currentPassword, user.passwordHash);
-      if (!isValidPassword) {
+      if (authError || !authData.user) {
         return NextResponse.json({ 
           error: 'Mot de passe actuel incorrect' 
         }, { status: 400 });
       }
     }
 
-    // Préparer les données à mettre à jour
+    // Préparer les données à mettre à jour dans la table users
     const updateData: any = {};
     
-    if (firstName !== undefined) updateData.firstName = firstName;
-    if (lastName !== undefined) updateData.lastName = lastName;
+    if (firstName !== undefined) updateData.first_name = firstName;
+    if (lastName !== undefined) updateData.last_name = lastName;
     if (email !== undefined) updateData.email = email;
-    
-    if (newPassword) {
-      updateData.passwordHash = await bcrypt.hash(newPassword, 12);
+
+    // Mettre à jour l'utilisateur dans la table users
+    const { data: updatedUser, error: updateError } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', user.id)
+      .select('id, email, first_name, last_name, role')
+      .single();
+
+    if (updateError || !updatedUser) {
+      console.error('Erreur mise à jour utilisateur:', updateError);
+      
+      if (updateError?.code === '23505') { // Unique constraint violation
+        return NextResponse.json({ 
+          error: 'Cet email est déjà utilisé par un autre compte' 
+        }, { status: 400 });
+      }
+
+      return NextResponse.json({ error: 'Erreur lors de la mise à jour du profil' }, { status: 500 });
     }
 
-    // Mettre à jour l'utilisateur
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true
-      }
-    });
+    // Si changement de mot de passe, mettre à jour via Supabase Auth
+    if (newPassword) {
+      const { error: passwordError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
 
-    console.log('✅ API - Utilisateur mis à jour:', updatedUser);
+      if (passwordError) {
+        console.error('Erreur mise à jour mot de passe:', passwordError);
+        return NextResponse.json({ error: 'Erreur lors de la mise à jour du mot de passe' }, { status: 500 });
+      }
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedUser = {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      firstName: updatedUser.first_name,
+      lastName: updatedUser.last_name,
+      role: updatedUser.role
+    };
+
+    console.log('✅ API - Utilisateur mis à jour:', formattedUser);
 
     return NextResponse.json({ 
       success: true, 
       message: 'Profil mis à jour avec succès',
-      user: updatedUser
+      user: formattedUser
     });
 
   } catch (error: any) {

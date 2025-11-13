@@ -1,36 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: 'Non autorisé' },
-        { status: 401 }
-      );
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    // Récupérer l'établissement du professionnel
-    const establishment = await prisma.establishment.findUnique({
-      where: {
-        ownerId: session.user.id,
-      },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        status: true,
-        subscription: true,
-      },
-    });
+    const supabase = createClient();
 
-    if (!establishment) {
+    // Récupérer l'établissement du professionnel
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name, slug, status, subscription')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: 'Aucun établissement trouvé' },
         { status: 404 }

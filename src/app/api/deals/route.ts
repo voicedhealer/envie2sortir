@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 API /api/deals - Début de la requête POST');
     
-    const session = await getServerSession(authOptions);
-    console.log('👤 Session utilisateur:', session?.user?.id, session?.user?.email);
-
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       console.error('❌ Utilisateur non authentifié');
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
+
+    const supabase = createClient();
 
     const body = await request.json();
     console.log('📦 Corps de la requête reçu:', {
@@ -64,23 +63,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'utilisateur est propriétaire de l'établissement
-    console.log('🔍 Vérification de l\'établissement:', establishmentId, 'pour l\'utilisateur:', session.user.id);
+    console.log('🔍 Vérification de l\'établissement:', establishmentId, 'pour l\'utilisateur:', user.id);
     
-    const establishment = await prisma.establishment.findFirst({
-      where: { 
-        id: establishmentId,
-        ownerId: session.user.id 
-      },
-      select: { 
-        id: true, 
-        subscription: true,
-        name: true
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription, name, owner_id')
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
 
     console.log('🏢 Établissement trouvé:', establishment);
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       console.error('❌ Établissement introuvable ou accès refusé');
       return NextResponse.json({ 
         error: 'Établissement introuvable ou accès refusé' 
@@ -98,36 +92,66 @@ export async function POST(request: NextRequest) {
     console.log('✅ Création du bon plan pour:', establishment.name);
 
     // Créer le bon plan
-    const deal = await prisma.dailyDeal.create({
-      data: {
-        establishmentId,
+    const { data: deal, error: dealError } = await supabase
+      .from('daily_deals')
+      .insert({
+        establishment_id: establishmentId,
         title,
         description,
         modality: modality || null,
-        originalPrice: originalPrice ? parseFloat(originalPrice) : null,
-        discountedPrice: discountedPrice ? parseFloat(discountedPrice) : null,
-        imageUrl: imageUrl || null,
-        pdfUrl: pdfUrl || null,
-        dateDebut: new Date(dateDebut),
-        dateFin: new Date(dateFin),
-        heureDebut: heureDebut || null,
-        heureFin: heureFin || null,
-        isActive: isActive !== undefined ? isActive : true,
-        // Récurrence
-        isRecurring: isRecurring || false,
-        recurrenceType: recurrenceType || null,
-        recurrenceDays: recurrenceDays || null,
-        recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
-        // Champs pour l'effet flip
-        promoUrl: promoUrl || null
-      }
-    });
+        original_price: originalPrice ? parseFloat(originalPrice) : null,
+        discounted_price: discountedPrice ? parseFloat(discountedPrice) : null,
+        image_url: imageUrl || null,
+        pdf_url: pdfUrl || null,
+        date_debut: new Date(dateDebut).toISOString(),
+        date_fin: new Date(dateFin).toISOString(),
+        heure_debut: heureDebut || null,
+        heure_fin: heureFin || null,
+        is_active: isActive !== undefined ? isActive : true,
+        is_recurring: isRecurring || false,
+        recurrence_type: recurrenceType || null,
+        recurrence_days: recurrenceDays ? JSON.stringify(recurrenceDays) : null,
+        recurrence_end_date: recurrenceEndDate ? new Date(recurrenceEndDate).toISOString() : null,
+        promo_url: promoUrl || null
+      })
+      .select()
+      .single();
+
+    if (dealError || !deal) {
+      console.error('Erreur création deal:', dealError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la création du bon plan' 
+      }, { status: 500 });
+    }
 
     console.log('✅ Bon plan créé avec succès:', deal.id);
 
+    // Convertir snake_case -> camelCase
+    const formattedDeal = {
+      ...deal,
+      id: deal.id,
+      establishmentId: deal.establishment_id,
+      originalPrice: deal.original_price,
+      discountedPrice: deal.discounted_price,
+      imageUrl: deal.image_url,
+      pdfUrl: deal.pdf_url,
+      dateDebut: deal.date_debut,
+      dateFin: deal.date_fin,
+      heureDebut: deal.heure_debut,
+      heureFin: deal.heure_fin,
+      isActive: deal.is_active,
+      isRecurring: deal.is_recurring,
+      recurrenceType: deal.recurrence_type,
+      recurrenceDays: deal.recurrence_days ? JSON.parse(deal.recurrence_days) : null,
+      recurrenceEndDate: deal.recurrence_end_date,
+      promoUrl: deal.promo_url,
+      createdAt: deal.created_at,
+      updatedAt: deal.updated_at
+    };
+
     return NextResponse.json({ 
       success: true,
-      deal
+      deal: formattedDeal
     });
 
   } catch (error) {

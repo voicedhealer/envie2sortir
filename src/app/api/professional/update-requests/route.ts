@@ -1,37 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
+    const supabase = createClient();
 
     // Récupérer toutes les demandes du professionnel
-    const requests = await prisma.professionalUpdateRequest.findMany({
-      where: {
-        professionalId: session.user.id,
-        status: {
-          in: ['pending', 'rejected'] // Ne montrer que les demandes en attente ou rejetées
-        }
-      },
-      orderBy: {
-        requestedAt: 'desc'
-      }
-    });
+    const { data: requests, error: requestsError } = await supabase
+      .from('professional_update_requests')
+      .select('*')
+      .eq('professional_id', user.id)
+      .in('status', ['pending', 'rejected'])
+      .order('requested_at', { ascending: false });
+
+    if (requestsError) {
+      console.error('Erreur récupération demandes:', requestsError);
+      return NextResponse.json({ error: 'Erreur lors de la récupération des demandes' }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedRequests = (requests || []).map((req: any) => ({
+      ...req,
+      professionalId: req.professional_id,
+      establishmentId: req.establishment_id,
+      requestedAt: req.requested_at,
+      reviewedAt: req.reviewed_at,
+      createdAt: req.created_at,
+      updatedAt: req.updated_at
+    }));
 
     return NextResponse.json({ 
       success: true,
-      requests 
+      requests: formattedRequests
     });
 
   } catch (error) {

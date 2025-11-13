@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const body = await request.json();
     const { fieldName, newValue, smsVerified } = body;
 
@@ -44,27 +38,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le professionnel avec toutes les informations
-    const professional = await prisma.professional.findUnique({
-      where: { id: session.user.id },
-      select: {
-        id: true,
-        email: true,
-        siret: true,
-        companyName: true,
-        firstName: true,
-        lastName: true,
-        phone: true
-      }
-    });
+    const { data: professional, error: professionalError } = await supabase
+      .from('professionals')
+      .select('id, email, siret, company_name, first_name, last_name, phone')
+      .eq('id', user.id)
+      .single();
 
-    if (!professional) {
+    if (professionalError || !professional) {
       return NextResponse.json({ 
         error: 'Professionnel non trouvé' 
       }, { status: 404 });
     }
 
-    // Récupérer l'ancienne valeur
-    const oldValue = professional[fieldName as keyof typeof professional] as string;
+    // Mapper les noms de champs camelCase -> snake_case
+    const fieldMapping: Record<string, string> = {
+      'email': 'email',
+      'siret': 'siret',
+      'companyName': 'company_name',
+      'firstName': 'first_name',
+      'lastName': 'last_name',
+      'phone': 'phone'
+    };
+
+    const dbFieldName = fieldMapping[fieldName] || fieldName;
+    const oldValue = professional[dbFieldName as keyof typeof professional] as string;
 
     // Vérifier que la nouvelle valeur est différente
     if (oldValue === newValue.trim()) {
@@ -83,9 +80,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Vérifier que l'email n'existe pas déjà
-      const existingPro = await prisma.professional.findUnique({
-        where: { email: newValue }
-      });
+      const { data: existingPro } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('email', newValue)
+        .single();
+      
       if (existingPro) {
         return NextResponse.json({ 
           error: 'Cet email est déjà utilisé' 
@@ -101,9 +101,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Vérifier que le SIRET n'existe pas déjà
-      const existingPro = await prisma.professional.findUnique({
-        where: { siret: newValue }
-      });
+      const { data: existingPro } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('siret', newValue)
+        .single();
+      
       if (existingPro) {
         return NextResponse.json({ 
           error: 'Ce SIRET est déjà utilisé' 
@@ -123,10 +126,18 @@ export async function POST(request: NextRequest) {
 
     // Champs avec mise à jour immédiate
     if (fieldsWithImmediateUpdate.includes(fieldName)) {
-      await prisma.professional.update({
-        where: { id: professional.id },
-        data: { [fieldName]: newValue.trim() }
-      });
+      const updateData: any = {};
+      updateData[dbFieldName] = newValue.trim();
+
+      const { error: updateError } = await supabase
+        .from('professionals')
+        .update(updateData)
+        .eq('id', professional.id);
+
+      if (updateError) {
+        console.error('Erreur mise à jour professionnel:', updateError);
+        return NextResponse.json({ error: 'Erreur lors de la mise à jour' }, { status: 500 });
+      }
 
       return NextResponse.json({ 
         success: true,
@@ -138,13 +149,14 @@ export async function POST(request: NextRequest) {
     // Champs nécessitant validation admin
     if (fieldsRequiringAdminApproval.includes(fieldName)) {
       // Vérifier s'il existe déjà une demande en attente pour ce champ
-      const existingRequest = await prisma.professionalUpdateRequest.findFirst({
-        where: {
-          professionalId: professional.id,
-          fieldName,
-          status: 'pending'
-        }
-      });
+      const { data: existingRequest } = await supabase
+        .from('professional_update_requests')
+        .select('id')
+        .eq('professional_id', professional.id)
+        .eq('field_name', fieldName)
+        .eq('status', 'pending')
+        .limit(1)
+        .single();
 
       if (existingRequest) {
         return NextResponse.json({ 
@@ -164,18 +176,25 @@ export async function POST(request: NextRequest) {
       }
 
       // Créer la demande de modification
-      const updateRequest = await prisma.professionalUpdateRequest.create({
-        data: {
-          professionalId: professional.id,
-          fieldName,
-          oldValue,
-          newValue: newValue.trim(),
-          verificationToken,
-          isEmailVerified: fieldName !== 'email', // Pour les autres champs, pas besoin de vérification email
-          isSmsVerified: true,
+      const { data: updateRequest, error: createError } = await supabase
+        .from('professional_update_requests')
+        .insert({
+          professional_id: professional.id,
+          field_name: fieldName,
+          old_value: oldValue,
+          new_value: newValue.trim(),
+          verification_token: verificationToken,
+          is_email_verified: fieldName !== 'email',
+          is_sms_verified: true,
           status: 'pending'
-        }
-      });
+        })
+        .select()
+        .single();
+
+      if (createError || !updateRequest) {
+        console.error('Erreur création demande:', createError);
+        return NextResponse.json({ error: 'Erreur lors de la création de la demande' }, { status: 500 });
+      }
 
       return NextResponse.json({ 
         success: true,

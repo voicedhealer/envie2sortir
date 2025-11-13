@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { uploadFile } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -15,19 +12,10 @@ export async function POST(request: NextRequest) {
   const requestLogger = createRequestLogger(requestId, undefined, ipAddress);
 
   try {
-    // Vérifier l'authentification
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès professionnel requis' }, { status: 403 });
-    }
-
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: 'Aucun établissement associé' }, { status: 400 });
+    // Vérifier l'authentification et que l'utilisateur est un professionnel
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: 'Non authentifié ou aucun établissement associé' }, { status: 401 });
     }
 
     const formData = await request.formData();
@@ -38,7 +26,7 @@ export async function POST(request: NextRequest) {
       recordAPIMetric('/api/upload/event-image', 'POST', 400, responseTime, { ipAddress });
       
       await requestLogger.warn('No file provided for event image upload', {
-        establishmentId: session.user.establishmentId,
+        establishmentId: user.establishmentId,
         ipAddress
       });
 
@@ -56,7 +44,7 @@ export async function POST(request: NextRequest) {
         fileSize: file.size,
         fileType: file.type,
         error: fileValidation.error,
-        establishmentId: session.user.establishmentId,
+        establishmentId: user.establishmentId,
         ipAddress
       });
 
@@ -65,17 +53,16 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier que l'établissement existe et est Premium
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { 
-        id: true, 
-        subscription: true,
-        name: true
-      }
-    });
+    const supabase = createClient();
 
-    if (!establishment) {
+    // Vérifier que l'établissement existe et est Premium
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription, name')
+      .eq('id', user.establishmentId)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 });
     }
 
@@ -89,37 +76,48 @@ export async function POST(request: NextRequest) {
 
     console.log(`📸 Upload d'image d'événement autorisé pour ${establishment.name} (${establishment.subscription})`);
 
-    // Créer le dossier uploads s'il n'existe pas
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true });
-    }
-
     // Générer un nom de fichier unique
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const extension = file.name.split('.').pop();
     const fileName = `${timestamp}_${randomString}.${extension}`;
     
-    // Chemin complet du fichier
-    const filePath = join(uploadsDir, fileName);
+    // Chemin dans Supabase Storage : events/{establishmentId}/{fileName}
+    const storagePath = `events/${user.establishmentId}/${fileName}`;
     
-    // Convertir le fichier en buffer et l'écrire
+    // Convertir le fichier en Blob
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const fileBlob = new Blob([bytes], { type: file.type });
+    
+    // Uploader vers Supabase Storage
+    const uploadResult = await uploadFile(
+      'images',
+      storagePath,
+      fileBlob,
+      {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false
+      }
+    );
 
-    // Retourner l'URL publique
-    const imageUrl = `/uploads/${fileName}`;
+    if (uploadResult.error || !uploadResult.data) {
+      console.error('Erreur upload Supabase:', uploadResult.error);
+      return NextResponse.json({ 
+        error: 'Erreur lors de l\'upload vers Supabase Storage' 
+      }, { status: 500 });
+    }
+
+    const imageUrl = uploadResult.data.url;
 
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/upload/event-image', 'POST', 200, responseTime, {
-      establishmentId: session.user.establishmentId,
+      establishmentId: user.establishmentId,
       ipAddress
     });
 
     await requestLogger.info('Event image uploaded successfully', {
-      establishmentId: session.user.establishmentId,
+      establishmentId: user.establishmentId,
       fileName,
       fileSize: file.size,
       fileType: file.type,

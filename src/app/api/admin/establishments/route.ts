@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
     // Vérifier que l'utilisateur est admin
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'admin') {
+    if (!(await isAdmin())) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
+
+    const supabase = createClient();
 
     // Récupérer les paramètres de requête
     const { searchParams } = new URL(request.url);
@@ -18,103 +18,157 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search');
 
-    // Construire les filtres
-    const where: any = {};
+    // Construire la requête
+    let query = supabase
+      .from('establishments')
+      .select(`
+        id,
+        name,
+        slug,
+        description,
+        address,
+        city,
+        phone,
+        email,
+        website,
+        status,
+        subscription,
+        rejection_reason,
+        rejected_at,
+        last_modified_at,
+        created_at,
+        updated_at,
+        activities,
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          company_name,
+          siret,
+          legal_status,
+          siret_verified,
+          siret_verified_at,
+          created_at,
+          updated_at
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    // Appliquer les filtres
     if (status) {
-      where.status = status;
+      query = query.eq('status', status);
     }
+
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { owner: { companyName: { contains: search, mode: 'insensitive' } } },
-        { owner: { firstName: { contains: search, mode: 'insensitive' } } },
-        { owner: { lastName: { contains: search, mode: 'insensitive' } } }
-      ];
+      // Recherche dans plusieurs champs (Supabase ne supporte pas OR directement, on fait plusieurs requêtes)
+      const searchLower = search.toLowerCase();
+      query = query.or(`name.ilike.%${search}%,city.ilike.%${search}%`);
     }
 
-    // Récupérer les établissements avec les données du professionnel
-    const establishments = await prisma.establishment.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        address: true,
-        city: true,
-        phone: true, // Contact de l'établissement
-        email: true, // Contact de l'établissement
-        website: true,
-        status: true,
-        subscription: true,
-        rejectionReason: true,
-        rejectedAt: true,
-        lastModifiedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        activities: true, // ✅ AJOUT : Type d'établissement
-        owner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true, // Contact du professionnel
-            phone: true, // Contact du professionnel
-            companyName: true,
-            siret: true,
-            legalStatus: true,
-            siretVerified: true,
-            siretVerifiedAt: true,
-            createdAt: true,
-            updatedAt: true
-          }
-        },
-        _count: {
-          select: {
-            images: true,
-            events: true,
-            comments: true,
-            favorites: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      skip: (page - 1) * limit,
-      take: limit
-    });
+    // Pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
 
-    // Compter le total pour la pagination
-    const total = await prisma.establishment.count({ where });
+    const { data: establishments, error: establishmentsError } = await query;
+
+    if (establishmentsError) {
+      console.error('Erreur récupération établissements:', establishmentsError);
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    }
+
+    // Compter le total (sans pagination)
+    let countQuery = supabase.from('establishments').select('*', { count: 'exact', head: true });
+    if (status) {
+      countQuery = countQuery.eq('status', status);
+    }
+    const { count: total, error: countError } = await countQuery;
 
     // Statistiques par statut
-    const stats = await prisma.establishment.groupBy({
-      by: ['status'],
-      _count: {
-        status: true
-      }
-    });
+    const { data: allEstablishments, error: statsError } = await supabase
+      .from('establishments')
+      .select('status');
 
-    const statusStats = stats.reduce((acc, stat) => {
-      acc[stat.status] = stat._count.status;
-      return acc;
-    }, {} as Record<string, number>);
+    const statusStats: Record<string, number> = {
+      pending: 0,
+      approved: 0,
+      rejected: 0
+    };
+
+    if (allEstablishments) {
+      allEstablishments.forEach((est: any) => {
+        statusStats[est.status] = (statusStats[est.status] || 0) + 1;
+      });
+    }
+
+    // Convertir snake_case -> camelCase et calculer les compteurs
+    const formattedEstablishments = await Promise.all((establishments || []).map(async (est: any) => {
+      // Compter les images, événements, commentaires, favoris
+      const [imagesCount, eventsCount, commentsCount, favoritesCount] = await Promise.all([
+        supabase.from('images').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
+        supabase.from('events').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
+        supabase.from('user_comments').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
+        supabase.from('user_favorites').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id)
+      ]);
+
+      const owner = est.owner ? (Array.isArray(est.owner) ? est.owner[0] : est.owner) : null;
+
+      return {
+        id: est.id,
+        name: est.name,
+        slug: est.slug,
+        description: est.description,
+        address: est.address,
+        city: est.city,
+        phone: est.phone,
+        email: est.email,
+        website: est.website,
+        status: est.status,
+        subscription: est.subscription,
+        rejectionReason: est.rejection_reason,
+        rejectedAt: est.rejected_at,
+        lastModifiedAt: est.last_modified_at,
+        createdAt: est.created_at,
+        updatedAt: est.updated_at,
+        activities: typeof est.activities === 'string' ? JSON.parse(est.activities) : est.activities,
+        owner: owner ? {
+          id: owner.id,
+          firstName: owner.first_name,
+          lastName: owner.last_name,
+          email: owner.email,
+          phone: owner.phone,
+          companyName: owner.company_name,
+          siret: owner.siret,
+          legalStatus: owner.legal_status,
+          siretVerified: owner.siret_verified,
+          siretVerifiedAt: owner.siret_verified_at,
+          createdAt: owner.created_at,
+          updatedAt: owner.updated_at
+        } : null,
+        _count: {
+          images: imagesCount.count || 0,
+          events: eventsCount.count || 0,
+          comments: commentsCount.count || 0,
+          favorites: favoritesCount.count || 0
+        }
+      };
+    }));
 
     return NextResponse.json({
-      establishments,
+      establishments: formattedEstablishments,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit)
+        total: total || 0,
+        pages: Math.ceil((total || 0) / limit)
       },
       stats: {
         pending: statusStats.pending || 0,
         approved: statusStats.approved || 0,
         rejected: statusStats.rejected || 0,
-        total
+        total: total || 0
       }
     });
 
@@ -130,11 +184,11 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     // Vérifier que l'utilisateur est admin
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'admin') {
+    if (!(await isAdmin())) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
+    const supabase = createClient();
     const { establishmentId, action, rejectionReason } = await request.json();
 
     if (!establishmentId || !action) {
@@ -147,8 +201,8 @@ export async function PATCH(request: NextRequest) {
       case 'approve':
         updateData = {
           status: 'approved',
-          rejectionReason: null,
-          rejectedAt: null
+          rejection_reason: null,
+          rejected_at: null
         };
         break;
       
@@ -158,8 +212,8 @@ export async function PATCH(request: NextRequest) {
         }
         updateData = {
           status: 'rejected',
-          rejectionReason,
-          rejectedAt: new Date()
+          rejection_reason: rejectionReason,
+          rejected_at: new Date().toISOString()
         };
         break;
       
@@ -168,26 +222,55 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Mettre à jour l'établissement
-    const updatedEstablishment = await prisma.establishment.update({
-      where: { id: establishmentId },
-      data: updateData,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            companyName: true,
-            siret: true,
-            legalStatus: true,
-            siretVerified: true,
-            siretVerifiedAt: true
-          }
-        }
-      }
-    });
+    const { data: updatedEstablishment, error: updateError } = await supabase
+      .from('establishments')
+      .update(updateData)
+      .eq('id', establishmentId)
+      .select(`
+        *,
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          company_name,
+          siret,
+          legal_status,
+          siret_verified,
+          siret_verified_at
+        )
+      `)
+      .single();
+
+    if (updateError || !updatedEstablishment) {
+      console.error('Erreur mise à jour établissement:', updateError);
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const owner = updatedEstablishment.owner ? (Array.isArray(updatedEstablishment.owner) ? updatedEstablishment.owner[0] : updatedEstablishment.owner) : null;
+
+    const formattedEstablishment = {
+      ...updatedEstablishment,
+      rejectionReason: updatedEstablishment.rejection_reason,
+      rejectedAt: updatedEstablishment.rejected_at,
+      lastModifiedAt: updatedEstablishment.last_modified_at,
+      createdAt: updatedEstablishment.created_at,
+      updatedAt: updatedEstablishment.updated_at,
+      owner: owner ? {
+        id: owner.id,
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+        email: owner.email,
+        phone: owner.phone,
+        companyName: owner.company_name,
+        siret: owner.siret,
+        legalStatus: owner.legal_status,
+        siretVerified: owner.siret_verified,
+        siretVerifiedAt: owner.siret_verified_at
+      } : null
+    };
 
     // TODO: Envoyer notification au professionnel
     // - Email de notification
@@ -195,7 +278,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      establishment: updatedEstablishment,
+      establishment: formattedEstablishment,
       message: action === 'approve' 
         ? 'Établissement approuvé avec succès'
         : 'Établissement rejeté avec succès'

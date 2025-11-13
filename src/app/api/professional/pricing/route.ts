@@ -1,34 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment } from "@/lib/supabase/helpers";
 
 export async function GET() {
   try {
-    // TODO: Récupérer l'ID du professionnel depuis la session
-    const professionalId = "cmf0ygvkn00008ztdq5rc0bwx"; // ID de test
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
 
-    // Récupérer l'établissement du professionnel avec ses tarifs
-    const professional = await prisma.professional.findUnique({
-      where: { id: professionalId },
-      include: { 
-        establishments: {
-          include: {
-            pricing: true
-          }
-        }
-      }
-    });
+    const supabase = createClient();
 
-    if (!professional || !professional.establishments[0]) {
+    // Récupérer l'établissement du professionnel
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    const establishment = professional.establishments[0];
-    
+    // Récupérer les tarifs
+    const { data: pricing, error: pricingError } = await supabase
+      .from('pricing')
+      .select('*')
+      .eq('establishment_id', establishment.id);
+
+    if (pricingError) {
+      console.error('Erreur récupération tarifs:', pricingError);
+      return NextResponse.json({ error: "Erreur lors de la récupération des tarifs" }, { status: 500 });
+    }
+
     // Convertir les tarifs en format clé-valeur
     const prices: Record<string, number> = {};
-    if (establishment.pricing) {
-      establishment.pricing.forEach(price => {
-        prices[price.serviceId] = price.price;
+    if (pricing) {
+      pricing.forEach((price: any) => {
+        prices[price.service_id] = price.price;
       });
     }
 
@@ -45,52 +54,60 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const supabase = createClient();
     const body = await request.json();
     const { prices } = body;
 
-    // TODO: Récupérer l'ID du professionnel depuis la session
-    const professionalId = "cmf0ygvkn00008ztdq5rc0bwx"; // ID de test
-
     // Récupérer l'établissement du professionnel
-    const professional = await prisma.professional.findUnique({
-      where: { id: professionalId },
-      include: { establishments: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
 
-    if (!professional || !professional.establishments[0]) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    const establishmentId = professional.establishments[0].id;
+    const establishmentId = establishment.id;
 
     // Supprimer les anciens tarifs
-    await prisma.pricing.deleteMany({
-      where: { establishmentId }
-    });
+    await supabase
+      .from('pricing')
+      .delete()
+      .eq('establishment_id', establishmentId);
 
     // Créer les nouveaux tarifs
     const pricingData = Object.entries(prices).map(([serviceId, price]) => ({
-      establishmentId,
-      serviceId,
-      price: price as number,
-      createdAt: new Date(),
-      updatedAt: new Date()
+      establishment_id: establishmentId,
+      service_id: serviceId,
+      price: price as number
     }));
 
     if (pricingData.length > 0) {
-      await prisma.pricing.createMany({
-        data: pricingData
-      });
+      const { error: insertError } = await supabase
+        .from('pricing')
+        .insert(pricingData);
+
+      if (insertError) {
+        console.error('Erreur insertion tarifs:', insertError);
+        return NextResponse.json({ error: "Erreur lors de la mise à jour des tarifs" }, { status: 500 });
+      }
     }
 
     // Mettre à jour le statut de l'établissement pour modération
-    await prisma.establishment.update({
-      where: { id: establishmentId },
-      data: {
+    await supabase
+      .from('establishments')
+      .update({
         status: 'pending',
-        updatedAt: new Date()
-      }
-    });
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', establishmentId);
 
     return NextResponse.json({ 
       success: true,

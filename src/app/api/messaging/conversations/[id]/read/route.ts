@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
 
 // PATCH /api/messaging/conversations/[id]/read - Marquer les messages comme lus
 export async function PATCH(
@@ -9,27 +8,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const supabase = createClient();
     const { id } = await params;
 
     // Vérifier que la conversation existe
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        professionalId: true,
-      },
-    });
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('id, professional_id')
+      .eq('id', id)
+      .single();
 
-    if (!conversation) {
+    if (conversationError || !conversation) {
       return NextResponse.json(
         { error: "Conversation non trouvée" },
         { status: 404 }
@@ -37,12 +31,12 @@ export async function PATCH(
     }
 
     // Vérifier les droits d'accès
-    const isAdmin = session.user.role === "admin";
+    const isUserAdmin = await isAdmin();
     const isProfessionalOwner = 
-      session.user.userType === "professional" && 
-      conversation.professionalId === session.user.id;
+      user.userType === "professional" && 
+      conversation.professional_id === user.id;
 
-    if (!isAdmin && !isProfessionalOwner) {
+    if (!isUserAdmin && !isProfessionalOwner) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
@@ -50,22 +44,24 @@ export async function PATCH(
     }
 
     // Marquer comme lus les messages de l'autre partie
-    const senderTypeToMarkAsRead = isAdmin ? "PROFESSIONAL" : "ADMIN";
+    const senderTypeToMarkAsRead = isUserAdmin ? "PROFESSIONAL" : "ADMIN";
 
-    const result = await prisma.message.updateMany({
-      where: {
-        conversationId: id,
-        senderType: senderTypeToMarkAsRead,
-        isRead: false,
-      },
-      data: {
-        isRead: true,
-      },
-    });
+    const { count, error: updateError } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('conversation_id', id)
+      .eq('sender_type', senderTypeToMarkAsRead)
+      .eq('is_read', false)
+      .select('*', { count: 'exact', head: true });
+
+    if (updateError) {
+      console.error('Erreur marquage messages:', updateError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true,
-      markedAsRead: result.count,
+      markedAsRead: count || 0,
     });
   } catch (error) {
     console.error("Erreur lors du marquage des messages comme lus:", error);

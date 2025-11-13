@@ -1,80 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      );
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    const supabase = createClient();
     const { establishmentId, imageOrder } = await request.json();
 
     console.log('🔄 Réorganisation des images:', {
       establishmentId,
-      userId: session.user.id,
+      userId: user.id,
       newOrder: imageOrder
     });
 
     // Vérifier que l'établissement appartient bien à l'utilisateur
-    const establishment = await prisma.establishment.findFirst({
-      where: {
-        id: establishmentId,
-        ownerId: session.user.id
-      },
-      include: {
-        images: true
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name, owner_id')
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: 'Établissement non trouvé ou accès non autorisé' },
         { status: 404 }
       );
     }
 
+    // Récupérer toutes les images de l'établissement
+    const { data: images, error: imagesError } = await supabase
+      .from('images')
+      .select('*')
+      .eq('establishment_id', establishmentId);
+
+    if (imagesError) {
+      console.error('Erreur récupération images:', imagesError);
+      return NextResponse.json({ error: 'Erreur lors de la récupération des images' }, { status: 500 });
+    }
+
     console.log('✅ Établissement trouvé:', establishment.name);
-    console.log('📸 Images actuelles:', establishment.images.length);
+    console.log('📸 Images actuelles:', images?.length || 0);
 
     // Mettre à jour l'ordre des images
-    // Pour chaque image dans le nouvel ordre, mettre à jour son index
     const updatePromises = imageOrder.map(async (imageUrl: string, index: number) => {
       // Trouver l'image correspondante
-      const image = establishment.images.find(img => img.url === imageUrl);
-      
-      console.log(`🔄 Image ${index + 1}:`, {
-        url: imageUrl,
-        trouvée: !!image,
-        imageId: image?.id
-      });
+      const image = images?.find((img: any) => img.url === imageUrl);
       
       if (image) {
-        return prisma.image.update({
-          where: { id: image.id },
-          data: { 
-            ordre: index, // ✅ CORRECTION : Le champ s'appelle "ordre" dans le schéma
-            isPrimary: index === 0 // La première image devient l'image principale
-          }
-        });
+        return supabase
+          .from('images')
+          .update({ 
+            ordre: index,
+            is_primary: index === 0
+          })
+          .eq('id', image.id);
       }
     });
 
     const results = await Promise.all(updatePromises.filter(Boolean));
     console.log('✅ Nombre d\'images mises à jour:', results.length);
 
-    // Mettre à jour aussi l'imageUrl principale de l'établissement
+    // Mettre à jour aussi l'image_url principale de l'établissement
     if (imageOrder.length > 0) {
-      await prisma.establishment.update({
-        where: { id: establishmentId },
-        data: { imageUrl: imageOrder[0] }
-      });
+      await supabase
+        .from('establishments')
+        .update({ image_url: imageOrder[0] })
+        .eq('id', establishmentId);
     }
 
     console.log('✅ Ordre des images mis à jour avec succès');

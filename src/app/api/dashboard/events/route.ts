@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment } from "@/lib/supabase/helpers";
 import { getPremiumRequiredError, validateSubscriptionAccess } from "@/lib/subscription-utils";
 
 /**
@@ -13,28 +12,21 @@ import { getPremiumRequiredError, validateSubscriptionAccess } from "@/lib/subsc
 // GET - Récupérer tous les événements
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
-    }
+    const supabase = createClient();
 
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: "Aucun établissement associé" }, { status: 400 });
-    }
+    // Vérifier que l'établissement existe et est Premium
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', user.establishmentId)
+      .single();
 
-    // Vérifier que l'établissement est Premium
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { subscription: true }
-    });
-
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
@@ -46,12 +38,36 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer tous les événements de l'établissement
-    const events = await prisma.event.findMany({
-      where: { establishmentId: session.user.establishmentId },
-      orderBy: { startDate: 'asc' }
-    });
+    const { data: events, error: eventsError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('establishment_id', user.establishmentId)
+      .order('start_date', { ascending: true });
 
-    return NextResponse.json({ events });
+    if (eventsError) {
+      console.error('Erreur récupération événements:', eventsError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedEvents = (events || []).map((event: any) => ({
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      modality: event.modality,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      imageUrl: event.image_url,
+      price: event.price,
+      priceUnit: event.price_unit,
+      maxCapacity: event.max_capacity,
+      isRecurring: event.is_recurring,
+      establishmentId: event.establishment_id,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at
+    }));
+
+    return NextResponse.json({ events: formattedEvents });
 
   } catch (error) {
     console.error('Erreur lors de la récupération des événements:', error);
@@ -62,28 +78,21 @@ export async function GET(request: NextRequest) {
 // POST - Créer un nouvel événement
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: "Accès professionnel requis" }, { status: 403 });
-    }
+    const supabase = createClient();
 
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: "Aucun établissement associé" }, { status: 400 });
-    }
+    // Vérifier que l'établissement existe et est Premium
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', user.establishmentId)
+      .single();
 
-    // Vérifier que l'établissement est Premium
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { subscription: true }
-    });
-
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
@@ -103,24 +112,49 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer l'événement
-    const event = await prisma.event.create({
-      data: {
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .insert({
         title,
-        description,
-        modality,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        imageUrl,
+        description: description || null,
+        modality: modality || null,
+        start_date: new Date(startDate).toISOString(),
+        end_date: endDate ? new Date(endDate).toISOString() : null,
+        image_url: imageUrl || null,
         price: price ? parseFloat(price) : null,
-        priceUnit: priceUnit || null,
-        maxCapacity: maxCapacity ? parseInt(maxCapacity) : null,
-        establishmentId: session.user.establishmentId
-      }
-    });
+        price_unit: priceUnit || null,
+        max_capacity: maxCapacity ? parseInt(maxCapacity) : null,
+        establishment_id: user.establishmentId
+      })
+      .select()
+      .single();
+
+    if (eventError || !event) {
+      console.error('Erreur création événement:', eventError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedEvent = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      modality: event.modality,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      imageUrl: event.image_url,
+      price: event.price,
+      priceUnit: event.price_unit,
+      maxCapacity: event.max_capacity,
+      isRecurring: event.is_recurring,
+      establishmentId: event.establishment_id,
+      createdAt: event.created_at,
+      updatedAt: event.updated_at
+    };
 
     return NextResponse.json({ 
       success: true, 
-      event,
+      event: formattedEvent,
       message: "Événement créé avec succès" 
     });
 

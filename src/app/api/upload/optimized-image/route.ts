@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { generateAllImageVariants, cleanupTempFiles } from '@/lib/image-management';
+import { uploadFile } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    // Vérifier l'authentification et que l'utilisateur est un professionnel
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
@@ -37,20 +37,17 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier que l'utilisateur est propriétaire de l'établissement
-    const establishment = await prisma.establishment.findFirst({
-      where: { 
-        id: establishmentId,
-        ownerId: session.user.id 
-      },
-      select: { 
-        id: true, 
-        subscription: true,
-        name: true
-      }
-    });
+    const supabase = createClient();
 
-    if (!establishment) {
+    // Vérifier que l'utilisateur est propriétaire de l'établissement
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription, name')
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ 
         error: 'Établissement introuvable ou accès refusé' 
       }, { status: 404 });
@@ -97,12 +94,35 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Retourner les URLs des variantes
+    // Uploader toutes les variantes vers Supabase Storage
     const variants: Record<string, string> = {};
+    const uploadPromises = [];
+
     for (const [variant, path] of Object.entries(result.variants)) {
       const fileName = path.split('/').pop() || '';
-      variants[variant] = `/uploads/${imageType}/${fileName}`;
+      const storagePath = `${imageType}/${establishmentId}/${fileName}`;
+      
+      // Lire le fichier optimisé
+      const optimizedFile = await import('fs/promises').then(fs => fs.readFile(path));
+      const fileBlob = new Blob([optimizedFile], { type: file.type });
+      
+      // Uploader vers Supabase Storage
+      uploadPromises.push(
+        uploadFile('images', storagePath, fileBlob, {
+          cacheControl: '3600',
+          contentType: file.type,
+          upsert: false
+        }).then(uploadResult => {
+          if (uploadResult.data) {
+            variants[variant] = uploadResult.data.url;
+          }
+          // Nettoyer le fichier local
+          return unlink(path).catch(() => {});
+        })
+      );
     }
+
+    await Promise.all(uploadPromises);
 
     return NextResponse.json({ 
       success: true,

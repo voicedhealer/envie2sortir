@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
 
 // POST /api/messaging/conversations/[id]/messages - Envoyer un message
 export async function POST(
@@ -9,15 +8,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const supabase = createClient();
     const { id } = await params;
 
     const body = await request.json();
@@ -31,16 +27,13 @@ export async function POST(
     }
 
     // Vérifier que la conversation existe
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        professionalId: true,
-        status: true,
-      },
-    });
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('id, professional_id, status, admin_id')
+      .eq('id', id)
+      .single();
 
-    if (!conversation) {
+    if (conversationError || !conversation) {
       return NextResponse.json(
         { error: "Conversation non trouvée" },
         { status: 404 }
@@ -48,12 +41,12 @@ export async function POST(
     }
 
     // Vérifier les droits d'accès
-    const isAdmin = session.user.role === "admin";
+    const isUserAdmin = await isAdmin();
     const isProfessionalOwner = 
-      session.user.userType === "professional" && 
-      conversation.professionalId === session.user.id;
+      user.userType === "professional" && 
+      conversation.professional_id === user.id;
 
-    if (!isAdmin && !isProfessionalOwner) {
+    if (!isUserAdmin && !isProfessionalOwner) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
@@ -61,33 +54,51 @@ export async function POST(
     }
 
     // Déterminer le type d'expéditeur
-    const senderType = isAdmin ? "ADMIN" : "PROFESSIONAL";
+    const senderType = isUserAdmin ? "ADMIN" : "PROFESSIONAL";
 
-    // Créer le message et mettre à jour la conversation
-    const message = await prisma.message.create({
-      data: {
-        conversationId: id,
-        senderId: session.user.id,
-        senderType,
+    // Créer le message
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: id,
+        sender_id: user.id,
+        sender_type: senderType,
         content,
-      },
-    });
+        is_read: false
+      })
+      .select()
+      .single();
+
+    if (messageError || !message) {
+      console.error('Erreur création message:', messageError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     // Mettre à jour lastMessageAt et assigner l'admin si premier message admin
     const updateData: any = {
-      lastMessageAt: new Date(),
+      last_message_at: new Date().toISOString()
     };
 
-    if (isAdmin && !conversation.status) {
-      updateData.adminId = session.user.id;
+    if (isUserAdmin && !conversation.admin_id) {
+      updateData.admin_id = user.id;
     }
 
-    await prisma.conversation.update({
-      where: { id },
-      data: updateData,
-    });
+    await supabase
+      .from('conversations')
+      .update(updateData)
+      .eq('id', id);
 
-    return NextResponse.json({ message }, { status: 201 });
+    // Convertir snake_case -> camelCase
+    const formattedMessage = {
+      ...message,
+      conversationId: message.conversation_id,
+      senderId: message.sender_id,
+      senderType: message.sender_type,
+      isRead: message.is_read,
+      createdAt: message.created_at
+    };
+
+    return NextResponse.json({ message: formattedMessage }, { status: 201 });
   } catch (error) {
     console.error("Erreur lors de l'envoi du message:", error);
     return NextResponse.json(

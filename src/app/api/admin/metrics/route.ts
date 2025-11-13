@@ -1,16 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
     // Vérifier l'authentification admin
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!(await isAdmin())) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
+
+    const supabase = createClient();
 
     // Métriques système réelles uniquement
     const memoryUsage = process.memoryUsage();
@@ -32,10 +31,13 @@ export async function GET(request: NextRequest) {
     const errorRate = 0;
 
     // Récupérer les statistiques d'établissements
-    const [pendingCount, activeCount] = await Promise.all([
-      prisma.establishment.count({ where: { status: "pending" } }),
-      prisma.establishment.count({ where: { status: "approved" } })
+    const [pendingResult, activeResult] = await Promise.all([
+      supabase.from('establishments').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('establishments').select('*', { count: 'exact', head: true }).eq('status', 'approved')
     ]);
+
+    const pendingCount = pendingResult.count || 0;
+    const activeCount = activeResult.count || 0;
 
     const systemMetrics = {
       memory: {
