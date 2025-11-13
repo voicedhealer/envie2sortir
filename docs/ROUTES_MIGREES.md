@@ -952,10 +952,32 @@ Pour chaque route migrée, tester :
 
 ## 📊 Statistiques
 
-- **Routes migrées** : 111
+### 112-114. Routes Learning Service ✅
+**Fichiers** :
+- `src/app/api/establishments/suggest-type/route.ts` (POST)
+- `src/app/api/establishments/save-pattern/route.ts` (POST)
+- `src/app/api/establishments/correct-type/route.ts` (POST)
+
+**Changements** :
+- Migration du service `serverLearningService` vers Supabase
+- Remplacement de toutes les opérations Prisma par Supabase
+- Parsing des champs JSON (google_types, keywords)
+- Calcul des statistiques en mémoire (remplace Prisma groupBy)
+- Conversion snake_case → camelCase
+
+**Service migré** : `src/lib/server-learning-service.ts`
+- `saveLearningPattern()` - Création de patterns
+- `correctEstablishmentType()` - Correction de types
+- `suggestEstablishmentType()` - Suggestions basées sur l'apprentissage
+- `getLearningStats()` - Statistiques d'apprentissage
+
+## 📊 Statistiques
+
+- **Routes migrées** : 114
 - **Helpers créés** : 7 (incluant signUpProfessional)
-- **Fichiers modifiés** : 90+
-- **Routes restantes** : ~10+ (principalement routes non-dépendantes de Prisma ou routes NextAuth)
+- **Services migrés** : 1 (serverLearningService)
+- **Fichiers modifiés** : 95+
+- **Routes restantes** : ~7+ (principalement routes NextAuth et routes proxy/utilitaires non-dépendantes de Prisma)
 
 ## 🔄 Prochaines Étapes
 
