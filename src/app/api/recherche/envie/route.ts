@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 // Fonction pour calculer la distance entre deux points (formule haversine)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -143,26 +143,59 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Charger TOUS les établissements actifs avec coordonnées
-    const establishments = await prisma.establishment.findMany({
-      where: { 
-        status: 'approved' as const,
-        // Seulement les établissements avec coordonnées GPS
-        latitude: { not: null },
-        longitude: { not: null }
-      },
-      include: { 
-        tags: true, 
-        images: { 
-          where: { isPrimary: true }, 
-          take: 1 
+    const supabase = createClient();
+    
+    const { data: establishments, error: establishmentsError } = await supabase
+      .from('establishments')
+      .select(`
+        *,
+        tags:etablissement_tags (*),
+        images (*)
+      `)
+      .eq('status', 'approved')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
+
+    if (establishmentsError) {
+      console.error('Erreur chargement établissements:', establishmentsError);
+      return NextResponse.json(
+        { error: "Erreur lors du chargement des établissements" },
+        { status: 500 }
+      );
+    }
+
+    // Filtrer les images primaires et parser les données
+    const establishmentsWithData = (establishments || []).map((est: any) => {
+      // Parser les champs JSON
+      const parseJsonField = (field: any) => {
+        if (!field) return null;
+        if (typeof field === 'object') return field;
+        if (typeof field !== 'string') return field;
+        try {
+          return JSON.parse(field);
+        } catch {
+          return null;
         }
-      }
+      };
+
+      return {
+        ...est,
+        activities: parseJsonField(est.activities) || [],
+        services: parseJsonField(est.services) || [],
+        ambiance: parseJsonField(est.ambiance) || [],
+        paymentMethods: parseJsonField(est.payment_methods) || [],
+        horairesOuverture: parseJsonField(est.horaires_ouverture) || {},
+        envieTags: parseJsonField(est.envie_tags) || [],
+        informationsPratiques: parseJsonField(est.informations_pratiques) || [],
+        // Filtrer les images primaires
+        images: (est.images || []).filter((img: any) => img.is_primary).slice(0, 1)
+      };
     });
 
-    console.log(`🏢 ${establishments.length} établissements actifs chargés avec coordonnées`);
+    console.log(`🏢 ${establishmentsWithData.length} établissements actifs chargés avec coordonnées`);
 
     // 3. Appliquer le filtrage géographique D'ABORD
-    const establishmentsInRadius = establishments.filter(est => {
+    const establishmentsInRadius = establishmentsWithData.filter(est => {
       if (lat && lng && est.latitude && est.longitude) {
         const distance = calculateDistance(lat, lng, est.latitude, est.longitude);
         return distance <= rayon;
@@ -286,7 +319,7 @@ export async function GET(request: NextRequest) {
         distance: Math.round(distance * 100) / 100,
         isOpen,
         matchedTags: [...new Set(matchedTags)], // Supprimer les doublons
-        primaryImage: establishment.images[0]?.url || null
+        primaryImage: establishment.images && establishment.images.length > 0 ? establishment.images[0].url : null
       };
     });
 
@@ -343,9 +376,9 @@ export async function GET(request: NextRequest) {
         coordinates: lat && lng ? { lat, lng } : null,
         distanceFilter: lat && lng ? `Rayon de ${rayon}km autour de (${lat}, ${lng})` : null,
         searchStrategy: "Géographique + Filtrage thématique - établissements pertinents dans le rayon",
-        totalEstablishments: establishments.length,
+        totalEstablishments: establishmentsWithData.length,
         establishmentsInRadius: establishmentsInRadius.length,
-        establishmentsWithCoords: establishments.filter(e => e.latitude && e.longitude).length,
+        establishmentsWithCoords: establishmentsWithData.filter(e => e.latitude && e.longitude).length,
         relevantResults: filteredEstablishments.length
       }
     });

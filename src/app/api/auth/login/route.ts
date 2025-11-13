@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { signIn } from '@/lib/auth-actions';
+import { signIn } from '@/lib/supabase/auth-actions';
 import { z } from 'zod';
 import { sanitizeInput, sanitizeEmail } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
@@ -28,22 +28,24 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(sanitizedBody);
     
     // Tenter la connexion
-    await signIn(validatedData.email, validatedData.password);
+    const result = await signIn(validatedData.email, validatedData.password);
 
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/auth/login', 'POST', 200, responseTime, {
-      userId: 'authenticated',
+      userId: result.user.id,
       ipAddress
     });
 
     await requestLogger.info('Successful login', {
       email: validatedData.email,
+      userId: result.user.id,
       responseTime
     });
 
     return NextResponse.json({
       success: true,
-      message: 'Connexion réussie'
+      message: 'Connexion réussie',
+      user: result.user
     });
 
   } catch (error: unknown) {

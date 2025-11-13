@@ -24,13 +24,18 @@
     "test:messaging:integration": "jest --testPathPatterns=messaging-integration",
     "test:messaging:components": "jest --testPathPatterns=messaging-components",
     "test:messaging:quick": "node scripts/test-messaging.js",
-    "test:messaging:all": "npm run test:messaging && npm run test:messaging:quick"
+    "test:messaging:all": "npm run test:messaging && npm run test:messaging:quick",
+    "test:supabase": "tsx scripts/test-supabase-connection.ts",
+    "export:prisma-to-supabase": "tsx scripts/export-prisma-to-supabase.ts",
+    "cleanup:test-data": "tsx scripts/cleanup-test-data.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^6.14.0",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.81.1",
     "@types/leaflet": "^1.9.20",
     "bad-words": "^4.0.0",
     "bcryptjs": "^3.0.2",
@@ -61,6 +66,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.7",
     "jest": "^30.1.3",
@@ -70,6 +76,7 @@
     "sharp": "^0.34.4",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

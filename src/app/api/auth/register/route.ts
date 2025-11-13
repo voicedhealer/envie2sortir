@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { signUp } from '@/lib/auth-actions';
+import { signUp } from '@/lib/supabase/auth-actions';
 import { z } from 'zod';
 import { sanitizeInput, sanitizeEmail } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
