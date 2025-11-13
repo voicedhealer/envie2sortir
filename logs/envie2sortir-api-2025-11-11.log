@@ -1,0 +1,17 @@
+[2025-11-11T09:00:32.681Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":16,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:01:37.273Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":2,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:24:26.234Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":5,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:29:06.057Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":6,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:29:47.737Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:46:45.668Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":0,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:50:46.130Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":2,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:52:04.251Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T09:57:50.767Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:12:42.236Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:13:55.794Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":0,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:14:27.949Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":1,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:24:06.580Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":3,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:25:23.214Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":2,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T10:33:28.082Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":0,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T21:24:04.098Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":10,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
+[2025-11-11T21:25:17.593Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"172.18.0...","responseTime":0,"requestId":"unknown","ipAddress":"172.18.0.1"} | Request: unknown
