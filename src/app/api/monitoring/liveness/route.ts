@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHealthChecker } from '@/lib/monitoring/health-check';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
-const healthChecker = createHealthChecker(prisma);
+const healthChecker = createHealthChecker();
 
 export async function GET(request: NextRequest) {
   try {

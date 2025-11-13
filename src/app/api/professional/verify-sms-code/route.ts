@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 // Stockage temporaire des codes (en production, utiliser Redis)
 const smsCodesStore = new Map<string, { code: string; expiry: Date }>();
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -28,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le code stocké pour cet utilisateur
-    const storedData = smsCodesStore.get(session.user.id);
+    const storedData = smsCodesStore.get(user.id);
 
     if (!storedData) {
       return NextResponse.json({ 
@@ -52,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code valide - le supprimer du stockage
-    smsCodesStore.delete(session.user.id);
+    smsCodesStore.delete(user.id);
 
     return NextResponse.json({ 
       success: true,

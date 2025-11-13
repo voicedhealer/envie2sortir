@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🏗️ Création d\'établissement par admin...');
     
+    const supabase = createClient();
+    
     // Récupérer l'utilisateur admin
-    const adminUser = await prisma.user.findUnique({
-      where: { email: 'admin@envie2sortir.com' }
-    });
+    const { data: adminUser, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', 'admin@envie2sortir.com')
+      .single();
     
     console.log('👤 Utilisateur admin trouvé:', adminUser ? 'Oui' : 'Non');
     
-    if (!adminUser) {
+    if (!adminUser || userError) {
       console.log('❌ Utilisateur admin introuvable');
       return NextResponse.json(
         { error: "Utilisateur admin introuvable" },
@@ -21,25 +25,41 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer ou récupérer le Professional pour l'admin
-    let professional = await prisma.professional.findFirst({
-      where: { email: adminUser.email }
-    });
+    const { data: existingProfessional } = await supabase
+      .from('professionals')
+      .select('*')
+      .eq('email', adminUser.email)
+      .single();
+
+    let professional = existingProfessional;
 
     if (!professional) {
       console.log('👨‍💼 Création du Professional pour l\'admin...');
-      professional = await prisma.professional.create({
-        data: {
+      const { data: newProfessional, error: proError } = await supabase
+        .from('professionals')
+        .insert({
           siret: `ADMIN_${adminUser.id}`,
-          firstName: adminUser.firstName || 'Admin',
-          lastName: adminUser.lastName || 'Envie2Sortir',
+          first_name: adminUser.first_name || 'Admin',
+          last_name: adminUser.last_name || 'Envie2Sortir',
           email: adminUser.email,
           phone: '0123456789',
-          companyName: 'Admin Envie2Sortir',
-          legalStatus: 'Admin',
-          subscriptionPlan: 'FREE',
-          siretVerified: true
-        }
-      });
+          company_name: 'Admin Envie2Sortir',
+          legal_status: 'Admin',
+          subscription_plan: 'FREE',
+          siret_verified: true
+        })
+        .select()
+        .single();
+      
+      if (proError || !newProfessional) {
+        console.error('❌ Erreur création Professional:', proError);
+        return NextResponse.json(
+          { error: "Erreur lors de la création du Professional" },
+          { status: 500 }
+        );
+      }
+      
+      professional = newProfessional;
       console.log('✅ Professional créé:', professional.id);
     } else {
       console.log('✅ Professional existant trouvé:', professional.id);
@@ -148,20 +168,32 @@ export async function POST(request: NextRequest) {
     let counter = 1;
     
     // Vérifier l'unicité du slug
-    while (await prisma.establishment.findUnique({ where: { slug } })) {
-      slug = `${generateSlug(establishmentData.name)}-${counter}`;
-      counter++;
+    let slugExists = true;
+    while (slugExists) {
+      const { data: existing } = await supabase
+        .from('establishments')
+        .select('id')
+        .eq('slug', slug)
+        .single();
+      
+      if (!existing) {
+        slugExists = false;
+      } else {
+        slug = `${generateSlug(establishmentData.name)}-${counter}`;
+        counter++;
+      }
     }
     
     // Créer l'établissement
-    const establishment = await prisma.establishment.create({
-      data: {
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .insert({
         name: establishmentData.name,
         slug: slug,
         description: establishmentData.description,
         address: establishmentData.address,
         city: establishmentData.city,
-        postalCode: establishmentData.postalCode,
+        postal_code: establishmentData.postalCode,
         latitude: establishmentData.latitude,
         longitude: establishmentData.longitude,
         phone: establishmentData.phone,
@@ -170,21 +202,33 @@ export async function POST(request: NextRequest) {
         instagram: establishmentData.instagram,
         facebook: establishmentData.facebook,
         tiktok: establishmentData.tiktok,
-        activities: establishmentData.activities,
-        services: establishmentData.services,
-        ambiance: establishmentData.ambiance,
-        paymentMethods: establishmentData.paymentMethods,
-        horairesOuverture: establishmentData.horairesOuverture,
-        priceMin: establishmentData.priceMin,
-        priceMax: establishmentData.priceMax,
-        informationsPratiques: establishmentData.informationsPratiques,
-        envieTags: establishmentData.envieTags,
-        theForkLink: establishmentData.theForkLink,
-        uberEatsLink: establishmentData.uberEatsLink,
-        ownerId: professional.id,
+        activities: JSON.stringify(establishmentData.activities),
+        services: JSON.stringify(establishmentData.services),
+        ambiance: JSON.stringify(establishmentData.ambiance),
+        payment_methods: JSON.stringify(establishmentData.paymentMethods),
+        horaires_ouverture: JSON.stringify(establishmentData.horairesOuverture),
+        price_min: establishmentData.priceMin,
+        price_max: establishmentData.priceMax,
+        informations_pratiques: JSON.stringify(establishmentData.informationsPratiques),
+        envie_tags: JSON.stringify(establishmentData.envieTags),
+        the_fork_link: establishmentData.theForkLink,
+        uber_eats_link: establishmentData.uberEatsLink,
+        owner_id: professional.id,
         status: 'approved' // Approuver automatiquement
-      }
-    });
+      })
+      .select()
+      .single();
+    
+    if (establishmentError || !establishment) {
+      console.error('❌ Erreur création établissement:', establishmentError);
+      return NextResponse.json(
+        { 
+          error: "Erreur lors de la création de l'établissement",
+          details: establishmentError?.message
+        },
+        { status: 500 }
+      );
+    }
     
     console.log('✅ Établissement créé:', establishment.name);
     

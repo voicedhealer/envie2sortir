@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 import { PublicMenuDisplay } from '@/types/menu.types';
 
 // GET /api/public/establishments/[slug]/menus - Récupérer les menus publics d'un établissement
@@ -10,31 +10,28 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    // Récupérer l'établissement par son slug
-    const establishment = await prisma.establishment.findFirst({
-      where: {
-        slug: slug,
-        status: 'approved' // Seuls les établissements approuvés
-      },
-      include: {
-        owner: true,
-        menus: {
-          where: {
-            isActive: true
-          },
-          orderBy: {
-            order: 'asc'
-          }
-        }
-      }
-    });
+    const supabase = createClient();
 
-    if (!establishment) {
+    // Récupérer l'établissement par son slug
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select(`
+        id,
+        subscription,
+        owner:professionals!establishments_owner_id_fkey (
+          id
+        )
+      `)
+      .eq('slug', slug)
+      .eq('status', 'approved')
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
     // Vérifier que l'établissement a un plan Premium (seuls les Premium ont des menus)
-    if (establishment.owner.subscriptionPlan !== 'PREMIUM') {
+    if (establishment.subscription !== 'PREMIUM') {
       return NextResponse.json({
         success: true,
         menus: [],
@@ -42,15 +39,31 @@ export async function GET(
       });
     }
 
+    // Récupérer les menus de l'établissement
+    const { data: menus, error: menusError } = await supabase
+      .from('establishment_menus')
+      .select('*')
+      .eq('establishment_id', establishment.id)
+      .eq('is_active', true)
+      .order('ordre', { ascending: true });
+
+    if (menusError) {
+      console.error('Erreur récupération menus:', menusError);
+      return NextResponse.json(
+        { error: 'Erreur interne du serveur' },
+        { status: 500 }
+      );
+    }
+
     // Transformer les menus pour l'affichage public
-    const publicMenus: PublicMenuDisplay[] = establishment.menus.map(menu => ({
+    const publicMenus: PublicMenuDisplay[] = (menus || []).map((menu: any) => ({
       id: menu.id,
       name: menu.name,
       description: menu.description,
-      fileUrl: menu.fileUrl,
-      fileName: menu.fileName,
-      fileSize: menu.fileSize,
-      order: menu.order
+      fileUrl: menu.file_url,
+      fileName: menu.file_name,
+      fileSize: menu.file_size,
+      order: menu.ordre
     }));
 
     return NextResponse.json({

@@ -655,12 +655,307 @@ Pour chaque route migrée, tester :
 - Filtrage des images primaires et événements à venir
 - Conversion snake_case → camelCase
 
+### 71. POST /api/professional/send-verification-sms ✅
+**Fichier** : `src/app/api/professional/send-verification-sms/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer le professionnel
+- Utilisation de `requireEstablishment()` pour l'authentification
+- Génération et stockage du code SMS (en mémoire, à migrer vers Redis en production)
+
+### 72. POST /api/professional/verify-sms-code ✅
+**Fichier** : `src/app/api/professional/verify-sms-code/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour l'authentification
+- Utilisation de `requireEstablishment()` pour l'authentification
+- Vérification du code SMS stocké en mémoire
+
+### 73. POST /api/establishments/enrich ✅
+**Fichier** : `src/app/api/establishments/enrich/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour enrichir un établissement
+- Parsing des champs JSON existants avant mise à jour
+- Conversion snake_case → camelCase
+- Gestion de l'enrichissement conditionnel (ne pas écraser les choix manuels)
+
+### 74-77. Routes Newsletter Admin ✅
+**Fichiers** :
+- `src/app/api/admin/newsletter/subscribers/route.ts` (GET)
+- `src/app/api/admin/newsletter/stats/route.ts` (GET)
+- `src/app/api/admin/newsletter/toggle/route.ts` (POST)
+- `src/app/api/admin/newsletter/delete/route.ts` (DELETE)
+- `src/app/api/admin/newsletter/export/route.ts` (GET)
+
+**Changements** :
+- Migration complète de la gestion newsletter admin vers Supabase
+- Utilisation de `isAdmin()` pour l'autorisation
+- Conversion snake_case → camelCase
+- Export CSV des abonnés
+
+### 78-79. Routes Newsletter Publique ✅
+**Fichiers** :
+- `src/app/api/newsletter/subscribe/route.ts` (POST)
+- `src/app/api/newsletter/unsubscribe/route.ts` (POST, GET)
+
+**Changements** :
+- Migration vers Supabase pour l'inscription/désinscription newsletter
+- Gestion de la réactivation d'inscription existante
+- Création d'utilisateur avec newsletter activée
+- Conversion snake_case → camelCase
+
+### 80. POST /api/establishments/[id]/stats ✅
+**Fichier** : `src/app/api/establishments/[id]/stats/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour incrémenter les statistiques (vues/clics)
+- Vérification que le propriétaire ne compte pas ses propres vues
+- Conversion snake_case → camelCase
+
+### 81. GET /api/establishments/[id]/menus ✅
+**Fichier** : `src/app/api/establishments/[id]/menus/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les menus d'un établissement
+- Vérification Premium subscription
+- Conversion snake_case → camelCase
+
+### 82. GET /api/public/establishments/[slug]/menus ✅
+**Fichier** : `src/app/api/public/establishments/[slug]/menus/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les menus publics
+- Vérification Premium subscription
+- Conversion snake_case → camelCase
+
+### 83. POST /api/analytics/track ✅
+**Fichier** : `src/app/api/analytics/track/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour enregistrer les événements de clic
+- Insertion dans la table `click_analytics`
+- Conversion snake_case → camelCase
+
+### 84. GET /api/analytics/track ✅
+**Fichier** : `src/app/api/analytics/track/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les statistiques analytics
+- Groupement en mémoire des données (remplace Prisma groupBy)
+- Calcul des statistiques par type et par heure
+- Conversion snake_case → camelCase
+
+### 85. GET /api/analytics/search ✅
+**Fichier** : `src/app/api/analytics/search/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les statistiques de recherche
+- Groupement en mémoire des recherches par terme
+- Calcul des tendances temporelles
+- Conversion snake_case → camelCase
+
+### 86. POST /api/analytics/search/track ✅
+**Fichier** : `src/app/api/analytics/search/track/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour enregistrer les recherches
+- Insertion dans la table `search_analytics`
+- Conversion snake_case → camelCase
+
+### 87. GET /api/analytics/detailed ✅
+**Fichier** : `src/app/api/analytics/detailed/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les analytics détaillées
+- Conversion des données Supabase en format utilisable
+- Calcul des statistiques horaires, quotidiennes, éléments populaires
+- Conversion snake_case → camelCase
+
+### 88. GET /api/admin/learning/stats ✅
+**Fichier** : `src/app/api/admin/learning/stats/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour l'autorisation admin
+- Utilisation de `isAdmin()` pour vérifier les permissions
+- Service d'apprentissage conservé (non lié à la base de données)
+
+### 89. GET /api/admin/learning/patterns ✅
+**Fichier** : `src/app/api/admin/learning/patterns/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les patterns d'apprentissage
+- Parsing des champs JSON (google_types, keywords)
+- Conversion snake_case → camelCase
+
+### 90. GET /api/etablissements/[slug]/images ✅
+**Fichier** : `src/app/api/etablissements/[slug]/images/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les images d'un établissement
+- Chargement des images via relation Supabase
+- Tri par ordre conservé
+- Conversion snake_case → camelCase
+
+### 91. PUT /api/etablissements/[slug]/images ✅
+**Fichier** : `src/app/api/etablissements/[slug]/images/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour mettre à jour l'image principale
+- Utilisation de `requireEstablishment()` pour l'authentification
+- Conversion snake_case → camelCase
+
+### 92-93. GET/POST /api/etablissements/[slug]/events ✅
+**Fichier** : `src/app/api/etablissements/[slug]/events/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer et créer des événements
+- Filtrage des événements à venir/en cours en mémoire
+- Logique de détection d'événements récurrents conservée
+- Conversion snake_case → camelCase
+
+### 94. POST /api/establishments/[id]/menus/upload ✅
+**Fichier** : `src/app/api/establishments/[id]/menus/upload/route.ts`
+
+**Changements** :
+- Migration vers Supabase Storage (bucket `menus`) pour l'upload de PDF
+- Vérification Premium subscription
+- Rollback automatique si insertion DB échoue
+- Conversion snake_case → camelCase
+
+### 95-96. DELETE/PUT /api/establishments/[id]/menus/[menuId] ✅
+**Fichier** : `src/app/api/establishments/[id]/menus/[menuId]/route.ts`
+
+**Changements** :
+- Migration vers Supabase Storage pour la suppression de fichiers
+- Migration vers Supabase pour la mise à jour de menus
+- Extraction du chemin depuis l'URL Supabase Storage
+- Conversion snake_case → camelCase
+
+### 97. POST /api/comments/[id]/report ✅
+**Fichier** : `src/app/api/comments/[id]/report/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour signaler un commentaire
+- Utilisation de `getCurrentUser()` pour l'authentification
+- Conversion snake_case → camelCase
+
+### 98. POST /api/comments/[id]/reply ✅
+**Fichier** : `src/app/api/comments/[id]/reply/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour répondre à un commentaire
+- Utilisation de `requireEstablishment()` pour l'authentification
+- Vérification de propriété de l'établissement
+- Conversion snake_case → camelCase
+
+### 99-100. POST/GET /api/events/[eventId]/engage ✅
+**Fichier** : `src/app/api/events/[eventId]/engage/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour créer/récupérer les engagements d'événements
+- Gestion du karma et des badges de gamification
+- Upsert manuel (vérification puis création/mise à jour)
+- Calcul des statistiques d'engagement et badges d'événement
+- Conversion snake_case → camelCase
+
+### 101. GET /api/monitoring/health ✅
+**Fichier** : `src/app/api/monitoring/health/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour vérifier la santé de la base de données
+- Test de connexion via Supabase client
+- Gestion des erreurs "table not found" (normal si migrations non appliquées)
+
+### 102. POST /api/etablissements/create-admin ✅
+**Fichier** : `src/app/api/etablissements/create-admin/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour créer un établissement par un admin
+- Création/récupération du Professional pour l'admin
+- Génération de slug unique
+- Conversion snake_case → camelCase
+
+### 103. POST /api/deals/recurrence/process ✅
+**Fichier** : `src/app/api/deals/recurrence/process/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour traiter la récurrence des deals
+- Génération de deals récurrents (hebdomadaires/mensuels)
+- Vérification d'existence avant création
+- Conversion snake_case → camelCase
+
+### 104. POST /api/admin/learning/validate ✅
+**Fichier** : `src/app/api/admin/learning/validate/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour valider un pattern d'apprentissage
+- Utilisation de `isAdmin()` pour l'autorisation
+- Mise à jour du pattern avec type validé
+- Conversion snake_case → camelCase
+
+### 105. DELETE /api/admin/learning/delete ✅
+**Fichier** : `src/app/api/admin/learning/delete/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour supprimer un pattern d'apprentissage
+- Utilisation de `isAdmin()` pour l'autorisation
+
+### 106. POST /api/admin/learning/correct ✅
+**Fichier** : `src/app/api/admin/learning/correct/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour l'autorisation admin
+- Utilisation de `isAdmin()` pour vérifier les permissions
+- Service d'apprentissage conservé (non lié à la base de données)
+
+### 107. GET /api/admin/analytics/establishments ✅
+**Fichier** : `src/app/api/admin/analytics/establishments/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour récupérer les analytics des établissements
+- Récupération séparée des établissements et analytics
+- Calcul des statistiques en mémoire (top element, total clicks)
+- Conversion snake_case → camelCase
+
+### 108. GET /api/monitoring/liveness ✅
+**Fichier** : `src/app/api/monitoring/liveness/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour le health checker
+- Suppression de la dépendance Prisma
+- Utilisation de `createHealthChecker()` sans paramètre
+
+### 109. GET /api/monitoring/readiness ✅
+**Fichier** : `src/app/api/monitoring/readiness/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour le health checker
+- Suppression de la dépendance Prisma
+- Utilisation de `createHealthChecker()` sans paramètre
+
+### 110. POST /api/admin/cleanup-images ✅
+**Fichier** : `src/app/api/admin/cleanup-images/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour l'autorisation admin
+- Utilisation de `isAdmin()` pour vérifier les permissions
+- Fonctions de nettoyage conservées (peuvent nécessiter adaptation pour Supabase Storage)
+
+### 111. GET /api/auth/verify-establishment ✅
+**Fichier** : `src/app/api/auth/verify-establishment/route.ts`
+
+**Changements** :
+- Migration vers Supabase pour vérifier si un professionnel a un établissement
+- Utilisation de `getCurrentUser()` et `getProfessionalEstablishment()`
+- Conversion snake_case → camelCase
+
 ## 📊 Statistiques
 
-- **Routes migrées** : 70
+- **Routes migrées** : 111
 - **Helpers créés** : 7 (incluant signUpProfessional)
-- **Fichiers modifiés** : 53
-- **Routes restantes** : ~41+
+- **Fichiers modifiés** : 90+
+- **Routes restantes** : ~10+ (principalement routes non-dépendantes de Prisma ou routes NextAuth)
 
 ## 🔄 Prochaines Étapes
 

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin, getCurrentUser } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'admin') {
+    const user = await getCurrentUser();
+    
+    if (!user || !(await isAdmin(user.id))) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -17,16 +16,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    const supabase = createClient();
+
     // Valider le pattern (marquer comme corrigé avec le type détecté)
-    await prisma.establishmentLearningPattern.update({
-      where: { id: patternId },
-      data: {
-        correctedType: validatedType,
-        isCorrected: true,
-        correctedBy: validatedBy || session.user.email || 'admin',
-        updatedAt: new Date()
-      }
-    });
+    const { error } = await supabase
+      .from('establishment_learning_patterns')
+      .update({
+        corrected_type: validatedType,
+        is_corrected: true,
+        corrected_by: validatedBy || user.email || 'admin',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', patternId);
+    
+    if (error) {
+      console.error('❌ Erreur validation pattern:', error);
+      return NextResponse.json({ 
+        error: 'Internal Server Error',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true,

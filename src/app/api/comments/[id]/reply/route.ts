@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 // POST - Répondre à un avis
 export async function POST(
@@ -9,17 +8,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session || !session.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'professional') {
-      return NextResponse.json({ error: 'Accès refusé - Professionnel requis' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const commentId = params.id;
     const { reply } = await request.json();
 
@@ -36,41 +30,59 @@ export async function POST(
     }
 
     // Vérifier que le commentaire existe et appartient à un établissement du professionnel
-    const comment = await prisma.userComment.findUnique({
-      where: { id: commentId },
-      include: {
-        establishment: {
-          select: {
-            id: true,
-            ownerId: true
-          }
-        }
-      }
-    });
+    const { data: comment, error: commentError } = await supabase
+      .from('user_comments')
+      .select(`
+        *,
+        establishment:establishments (
+          id,
+          owner_id
+        )
+      `)
+      .eq('id', commentId)
+      .single();
 
-    if (!comment) {
+    if (commentError || !comment) {
       return NextResponse.json({ error: 'Avis introuvable' }, { status: 404 });
     }
 
     // Vérifier que le professionnel est le propriétaire de l'établissement
-    if (comment.establishment.ownerId !== session.user.id) {
+    const establishment = Array.isArray(comment.establishment) 
+      ? comment.establishment[0] 
+      : comment.establishment;
+
+    if (!establishment || establishment.owner_id !== user.id) {
       return NextResponse.json({ 
         error: 'Vous n\'êtes pas autorisé à répondre à cet avis' 
       }, { status: 403 });
     }
 
     // Mettre à jour le commentaire avec la réponse
-    const updatedComment = await prisma.userComment.update({
-      where: { id: commentId },
-      data: {
-        establishmentReply: reply.trim(),
-        repliedAt: new Date()
-      }
-    });
+    const { data: updatedComment, error: updateError } = await supabase
+      .from('user_comments')
+      .update({
+        establishment_reply: reply.trim(),
+        replied_at: new Date().toISOString()
+      })
+      .eq('id', commentId)
+      .select()
+      .single();
+
+    if (updateError || !updatedComment) {
+      console.error('Erreur ajout réponse:', updateError);
+      return NextResponse.json(
+        { error: 'Erreur lors de l\'ajout de la réponse' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ 
       success: true, 
-      comment: updatedComment 
+      comment: {
+        id: updatedComment.id,
+        establishmentReply: updatedComment.establishment_reply,
+        repliedAt: updatedComment.replied_at
+      }
     });
 
   } catch (error) {

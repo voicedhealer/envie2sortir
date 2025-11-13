@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 import { storeSmsCode } from '../verify-sms-code/route';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const body = await request.json();
     const { fieldName } = body;
 
@@ -29,17 +23,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le professionnel
-    const professional = await prisma.professional.findUnique({
-      where: { id: session.user.id },
-      select: { 
-        id: true, 
-        phone: true,
-        firstName: true,
-        lastName: true
-      }
-    });
+    const { data: professional, error: professionalError } = await supabase
+      .from('professionals')
+      .select('id, phone, first_name, last_name')
+      .eq('id', user.id)
+      .single();
 
-    if (!professional) {
+    if (professionalError || !professional) {
       return NextResponse.json({ 
         error: 'Professionnel non trouvé' 
       }, { status: 404 });

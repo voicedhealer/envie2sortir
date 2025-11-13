@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 
 // Types d'engagement et leurs scores
 const ENGAGEMENT_SCORES = {
@@ -46,15 +45,15 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
+    const user = await getCurrentUser();
+    if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Vous devez être connecté pour réagir à un événement' },
         { status: 401 }
       );
     }
 
+    const supabase = createClient();
     const body = await request.json();
     const { type } = body;
 
@@ -67,14 +66,16 @@ export async function POST(
     }
 
     const { eventId } = await params;
-    const userId = session.user.id;
+    const userId = user.id;
 
     // Vérifier que l'événement existe
-    const event = await prisma.event.findUnique({
-      where: { id: eventId }
-    });
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .single();
 
-    if (!event) {
+    if (eventError || !event) {
       return NextResponse.json(
         { error: 'Événement introuvable' },
         { status: 404 }
@@ -82,81 +83,136 @@ export async function POST(
     }
 
     // Obtenir le nombre d'engagements précédents de l'utilisateur
-    const previousEngagementsCount = await prisma.eventEngagement.count({
-      where: { userId }
-    });
+    const { count: previousEngagementsCount } = await supabase
+      .from('event_engagements')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
 
-    // Créer ou mettre à jour l'engagement
-    const engagement = await prisma.eventEngagement.upsert({
-      where: {
-        eventId_userId: {
-          eventId,
-          userId
-        }
-      },
-      update: {
-        type,
-        createdAt: new Date() // Mettre à jour la date
-      },
-      create: {
-        eventId,
-        userId,
-        type
+    // Vérifier si un engagement existe déjà
+    const { data: existingEngagement } = await supabase
+      .from('event_engagements')
+      .select('*')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .single();
+
+    let engagement;
+    if (existingEngagement) {
+      // Mettre à jour l'engagement existant
+      const { data: updatedEngagement, error: updateError } = await supabase
+        .from('event_engagements')
+        .update({
+          type,
+          created_at: new Date().toISOString()
+        })
+        .eq('id', existingEngagement.id)
+        .select()
+        .single();
+
+      if (updateError || !updatedEngagement) {
+        console.error('Erreur mise à jour engagement:', updateError);
+        return NextResponse.json(
+          { error: 'Erreur lors de la création de l\'engagement' },
+          { status: 500 }
+        );
       }
-    });
+      engagement = updatedEngagement;
+    } else {
+      // Créer un nouvel engagement
+      const { data: newEngagement, error: createError } = await supabase
+        .from('event_engagements')
+        .insert({
+          event_id: eventId,
+          user_id: userId,
+          type
+        })
+        .select()
+        .single();
+
+      if (createError || !newEngagement) {
+        console.error('Erreur création engagement:', createError);
+        return NextResponse.json(
+          { error: 'Erreur lors de la création de l\'engagement' },
+          { status: 500 }
+        );
+      }
+      engagement = newEngagement;
+    }
 
     // Calculer le score de karma pour cet engagement
     const karmaPoints = ENGAGEMENT_SCORES[type as EngagementType];
 
+    // Récupérer l'utilisateur actuel
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('karma_points, gamification_badges')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !userData) {
+      console.error('Erreur récupération utilisateur:', userError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération de l\'utilisateur' },
+        { status: 500 }
+      );
+    }
+
     // Mettre à jour le karma de l'utilisateur
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        karmaPoints: {
-          increment: karmaPoints
-        }
-      },
-      select: {
-        karmaPoints: true,
-        gamificationBadges: true,
-        eventEngagements: {
-          select: { id: true }
-        }
-      }
-    });
+    const newKarmaPoints = (userData.karma_points || 0) + karmaPoints;
+    const { data: updatedUser, error: karmaUpdateError } = await supabase
+      .from('users')
+      .update({ karma_points: newKarmaPoints })
+      .eq('id', userId)
+      .select('karma_points, gamification_badges')
+      .single();
+
+    if (karmaUpdateError || !updatedUser) {
+      console.error('Erreur mise à jour karma:', karmaUpdateError);
+    }
+
+    // Récupérer le nombre total d'engagements de l'utilisateur
+    const { count: currentEngagementsCount } = await supabase
+      .from('event_engagements')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
 
     // Vérifier si un nouveau badge doit être débloqué
-    const currentEngagementsCount = user.eventEngagements.length;
-    const newBadge = checkNewBadge(currentEngagementsCount, previousEngagementsCount);
+    const newBadge = checkNewBadge(currentEngagementsCount || 0, previousEngagementsCount || 0);
     
-    let updatedBadges = user.gamificationBadges as any[] || [];
+    let updatedBadges = typeof updatedUser?.gamification_badges === 'string'
+      ? JSON.parse(updatedUser.gamification_badges || '[]')
+      : (updatedUser?.gamification_badges || []);
     
-    if (newBadge && !updatedBadges.some(b => b.id === newBadge.id)) {
+    if (newBadge && !updatedBadges.some((b: any) => b.id === newBadge.id)) {
       updatedBadges = [...updatedBadges, { ...newBadge, unlockedAt: new Date().toISOString() }];
       
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          gamificationBadges: updatedBadges
-        }
-      });
+      await supabase
+        .from('users')
+        .update({ gamification_badges: JSON.stringify(updatedBadges) })
+        .eq('id', userId);
     }
 
     // Récupérer les stats globales de l'événement avec les infos utilisateur
-    const engagements = await prisma.eventEngagement.findMany({
-      where: { eventId },
-      select: { 
-        type: true,
-        userId: true,
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
-    });
+    const { data: engagements, error: engagementsError } = await supabase
+      .from('event_engagements')
+      .select(`
+        type,
+        user_id,
+        user:users!event_engagements_user_id_fkey (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('event_id', eventId);
+
+    if (engagementsError) {
+      console.error('Erreur récupération engagements:', engagementsError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la création de l\'engagement' },
+        { status: 500 }
+      );
+    }
 
     const stats = {
       envie: 0,
@@ -175,17 +231,18 @@ export async function POST(
 
     let totalScore = 0;
 
-    engagements.forEach(eng => {
+    (engagements || []).forEach((eng: any) => {
       stats[eng.type as EngagementType]++;
       totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
       
       // Ajouter l'utilisateur à la liste correspondante
-      if (eng.user) {
+      const user = Array.isArray(eng.user) ? eng.user[0] : eng.user;
+      if (user) {
         usersByEngagement[eng.type as EngagementType].push({
-          id: eng.userId,
-          firstName: eng.user.firstName,
-          lastName: eng.user.lastName,
-          initials: `${eng.user.firstName?.[0] || ''}${eng.user.lastName?.[0] || ''}`.toUpperCase()
+          id: eng.user_id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase()
         });
       }
     });
@@ -206,15 +263,21 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      engagement,
+      engagement: {
+        id: engagement.id,
+        eventId: engagement.event_id,
+        userId: engagement.user_id,
+        type: engagement.type,
+        createdAt: engagement.created_at
+      },
       stats,
       gaugePercentage,
       eventBadge,
       userEngagement: type,
       newBadge,
-      userKarma: user.karmaPoints,
+      userKarma: updatedUser?.karma_points || 0,
       usersByEngagement,
-      totalEngagements: engagements.length
+      totalEngagements: (engagements || []).length
     });
 
   } catch (error) {
@@ -232,15 +295,18 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
+    const supabase = createClient();
     const { eventId } = await params;
 
     // Vérifier que l'événement existe
-    const event = await prisma.event.findUnique({
-      where: { id: eventId }
-    });
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .select('id')
+      .eq('id', eventId)
+      .single();
 
-    if (!event) {
+    if (eventError || !event) {
       return NextResponse.json(
         { error: 'Événement introuvable' },
         { status: 404 }
@@ -248,20 +314,26 @@ export async function GET(
     }
 
     // Récupérer les engagements de l'événement avec les infos utilisateur
-    const engagements = await prisma.eventEngagement.findMany({
-      where: { eventId },
-      select: { 
-        type: true, 
-        userId: true,
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        }
-      }
-    });
+    const { data: engagements, error: engagementsError } = await supabase
+      .from('event_engagements')
+      .select(`
+        type,
+        user_id,
+        user:users!event_engagements_user_id_fkey (
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('event_id', eventId);
+
+    if (engagementsError) {
+      console.error('Erreur récupération engagements:', engagementsError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération des stats' },
+        { status: 500 }
+      );
+    }
 
     const stats = {
       envie: 0,
@@ -281,21 +353,22 @@ export async function GET(
     let totalScore = 0;
     let userEngagement = null;
 
-    engagements.forEach(eng => {
+    (engagements || []).forEach((eng: any) => {
       stats[eng.type as EngagementType]++;
       totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
       
       // Ajouter l'utilisateur à la liste correspondante
-      if (eng.user) {
+      const userData = Array.isArray(eng.user) ? eng.user[0] : eng.user;
+      if (userData) {
         usersByEngagement[eng.type as EngagementType].push({
-          id: eng.userId,
-          firstName: eng.user.firstName,
-          lastName: eng.user.lastName,
-          initials: `${eng.user.firstName?.[0] || ''}${eng.user.lastName?.[0] || ''}`.toUpperCase()
+          id: eng.user_id,
+          firstName: userData.first_name,
+          lastName: userData.last_name,
+          initials: `${userData.first_name?.[0] || ''}${userData.last_name?.[0] || ''}`.toUpperCase()
         });
       }
       
-      if (session?.user?.id && eng.userId === session.user.id) {
+      if (user?.id && eng.user_id === user.id) {
         userEngagement = eng.type;
       }
     });
@@ -320,7 +393,7 @@ export async function GET(
       totalScore,
       eventBadge,
       userEngagement,
-      totalEngagements: engagements.length,
+      totalEngagements: (engagements || []).length,
       usersByEngagement
     });
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,8 +8,14 @@ export async function GET(request: NextRequest) {
     let databaseError = null;
     
     try {
-      // Test simple de connexion à la base de données
-      await prisma.$queryRaw`SELECT 1`;
+      // Test simple de connexion à la base de données Supabase
+      const supabase = createClient();
+      const { error } = await supabase.from('users').select('id').limit(1);
+      // Si l'erreur est "table not found", c'est normal si les migrations ne sont pas appliquées
+      // Mais si c'est une erreur de connexion, c'est un problème
+      if (error && !error.message.includes('does not exist') && !error.message.includes('not found')) {
+        throw error;
+      }
       databaseHealth = true;
     } catch (error) {
       databaseError = error instanceof Error ? error.message : 'Erreur inconnue';

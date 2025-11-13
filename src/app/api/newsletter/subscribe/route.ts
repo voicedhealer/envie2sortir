@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 // Schema de validation
@@ -64,16 +64,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createClient();
     const { email, consent } = validationResult.data;
 
     // 🔒 Vérifier si l'email existe déjà
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, newsletterOptIn: true, isVerified: true }
-    });
+    const { data: existingUser, error: existingError } = await supabase
+      .from('users')
+      .select('id, newsletter_opt_in, is_verified')
+      .eq('email', email)
+      .single();
 
-    if (existingUser) {
-      if (existingUser.newsletterOptIn) {
+    if (existingUser && !existingError) {
+      if (existingUser.newsletter_opt_in) {
         return NextResponse.json(
           { 
             success: false, 
@@ -83,10 +85,18 @@ export async function POST(request: NextRequest) {
         );
       } else {
         // Réactiver l'inscription
-        await prisma.user.update({
-          where: { id: existingUser.id },
-          data: { newsletterOptIn: true }
-        });
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ newsletter_opt_in: true })
+          .eq('id', existingUser.id);
+
+        if (updateError) {
+          console.error('Erreur réactivation newsletter:', updateError);
+          return NextResponse.json(
+            { success: false, error: "Erreur lors de la réactivation" },
+            { status: 500 }
+          );
+        }
 
         return NextResponse.json({
           success: true,
@@ -96,22 +106,32 @@ export async function POST(request: NextRequest) {
     }
 
     // 🔒 Créer un nouvel utilisateur avec newsletter activée
-    await prisma.user.create({
-      data: {
-        email,
-        newsletterOptIn: true,
-        isVerified: false, // Double opt-in requis
-        role: 'user',
-        // Générer un nom temporaire basé sur l'email
-        name: email.split('@')[0],
-        // Token de vérification pour double opt-in
-        preferences: {
-          newsletterConsent: consent,
-          consentDate: new Date().toISOString(),
-          ipAddress: ip
-        }
-      }
+    const preferences = JSON.stringify({
+      newsletterConsent: consent,
+      consentDate: new Date().toISOString(),
+      ipAddress: ip
     });
+
+    const { data: newUser, error: createError } = await supabase
+      .from('users')
+      .insert({
+        email,
+        newsletter_opt_in: true,
+        is_verified: false, // Double opt-in requis
+        role: 'user',
+        first_name: email.split('@')[0], // Nom temporaire basé sur l'email
+        preferences
+      })
+      .select()
+      .single();
+
+    if (createError || !newUser) {
+      console.error('Erreur création utilisateur newsletter:', createError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de l'inscription" },
+        { status: 500 }
+      );
+    }
 
     // 🔒 Log de sécurité
     console.log(`📧 [Newsletter] Nouvelle inscription: ${email} (IP: ${ip})`);

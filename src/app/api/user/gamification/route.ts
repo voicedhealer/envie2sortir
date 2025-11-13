@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 
 // Définition des badges disponibles
 const AVAILABLE_BADGES = [
@@ -14,46 +13,54 @@ const AVAILABLE_BADGES = [
 // GET - Récupérer les badges et le karma de l'utilisateur
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Vous devez être connecté' },
         { status: 401 }
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: {
-        karmaPoints: true,
-        gamificationBadges: true,
-        eventEngagements: {
-          select: { 
-            id: true,
-            type: true,
-            createdAt: true,
-            event: {
-              select: {
-                id: true,
-                title: true
-              }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
-    });
+    const supabase = createClient();
 
-    if (!user) {
+    // Récupérer l'utilisateur avec ses badges
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('karma_points, gamification_badges')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData) {
       return NextResponse.json(
         { error: 'Utilisateur introuvable' },
         { status: 404 }
       );
     }
 
-    const unlockedBadges = (user.gamificationBadges as any[]) || [];
-    const totalEngagements = user.eventEngagements.length;
+    // Récupérer les engagements de l'utilisateur
+    const { data: eventEngagements, error: engagementsError } = await supabase
+      .from('event_engagements')
+      .select(`
+        id,
+        type,
+        created_at,
+        event:events (
+          id,
+          title
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (engagementsError) {
+      console.error('Erreur récupération engagements:', engagementsError);
+    }
+
+    const unlockedBadges = typeof userData.gamification_badges === 'string'
+      ? JSON.parse(userData.gamification_badges || '[]')
+      : (userData.gamification_badges || []);
+    const totalEngagements = (eventEngagements || []).length;
 
     // Calculer les badges disponibles et leur progression
     const badgesStatus = AVAILABLE_BADGES.map(badge => {
@@ -74,19 +81,27 @@ export async function GET(request: NextRequest) {
 
     // Statistiques d'engagement par type
     const engagementsByType = {
-      'envie': user.eventEngagements.filter(e => e.type === 'envie').length,
-      'grande-envie': user.eventEngagements.filter(e => e.type === 'grande-envie').length,
-      'decouvrir': user.eventEngagements.filter(e => e.type === 'decouvrir').length,
-      'pas-envie': user.eventEngagements.filter(e => e.type === 'pas-envie').length
+      'envie': (eventEngagements || []).filter((e: any) => e.type === 'envie').length,
+      'grande-envie': (eventEngagements || []).filter((e: any) => e.type === 'grande-envie').length,
+      'decouvrir': (eventEngagements || []).filter((e: any) => e.type === 'decouvrir').length,
+      'pas-envie': (eventEngagements || []).filter((e: any) => e.type === 'pas-envie').length
     };
 
+    // Formater les engagements récents
+    const recentEngagements = (eventEngagements || []).slice(0, 5).map((e: any) => ({
+      id: e.id,
+      type: e.type,
+      createdAt: e.created_at,
+      event: Array.isArray(e.event) ? e.event[0] : e.event
+    }));
+
     return NextResponse.json({
-      karmaPoints: user.karmaPoints,
+      karmaPoints: userData.karma_points || 0,
       totalEngagements,
       badges: badgesStatus,
       unlockedBadges,
       engagementsByType,
-      recentEngagements: user.eventEngagements.slice(0, 5) // Les 5 derniers
+      recentEngagements
     });
 
   } catch (error) {
@@ -101,15 +116,16 @@ export async function GET(request: NextRequest) {
 // POST - Débloquer un badge manuel (pour badges spéciaux)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.id) {
+    if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Vous devez être connecté' },
         { status: 401 }
       );
     }
 
+    const supabase = createClient();
     const body = await request.json();
     const { badgeId, reason } = body;
 
@@ -129,22 +145,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { gamificationBadges: true }
-    });
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('gamification_badges')
+      .eq('id', user.id)
+      .single();
 
-    if (!user) {
+    if (userError || !userData) {
       return NextResponse.json(
         { error: 'Utilisateur introuvable' },
         { status: 404 }
       );
     }
 
-    const currentBadges = (user.gamificationBadges as any[]) || [];
+    const currentBadges = typeof userData.gamification_badges === 'string'
+      ? JSON.parse(userData.gamification_badges || '[]')
+      : (userData.gamification_badges || []);
 
     // Vérifier si le badge est déjà débloqué
-    if (currentBadges.some(b => b.id === badgeId)) {
+    if (currentBadges.some((b: any) => b.id === badgeId)) {
       return NextResponse.json(
         { error: 'Badge déjà débloqué' },
         { status: 400 }
@@ -160,12 +179,18 @@ export async function POST(request: NextRequest) {
 
     const updatedBadges = [...currentBadges, newBadge];
 
-    await prisma.user.update({
-      where: { id: session.user.id },
-      data: {
-        gamificationBadges: updatedBadges
-      }
-    });
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ gamification_badges: JSON.stringify(updatedBadges) })
+      .eq('id', user.id);
+
+    if (updateError) {
+      console.error('Erreur mise à jour badges:', updateError);
+      return NextResponse.json(
+        { error: 'Erreur lors du déblocage du badge' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 import { getPremiumRequiredError } from '@/lib/subscription-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
+
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d';
@@ -19,11 +20,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier l'abonnement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { subscription: true }
-    });
-    if (!establishment || establishment.subscription !== 'PREMIUM') {
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
     }
@@ -49,20 +52,25 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    // Récupérer toutes les données d'analytics pour l'établissement
-    const analytics = await prisma.clickAnalytics.findMany({
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        timestamp: 'desc',
-      },
-    });
+    const startDateISO = startDate.toISOString();
 
-    if (analytics.length === 0) {
+    // Récupérer toutes les données d'analytics pour l'établissement
+    const { data: analytics, error: analyticsError } = await supabase
+      .from('click_analytics')
+      .select('*')
+      .eq('establishment_id', establishmentId)
+      .gte('timestamp', startDateISO)
+      .order('timestamp', { ascending: false });
+
+    if (analyticsError) {
+      console.error('Erreur récupération analytics:', analyticsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch detailed analytics' },
+        { status: 500 }
+      );
+    }
+
+    if (!analytics || analytics.length === 0) {
       // Données de démonstration pour tester le graphique
       const demoHourlyStats = [
         { hour: 2, interactions: 1, visitors: 1, timeSlot: "02h-03h" },
@@ -114,14 +122,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Convertir les données Supabase en format utilisable
+    const formattedAnalytics = (analytics || []).map((a: any) => ({
+      ...a,
+      elementType: a.element_type,
+      elementId: a.element_id,
+      elementName: a.element_name,
+      userAgent: a.user_agent,
+      timestamp: new Date(a.timestamp),
+      hour: new Date(a.timestamp).getHours(),
+      dayOfWeek: new Date(a.timestamp).toLocaleDateString('fr-FR', { weekday: 'long' })
+    }));
+
     // Statistiques générales
-    const totalInteractions = analytics.length;
-    const uniqueVisitors = new Set(analytics.map(a => a.userAgent)).size;
-    const averageSessionTime = Math.round(analytics.length / Math.max(uniqueVisitors, 1) * 2); // Estimation
+    const totalInteractions = formattedAnalytics.length;
+    const uniqueVisitors = new Set(formattedAnalytics.map(a => a.userAgent)).size;
+    const averageSessionTime = Math.round(formattedAnalytics.length / Math.max(uniqueVisitors, 1) * 2); // Estimation
 
     // Statistiques par heure
     const hourlyMap = new Map<number, { interactions: number; visitors: Set<string> }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const hour = analytics.hour || 0;
       if (!hourlyMap.has(hour)) {
         hourlyMap.set(hour, { interactions: 0, visitors: new Set() });
@@ -144,7 +164,7 @@ export async function GET(request: NextRequest) {
 
     // Statistiques par jour
     const dailyMap = new Map<string, { interactions: number; visitors: Set<string>; dayOfWeek: string }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const date = analytics.timestamp.toISOString().split('T')[0];
       const dayOfWeek = analytics.dayOfWeek || analytics.timestamp.toLocaleDateString('fr-FR', { weekday: 'long' });
       
@@ -169,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     // Éléments populaires
     const elementMap = new Map<string, { elementType: string; elementName: string; interactions: number }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const key = `${analytics.elementType}-${analytics.elementId}`;
       if (!elementMap.has(key)) {
         elementMap.set(key, {
@@ -191,7 +211,7 @@ export async function GET(request: NextRequest) {
 
     // Sections populaires
     const sectionMap = new Map<string, { sectionName: string; openCount: number; visitors: Set<string> }>();
-    analytics
+    formattedAnalytics
       .filter(a => a.elementType === 'section' && a.action === 'open')
       .forEach(analytics => {
         const sectionName = analytics.elementName || analytics.elementId;
@@ -215,7 +235,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.openCount - a.openCount);
 
     // Statistiques des horaires
-    const scheduleAnalytics = analytics.filter(a => a.elementType === 'schedule');
+    const scheduleAnalytics = formattedAnalytics.filter(a => a.elementType === 'schedule');
     const scheduleHourlyMap = new Map<number, number>();
     const scheduleDailyMap = new Map<string, number>();
     
@@ -239,7 +259,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
     // Statistiques des contacts
-    const contactAnalytics = analytics.filter(a => a.elementType === 'contact');
+    const contactAnalytics = formattedAnalytics.filter(a => a.elementType === 'contact');
     const contactMap = new Map<string, { contactName: string; clicks: number }>();
     
     contactAnalytics.forEach(analytics => {

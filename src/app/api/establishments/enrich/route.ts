@@ -1,19 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
       );
     }
 
+    const supabase = createClient();
     const { establishmentId, enrichmentData } = await request.json();
 
     if (!establishmentId || !enrichmentData) {
@@ -24,84 +23,98 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'établissement appartient à l'utilisateur
-    const establishment = await prisma.establishment.findFirst({
-      where: {
-        id: establishmentId,
-        userId: session.user.id
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('*')
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: 'Établissement non trouvé ou non autorisé' },
         { status: 404 }
       );
     }
 
+    // Parser les champs JSON existants
+    const existingHorairesOuverture = typeof establishment.horaires_ouverture === 'string' 
+      ? JSON.parse(establishment.horaires_ouverture || '{}') 
+      : (establishment.horaires_ouverture || {});
+    const existingInformationsPratiques = typeof establishment.informations_pratiques === 'string'
+      ? JSON.parse(establishment.informations_pratiques || '[]')
+      : (establishment.informations_pratiques || []);
+    const existingDetailedPayments = typeof establishment.detailed_payments === 'string'
+      ? JSON.parse(establishment.detailed_payments || '{}')
+      : (establishment.detailed_payments || {});
+    const existingDetailedServices = typeof establishment.detailed_services === 'string'
+      ? JSON.parse(establishment.detailed_services || '{}')
+      : (establishment.detailed_services || {});
+    const existingAccessibilityDetails = typeof establishment.accessibility_details === 'string'
+      ? JSON.parse(establishment.accessibility_details || '{}')
+      : (establishment.accessibility_details || {});
+
+    // Préparer les données de mise à jour
+    const updateData: any = {
+      name: enrichmentData.name || establishment.name,
+      description: enrichmentData.description || establishment.description,
+      phone: enrichmentData.phone || establishment.phone,
+      website: enrichmentData.website || establishment.website,
+      google_business_url: enrichmentData.googleBusinessUrl,
+      google_place_id: enrichmentData.googlePlaceId,
+      google_rating: enrichmentData.googleRating,
+      google_review_count: enrichmentData.googleReviewCount,
+      the_fork_link: enrichmentData.theForkLink,
+      envie_tags: JSON.stringify(enrichmentData.envieTags || []),
+      specialties: JSON.stringify(enrichmentData.specialties || []),
+      atmosphere: JSON.stringify(enrichmentData.atmosphere || []),
+      accessibility: JSON.stringify(enrichmentData.accessibility || []),
+      services: JSON.stringify(enrichmentData.servicesArray || []),
+      ambiance: JSON.stringify(enrichmentData.ambianceArray || []),
+      payment_methods: JSON.stringify(enrichmentData.paymentMethodsArray || []),
+      clientele_info: JSON.stringify(enrichmentData.clientele || []),
+      enriched: true,
+      horaires_ouverture: JSON.stringify(enrichmentData.hours || existingHorairesOuverture),
+      price_level: enrichmentData.priceLevel || establishment.price_level,
+      informations_pratiques: JSON.stringify([
+        ...existingInformationsPratiques,
+        ...(enrichmentData.practicalInfo || [])
+      ].filter((item, index, arr) => arr.indexOf(item) === index)),
+      detailed_payments: JSON.stringify(
+        Object.keys(existingDetailedPayments).length > 0 
+          ? existingDetailedPayments
+          : (enrichmentData.detailedPayments || {})
+      ),
+      detailed_services: JSON.stringify(
+        Object.keys(existingDetailedServices).length > 0 
+          ? existingDetailedServices
+          : (enrichmentData.detailedServices || {})
+      ),
+      accessibility_details: JSON.stringify(
+        Object.keys(existingAccessibilityDetails).length > 0 
+          ? existingAccessibilityDetails
+          : (enrichmentData.accessibilityDetails || {})
+      ),
+      enrichment_applied: true,
+      enrichment_date: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
     // Mettre à jour l'établissement avec les données enrichies
-    const updatedEstablishment = await prisma.establishment.update({
-      where: { id: establishmentId },
-      data: {
-        // Données de base enrichies
-        name: enrichmentData.name || establishment.name,
-        description: enrichmentData.description || establishment.description,
-        phone: enrichmentData.phone || establishment.phone,
-        website: enrichmentData.website || establishment.website,
-        
-        // Données d'enrichissement spécifiques
-        googleBusinessUrl: enrichmentData.googleBusinessUrl,
-        googlePlaceId: enrichmentData.googlePlaceId,
-        googleRating: enrichmentData.googleRating,
-        googleReviewCount: enrichmentData.googleReviewCount,
-        theForkLink: enrichmentData.theForkLink,
-        
-        // Tags "envie" générés
-        envieTags: enrichmentData.envieTags || [],
-        
-        // Spécialités et informations pratiques
-        specialties: enrichmentData.specialties || [],
-        atmosphere: enrichmentData.atmosphere || [],
-        accessibility: enrichmentData.accessibility || [],
-        
-        // ✅ CORRECTION : Sauvegarder les données organisées dans les bons champs
-        services: enrichmentData.servicesArray || [],
-        ambiance: enrichmentData.ambianceArray || [],
-        paymentMethods: enrichmentData.paymentMethodsArray || [],
-        clienteleInfo: enrichmentData.clientele || [],
-        
-        // Marquer comme enrichi
-        enriched: true,
-        
-        // Horaires d'ouverture si disponibles
-        horairesOuverture: enrichmentData.hours || establishment.horairesOuverture,
-        
-        // Prix basé sur le niveau Google
-        priceLevel: enrichmentData.priceLevel || establishment.priceLevel,
-        
-        // Informations pratiques fusionnées
-        informationsPratiques: [
-          ...(establishment.informationsPratiques || []),
-          ...(enrichmentData.practicalInfo || [])
-        ].filter((item, index, arr) => arr.indexOf(item) === index), // Supprimer les doublons
-        
-        // Enrichissement conditionnel : ne pas écraser les choix d'enrichissement manuel existants
-        detailedPayments: establishment.detailedPayments && Object.keys(establishment.detailedPayments).length > 0 
-          ? establishment.detailedPayments  // Garder les choix manuels existants
-          : enrichmentData.detailedPayments, // Appliquer l'enrichissement seulement si vide
-        
-        detailedServices: establishment.detailedServices && Object.keys(establishment.detailedServices).length > 0 
-          ? establishment.detailedServices  // Garder les choix manuels existants
-          : enrichmentData.detailedServices, // Appliquer l'enrichissement seulement si vide
-        
-        accessibilityDetails: establishment.accessibilityDetails && Object.keys(establishment.accessibilityDetails).length > 0 
-          ? establishment.accessibilityDetails  // Garder les choix manuels existants
-          : enrichmentData.accessibilityDetails, // Appliquer l'enrichissement seulement si vide
-        
-        // Marquer comme enrichi avec la date
-        enrichmentApplied: true,
-        enrichmentDate: new Date()
-      }
-    });
+    const { data: updatedEstablishment, error: updateError } = await supabase
+      .from('establishments')
+      .update(updateData)
+      .eq('id', establishmentId)
+      .select()
+      .single();
+
+    if (updateError || !updatedEstablishment) {
+      console.error('Erreur mise à jour établissement:', updateError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la sauvegarde de l\'enrichissement' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

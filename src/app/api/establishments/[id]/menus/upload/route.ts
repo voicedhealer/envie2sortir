@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
+import { uploadFile } from '@/lib/supabase/helpers';
 import { MENU_CONSTRAINTS } from '@/types/menu.types';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
 
 // POST /api/establishments/[id]/menus/upload - Uploader un menu PDF
 export async function POST(
@@ -13,41 +10,52 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
+    const supabase = createClient();
     const { id: establishmentId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
-    const establishment = await prisma.establishment.findFirst({
-      where: {
-        id: establishmentId,
-        owner: {
-          email: session.user.email
-        }
-      },
-      include: {
-        owner: true,
-        menus: true
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select(`
+        id,
+        subscription,
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          email
+        )
+      `)
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
     // Vérifier que l'utilisateur a un plan Premium
-    if (establishment.owner.subscriptionPlan !== 'PREMIUM') {
+    if (establishment.subscription !== 'PREMIUM') {
       return NextResponse.json({ 
         error: 'Cette fonctionnalité est réservée aux comptes Premium' 
       }, { status: 403 });
     }
 
     // Vérifier la limite de menus (5 maximum)
-    if (establishment.menus.length >= MENU_CONSTRAINTS.MAX_FILES) {
+    const { count: menuCount, error: countError } = await supabase
+      .from('establishment_menus')
+      .select('*', { count: 'exact', head: true })
+      .eq('establishment_id', establishmentId)
+      .eq('is_active', true);
+
+    if (countError) {
+      console.error('Erreur comptage menus:', countError);
+    }
+
+    if ((menuCount || 0) >= MENU_CONSTRAINTS.MAX_FILES) {
       return NextResponse.json({ 
         error: `Limite de ${MENU_CONSTRAINTS.MAX_FILES} menus atteinte` 
       }, { status: 400 });
@@ -85,45 +93,76 @@ export async function POST(
       }, { status: 400 });
     }
 
-    // Créer le dossier de stockage s'il n'existe pas
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'menus', establishmentId);
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
-
     // Générer un nom de fichier unique
     const timestamp = Date.now();
     const sanitizedName = name.replace(/[^a-zA-Z0-9\s-_]/g, '').replace(/\s+/g, '_');
     const fileName = `${sanitizedName}_${timestamp}.pdf`;
-    const filePath = join(uploadDir, fileName);
-    const fileUrl = `/uploads/menus/${establishmentId}/${fileName}`;
+    const filePath = `menus/${establishmentId}/${fileName}`;
 
-    // Sauvegarder le fichier
+    // Upload vers Supabase Storage
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    
+    const { data: uploadData, error: uploadError } = await uploadFile(
+      'menus',
+      filePath,
+      buffer,
+      {
+        contentType: file.type,
+        upsert: false
+      }
+    );
+
+    if (uploadError || !uploadData) {
+      console.error('Erreur upload menu:', uploadError);
+      return NextResponse.json(
+        { error: 'Erreur lors de l\'upload du fichier' },
+        { status: 500 }
+      );
+    }
+
+    // Obtenir l'URL publique
+    const { data: { publicUrl } } = supabase.storage
+      .from('menus')
+      .getPublicUrl(filePath);
 
     // Déterminer l'ordre (dernier + 1)
-    const lastMenu = await prisma.establishmentMenu.findFirst({
-      where: { establishmentId },
-      orderBy: { order: 'desc' }
-    });
-    const order = lastMenu ? lastMenu.order + 1 : 0;
+    const { data: lastMenu } = await supabase
+      .from('establishment_menus')
+      .select('ordre')
+      .eq('establishment_id', establishmentId)
+      .order('ordre', { ascending: false })
+      .limit(1)
+      .single();
+
+    const order = lastMenu ? (lastMenu.ordre || 0) + 1 : 0;
 
     // Créer l'entrée en base de données
-    const menu = await prisma.establishmentMenu.create({
-      data: {
+    const { data: menu, error: menuError } = await supabase
+      .from('establishment_menus')
+      .insert({
         name,
         description: description || null,
-        fileUrl,
-        fileName: file.name,
-        fileSize: file.size,
-        mimeType: file.type,
-        order,
-        isActive: true,
-        establishmentId
-      }
-    });
+        file_url: publicUrl,
+        file_name: file.name,
+        file_size: file.size,
+        mime_type: file.type,
+        ordre: order,
+        is_active: true,
+        establishment_id: establishmentId
+      })
+      .select()
+      .single();
+
+    if (menuError || !menu) {
+      console.error('Erreur création menu:', menuError);
+      // Rollback: supprimer le fichier uploadé
+      await supabase.storage.from('menus').remove([filePath]);
+      return NextResponse.json(
+        { error: 'Erreur lors de la création du menu' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -131,15 +170,15 @@ export async function POST(
         id: menu.id,
         name: menu.name,
         description: menu.description,
-        fileUrl: menu.fileUrl,
-        fileName: menu.fileName,
-        fileSize: menu.fileSize,
-        mimeType: menu.mimeType,
-        order: menu.order,
-        isActive: menu.isActive,
-        establishmentId: menu.establishmentId,
-        createdAt: menu.createdAt,
-        updatedAt: menu.updatedAt
+        fileUrl: menu.file_url,
+        fileName: menu.file_name,
+        fileSize: menu.file_size,
+        mimeType: menu.mime_type,
+        order: menu.ordre,
+        isActive: menu.is_active,
+        establishmentId: menu.establishment_id,
+        createdAt: menu.created_at,
+        updatedAt: menu.updated_at
       }
     });
 

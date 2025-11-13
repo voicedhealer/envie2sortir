@@ -1,32 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
+    const supabase = createClient();
+
     // Récupérer tous les abonnés
-    const subscribers = await prisma.user.findMany({
-      where: { newsletterOptIn: true },
-      select: {
-        id: true,
-        email: true,
-        newsletterOptIn: true,
-        isVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        preferences: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    const { data: subscribers, error: subscribersError } = await supabase
+      .from('users')
+      .select('id, email, newsletter_opt_in, is_verified, created_at, updated_at, preferences')
+      .eq('newsletter_opt_in', true)
+      .order('created_at', { ascending: false });
+
+    if (subscribersError) {
+      console.error('Erreur récupération abonnés:', subscribersError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de l'export" },
+        { status: 500 }
+      );
+    }
 
     // Générer le CSV
     const csvHeader = 'Email,Statut,Vérifié,Date Inscription,Date Modification\n';
-    const csvRows = subscribers.map(sub => {
-      const status = sub.newsletterOptIn ? 'Actif' : 'Inactif';
-      const verified = sub.isVerified ? 'Oui' : 'Non';
-      const createdAt = new Date(sub.createdAt).toLocaleDateString('fr-FR');
-      const updatedAt = new Date(sub.updatedAt).toLocaleDateString('fr-FR');
+    const csvRows = (subscribers || []).map((sub: any) => {
+      const status = sub.newsletter_opt_in ? 'Actif' : 'Inactif';
+      const verified = sub.is_verified ? 'Oui' : 'Non';
+      const createdAt = new Date(sub.created_at).toLocaleDateString('fr-FR');
+      const updatedAt = new Date(sub.updated_at).toLocaleDateString('fr-FR');
       
       return `"${sub.email}","${status}","${verified}","${createdAt}","${updatedAt}"`;
     }).join('\n');

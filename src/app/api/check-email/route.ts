@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * API pour vérifier si un email existe déjà dans la base de données
@@ -15,45 +15,40 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    const supabase = createClient();
+    
     // Nettoyer l'email (trim et lowercase)
     const cleanedEmail = email.trim().toLowerCase();
     
     // Vérifier si l'email existe déjà dans User
-    const existingUser = await prisma.user.findUnique({
-      where: { email: cleanedEmail },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true
-      }
-    });
+    const { data: existingUser, error: userError } = await supabase
+      .from('users')
+      .select('id, first_name, last_name')
+      .eq('email', cleanedEmail)
+      .single();
 
     // Vérifier si l'email existe déjà dans Professional
-    const existingProfessional = await prisma.professional.findUnique({
-      where: { email: cleanedEmail },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        companyName: true
-      }
-    });
+    const { data: existingProfessional, error: professionalError } = await supabase
+      .from('professionals')
+      .select('id, first_name, last_name, company_name')
+      .eq('email', cleanedEmail)
+      .single();
 
-    if (existingUser) {
+    if (existingUser && !userError) {
       return NextResponse.json({ 
         exists: true,
         message: 'Cet email est déjà utilisé par un utilisateur.',
-        userName: `${existingUser.firstName} ${existingUser.lastName}`,
+        userName: `${existingUser.first_name || ''} ${existingUser.last_name || ''}`.trim(),
         userType: 'user'
       });
     }
 
-    if (existingProfessional) {
+    if (existingProfessional && !professionalError) {
       return NextResponse.json({ 
         exists: true,
         message: 'Cet email est déjà utilisé par un professionnel.',
-        userName: `${existingProfessional.firstName} ${existingProfessional.lastName}`,
-        companyName: existingProfessional.companyName,
+        userName: `${existingProfessional.first_name || ''} ${existingProfessional.last_name || ''}`.trim(),
+        companyName: existingProfessional.company_name,
         userType: 'professional'
       });
     }

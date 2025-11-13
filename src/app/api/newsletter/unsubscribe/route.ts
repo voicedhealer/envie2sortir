@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const unsubscribeSchema = z.object({
@@ -19,15 +19,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createClient();
     const { email, token } = validationResult.data;
 
     // Vérifier que l'utilisateur existe
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, email: true, newsletterOptIn: true, role: true }
-    });
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, newsletter_opt_in, role')
+      .eq('email', email)
+      .single();
 
-    if (!user) {
+    if (userError || !user) {
       return NextResponse.json(
         { success: false, error: "Adresse email non trouvée dans notre base de données" },
         { status: 404 }
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier si déjà désabonné
-    if (!user.newsletterOptIn) {
+    if (!user.newsletter_opt_in) {
       return NextResponse.json(
         { success: false, error: "Vous êtes déjà désabonné de notre newsletter" },
         { status: 409 }
@@ -43,13 +45,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Désabonner l'utilisateur
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { 
-        newsletterOptIn: false,
-        updatedAt: new Date()
-      }
-    });
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        newsletter_opt_in: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', user.id);
+
+    if (updateError) {
+      console.error('Erreur désabonnement:', updateError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de la désinscription" },
+        { status: 500 }
+      );
+    }
 
     // Log de la désinscription
     console.log(`📧 [Newsletter] Désinscription: ${email} (Token: ${token || 'N/A'})`);
@@ -82,19 +92,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Désabonner directement
-    const result = await prisma.user.updateMany({
-      where: { 
-        email: email.toLowerCase(),
-        newsletterOptIn: true
-      },
-      data: { 
-        newsletterOptIn: false,
-        updatedAt: new Date()
-      }
-    });
+    const supabase = createClient();
 
-    if (result.count === 0) {
+    // Désabonner directement
+    const { data: updatedUsers, error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        newsletter_opt_in: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('email', email.toLowerCase())
+      .eq('newsletter_opt_in', true)
+      .select();
+
+    if (updateError) {
+      console.error('Erreur désabonnement GET:', updateError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de la désinscription" },
+        { status: 500 }
+      );
+    }
+
+    if (!updatedUsers || updatedUsers.length === 0) {
       return NextResponse.json(
         { success: false, error: "Email non trouvé ou déjà désabonné" },
         { status: 404 }

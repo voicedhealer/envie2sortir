@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function GET(
   request: NextRequest,
@@ -10,69 +9,63 @@ export async function GET(
   try {
     const { slug } = await params;
     
-    // Récupérer l'établissement
-    const establishment = await prisma.establishment.findUnique({
-      where: { slug },
-      select: { id: true, name: true }
-    });
+    const supabase = createClient();
+    const now = new Date();
+    const nowISO = now.toISOString();
 
-    if (!establishment) {
+    // Récupérer l'établissement
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name')
+      .eq('slug', slug)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Récupérer les événements de l'établissement avec filtrage par horaires quotidiens
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const currentTime = currentHour * 60 + currentMinute; // Convertir en minutes depuis minuit
-    
     // Récupérer tous les événements de l'établissement
-    const allEvents = await prisma.event.findMany({
-      where: { 
-        establishmentId: establishment.id,
-        OR: [
-          // Événements à venir (pas encore commencés)
-          {
-            startDate: {
-              gt: now
-            }
-          },
-          // Événements en cours (commencés mais pas encore finis)
-          {
-            startDate: {
-              lte: now
-            },
-            endDate: {
-              gte: now
-            }
-          }
-        ]
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        startDate: true,
-        endDate: true,
-        imageUrl: true,
-        price: true,
-        maxCapacity: true,
-        isRecurring: true,
-        modality: true,
-        createdAt: true
-      },
-      orderBy: { startDate: 'asc' }
+    // On récupère tous les événements et on filtre ensuite
+    const { data: allEvents, error: eventsError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('establishment_id', establishment.id)
+      .order('start_date', { ascending: true });
+
+    if (eventsError) {
+      console.error('Erreur récupération événements:', eventsError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la récupération des événements' 
+      }, { status: 500 });
+    }
+
+    // Filtrer les événements à venir ou en cours
+    const filteredEvents = (allEvents || []).filter((event: any) => {
+      const startDate = new Date(event.start_date);
+      const endDate = event.end_date ? new Date(event.end_date) : null;
+      
+      // Événements à venir (pas encore commencés)
+      if (startDate > now) return true;
+      
+      // Événements en cours (commencés mais pas encore finis)
+      if (startDate <= now && (!endDate || endDate >= now)) return true;
+      
+      return false;
     });
 
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute;
+
     // Filtrer les événements par horaires quotidiens
-    const events = allEvents.filter(event => {
+    const events = filteredEvents.filter((event: any) => {
       console.log(`🕐 [API Events] Filtrage événement: "${event.title}"`);
       console.log(`🕐 [API Events] Heure actuelle: ${currentHour}:${currentMinute} (${currentTime} minutes)`);
-      console.log(`🕐 [API Events] Événement récurrent (DB): ${event.isRecurring}`);
+      console.log(`🕐 [API Events] Événement récurrent (DB): ${event.is_recurring}`);
       
       // 🔍 DÉTECTION AUTOMATIQUE : Est-ce un événement récurrent ?
-      const startDate = new Date(event.startDate);
-      const endDate = event.endDate ? new Date(event.endDate) : null;
+      const startDate = new Date(event.start_date);
+      const endDate = event.end_date ? new Date(event.end_date) : null;
       
       // Calculer la durée en jours
       const durationInDays = endDate ? 
@@ -86,7 +79,7 @@ export async function GET(
       
       // 🎯 LOGIQUE SIMPLIFIÉE : Tout événement multi-jours est récurrent pour le filtrage
       // Si un événement dure plus d'1 jour, il doit respecter ses horaires quotidiens
-      const isActuallyRecurring = event.isRecurring || durationInDays > 1;
+      const isActuallyRecurring = event.is_recurring || durationInDays > 1;
       
       console.log(`🕐 [API Events] Durée: ${durationInDays} jours`);
       console.log(`🕐 [API Events] Horaires: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
@@ -121,17 +114,17 @@ export async function GET(
     });
 
     // 🎯 AJOUTER LE STATUT À CHAQUE ÉVÉNEMENT
-    const eventsWithStatus = events.map(event => {
+    const eventsWithStatus = events.map((event: any) => {
       // Déterminer le statut : "en cours" ou "à venir"
       let eventStatus = 'upcoming'; // Par défaut "à venir"
       
       // Si c'est un événement récurrent, vérifier les horaires quotidiens
-      const isRecurring = event.isRecurring || (event.endDate && 
-        Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60 * 24)) > 1);
+      const isRecurring = event.is_recurring || (event.end_date && 
+        Math.ceil((new Date(event.end_date).getTime() - new Date(event.start_date).getTime()) / (1000 * 60 * 60 * 24)) > 1);
       
       if (isRecurring) {
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : null;
+        const startDate = new Date(event.start_date);
+        const endDate = event.end_date ? new Date(event.end_date) : null;
         
         const eventStartHour = startDate.getHours();
         const eventStartMinute = startDate.getMinutes();
@@ -148,8 +141,8 @@ export async function GET(
         }
       } else {
         // Pour les événements ponctuels, vérifier si on est dans la période
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : null;
+        const startDate = new Date(event.start_date);
+        const endDate = event.end_date ? new Date(event.end_date) : null;
         
         if (now >= startDate && (!endDate || now <= endDate)) {
           eventStatus = 'ongoing';
@@ -157,7 +150,17 @@ export async function GET(
       }
 
       return {
-        ...event,
+        id: event.id,
+        title: event.title,
+        description: event.description,
+        startDate: event.start_date,
+        endDate: event.end_date,
+        imageUrl: event.image_url,
+        price: event.price,
+        maxCapacity: event.max_capacity,
+        isRecurring: event.is_recurring,
+        modality: event.modality,
+        createdAt: event.created_at,
         status: eventStatus
       };
     });
@@ -177,17 +180,12 @@ export async function POST(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = createClient();
     const { slug } = await params;
     const body = await request.json();
     const { title, description, startDate, endDate, price, maxCapacity } = body;
@@ -200,21 +198,17 @@ export async function POST(
     }
 
     // Récupérer l'établissement et vérifier les permissions
-    const establishment = await prisma.establishment.findUnique({
-      where: { slug },
-      select: { 
-        id: true, 
-        name: true, 
-        ownerId: true,
-        subscription: true
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name, owner_id, subscription')
+      .eq('slug', slug)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    if (establishment.ownerId !== session.user.id) {
+    if (establishment.owner_id !== user.id) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
@@ -228,18 +222,27 @@ export async function POST(
     }
 
     // Créer l'événement
-    const event = await prisma.event.create({
-      data: {
+    const { data: event, error: eventError } = await supabase
+      .from('events')
+      .insert({
         title,
         description,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
+        start_date: new Date(startDate).toISOString(),
+        end_date: endDate ? new Date(endDate).toISOString() : null,
         price: price ? parseFloat(price) : null,
-        maxCapacity: maxCapacity ? parseInt(maxCapacity) : null,
-        establishmentId: establishment.id,
-        isRecurring: false
-      }
-    });
+        max_capacity: maxCapacity ? parseInt(maxCapacity) : null,
+        establishment_id: establishment.id,
+        is_recurring: false
+      })
+      .select()
+      .single();
+
+    if (eventError || !event) {
+      console.error('Erreur création événement:', eventError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la création de l\'événement' 
+      }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
@@ -247,11 +250,11 @@ export async function POST(
         id: event.id,
         title: event.title,
         description: event.description,
-        startDate: event.startDate,
-        endDate: event.endDate,
+        startDate: event.start_date,
+        endDate: event.end_date,
         price: event.price,
-        maxCapacity: event.maxCapacity,
-        isRecurring: event.isRecurring
+        maxCapacity: event.max_capacity,
+        isRecurring: event.is_recurring
       },
       message: 'Événement créé avec succès'
     });

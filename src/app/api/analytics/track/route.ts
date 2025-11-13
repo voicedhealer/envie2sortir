@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma as prismaShared } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 import { getPremiumRequiredError } from '@/lib/subscription-utils';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,13 +27,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que l'établissement existe
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { id: true }
-    });
+    const supabase = createClient();
 
-    if (!establishment) {
+    // Vérifier que l'établissement existe
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: 'Establishment not found' },
         { status: 404 }
@@ -45,19 +44,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Enregistrer l'événement de clic
-    await prisma.clickAnalytics.create({
-      data: {
-        establishmentId,
-        elementType,
-        elementId,
-        elementName,
+    const { error: insertError } = await supabase
+      .from('click_analytics')
+      .insert({
+        establishment_id: establishmentId,
+        element_type: elementType,
+        element_id: elementId,
+        element_name: elementName,
         action,
-        sectionContext,
-        userAgent,
+        section_context: sectionContext,
+        user_agent: userAgent,
         referrer,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
-      },
-    });
+        timestamp: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('Erreur enregistrement analytics:', insertError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -73,11 +80,12 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Vérifier l'abonnement: Premium requis pour consulter les analytics détaillés
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d'; // 7d, 30d, 90d, 1y
@@ -90,11 +98,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier le plan d'abonnement de l'établissement
-    const establishment = await prismaShared.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { subscription: true }
-    });
-    if (!establishment || establishment.subscription !== 'PREMIUM') {
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
     }
@@ -120,51 +130,62 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    // Récupérer les statistiques
-    const stats = await prisma.clickAnalytics.groupBy({
-      by: ['elementType', 'elementId', 'elementName'],
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        _count: {
-          id: 'desc',
-        },
-      },
+    const startDateISO = startDate.toISOString();
+
+    // Récupérer toutes les données d'analytics pour cette période
+    const { data: allClicks, error: clicksError } = await supabase
+      .from('click_analytics')
+      .select('*')
+      .eq('establishment_id', establishmentId)
+      .gte('timestamp', startDateISO);
+
+    if (clicksError) {
+      console.error('Erreur récupération analytics:', clicksError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+
+    // Grouper par élément (elementType, elementId, elementName)
+    const statsMap = new Map<string, { elementType: string; elementId: string; elementName: string; count: number }>();
+    const statsByTypeMap = new Map<string, number>();
+
+    (allClicks || []).forEach((click: any) => {
+      const key = `${click.element_type}-${click.element_id}-${click.element_name}`;
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          elementType: click.element_type,
+          elementId: click.element_id,
+          elementName: click.element_name,
+          count: 0
+        });
+      }
+      statsMap.get(key)!.count++;
+
+      // Stats par type
+      const typeCount = statsByTypeMap.get(click.element_type) || 0;
+      statsByTypeMap.set(click.element_type, typeCount + 1);
     });
 
-    // Statistiques par type d'élément
-    const statsByType = await prisma.clickAnalytics.groupBy({
-      by: ['elementType'],
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const stats = Array.from(statsMap.values())
+      .sort((a, b) => b.count - a.count)
+      .map(item => ({
+        elementType: item.elementType,
+        elementId: item.elementId,
+        elementName: item.elementName,
+        _count: { id: item.count }
+      }));
+
+    const statsByType = Array.from(statsByTypeMap.entries()).map(([elementType, count]) => ({
+      elementType,
+      _count: { id: count }
+    }));
 
     // Statistiques temporelles (clics par heure de la journée)
-    const hourlyData = await prisma.clickAnalytics.findMany({
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      select: {
-        timestamp: true,
-      },
-    });
+    const hourlyData = (allClicks || []).map((click: any) => ({
+      timestamp: new Date(click.timestamp)
+    }));
 
     // Grouper par heure de la journée (0-23)
     const hourlyStatsMap = new Map<number, number>();

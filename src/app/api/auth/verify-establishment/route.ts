@@ -6,29 +6,35 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { getUserEstablishment } from '@/lib/professional-utils';
+import { getCurrentUser } from '@/lib/supabase/helpers';
+import { createClient } from '@/lib/supabase/server';
+import { getProfessionalEstablishment } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
     // Vérifier si l'utilisateur est un professionnel
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
+    const supabase = createClient();
+    const { data: professional } = await supabase
+      .from('professionals')
+      .select('id')
+      .eq('email', user.email)
+      .single();
+
+    if (!professional) {
       return NextResponse.json({ 
         hasEstablishment: false, 
         error: 'Utilisateur non professionnel' 
       });
     }
 
-    // Récupérer l'établissement de l'utilisateur
-    const establishment = await getUserEstablishment(session.user.id);
+    // Récupérer l'établissement du professionnel
+    const establishment = await getProfessionalEstablishment(professional.id);
     
     return NextResponse.json({ 
       hasEstablishment: !!establishment,

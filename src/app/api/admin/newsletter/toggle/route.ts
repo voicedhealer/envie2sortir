@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
 const toggleSchema = z.object({
@@ -9,6 +10,12 @@ const toggleSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
+    const supabase = createClient();
     const body = await request.json();
     const validationResult = toggleSchema.safeParse(body);
 
@@ -22,12 +29,13 @@ export async function POST(request: NextRequest) {
     const { subscriberId, status } = validationResult.data;
 
     // Vérifier que l'abonné existe
-    const subscriber = await prisma.user.findUnique({
-      where: { id: subscriberId },
-      select: { id: true, email: true, newsletterOptIn: true }
-    });
+    const { data: subscriber, error: subscriberError } = await supabase
+      .from('users')
+      .select('id, email, newsletter_opt_in')
+      .eq('id', subscriberId)
+      .single();
 
-    if (!subscriber) {
+    if (subscriberError || !subscriber) {
       return NextResponse.json(
         { success: false, error: "Abonné non trouvé" },
         { status: 404 }
@@ -35,13 +43,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Mettre à jour le statut
-    await prisma.user.update({
-      where: { id: subscriberId },
-      data: { 
-        newsletterOptIn: status,
-        updatedAt: new Date()
-      }
-    });
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ 
+        newsletter_opt_in: status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', subscriberId);
+
+    if (updateError) {
+      console.error('Erreur mise à jour abonné:', updateError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de la modification du statut" },
+        { status: 500 }
+      );
+    }
 
     // Log de l'action
     console.log(`📧 [Newsletter Admin] Statut modifié pour ${subscriber.email}: ${status ? 'Activé' : 'Désactivé'}`);

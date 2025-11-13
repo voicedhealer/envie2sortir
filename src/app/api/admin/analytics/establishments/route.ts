@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin, getCurrentUser } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session?.user?.id) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Non autorisé' },
         { status: 401 }
@@ -17,40 +14,53 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    if (!(await isAdmin(user.id))) {
       return NextResponse.json(
         { error: 'Accès refusé - Admin requis' },
         { status: 403 }
       );
     }
 
-    // Récupérer tous les établissements avec leurs analytics
-    const establishments = await prisma.establishment.findMany({
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        clickAnalytics: {
-          select: {
-            elementId: true,
-            elementName: true,
-            timestamp: true,
-          },
-          orderBy: {
-            timestamp: 'desc',
-          },
-        },
-      },
-    });
+    const supabase = createClient();
+
+    // Récupérer tous les établissements
+    const { data: establishments, error: establishmentsError } = await supabase
+      .from('establishments')
+      .select('id, name, slug');
+    
+    if (establishmentsError) {
+      console.error('Error fetching establishments:', establishmentsError);
+      return NextResponse.json(
+        { error: 'Erreur interne du serveur' },
+        { status: 500 }
+      );
+    }
+
+    // Récupérer toutes les analytics
+    const { data: analytics, error: analyticsError } = await supabase
+      .from('click_analytics')
+      .select('establishment_id, element_id, element_name, timestamp')
+      .order('timestamp', { ascending: false });
+    
+    if (analyticsError) {
+      console.error('Error fetching analytics:', analyticsError);
+      return NextResponse.json(
+        { error: 'Erreur interne du serveur' },
+        { status: 500 }
+      );
+    }
 
     // Traiter les données pour chaque établissement
-    const establishmentsWithAnalytics = establishments.map(establishment => {
-      const analytics = establishment.clickAnalytics;
-      const totalClicks = analytics.length;
+    const establishmentsWithAnalytics = (establishments || []).map(establishment => {
+      const establishmentAnalytics = (analytics || []).filter(
+        (a: any) => a.establishment_id === establishment.id
+      );
+      
+      const totalClicks = establishmentAnalytics.length;
       
       // Trouver l'élément le plus cliqué
-      const elementCounts = analytics.reduce((acc, click) => {
-        const key = click.elementName || click.elementId;
+      const elementCounts = establishmentAnalytics.reduce((acc: Record<string, number>, click: any) => {
+        const key = click.element_name || click.element_id;
         acc[key] = (acc[key] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
@@ -58,7 +68,9 @@ export async function GET(request: NextRequest) {
       const topElement = Object.entries(elementCounts)
         .sort(([,a], [,b]) => b - a)[0];
       
-      const lastActivity = analytics.length > 0 ? analytics[0].timestamp : new Date();
+      const lastActivity = establishmentAnalytics.length > 0 
+        ? new Date(establishmentAnalytics[0].timestamp) 
+        : new Date();
 
       return {
         id: establishment.id,

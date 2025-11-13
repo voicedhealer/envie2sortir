@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,20 +24,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createClient();
+
     // Enregistrer la recherche
-    await prisma.searchAnalytics.create({
-      data: {
-        searchTerm: searchTerm.trim().toLowerCase(),
-        resultCount: resultCount || 0,
-        clickedEstablishmentId,
-        clickedEstablishmentName,
-        userAgent: userAgent || request.headers.get('user-agent'),
+    const { error: insertError } = await supabase
+      .from('search_analytics')
+      .insert({
+        search_term: searchTerm.trim().toLowerCase(),
+        result_count: resultCount || 0,
+        clicked_establishment_id: clickedEstablishmentId,
+        clicked_establishment_name: clickedEstablishmentName,
+        user_agent: userAgent || request.headers.get('user-agent'),
         referrer: referrer || request.headers.get('referer'),
         city,
-        searchedCity,
-        timestamp: new Date(),
-      },
-    });
+        searched_city: searchedCity,
+        timestamp: new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('Erreur enregistrement search analytics:', insertError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

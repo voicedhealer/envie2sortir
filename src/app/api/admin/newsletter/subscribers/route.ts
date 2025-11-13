@@ -1,74 +1,79 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
+    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || 'all';
 
-    // Construire les conditions de filtrage
-    const whereConditions: any = {};
+    // Construire la requête
+    let query = supabase
+      .from('users')
+      .select('id, email, newsletter_opt_in, is_verified, created_at, updated_at, preferences', { count: 'exact' });
 
     // Filtre par statut
     switch (status) {
       case 'active':
-        whereConditions.newsletterOptIn = true;
-        whereConditions.isVerified = true;
+        query = query.eq('newsletter_opt_in', true).eq('is_verified', true);
         break;
       case 'inactive':
-        whereConditions.newsletterOptIn = false;
+        query = query.eq('newsletter_opt_in', false);
         break;
       case 'unverified':
-        whereConditions.newsletterOptIn = true;
-        whereConditions.isVerified = false;
+        query = query.eq('newsletter_opt_in', true).eq('is_verified', false);
         break;
     }
 
     // Recherche par email
     if (search) {
-      whereConditions.email = {
-        contains: search,
-        mode: 'insensitive'
-      };
+      query = query.ilike('email', `%${search}%`);
     }
 
-    // Récupérer les abonnés avec pagination
-    const [subscribers, total] = await Promise.all([
-      prisma.user.findMany({
-        where: whereConditions,
-        select: {
-          id: true,
-          email: true,
-          newsletterOptIn: true,
-          isVerified: true,
-          createdAt: true,
-          updatedAt: true,
-          preferences: true
-        },
-        orderBy: {
-          createdAt: 'desc'
-        },
-        skip: (page - 1) * limit,
-        take: limit
-      }),
-      prisma.user.count({ where: whereConditions })
-    ]);
+    // Pagination
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    query = query.order('created_at', { ascending: false }).range(from, to);
+
+    const { data: subscribers, error: subscribersError, count } = await query;
+
+    if (subscribersError) {
+      console.error('Erreur récupération abonnés:', subscribersError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors du chargement des abonnés" },
+        { status: 500 }
+      );
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedSubscribers = (subscribers || []).map((sub: any) => ({
+      id: sub.id,
+      email: sub.email,
+      newsletterOptIn: sub.newsletter_opt_in,
+      isVerified: sub.is_verified,
+      createdAt: sub.created_at,
+      updatedAt: sub.updated_at,
+      preferences: typeof sub.preferences === 'string' ? JSON.parse(sub.preferences || '{}') : (sub.preferences || {})
+    }));
 
     return NextResponse.json({
       success: true,
-      subscribers: subscribers.map(sub => ({
-        ...sub,
-        createdAt: sub.createdAt.toISOString(),
-        updatedAt: sub.updatedAt.toISOString()
-      })),
+      subscribers: formattedSubscribers,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit)
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit)
       }
     });
 

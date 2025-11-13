@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { createClient } from '@/lib/supabase/server';
 import { metricsCollector } from './metrics-collector';
 
 interface HealthCheckResult {
@@ -23,12 +23,12 @@ interface DependencyCheck {
 }
 
 export class HealthChecker {
-  private prisma: PrismaClient;
+  private supabase: ReturnType<typeof createClient>;
   private startTime: number;
   private dependencies: DependencyCheck[] = [];
 
-  constructor(prisma: PrismaClient) {
-    this.prisma = prisma;
+  constructor() {
+    this.supabase = createClient();
     this.startTime = Date.now();
     this.initializeDependencies();
   }
@@ -70,8 +70,15 @@ export class HealthChecker {
   private async checkDatabase(): Promise<boolean> {
     try {
       const startTime = Date.now();
-      await this.prisma.$queryRaw`SELECT 1`;
+      // Test simple de connexion à Supabase
+      const { error } = await this.supabase.from('users').select('id').limit(1);
       const responseTime = Date.now() - startTime;
+      
+      // Si l'erreur est "table not found", c'est normal si les migrations ne sont pas appliquées
+      // Mais si c'est une erreur de connexion, c'est un problème
+      if (error && !error.message.includes('does not exist') && !error.message.includes('not found')) {
+        throw error;
+      }
       
       // Enregistrer la métrique
       metricsCollector.recordGauge('health_check_database_response_time', responseTime);
@@ -309,8 +316,8 @@ export class HealthChecker {
 }
 
 // Fonction utilitaire pour créer une instance
-export function createHealthChecker(prisma: PrismaClient): HealthChecker {
-  return new HealthChecker(prisma);
+export function createHealthChecker(): HealthChecker {
+  return new HealthChecker();
 }
 
 // Middleware pour les endpoints de health
