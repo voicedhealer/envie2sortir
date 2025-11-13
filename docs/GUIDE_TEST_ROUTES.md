@@ -1,227 +1,115 @@
-# Guide : Tester les Routes Migrées
+# Guide de Test des Routes Migrées
 
-## ⚠️ Erreur Commune : Serveur Non Démarré
+## 🚀 Démarrage Rapide
 
-Si vous voyez cette erreur :
-```
-curl: (7) Failed to connect to localhost port 3000
-```
+### 1. Démarrer le serveur Next.js
 
-**C'est normal !** Le serveur Next.js n'est pas démarré.
+Dans un premier terminal :
 
-## 🚀 Solution : Démarrer le Serveur
-
-### Étape 1 : Démarrer Next.js
-
-```bash
-# Dans un terminal, démarrer le serveur
-npm run dev
-```
-
-Vous devriez voir :
-```
-▲ Next.js 15.x.x
-- Local:        http://localhost:3000
-- Ready in Xs
-```
-
-### Étape 2 : Garder le Terminal Ouvert
-
-**Important** : Laissez ce terminal ouvert ! Le serveur doit rester actif.
-
-### Étape 3 : Ouvrir un Nouveau Terminal
-
-Ouvrez un **nouveau terminal** pour tester les routes (sans fermer le premier).
-
-## 🧪 Tester les Routes
-
-### Test 1 : GET /api/categories
-
-```bash
-# Dans un NOUVEAU terminal
-curl http://localhost:3000/api/categories
-```
-
-### Test 2 : GET /api/etablissements/[slug]
-
-**⚠️ Erreur à éviter** : Ne pas utiliser `[slug]` littéralement !
-
-```bash
-# ❌ MAUVAIS (zsh interprète les crochets)
-curl http://localhost:3000/api/etablissements/[slug]
-
-# ✅ BON : Utiliser un vrai slug
-curl http://localhost:3000/api/etablissements/votre-slug-reel
-```
-
-**Comment trouver un slug réel ?**
-
-1. **Via votre base Prisma** :
-```bash
-# Si vous avez sqlite3 installé
-sqlite3 prisma/dev.db "SELECT slug FROM establishments LIMIT 1;"
-```
-
-2. **Via l'interface web** :
-   - Aller sur `http://localhost:3000`
-   - Cliquer sur un établissement
-   - Regarder l'URL : `/etablissements/mon-slug`
-
-3. **Créer un slug de test** :
-   - Utiliser un slug simple : `test-etablissement`
-   - Ou créer un établissement via l'interface
-
-### Test 3 : GET /api/recherche/envie
-
-```bash
-# Recherche "envie de restaurant"
-curl "http://localhost:3000/api/recherche/envie?envie=restaurant&ville=Paris&rayon=5"
-
-# Recherche "envie de sushi"
-curl "http://localhost:3000/api/recherche/envie?envie=sushi&ville=Lyon&rayon=10"
-```
-
-**Note** : Utilisez des guillemets pour les URLs avec paramètres.
-
-### Test 4 : POST /api/auth/register
-
-```bash
-curl -X POST http://localhost:3000/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Test",
-    "lastName": "User",
-    "email": "test'$(date +%s)'@example.com",
-    "password": "test123456",
-    "acceptTerms": true
-  }'
-```
-
-### Test 5 : POST /api/auth/login
-
-```bash
-curl -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@example.com",
-    "password": "test123456"
-  }'
-```
-
-## 🔍 Vérifier que le Serveur Tourne
-
-### Méthode 1 : Vérifier le Processus
-
-```bash
-# Voir si Next.js tourne
-ps aux | grep "next\|node.*dev" | grep -v grep
-```
-
-### Méthode 2 : Tester la Page d'Accueil
-
-```bash
-# Tester la page d'accueil
-curl http://localhost:3000
-```
-
-Si ça fonctionne, le serveur est démarré.
-
-### Méthode 3 : Ouvrir dans le Navigateur
-
-Allez sur `http://localhost:3000` dans votre navigateur.
-
-## 📋 Checklist de Test
-
-- [ ] Serveur Next.js démarré (`npm run dev`)
-- [ ] Terminal du serveur reste ouvert
-- [ ] Nouveau terminal ouvert pour les tests
-- [ ] Test Supabase réussi (`npm run test:supabase`)
-- [ ] Migrations SQL appliquées dans Supabase Dashboard
-- [ ] Test GET /api/categories
-- [ ] Test GET /api/etablissements/[slug-reel]
-- [ ] Test GET /api/recherche/envie
-
-## 🐛 Erreurs Courantes
-
-### Erreur : "Failed to connect to localhost port 3000"
-
-**Cause** : Serveur non démarré
-
-**Solution** :
 ```bash
 npm run dev
 ```
 
-### Erreur : "zsh: no matches found: [slug]"
+Attendez que le serveur soit prêt (message `Ready in X ms`).
 
-**Cause** : zsh interprète les crochets comme des patterns glob
+### 2. Lancer les tests
 
-**Solution** : Utiliser un vrai slug ou mettre l'URL entre guillemets :
+Dans un deuxième terminal :
+
 ```bash
-# Avec guillemets
-curl "http://localhost:3000/api/etablissements/[slug]"
-
-# Ou mieux : utiliser un vrai slug
-curl http://localhost:3000/api/etablissements/mon-slug-reel
+npm run test:routes
 ```
 
-### Erreur : "Table does not exist" (Supabase)
+## 📊 Ce que teste le script
 
-**Cause** : Migrations SQL non appliquées
+Le script `test-routes-supabase.ts` teste automatiquement :
 
-**Solution** :
-1. Aller dans Supabase Dashboard > SQL Editor
-2. Exécuter les migrations dans l'ordre :
-   - `001_initial_schema.sql`
-   - `002_rls_policies.sql`
-   - `003_storage_setup.sql`
+### Routes Publiques ✅
+- `/api/monitoring/health` - Santé de l'application
+- `/api/monitoring/liveness` - Vérification de disponibilité
+- `/api/monitoring/readiness` - Vérification de préparation
+- `/api/categories` - Liste des catégories
+- `/api/establishments/all` - Liste des établissements
+- `/api/establishments/random` - Établissements aléatoires
+- `/api/events/upcoming` - Événements à venir
+- `/api/deals/all` - Tous les deals actifs
 
-## 🎯 Exemple Complet de Test
+### Routes d'Authentification 🔐
+- `/api/auth/verify-establishment` - Vérification d'établissement
 
+### Routes Admin 👑
+- `/api/admin/stats` - Statistiques admin
+- `/api/admin/pending-count` - Compteur d'éléments en attente
+- `/api/admin/metrics` - Métriques système
+- `/api/admin/professionals` - Liste des professionnels
+
+### Routes de Recherche 🔍
+- `/api/recherche/envie` - Recherche "envie de"
+- `/api/recherche/filtered` - Recherche filtrée
+
+### Routes Newsletter 📧
+- `/api/newsletter/subscribe` - Inscription newsletter
+
+### Routes Analytics 📊
+- `/api/analytics/search/track` - Tracking des recherches
+
+## 📋 Interprétation des Résultats
+
+### ✅ Succès
+- Status 200-299 : Route fonctionne correctement
+- Status 401/403 : Route protégée (normal si non authentifié)
+
+### ❌ Erreurs
+- Status 500 : Erreur serveur (vérifier les logs)
+- Status 404 : Route non trouvée
+- Erreur réseau : Serveur non accessible
+
+## 🔧 Dépannage
+
+### Le serveur ne démarre pas
 ```bash
-# Terminal 1 : Démarrer le serveur
-npm run dev
+# Vérifier que le port 3000 est libre
+lsof -ti:3000 | xargs kill -9
 
-# Terminal 2 : Tester les routes
-# 1. Tester Supabase
+# Redémarrer
+npm run dev
+```
+
+### Erreurs de connexion Supabase
+```bash
+# Vérifier la configuration
 npm run test:supabase
+```
 
-# 2. Tester categories
+### Routes retournent 401/403
+C'est normal pour les routes protégées. Le script teste que :
+- La route existe
+- Elle retourne une erreur d'authentification appropriée
+
+## 📈 Rapport de Test
+
+Le script génère un rapport détaillé avec :
+- Nombre de succès/erreurs
+- Détails de chaque test
+- Temps de réponse
+- Codes de statut HTTP
+
+## 🎯 Tests Manuels
+
+Pour tester manuellement une route spécifique :
+
+```bash
+# Test GET
 curl http://localhost:3000/api/categories
 
-# 3. Tester recherche
-curl "http://localhost:3000/api/recherche/envie?envie=restaurant&ville=Paris&rayon=5"
-
-# 4. Tester un établissement (remplacer par un vrai slug)
-curl http://localhost:3000/api/etablissements/mon-slug-reel
+# Test POST
+curl -X POST http://localhost:3000/api/newsletter/subscribe \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "firstName": "Test"}'
 ```
 
-## 💡 Astuce : Script de Test Automatique
+## 📝 Notes
 
-Créez un fichier `test-routes.sh` :
-
-```bash
-#!/bin/bash
-
-BASE_URL="http://localhost:3000"
-
-echo "🧪 Test des routes migrées..."
-echo ""
-
-echo "1. Test GET /api/categories"
-curl -s "$BASE_URL/api/categories" | jq '.categories | length' || echo "❌ Erreur"
-echo ""
-
-echo "2. Test GET /api/recherche/envie"
-curl -s "$BASE_URL/api/recherche/envie?envie=restaurant&ville=Paris&rayon=5" | jq '.results | length' || echo "❌ Erreur"
-echo ""
-
-echo "✅ Tests terminés"
-```
-
-Puis exécutez :
-```bash
-chmod +x test-routes.sh
-./test-routes.sh
-```
-
+- Les routes nécessitant une authentification retourneront 401/403 (normal)
+- Certaines routes nécessitent des données en base (peuvent retourner des listes vides)
+- Le script teste la disponibilité, pas la logique métier complète

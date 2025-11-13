@@ -23,14 +23,16 @@ interface DependencyCheck {
 }
 
 export class HealthChecker {
-  private supabase: ReturnType<typeof createClient>;
   private startTime: number;
   private dependencies: DependencyCheck[] = [];
 
   constructor() {
-    this.supabase = createClient();
     this.startTime = Date.now();
     this.initializeDependencies();
+  }
+
+  private getSupabase() {
+    return createClient();
   }
 
   private initializeDependencies(): void {
@@ -71,7 +73,8 @@ export class HealthChecker {
     try {
       const startTime = Date.now();
       // Test simple de connexion à Supabase
-      const { error } = await this.supabase.from('users').select('id').limit(1);
+      const supabase = this.getSupabase();
+      const { error } = await supabase.from('users').select('id').limit(1);
       const responseTime = Date.now() - startTime;
       
       // Si l'erreur est "table not found", c'est normal si les migrations ne sont pas appliquées
