@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHealthChecker } from '@/lib/monitoring/health-check';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
+// Utilise l'instance Prisma centralisée configurée pour la branche demo
 const healthChecker = createHealthChecker(prisma);
 
 export async function GET(request: NextRequest) {
