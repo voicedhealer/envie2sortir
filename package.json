@@ -27,8 +27,11 @@
     "test:messaging:all": "npm run test:messaging && npm run test:messaging:quick",
     "test:supabase": "tsx scripts/test-supabase-connection.ts",
     "test:routes": "tsx scripts/test-routes-supabase.ts",
+    "verify:email": "tsx scripts/verify-user-email.ts",
+    "check:establishment": "tsx scripts/check-establishment.ts",
     "export:prisma-to-supabase": "tsx scripts/export-prisma-to-supabase.ts",
-    "cleanup:test-data": "tsx scripts/cleanup-test-data.ts"
+    "cleanup:test-data": "tsx scripts/cleanup-test-data.ts",
+    "cleanup:test-professionals": "tsx scripts/cleanup-test-professionals.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

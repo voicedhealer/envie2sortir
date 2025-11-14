@@ -72,48 +72,70 @@ function AuthContent() {
 
     try {
       if (isLogin) {
-        const result = await nextAuthSignIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
+        // Utiliser l'API Supabase Auth au lieu de NextAuth
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          }),
         });
 
-        if (result?.error) {
-          console.error('Erreur de connexion:', result.error);
+        let result;
+        try {
+          result = await response.json();
+        } catch (jsonError) {
+          console.error('❌ Erreur lors du parsing de la réponse JSON:', jsonError);
+          const text = await response.text();
+          console.error('❌ Réponse brute:', text);
+          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
+          return;
+        }
+
+        console.log('📥 Réponse complète:', { status: response.status, ok: response.ok, result });
+
+        if (!response.ok || !result.success) {
+          console.error('❌ Erreur de connexion - Status:', response.status);
+          console.error('❌ Erreur de connexion - Résultat:', JSON.stringify(result, null, 2));
           
           // Gérer les erreurs spécifiques
-          if (result.error === 'AccessDenied') {
-            setError('Accès refusé. Veuillez vérifier que vous avez sélectionné le bon type de compte (Utilisateur, Professionnel, ou Admin).');
-          } else if (result.error === 'CredentialsSignin') {
+          const errorMessage = result.message || result.error || 'Erreur lors de la connexion';
+          
+          if (errorMessage.includes('Email ou mot de passe incorrect') || errorMessage.includes('Invalid credentials')) {
             setError('Email ou mot de passe incorrect');
+          } else if (errorMessage.includes('User not found')) {
+            setError('Aucun compte trouvé avec cet email');
+          } else if (errorMessage.includes('email') && errorMessage.includes('confirm')) {
+            setError('Veuillez vérifier votre email avant de vous connecter. Un lien de vérification vous a été envoyé.');
           } else {
-            setError(`Erreur de connexion: ${result.error}`);
+            setError(errorMessage);
           }
-        } else if (result?.ok) {
-          // Forcer la synchronisation de la session
-          const session = await getSession();
-          console.log('🔐 Session après connexion:', session);
+        } else if (result.success && result.user) {
+          console.log('✅ Connexion réussie:', result.user);
           
           // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
-          console.log('🔐 Rôle de l\'utilisateur:', session?.user?.role);
+          const userRole = result.user.role || (result.user.userType === 'professional' ? 'pro' : 'user');
+          console.log('🔐 Rôle de l\'utilisateur:', userRole);
           console.log('🔐 Rôle sélectionné:', selectedRole);
-          console.log('🔐 Type d\'utilisateur:', session?.user?.userType);
           
-          if (session?.user?.role !== selectedRole) {
+          if (userRole !== selectedRole) {
             const roleNames = {
               'user': 'utilisateur',
               'pro': 'professionnel', 
               'admin': 'administrateur'
             };
-            setError(`Ce compte est un compte ${roleNames[session?.user?.role as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
+            setError(`Ce compte est un compte ${roleNames[userRole as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
             return;
           }
           
-          // Rediriger selon le rôle de l'utilisateur (pas celui sélectionné)
+          // Recharger la page pour synchroniser la session Supabase
           let redirectUrl = callbackUrl;
-          if (session.user.role === 'pro') {
+          if (userRole === 'pro') {
             redirectUrl = '/dashboard';
-          } else if (session.user.role === 'admin') {
+          } else if (userRole === 'admin') {
             redirectUrl = '/admin';
           }
           
@@ -148,19 +170,22 @@ function AuthContent() {
         if (data.success) {
           console.log('✅ Inscription réussie, tentative de connexion automatique...');
           
-          // Connexion automatique après inscription
-          const signInResult = await nextAuthSignIn('credentials', {
-            email: formData.email,
-            password: formData.password,
-            redirect: false
+          // Connexion automatique après inscription avec Supabase Auth
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password
+            }),
           });
 
-          console.log('🔐 Résultat connexion:', signInResult);
+          const loginResult = await loginResponse.json();
 
-          if (signInResult?.ok) {
+          if (loginResponse.ok && loginResult.success) {
             console.log('✅ Connexion réussie, redirection vers:', callbackUrl);
-            // Forcer la synchronisation de la session
-            await getSession();
             // Pour les nouveaux comptes, ajouter le paramètre welcome si on va vers l'accueil
             const redirectUrl = callbackUrl === '/' ? '/?welcome=true' : decodeURIComponent(callbackUrl);
             // Utiliser window.location.href pour forcer le rechargement complet de la page et synchroniser la session
@@ -175,7 +200,14 @@ function AuthContent() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      console.error('❌ Erreur dans handleSubmit:', {
+        message: err?.message,
+        name: err?.name,
+        stack: err?.stack,
+        error: err
+      });
+      const errorMessage = err?.message || err?.toString() || 'Une erreur est survenue';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

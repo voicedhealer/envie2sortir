@@ -1,5 +1,6 @@
 // Service d'apprentissage côté serveur (API routes uniquement)
 import { createClient } from './supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { learningService } from './learning-service';
 
 export interface LearningPattern {
@@ -24,6 +25,21 @@ export interface TypeSuggestion {
 }
 
 export class ServerLearningService {
+  private getAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase admin client non configuré (variables manquantes)');
+    }
+
+    return createAdminClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
   
   /**
    * Sauvegarde un pattern d'apprentissage lors de l'ajout d'un établissement
@@ -38,7 +54,7 @@ export class ServerLearningService {
     correctedBy?: string;
   }): Promise<void> {
     try {
-      const supabase = createClient();
+      const supabase = this.getAdminClient();
       const { error } = await supabase
         .from('establishment_learning_patterns')
         .insert({
@@ -71,7 +87,7 @@ export class ServerLearningService {
     correctedBy: string
   ): Promise<void> {
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       
       // Trouver le pattern correspondant
       const { data: patterns, error: findError } = await supabase
@@ -127,7 +143,7 @@ export class ServerLearningService {
     description?: string;
   }): Promise<TypeSuggestion[]> {
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       
       // Récupérer tous les patterns d'apprentissage corrigés
       const { data: patterns, error } = await supabase
@@ -219,7 +235,7 @@ export class ServerLearningService {
     mostCommonTypes: Array<{ type: string; count: number }>;
   }> {
     try {
-      const supabase = createClient();
+      const supabase = await createClient();
       
       // Compter tous les patterns
       const { count: totalPatterns, error: totalError } = await supabase

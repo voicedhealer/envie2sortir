@@ -1,63 +1,31 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { applySecurityMiddleware } from "@/lib/security";
 import { validateCSRFMiddleware } from "@/lib/csrf-middleware";
+import { updateSession } from "@/lib/supabase/middleware";
 
-export default withAuth(
-  async function middleware(req) {
-    const { pathname } = req.nextUrl;
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-    // Pour les autres routes, appliquer la sécurité
-    if (pathname.startsWith('/admin') || pathname.startsWith('/dashboard')) {
-      // Vérification CSRF
-      const csrfCheck = await validateCSRFMiddleware(req);
-      if (csrfCheck) {
-        return csrfCheck;
-      }
+  // Mettre à jour la session Supabase (gère l'authentification)
+  const supabaseResponse = await updateSession(req);
 
-      // Rate limiting et autres protections
-      const securityCheck = await applySecurityMiddleware(req, pathname);
-      if (securityCheck) {
-        return securityCheck;
-      }
+  // Pour les routes dashboard et admin, appliquer la sécurité supplémentaire
+  if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
+    // Vérification CSRF
+    const csrfCheck = await validateCSRFMiddleware(req);
+    if (csrfCheck) {
+      return csrfCheck;
     }
 
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const { pathname } = req.nextUrl;
-        
-        // Pages publiques qui ne nécessitent pas d'authentification
-        const publicPaths = [
-          '/',
-          '/recherche',
-          '/recherche/envie',
-          '/carte',
-          '/etablissements',
-          '/etablissements/nouveau',
-          '/auth',
-          '/auth/error',
-          '/api/auth',
-          '/api/categories',
-          '/api/etablissements',
-          '/api/recherche',
-          '/api/geocode',
-          '/api/verify-siret'
-        ];
-
-        // Si c'est une page publique, autoriser l'accès
-        if (publicPaths.some(path => pathname.startsWith(path))) {
-          return true;
-        }
-
-        // Pour les autres pages, vérifier l'authentification
-        return !!token;
-      }
-    },
+    // Rate limiting et autres protections
+    const securityCheck = await applySecurityMiddleware(req, pathname);
+    if (securityCheck) {
+      return securityCheck;
+    }
   }
-);
+
+  return supabaseResponse;
+}
 
 export const config = {
   matcher: [

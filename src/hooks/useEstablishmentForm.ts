@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { 
   ProfessionalData, 
   FormStep, 
@@ -943,26 +943,52 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         const result = await response.json();
         
         if (!response.ok) {
-          throw new Error(result.error || 'Erreur lors de l\'inscription');
+          // Afficher les détails de l'erreur en mode développement
+          console.error('❌ Erreur API:', result);
+          if (result.details) {
+            console.error('❌ Détails:', result.details);
+          }
+          if (result.suggestion) {
+            console.warn('💡 Suggestion:', result.suggestion);
+          }
+          if (result.stack) {
+            console.error('❌ Stack:', result.stack);
+          }
+          
+          // Construire le message d'erreur avec la suggestion si disponible
+          let errorMessage = result.error || result.details || 'Erreur lors de l\'inscription';
+          if (result.suggestion) {
+            errorMessage += `\n\n💡 ${result.suggestion}`;
+          }
+          
+          throw new Error(errorMessage);
         }
         
         if (result.autoLogin && result.professional) {
           try {
-            console.log('🔄 Tentative de connexion automatique...');
+            console.log('🔄 Tentative de connexion automatique avec Supabase Auth...');
             setSubmitProgress('Connexion automatique...');
-            const signInResult = await signIn('credentials', {
-              email: result.professional.email,
-              password: formData.accountPassword,
-              redirect: false,
+            
+            // Utiliser l'API Supabase Auth au lieu de NextAuth
+            const loginResponse = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: result.professional.email,
+                password: formData.accountPassword
+              }),
             });
 
-            if (signInResult?.ok) {
+            const loginResult = await loginResponse.json();
+
+            if (loginResponse.ok && loginResult.success) {
               console.log('✅ Connexion automatique réussie, redirection vers dashboard');
-              // ✅ OPTIMISATION : Redirection immédiate sans attendre ni vérifier la session
-              // Next-Auth gère la session automatiquement, pas besoin de vérifier
-              router.push('/dashboard');
+              // Recharger la page pour synchroniser la session Supabase
+              window.location.href = '/dashboard';
             } else {
-              console.error('❌ Échec de la connexion automatique:', signInResult?.error);
+              console.error('❌ Échec de la connexion automatique:', loginResult);
               // En cas d'échec, rediriger vers la page de connexion avec un message
               router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
             }

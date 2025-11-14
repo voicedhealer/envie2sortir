@@ -5,22 +5,42 @@ import { supabase } from '@/lib/supabase/client';
  * Récupère l'utilisateur actuel (user ou professional)
  */
 export async function getCurrentUser() {
-  const supabase = createClient();
+  const supabase = await createClient();
+  
+  // Debug: vérifier les cookies
+  const cookieStore = await import('next/headers').then(m => m.cookies());
+  const allCookies = cookieStore.getAll();
+  const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'));
+  console.log('🍪 Cookies Supabase trouvés:', supabaseCookies.length, supabaseCookies.map(c => c.name));
   
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
   
+  console.log('👤 getUser result:', {
+    hasUser: !!authUser,
+    userId: authUser?.id,
+    error: authError?.message
+  });
+  
   if (authError || !authUser) {
+    console.log('❌ Pas d\'utilisateur authentifié:', authError?.message || 'No user');
     return null;
   }
   
   // Vérifier si c'est un user
-  const { data: userData } = await supabase
+  const { data: userData, error: userError } = await supabase
     .from('users')
     .select('*')
     .eq('id', authUser.id)
-    .single();
+    .maybeSingle();
+  
+  console.log('🔍 Recherche dans users:', {
+    found: !!userData,
+    error: userError?.message,
+    userId: authUser.id
+  });
   
   if (userData) {
+    console.log('✅ Utilisateur trouvé dans users');
     return {
       ...userData,
       userType: 'user' as const,
@@ -29,24 +49,38 @@ export async function getCurrentUser() {
   }
   
   // Vérifier si c'est un professional
-  const { data: professionalData } = await supabase
+  // Récupérer d'abord le professional, puis l'établissement séparément
+  const { data: professionalData, error: professionalError } = await supabase
     .from('professionals')
-    .select(`
-      *,
-      establishment:establishments(*)
-    `)
+    .select('*')
     .eq('id', authUser.id)
-    .single();
+    .maybeSingle();
+  
+  console.log('🔍 Recherche dans professionals:', {
+    found: !!professionalData,
+    error: professionalError?.message,
+    userId: authUser.id
+  });
   
   if (professionalData) {
+    // Récupérer l'établissement séparément
+    const { data: establishment } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('owner_id', professionalData.id)
+      .maybeSingle();
+    
+    console.log('✅ Professionnel trouvé, établissement:', establishment?.id || 'aucun');
+    
     return {
       ...professionalData,
       userType: 'professional' as const,
-      establishmentId: professionalData.establishment?.[0]?.id || null,
+      establishmentId: establishment?.id || null,
       authUser
     };
   }
   
+  console.log('❌ Utilisateur non trouvé dans users ni professionals');
   return null;
 }
 
@@ -70,18 +104,43 @@ export async function isProfessional(): Promise<boolean> {
  * Récupère l'établissement d'un professionnel
  */
 export async function getProfessionalEstablishment(professionalId: string) {
-  const supabase = createClient();
+  console.log('🔍 Recherche établissement pour professionalId:', professionalId);
   
-  const { data, error } = await supabase
+  // Utiliser le client admin pour contourner RLS
+  // On sait déjà que l'utilisateur est authentifié et est le propriétaire
+  const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('❌ Variables d\'environnement Supabase manquantes');
+    return null;
+  }
+  
+  const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data, error } = await adminClient
     .from('establishments')
     .select('*')
     .eq('owner_id', professionalId)
-    .single();
+    .maybeSingle();
   
   if (error) {
-    console.error('Error fetching establishment:', error);
+    console.error('❌ Error fetching establishment:', {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
     return null;
   }
+  
+  console.log('🏢 Établissement trouvé:', data ? `ID: ${data.id}, Name: ${data.name}` : 'aucun');
   
   return data;
 }
@@ -127,7 +186,7 @@ export async function uploadFile(
     upsert?: boolean;
   }
 ) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase.storage
     .from(bucket)
@@ -160,7 +219,7 @@ export async function uploadFile(
  * Supprime un fichier de Supabase Storage
  */
 export async function deleteFile(bucket: string, path: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
   
   const { data, error } = await supabase.storage
     .from(bucket)

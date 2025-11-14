@@ -321,7 +321,10 @@ export async function POST(request: NextRequest) {
       {
         ...establishmentData,
         latitude: finalCoordinates?.latitude || null,
-        longitude: finalCoordinates?.longitude || null
+        longitude: finalCoordinates?.longitude || null,
+        whatsappPhone: establishmentData.whatsappPhone || '',
+        messengerUrl: establishmentData.messengerUrl || '',
+        youtube: establishmentData.youtube || ''
       },
       generateSlug,
       createTagsData
@@ -368,30 +371,63 @@ export async function POST(request: NextRequest) {
     // Gestion des erreurs spécifiques
     if (error instanceof Error) {
       console.error('❌ Error message:', error.message);
+      console.error('❌ Error name:', error.name);
+      
+      // Erreur de configuration Supabase
+      if (error.message.includes('Configuration Supabase manquante')) {
+        return NextResponse.json({ 
+          error: 'Configuration Supabase manquante. Veuillez configurer les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans votre fichier .env.local',
+          details: error.message
+        }, { status: 500 });
+      }
+      
+      // Erreur email déjà utilisé
+      if (error.message.includes('Un compte avec cet email existe déjà')) {
+        return NextResponse.json({ 
+          error: 'Cet email est déjà utilisé. Si vous avez déjà un compte, veuillez vous connecter.',
+          suggestion: 'Si c\'était une tentative d\'inscription précédente qui a échoué, vous pouvez nettoyer les comptes de test avec: npm run cleanup:test-professionals -- --delete'
+        }, { status: 400 });
+      }
       
       // Vérifier les contraintes uniques spécifiques
-      if (error.message.includes('Unique constraint')) {
+      if (error.message.includes('Unique constraint') || error.message.includes('duplicate key')) {
         // Vérifier quel champ pose problème
-        if (error.message.includes('siret')) {
+        if (error.message.includes('siret') || error.message.includes('SIRET')) {
           return NextResponse.json({ 
             error: 'Ce SIRET est déjà utilisé par un autre établissement. Si vous êtes le propriétaire, veuillez vous connecter à votre compte existant.' 
           }, { status: 400 });
         }
-        if (error.message.includes('email')) {
+        if (error.message.includes('email') || error.message.includes('Email')) {
           return NextResponse.json({ 
             error: 'Cet email est déjà utilisé. Si vous avez déjà un compte, veuillez vous connecter.' 
           }, { status: 400 });
         }
         // Message générique si on ne peut pas déterminer le champ
         return NextResponse.json({ 
-          error: 'SIRET ou email déjà utilisé. Vérifiez vos informations ou connectez-vous si vous avez déjà un compte.' 
+          error: 'SIRET ou email déjà utilisé. Vérifiez vos informations ou connectez-vous si vous avez déjà un compte.',
+          details: error.message
+        }, { status: 400 });
+      }
+      
+      // Erreur de validation Supabase
+      if (error.message.includes('violates') || error.message.includes('constraint')) {
+        return NextResponse.json({ 
+          error: 'Erreur de validation des données. Vérifiez que tous les champs requis sont remplis correctement.',
+          details: error.message
         }, { status: 400 });
       }
     }
 
+    // En mode développement, renvoyer plus de détails
+    const isDev = process.env.NODE_ENV === 'development';
+    
     return NextResponse.json({ 
       error: 'Erreur lors de l\'inscription. Veuillez réessayer.',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      ...(isDev && { 
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      })
     }, { status: 500 });
   }
 }
