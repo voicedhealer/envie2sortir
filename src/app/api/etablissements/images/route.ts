@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { requireEstablishment } from "@/lib/supabase/helpers";
+import { requireEstablishment, getProfessionalEstablishment } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,10 +9,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
+    const establishmentId = (user as any).establishmentId || null;
 
-    // Récupérer l'établissement de l'utilisateur
-    const { data: establishment, error: establishmentError } = await supabase
+    console.log('📸 [GET] Images API - user context:', {
+      userId: user.id,
+      establishmentId,
+      hasProfessional: user.userType === 'professional'
+    });
+
+    // Préparer la requête pour récupérer l'établissement
+    let query = supabase
       .from('establishments')
       .select(`
         id,
@@ -23,34 +30,66 @@ export async function GET(request: NextRequest) {
           id,
           url,
           is_primary,
+          is_card_image,
           created_at,
           ordre
         )
       `)
-      .eq('owner_id', user.id)
-      .single();
+      .limit(1);
 
+    if (establishmentId) {
+      query = query.eq('id', establishmentId);
+    } else {
+      query = query.eq('owner_id', user.id);
+    }
+
+    const { data: establishment, error: establishmentError } = await query.single();
+
+    let finalEstablishment = establishment;
     if (establishmentError || !establishment) {
-      return NextResponse.json({ 
-        error: "Établissement non trouvé"
-      }, { status: 404 });
+      console.error('❌ [GET] Établissement non trouvé via client standard', {
+        establishmentId,
+        ownerId: user.id,
+        error: establishmentError
+      });
+
+      // Fallback avec client admin (contourne RLS éventuels)
+      const fallbackEstablishment = await getProfessionalEstablishment(user.id);
+      if (!fallbackEstablishment) {
+        return NextResponse.json({ 
+          error: "Établissement non trouvé",
+          details: establishmentError?.message
+        }, { status: 404 });
+      }
+
+      finalEstablishment = fallbackEstablishment;
+
+      // Récupérer les images séparément
+      const { data: adminImages } = await supabase
+        .from('images')
+        .select('id, url, is_primary, is_card_image, created_at, ordre')
+        .eq('establishment_id', fallbackEstablishment.id)
+        .order('ordre', { ascending: true });
+
+      finalEstablishment.images = adminImages || [];
     }
 
     // Trier les images par ordre
-    const sortedImages = (establishment.images || []).sort((a: any, b: any) => 
+    const sortedImages = (finalEstablishment.images || []).sort((a: any, b: any) => 
       (a.ordre || 0) - (b.ordre || 0)
     );
 
     return NextResponse.json({
       establishment: {
-        id: establishment.id,
-        name: establishment.name,
-        slug: establishment.slug,
-        imageUrl: establishment.image_url,
+        id: finalEstablishment.id,
+        name: finalEstablishment.name,
+        slug: finalEstablishment.slug,
+        imageUrl: finalEstablishment.image_url,
         images: sortedImages.map((img: any) => ({
           id: img.id,
           url: img.url,
           isPrimary: img.is_primary,
+          isCardImage: img.is_card_image,
           createdAt: img.created_at,
           ordre: img.ordre
         }))
@@ -73,16 +112,34 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
+    const establishmentId = (user as any).establishmentId || null;
 
-    // Récupérer l'établissement de l'utilisateur
-    const { data: establishment, error: establishmentError } = await supabase
+    console.log('📸 [PUT] Images API - user context:', {
+      userId: user.id,
+      establishmentId,
+      hasProfessional: user.userType === 'professional'
+    });
+
+    let query = supabase
       .from('establishments')
       .select('id, name, status, image_url')
-      .eq('owner_id', user.id)
-      .single();
+      .limit(1);
+
+    if (establishmentId) {
+      query = query.eq('id', establishmentId);
+    } else {
+      query = query.eq('owner_id', user.id);
+    }
+
+    const { data: establishment, error: establishmentError } = await query.single();
 
     if (establishmentError || !establishment) {
+      console.error('❌ [PUT] Établissement non trouvé', {
+        establishmentId,
+        ownerId: user.id,
+        error: establishmentError
+      });
       return NextResponse.json({ error: "Aucun établissement associé" }, { status: 404 });
     }
 

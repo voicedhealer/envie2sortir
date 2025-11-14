@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
 import { getMaxImages } from '@/lib/subscription-utils';
-import { uploadFile } from '@/lib/supabase/helpers';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement existe et récupérer son plan d'abonnement
     const { data: establishment, error: establishmentError } = await supabase
@@ -152,8 +152,9 @@ export async function POST(request: NextRequest) {
     // Chemin dans Supabase Storage : establishments/{establishmentId}/{fileName}
     const storagePath = `establishments/${establishmentId}/${fileName}`;
     
-    const uploadResult = await uploadFile(
-      'images',
+    // Utiliser le client admin pour contourner RLS lors de l'upload
+    const uploadResult = await uploadFileAdmin(
+      'establishments',
       storagePath,
       fileBlob,
       {
@@ -170,14 +171,34 @@ export async function POST(request: NextRequest) {
     if (uploadResult.error || !uploadResult.data) {
       console.error('Erreur upload Supabase:', uploadResult.error);
       return NextResponse.json({ 
-        error: 'Erreur lors de l\'upload vers Supabase Storage' 
+        error: 'Erreur lors de l\'upload vers Supabase Storage',
+        details: uploadResult.error instanceof Error ? uploadResult.error.message : String(uploadResult.error),
+        code: (uploadResult.error as any)?.statusCode || (uploadResult.error as any)?.code
       }, { status: 500 });
     }
 
     const imageUrl = uploadResult.data.url;
     
-    // Créer l'entrée en base de données
-    const { data: imageRecord, error: imageError } = await supabase
+    // Créer le client admin pour l'insertion en base de données (contourne RLS)
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    
+    // Créer l'entrée en base de données avec le client admin
+    const { data: imageRecord, error: imageError } = await adminClient
       .from('images')
       .insert({
         url: imageUrl,
@@ -191,14 +212,18 @@ export async function POST(request: NextRequest) {
 
     if (imageError || !imageRecord) {
       // Rollback: supprimer le fichier uploadé
-      await supabase.storage.from('images').remove([storagePath]);
+      await adminClient.storage.from('establishments').remove([storagePath]);
+      
+      console.error('Erreur création entrée image:', imageError);
       return NextResponse.json({ 
-        error: 'Erreur lors de la création de l\'entrée en base de données' 
+        error: 'Erreur lors de la création de l\'entrée en base de données',
+        details: imageError?.message || 'Erreur inconnue',
+        code: imageError?.code
       }, { status: 500 });
     }
 
-    // Mettre à jour l'imageUrl de l'établissement
-    await supabase
+    // Mettre à jour l'imageUrl de l'établissement avec le client admin
+    await adminClient
       .from('establishments')
       .update({ image_url: imageUrl })
       .eq('id', establishmentId);

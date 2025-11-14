@@ -174,7 +174,7 @@ export async function safeQuery<T>(
 }
 
 /**
- * Upload un fichier vers Supabase Storage
+ * Upload un fichier vers Supabase Storage (utilise le client standard)
  */
 export async function uploadFile(
   bucket: string,
@@ -203,6 +203,65 @@ export async function uploadFile(
   
   // Récupérer l'URL publique
   const { data: urlData } = supabase.storage
+    .from(bucket)
+    .getPublicUrl(path);
+  
+  return {
+    data: {
+      path: data.path,
+      url: urlData.publicUrl
+    },
+    error: null
+  };
+}
+
+/**
+ * Upload un fichier vers Supabase Storage avec le client admin (contourne RLS)
+ * À utiliser côté serveur uniquement pour les opérations nécessitant des privilèges élevés
+ */
+export async function uploadFileAdmin(
+  bucket: string,
+  path: string,
+  file: File | Blob,
+  options?: {
+    cacheControl?: string;
+    contentType?: string;
+    upsert?: boolean;
+  }
+) {
+  const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return {
+      data: null,
+      error: new Error('Variables d\'environnement Supabase manquantes')
+    };
+  }
+  
+  const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  const { data, error } = await adminClient.storage
+    .from(bucket)
+    .upload(path, file, {
+      cacheControl: options?.cacheControl || '3600',
+      contentType: options?.contentType || file.type,
+      upsert: options?.upsert || false
+    });
+  
+  if (error) {
+    console.error('Upload error (admin):', error);
+    return { data: null, error };
+  }
+  
+  // Récupérer l'URL publique
+  const { data: urlData } = adminClient.storage
     .from(bucket)
     .getPublicUrl(path);
   

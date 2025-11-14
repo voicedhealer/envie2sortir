@@ -13,7 +13,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non authentifié ou aucun établissement associé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id } = await params;
     
     // Récupérer l'image avec l'établissement associé
@@ -42,24 +42,45 @@ export async function DELETE(
     }
 
     // Extraire le chemin du fichier depuis l'URL Supabase Storage
-    // Format URL: https://...supabase.co/storage/v1/object/public/images/path/to/file.jpg
+    // Format URL: https://...supabase.co/storage/v1/object/public/establishments/path/to/file.jpg
     const urlParts = image.url.split('/');
-    const storagePathIndex = urlParts.indexOf('images') + 1;
-    const storagePath = urlParts.slice(storagePathIndex).join('/');
+    const bucketIndex = urlParts.indexOf('establishments');
+    const storagePath = bucketIndex >= 0 ? urlParts.slice(bucketIndex + 1).join('/') : '';
 
-    // Supprimer le fichier de Supabase Storage
+    // Utiliser le client admin pour contourner RLS
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Supprimer le fichier de Supabase Storage avec le client admin
     if (storagePath) {
-      const deleteResult = await deleteFile('images', storagePath);
-      if (deleteResult.error) {
-        console.warn('⚠️ Impossible de supprimer le fichier de Supabase Storage:', deleteResult.error);
+      const { error: storageError } = await adminClient.storage
+        .from('establishments')
+        .remove([storagePath]);
+        
+      if (storageError) {
+        console.warn('⚠️ Impossible de supprimer le fichier de Supabase Storage:', storageError);
         // Continuer même si le fichier n'existe pas
       } else {
         console.log('🗑️ Fichier supprimé de Supabase Storage:', storagePath);
       }
     }
 
-    // Supprimer l'image de la base de données
-    const { error: deleteError } = await supabase
+    // Supprimer l'image de la base de données avec le client admin
+    const { error: deleteError } = await adminClient
       .from('images')
       .delete()
       .eq('id', id);
@@ -70,23 +91,23 @@ export async function DELETE(
     }
 
     // Vérifier s'il reste des images pour cet établissement
-    const { data: remainingImages, error: remainingError } = await supabase
+    const { data: remainingImages, error: remainingError } = await adminClient
       .from('images')
       .select('url')
       .eq('establishment_id', establishment.id)
       .order('created_at', { ascending: false });
 
-    // Mettre à jour l'imageUrl de l'établissement
+    // Mettre à jour l'imageUrl de l'établissement avec le client admin
     if (remainingImages && remainingImages.length > 0) {
       // Utiliser la première image restante
-      await supabase
+      await adminClient
         .from('establishments')
         .update({ image_url: remainingImages[0].url })
         .eq('id', establishment.id);
       console.log('✅ ImageUrl de l\'établissement mise à jour avec:', remainingImages[0].url);
     } else {
       // Aucune image restante, vider l'imageUrl
-      await supabase
+      await adminClient
         .from('establishments')
         .update({ image_url: null })
         .eq('id', establishment.id);

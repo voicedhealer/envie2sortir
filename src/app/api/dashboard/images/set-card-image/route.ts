@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé - Session manquante' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { imageId, establishmentId } = await request.json();
 
     console.log('📥 Requête:', { imageId, establishmentId });
@@ -33,15 +33,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé - Vous n\'êtes pas le propriétaire' }, { status: 403 });
     }
 
+    // Utiliser le client admin pour contourner RLS
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     // Retirer is_card_image de toutes les images de cet établissement
-    await supabase
+    const { error: resetError } = await adminClient
       .from('images')
       .update({ is_card_image: false })
       .eq('establishment_id', establishmentId)
       .eq('is_card_image', true);
 
+    if (resetError) {
+      console.error('Erreur reset is_card_image:', resetError);
+    }
+
     // Définir la nouvelle image de card
-    const { data: updatedImage, error: updateError } = await supabase
+    const { data: updatedImage, error: updateError } = await adminClient
       .from('images')
       .update({ is_card_image: true })
       .eq('id', imageId)
@@ -50,7 +72,11 @@ export async function POST(request: NextRequest) {
 
     if (updateError || !updatedImage) {
       console.error('Erreur mise à jour image:', updateError);
-      return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'image' }, { status: 500 });
+      return NextResponse.json({ 
+        error: 'Erreur lors de la mise à jour de l\'image',
+        details: updateError?.message || 'Erreur inconnue',
+        code: updateError?.code
+      }, { status: 500 });
     }
 
     console.log('✅ Image de card définie:', imageId);

@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId, imageOrder } = await request.json();
 
     console.log('🔄 Réorganisation des images:', {
@@ -47,13 +47,31 @@ export async function PUT(request: NextRequest) {
     console.log('✅ Établissement trouvé:', establishment.name);
     console.log('📸 Images actuelles:', images?.length || 0);
 
+    // Utiliser le client admin pour contourner RLS lors des UPDATE
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     // Mettre à jour l'ordre des images
     const updatePromises = imageOrder.map(async (imageUrl: string, index: number) => {
       // Trouver l'image correspondante
       const image = images?.find((img: any) => img.url === imageUrl);
       
       if (image) {
-        return supabase
+        return adminClient
           .from('images')
           .update({ 
             ordre: index,
@@ -68,7 +86,7 @@ export async function PUT(request: NextRequest) {
 
     // Mettre à jour aussi l'image_url principale de l'établissement
     if (imageOrder.length > 0) {
-      await supabase
+      await adminClient
         .from('establishments')
         .update({ image_url: imageOrder[0] })
         .eq('id', establishmentId);
