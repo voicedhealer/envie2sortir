@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Récupérer les paramètres de requête
     const { searchParams } = new URL(request.url);
@@ -188,7 +188,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId, action, rejectionReason } = await request.json();
 
     if (!establishmentId || !action) {

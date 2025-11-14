@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
         name,
         slug,
         image_url,
-        images (
+        images!images_establishment_id_fkey (
           id,
           url,
           is_primary,

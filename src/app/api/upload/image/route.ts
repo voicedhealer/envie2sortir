@@ -197,6 +197,17 @@ export async function POST(request: NextRequest) {
       }
     });
     
+    // Compter le nombre d'images existantes pour définir l'ordre
+    const { count: existingImagesCount } = await adminClient
+      .from('images')
+      .select('*', { count: 'exact', head: true })
+      .eq('establishment_id', establishmentId);
+    
+    const nextOrdre = existingImagesCount || 0;
+    const isFirstImage = nextOrdre === 0;
+    
+    console.log('📊 Images existantes:', existingImagesCount, '→ Prochain ordre:', nextOrdre);
+    
     // Créer l'entrée en base de données avec le client admin
     const { data: imageRecord, error: imageError } = await adminClient
       .from('images')
@@ -204,8 +215,8 @@ export async function POST(request: NextRequest) {
         url: imageUrl,
         alt_text: file.name,
         establishment_id: establishmentId,
-        is_primary: true,
-        ordre: 0
+        is_primary: isFirstImage, // Seulement la première image est "primary"
+        ordre: nextOrdre
       })
       .select()
       .single();

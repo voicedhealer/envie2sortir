@@ -72,78 +72,91 @@ function AuthContent() {
 
     try {
       if (isLogin) {
-        // Utiliser l'API Supabase Auth au lieu de NextAuth
-        const response = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: formData.email,
-            password: formData.password
-          }),
+        // Utiliser directement le client Supabase pour la connexion côté client
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        
+        console.log('🔐 Tentative de connexion avec:', formData.email);
+        
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
         });
 
-        let result;
-        try {
-          result = await response.json();
-        } catch (jsonError) {
-          console.error('❌ Erreur lors du parsing de la réponse JSON:', jsonError);
-          const text = await response.text();
-          console.error('❌ Réponse brute:', text);
-          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
+        if (authError) {
+          console.error('❌ Erreur de connexion:', authError);
+          
+          if (authError.message.includes('Invalid') || authError.message.includes('credentials')) {
+            setError('Email ou mot de passe incorrect');
+          } else if (authError.message.includes('Email not confirmed')) {
+            setError('Veuillez vérifier votre email avant de vous connecter. Un lien de vérification vous a été envoyé.');
+          } else {
+            setError(authError.message || 'Erreur lors de la connexion');
+          }
           return;
         }
 
-        console.log('📥 Réponse complète:', { status: response.status, ok: response.ok, result });
-
-        if (!response.ok || !result.success) {
-          console.error('❌ Erreur de connexion - Status:', response.status);
-          console.error('❌ Erreur de connexion - Résultat:', JSON.stringify(result, null, 2));
-          
-          // Gérer les erreurs spécifiques
-          const errorMessage = result.message || result.error || 'Erreur lors de la connexion';
-          
-          if (errorMessage.includes('Email ou mot de passe incorrect') || errorMessage.includes('Invalid credentials')) {
-            setError('Email ou mot de passe incorrect');
-          } else if (errorMessage.includes('User not found')) {
-            setError('Aucun compte trouvé avec cet email');
-          } else if (errorMessage.includes('email') && errorMessage.includes('confirm')) {
-            setError('Veuillez vérifier votre email avant de vous connecter. Un lien de vérification vous a été envoyé.');
-          } else {
-            setError(errorMessage);
-          }
-        } else if (result.success && result.user) {
-          console.log('✅ Connexion réussie:', result.user);
-          
-          // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
-          const userRole = result.user.role || (result.user.userType === 'professional' ? 'pro' : 'user');
-          console.log('🔐 Rôle de l\'utilisateur:', userRole);
-          console.log('🔐 Rôle sélectionné:', selectedRole);
-          
-          if (userRole !== selectedRole) {
-            const roleNames = {
-              'user': 'utilisateur',
-              'pro': 'professionnel', 
-              'admin': 'administrateur'
-            };
-            setError(`Ce compte est un compte ${roleNames[userRole as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
-            return;
-          }
-          
-          // Recharger la page pour synchroniser la session Supabase
-          let redirectUrl = callbackUrl;
-          if (userRole === 'pro') {
-            redirectUrl = '/dashboard';
-          } else if (userRole === 'admin') {
-            redirectUrl = '/admin';
-          }
-          
-          // Utiliser window.location.href pour forcer le rechargement complet de la page
-          window.location.href = decodeURIComponent(redirectUrl);
-        } else {
-          setError('Erreur de connexion inattendue');
+        if (!authData.user) {
+          setError('Erreur lors de la connexion');
+          return;
         }
+
+        console.log('✅ Connexion Supabase réussie:', authData.user.email);
+
+        // Déterminer le type d'utilisateur en interrogeant les tables
+        const { data: userData } = await supabase
+          .from('users')
+          .select('id, role')
+          .eq('id', authData.user.id)
+          .maybeSingle();
+
+        let userRole = 'user';
+        
+        if (userData) {
+          userRole = userData.role === 'admin' ? 'admin' : 'user';
+        } else {
+          // Vérifier dans professionals
+          const { data: professionalData } = await supabase
+            .from('professionals')
+            .select('id')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+
+          if (professionalData) {
+            userRole = 'pro';
+          }
+        }
+
+        console.log('🔐 Rôle détecté:', userRole);
+        console.log('🔐 Rôle sélectionné:', selectedRole);
+
+        // Vérifier que le rôle correspond
+        if (userRole !== selectedRole) {
+          const roleNames = {
+            'user': 'utilisateur',
+            'pro': 'professionnel', 
+            'admin': 'administrateur'
+          };
+          setError(`Ce compte est un compte ${roleNames[userRole as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
+          
+          // Déconnecter l'utilisateur
+          await supabase.auth.signOut();
+          return;
+        }
+
+        // Redirection selon le rôle
+        let redirectUrl = callbackUrl;
+        if (userRole === 'pro') {
+          redirectUrl = '/dashboard';
+        } else if (userRole === 'admin') {
+          redirectUrl = '/admin';
+        }
+
+        console.log('✅ Redirection vers:', redirectUrl);
+        
+        // Pas besoin de flag localStorage, la session est maintenant côté client
+        // Utiliser window.location.href pour forcer le rechargement complet de la page
+        window.location.href = decodeURIComponent(redirectUrl);
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');

@@ -14,7 +14,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Utilisateur non trouvé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId, action, reason } = await request.json();
 
     if (!establishmentId || !action) {
