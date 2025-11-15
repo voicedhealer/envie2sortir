@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Brain, TrendingUp, Target, BarChart3, Users, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -32,7 +32,7 @@ interface TypeOption {
 }
 
 export default function LearningDashboard() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [stats, setStats] = useState<LearningStats | null>(null);
   const [patterns, setPatterns] = useState<LearningPattern[]>([]);
@@ -182,20 +182,20 @@ export default function LearningDashboard() {
   ];
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
     if (!session) {
       router.push('/auth?error=AccessDenied');
       return;
     }
 
-    if (session.user.role !== 'admin') {
+    if (session.user?.role !== 'admin') {
       router.push('/auth?error=AccessDenied');
       return;
     }
 
     fetchLearningData();
-  }, [session, status, router]);
+  }, [session, sessionLoading, router]);
 
   const fetchLearningData = async () => {
     try {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSession, signOut, getSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart, MapPin, Star, MessageSquare, Settings, LogOut, Edit3, Trash2, Save, X, Trophy } from 'lucide-react';
 import Image from 'next/image';
@@ -35,7 +35,7 @@ interface UserComment {
 }
 
 function MonCompteContent() {
-  const { data: session, status } = useSession();
+  const { session, loading, signOut } = useSupabaseSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'favoris' | 'avis' | 'badges' | 'profil'>('favoris');
@@ -66,12 +66,14 @@ function MonCompteContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (loading) return;
+
+    if (!session) {
       router.push('/auth');
       return;
     }
 
-    if (status === 'authenticated' && session?.user?.role === 'user') {
+    if (session.user?.role === 'user' || session.user?.userType === 'user') {
       loadUserData();
       // Initialiser les données du profil
       setProfileData({
@@ -82,12 +84,12 @@ function MonCompteContent() {
         newPassword: '',
         confirmPassword: ''
       });
-    } else if (session?.user?.role === 'pro') {
+    } else if (session.user?.role === 'professional' || session.user?.userType === 'professional') {
       router.push('/dashboard');
-    } else if (session?.user?.role === 'admin') {
+    } else if (session.user?.role === 'admin') {
       router.push('/admin');
     }
-  }, [session, status, router]);
+  }, [session, loading, router]);
 
   // Mettre à jour profileData quand la session change
   useEffect(() => {
@@ -189,10 +191,8 @@ function MonCompteContent() {
           lastName: data.user.lastName || prev.lastName,
           email: data.user.email || prev.email
         }));
-        // Forcer la mise à jour de la session NextAuth de manière asynchrone
-        setTimeout(async () => {
-          await getSession();
-          // Recharger la page pour s'assurer que tout est synchronisé
+        // Recharger la page pour s'assurer que tout est synchronisé
+        setTimeout(() => {
           window.location.reload();
         }, 500);
       } else {
@@ -218,7 +218,8 @@ function MonCompteContent() {
       if (data.success) {
         toast.success('Compte supprimé avec succès');
         // Déconnecter l'utilisateur et rediriger
-        await signOut({ callbackUrl: '/' });
+        await signOut();
+        router.push('/');
       } else {
         toast.error(data.error || 'Erreur lors de la suppression du compte');
       }
@@ -231,7 +232,7 @@ function MonCompteContent() {
     }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>

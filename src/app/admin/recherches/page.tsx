@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Users, AlertCircle } from 'lucide-react';
 
@@ -27,7 +27,7 @@ interface SearchAnalyticsData {
 }
 
 export default function AdminRecherchesPage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [data, setData] = useState<SearchAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,15 +35,15 @@ export default function AdminRecherchesPage() {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    if (session.user?.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
@@ -67,9 +67,9 @@ export default function AdminRecherchesPage() {
     };
 
     fetchSearchAnalytics();
-  }, [session, status, router, period]);
+  }, [session, sessionLoading, router, period]);
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>

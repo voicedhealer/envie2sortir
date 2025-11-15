@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus } from "lucide-react";
 import ConversationList from "@/components/messaging/ConversationList";
@@ -9,14 +9,14 @@ import ConversationDetail from "@/components/messaging/ConversationDetail";
 import NewConversationModal from "@/components/messaging/NewConversationModal";
 
 export default function MessagingPage() {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Redirection si non authentifié ou pas pro
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-gray-500">Chargement...</div>
@@ -24,7 +24,7 @@ export default function MessagingPage() {
     );
   }
 
-  if (!session?.user || session.user.userType !== "professional") {
+  if (!session?.user || (session.user.userType !== "professional" && session.user.role !== "professional")) {
     router.push("/auth");
     return null;
   }

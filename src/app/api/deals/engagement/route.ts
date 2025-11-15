@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createClientAdmin } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que le bon plan existe
     const { data: deal, error: dealError } = await supabase
@@ -95,7 +96,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('API deals/engagement - Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     // Construire la requête
     let query = supabase.from('deal_engagements').select('type, timestamp, deal_id');

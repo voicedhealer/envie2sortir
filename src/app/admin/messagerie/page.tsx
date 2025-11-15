@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus } from "lucide-react";
 import ConversationList from "@/components/messaging/ConversationList";
@@ -16,7 +16,7 @@ interface Professional {
 }
 
 export default function AdminMessagingPage() {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
@@ -30,7 +30,7 @@ export default function AdminMessagingPage() {
   }, [session]);
 
   // Redirection si non authentifié ou pas admin
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-gray-500">Chargement...</div>
@@ -38,7 +38,7 @@ export default function AdminMessagingPage() {
     );
   }
 
-  if (!session?.user || session.user.role !== "admin") {
+  if (!session?.user || session.user?.role !== "admin") {
     router.push("/auth");
     return null;
   }

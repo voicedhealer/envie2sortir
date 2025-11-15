@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { BarChart3, TrendingUp, Users, Eye, Building2 } from 'lucide-react';
 
@@ -16,22 +16,22 @@ interface EstablishmentAnalytics {
 }
 
 export default function AdminAnalyticsPage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [establishments, setEstablishments] = useState<EstablishmentAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    if (session.user?.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
@@ -55,9 +55,9 @@ export default function AdminAnalyticsPage() {
     };
 
     fetchEstablishmentsAnalytics();
-  }, [session, status, router]);
+  }, [session, sessionLoading, router]);
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

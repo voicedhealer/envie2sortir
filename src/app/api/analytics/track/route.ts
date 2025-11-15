@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement existe
     const { data: establishment, error: establishmentError } = await supabase
@@ -85,7 +85,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d'; // 7d, 30d, 90d, 1y
@@ -97,6 +96,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Analytics] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
+
     // Vérifier le plan d'abonnement de l'établissement
     const { data: establishment, error: establishmentError } = await supabase
       .from('establishments')
@@ -104,7 +120,19 @@ export async function GET(request: NextRequest) {
       .eq('id', establishmentId)
       .single();
 
-    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
+    if (establishmentError) {
+      console.error('❌ [Analytics] Erreur récupération établissement:', establishmentError);
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération de l\'établissement',
+          details: establishmentError.message,
+          code: establishmentError.code
+        },
+        { status: 500 }
+      );
+    }
+
+    if (!establishment || establishment.subscription !== 'PREMIUM') {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
     }
@@ -140,9 +168,13 @@ export async function GET(request: NextRequest) {
       .gte('timestamp', startDateISO);
 
     if (clicksError) {
-      console.error('Erreur récupération analytics:', clicksError);
+      console.error('❌ [Analytics] Erreur récupération analytics:', clicksError);
       return NextResponse.json(
-        { error: 'Internal server error' },
+        { 
+          error: 'Erreur lors de la récupération des analytics',
+          details: clicksError.message,
+          code: clicksError.code
+        },
         { status: 500 }
       );
     }

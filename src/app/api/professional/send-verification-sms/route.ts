@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
-import { storeSmsCode } from '../verify-sms-code/route';
+import { storeSmsCode } from '@/lib/sms-code-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { fieldName } = body;
 
@@ -61,7 +61,11 @@ export async function POST(request: NextRequest) {
     */
 
     // Stocker le code pour vérification ultérieure
-    storeSmsCode(professional.id, smsCode, smsCodeExpiry);
+    // Utiliser user.id (qui est l'ID du professionnel) pour être cohérent avec verify-sms-code
+    storeSmsCode(user.id, smsCode, smsCodeExpiry);
+    
+    // Log pour debug
+    console.log('💾 Code stocké pour user.id:', user.id, 'professional.id:', professional.id);
     
     return NextResponse.json({ 
       success: true,

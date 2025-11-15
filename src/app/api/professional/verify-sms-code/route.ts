@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
-
-// Stockage temporaire des codes (en production, utiliser Redis)
-const smsCodesStore = new Map<string, { code: string; expiry: Date }>();
+import { getSmsCode, deleteSmsCode, getAllStoredCodes } from '@/lib/sms-code-store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +19,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer le code stocké pour cet utilisateur
-    const storedData = smsCodesStore.get(user.id);
+    const storedData = getSmsCode(user.id);
+    
+    // Log pour debug
+    console.log('🔍 [Verify SMS] Recherche code pour user.id:', user.id);
+    console.log('📦 [Verify SMS] Codes stockés:', getAllStoredCodes());
+    console.log('📋 [Verify SMS] Code trouvé:', storedData ? 'OUI' : 'NON');
 
     if (!storedData) {
       return NextResponse.json({ 
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Vérifier l'expiration
     if (new Date() > storedData.expiry) {
-      smsCodesStore.delete(session.user.id);
+      deleteSmsCode(user.id);
       return NextResponse.json({ 
         error: 'Code expiré. Veuillez redemander un nouveau code.' 
       }, { status: 400 });
@@ -45,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code valide - le supprimer du stockage
-    smsCodesStore.delete(user.id);
+    deleteSmsCode(user.id);
 
     return NextResponse.json({ 
       success: true,
@@ -59,10 +62,5 @@ export async function POST(request: NextRequest) {
       error: 'Erreur lors de la vérification du code' 
     }, { status: 500 });
   }
-}
-
-// Fonction helper pour stocker un code (appelée par l'API send-verification-sms)
-export function storeSmsCode(userId: string, code: string, expiry: Date) {
-  smsCodesStore.set(userId, { code, expiry });
 }
 

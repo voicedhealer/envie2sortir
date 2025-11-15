@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -47,7 +47,7 @@ interface HealthStatus {
 }
 
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
@@ -57,9 +57,9 @@ export default function AdminDashboard() {
 
   // Vérifier l'authentification admin
   useEffect(() => {
-    if (status === 'loading') return; // En cours de chargement
+    if (loading) return; // En cours de chargement
     
-    if (!session || session.user.role !== 'admin') {
+    if (!session || session.user?.role !== 'admin') {
       router.push('/auth?error=AccessDenied');
       return;
     }
@@ -72,7 +72,7 @@ export default function AdminDashboard() {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [session, status, router]);
+  }, [session, loading, router]);
 
   const fetchDashboardStats = async () => {
     try {
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
 
   const fetchSystemMetrics = async () => {
     // Vérifier que la session est toujours valide
-    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+    if (!session || session.user?.role !== 'admin' || loading) {
       return;
     }
 
@@ -121,7 +121,7 @@ export default function AdminDashboard() {
 
   const fetchAllData = async () => {
     // Vérifier que la session est toujours valide avant de faire les requêtes
-    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+    if (!session || session.user?.role !== 'admin' || loading) {
       setIsLoading(false);
       return;
     }
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
   };
 
   // Afficher un loader pendant la vérification de l'authentification
-  if (status === 'loading' || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-gray-500">Chargement...</div>
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
   }
 
   // Si pas de session ou pas admin, ne rien afficher (redirection en cours)
-  if (!session || session.user.role !== 'admin') {
+  if (!session || session.user?.role !== 'admin') {
     return null;
   }
 

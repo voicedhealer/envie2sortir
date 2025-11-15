@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { toast } from '@/lib/fake-toast';
 import { Eye, EyeOff, Lock, User, Mail, Building, Phone, Edit, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import SmsVerificationModal from '@/components/SmsVerificationModal';
@@ -30,7 +30,7 @@ interface UpdateRequest {
 }
 
 export default function ParametresManager({ professional }: ParametresManagerProps) {
-  const { data: session } = useSession();
+  const { session } = useSupabaseSession();
   
   // États pour le changement de mot de passe
   const [isChangingPassword, setIsChangingPassword] = useState(false);

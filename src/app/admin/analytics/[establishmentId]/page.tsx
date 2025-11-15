@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BarChart3, Building2, TrendingUp, Users, Eye } from 'lucide-react';
 import ClickAnalyticsDashboard from '@/components/analytics/ClickAnalyticsDashboard';
@@ -17,7 +17,7 @@ interface EstablishmentDetails {
 }
 
 export default function EstablishmentAnalyticsPage({ params }: { params: Promise<{ establishmentId: string }> }) {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [establishment, setEstablishment] = useState<EstablishmentDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,15 +27,15 @@ export default function EstablishmentAnalyticsPage({ params }: { params: Promise
   const { establishmentId } = use(params);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    if (session.user?.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
@@ -65,9 +65,9 @@ export default function EstablishmentAnalyticsPage({ params }: { params: Promise
     };
 
     fetchEstablishmentDetails();
-  }, [session, status, router, establishmentId]);
+  }, [session, sessionLoading, router, establishmentId]);
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

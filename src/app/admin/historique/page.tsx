@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useRouter } from 'next/navigation';
 
 interface AdminAction {
   id: string;
@@ -23,7 +23,8 @@ interface AdminAction {
 }
 
 export default function AdminHistoriquePage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
+  const router = useRouter();
   const [actions, setActions] = useState<AdminAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,16 +32,23 @@ export default function AdminHistoriquePage() {
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    
+    if (!session || session.user?.role !== 'admin') {
+      router.push('/');
+      return;
+    }
+    
     loadActions();
-  }, [page]);
+  }, [page, session, sessionLoading, router]);
 
   // Redirection si pas admin
-  if (status === 'loading') {
+  if (sessionLoading) {
     return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   }
 
-  if (!session || session.user.role !== 'admin') {
-    redirect('/');
+  if (!session || session.user?.role !== 'admin') {
+    return null;
   }
 
   const loadActions = async () => {

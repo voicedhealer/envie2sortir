@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useRouter } from 'next/navigation';
 
 interface Professional {
   id: string;
@@ -63,7 +63,7 @@ interface EstablishmentsResponse {
 }
 
 export default function AdminEstablishmentsPage() {
-  const { data: session, status } = useSession();
+  const { session } = useSupabaseSession();
   const [establishments, setEstablishments] = useState<Establishment[]>([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [loading, setLoading] = useState(true);
