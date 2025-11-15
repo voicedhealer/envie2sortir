@@ -60,12 +60,12 @@ export async function POST(request: NextRequest) {
     });
     */
 
-    // Stocker le code pour vérification ultérieure
+    // Stocker le code pour vérification ultérieure dans Supabase
     // Utiliser user.id (qui est l'ID du professionnel) pour être cohérent avec verify-sms-code
-    storeSmsCode(user.id, smsCode, smsCodeExpiry);
+    await storeSmsCode(user.id, smsCode, smsCodeExpiry);
     
     // Log pour debug
-    console.log('💾 Code stocké pour user.id:', user.id, 'professional.id:', professional.id);
+    console.log('💾 Code stocké dans Supabase pour user.id:', user.id, 'professional.id:', professional.id);
     
     return NextResponse.json({ 
       success: true,

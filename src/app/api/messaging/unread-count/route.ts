@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
 
 // GET /api/messaging/unread-count - Compter les messages non lus
@@ -10,7 +9,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Messaging Unread Count] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
     let unreadCount = 0;
 
     const isUserAdmin = await isAdmin();

@@ -18,12 +18,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Récupérer le code stocké pour cet utilisateur
-    const storedData = getSmsCode(user.id);
+    // Récupérer le code stocké pour cet utilisateur depuis Supabase
+    const storedData = await getSmsCode(user.id);
     
     // Log pour debug
     console.log('🔍 [Verify SMS] Recherche code pour user.id:', user.id);
-    console.log('📦 [Verify SMS] Codes stockés:', getAllStoredCodes());
+    const allCodes = await getAllStoredCodes();
+    console.log('📦 [Verify SMS] Codes stockés:', allCodes);
     console.log('📋 [Verify SMS] Code trouvé:', storedData ? 'OUI' : 'NON');
 
     if (!storedData) {
@@ -32,9 +33,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier l'expiration
+    // Vérifier l'expiration (déjà fait dans getSmsCode, mais double vérification)
     if (new Date() > storedData.expiry) {
-      deleteSmsCode(user.id);
+      await deleteSmsCode(user.id);
       return NextResponse.json({ 
         error: 'Code expiré. Veuillez redemander un nouveau code.' 
       }, { status: 400 });
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code valide - le supprimer du stockage
-    deleteSmsCode(user.id);
+    await deleteSmsCode(user.id);
 
     return NextResponse.json({ 
       success: true,

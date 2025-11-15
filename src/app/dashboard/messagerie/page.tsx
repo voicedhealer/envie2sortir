@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
-import { MessageSquare, Plus } from "lucide-react";
+import { MessageSquare, Plus, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import ConversationList from "@/components/messaging/ConversationList";
 import ConversationDetail from "@/components/messaging/ConversationDetail";
 import NewConversationModal from "@/components/messaging/NewConversationModal";
@@ -53,13 +54,31 @@ export default function MessagingPage() {
                 </p>
               </div>
             </div>
-            <button
-              onClick={() => setIsNewConversationModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-5 h-5" />
-              Nouvelle conversation
-            </button>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                Retour au dashboard
+              </Link>
+              <button
+                onClick={() => setIsNewConversationModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors"
+                style={{
+                  background: 'linear-gradient(135deg, #ff751f 0%, #ff1fa9 100%)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #e66a1a 0%, #e01a96 100%)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #ff751f 0%, #ff1fa9 100%)';
+                }}
+              >
+                <Plus className="w-5 h-5" />
+                Nouvelle conversation
+              </button>
+            </div>
           </div>
         </div>
       </div>

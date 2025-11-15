@@ -10,7 +10,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels et admins authentifiés)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Messaging Conversations GET] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const unreadOnly = searchParams.get("unreadOnly") === "true";
@@ -231,9 +247,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
     const body = await request.json();
     const { subject, professionalId, initialMessage } = body;
+
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels et admins authentifiés)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Messaging Conversations] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     if (!subject || !initialMessage) {
       return NextResponse.json(

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
 
 // GET /api/messaging/conversations/[id] - Détails d'une conversation
@@ -13,7 +12,23 @@ export async function GET(
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels et admins authentifiés)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Messaging Conversation Detail] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
+
     const { id } = await params;
 
     const { data: conversation, error: conversationError } = await supabase
