@@ -15,7 +15,25 @@ export async function GET(request: NextRequest) {
     
     console.log('📊 API /api/deals/all - Recherche des deals actifs...', { limit, today, tomorrow });
     
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS (route publique)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceKey) {
+      console.error('API deals/all - Clés Supabase manquantes');
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Configuration Supabase manquante'
+        },
+        { status: 500 }
+      );
+    }
+    
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     // Récupérer tous les bons plans actifs avec les informations de l'établissement
     let query = supabase
