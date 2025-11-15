@@ -129,13 +129,13 @@ export async function POST(
     // Déterminer l'ordre (dernier + 1)
     const { data: lastMenu } = await supabase
       .from('establishment_menus')
-      .select('ordre')
+      .select('order')
       .eq('establishment_id', establishmentId)
-      .order('ordre', { ascending: false })
+      .order('order', { ascending: false })
       .limit(1)
       .single();
 
-    const order = lastMenu ? (lastMenu.ordre || 0) + 1 : 0;
+    const order = lastMenu ? (lastMenu.order || 0) + 1 : 0;
 
     // Créer l'entrée en base de données
     const { data: menu, error: menuError } = await supabase
@@ -147,7 +147,7 @@ export async function POST(
         file_name: file.name,
         file_size: file.size,
         mime_type: file.type,
-        ordre: order,
+        order: order,
         is_active: true,
         establishment_id: establishmentId
       })
@@ -174,7 +174,7 @@ export async function POST(
         fileName: menu.file_name,
         fileSize: menu.file_size,
         mimeType: menu.mime_type,
-        order: menu.ordre,
+        order: menu.order,
         isActive: menu.is_active,
         establishmentId: menu.establishment_id,
         createdAt: menu.created_at,

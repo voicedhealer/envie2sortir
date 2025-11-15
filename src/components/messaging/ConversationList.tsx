@@ -107,31 +107,52 @@ export default function ConversationList({
         <div className="flex gap-2">
           <button
             onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1 text-sm rounded ${
+            className={`px-3 py-1 text-sm rounded transition-all ${
               statusFilter === "all"
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
+            style={
+              statusFilter === "all"
+                ? {
+                    background: "linear-gradient(135deg, #ff751f 0%, #ff1fa9 100%)",
+                  }
+                : undefined
+            }
           >
             Toutes
           </button>
           <button
             onClick={() => setStatusFilter("open")}
-            className={`px-3 py-1 text-sm rounded ${
+            className={`px-3 py-1 text-sm rounded transition-all ${
               statusFilter === "open"
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
+            style={
+              statusFilter === "open"
+                ? {
+                    background: "linear-gradient(135deg, #ff751f 0%, #ff1fa9 100%)",
+                  }
+                : undefined
+            }
           >
             Ouvertes
           </button>
           <button
             onClick={() => setStatusFilter("closed")}
-            className={`px-3 py-1 text-sm rounded ${
+            className={`px-3 py-1 text-sm rounded transition-all ${
               statusFilter === "closed"
-                ? "bg-blue-600 text-white"
+                ? "text-white"
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
+            style={
+              statusFilter === "closed"
+                ? {
+                    background: "linear-gradient(135deg, #ff751f 0%, #ff1fa9 100%)",
+                  }
+                : undefined
+            }
           >
             Fermées
           </button>

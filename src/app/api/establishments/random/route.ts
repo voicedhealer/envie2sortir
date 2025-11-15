@@ -5,6 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Fonction pour vider le cache (utile pour le développement)
+export function clearCache() {
+  cache.clear();
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -38,37 +43,10 @@ export async function GET(request: NextRequest) {
     
     const supabase = await createClient();
 
-    // Construire la requête Supabase
+    // Construire la requête Supabase (sans relations pour éviter les problèmes)
     let query = supabase
       .from('establishments')
-      .select(`
-        id,
-        name,
-        slug,
-        address,
-        city,
-        description,
-        latitude,
-        longitude,
-        price_min,
-        price_max,
-        status,
-        subscription,
-        image_url,
-        avg_rating,
-        total_comments,
-        views_count,
-        clicks_count,
-        created_at,
-        last_modified_at,
-        images:images!images_establishment_id_fkey (
-          id,
-          url,
-          alt_text,
-          is_primary,
-          is_card_image
-        )
-      `)
+      .select('*')
       .eq('status', 'approved')
       .not('latitude', 'is', null)
       .not('longitude', 'is', null)
@@ -82,7 +60,12 @@ export async function GET(request: NextRequest) {
     const { data: allEstablishments, error: establishmentsError } = await query;
 
     if (establishmentsError) {
-      console.error('Erreur chargement établissements:', establishmentsError);
+      console.error('❌ [Random Establishments] Erreur chargement établissements:', {
+        error: establishmentsError,
+        code: establishmentsError?.code,
+        message: establishmentsError?.message,
+        details: establishmentsError?.details
+      });
       return NextResponse.json(
         { 
           success: false,
@@ -96,9 +79,28 @@ export async function GET(request: NextRequest) {
       );
     }
     
+    // Récupérer les images pour tous les établissements
+    const establishmentIds = (allEstablishments || []).map((est: any) => est.id);
+    const imagesMap = new Map();
+    
+    if (establishmentIds.length > 0) {
+      const { data: imagesData } = await supabase
+        .from('images')
+        .select('*')
+        .in('establishment_id', establishmentIds)
+        .eq('is_primary', true);
+      
+      (imagesData || []).forEach((img: any) => {
+        if (!imagesMap.has(img.establishment_id)) {
+          imagesMap.set(img.establishment_id, []);
+        }
+        imagesMap.get(img.establishment_id).push(img);
+      });
+    }
+    
     // Filtrer par rayon géographique si des coordonnées sont fournies
     let establishments = (allEstablishments || []);
-    if (lat && lng && radius) {
+    if (lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng) && radius > 0) {
       const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
         const R = 6371; // Rayon de la Terre en km
         const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -118,44 +120,47 @@ export async function GET(request: NextRequest) {
         return false;
       });
 
-      // Si aucun établissement ne rentre dans le rayon, faire un fallback sur les plus récents
-      if (establishments.length === 0) {
-        establishments = (allEstablishments || []).slice(0, limit);
-      }
+      console.log(`📍 [Random Establishments] Filtrage géographique: ${establishments.length} établissements dans un rayon de ${radius}km autour de (${lat}, ${lng})`);
+      
+      // Ne pas faire de fallback - si aucun établissement ne rentre dans le rayon, retourner une liste vide
+      // Cela permet à l'utilisateur de voir qu'il n'y a pas de résultats et d'augmenter le rayon
     }
     
     // Limiter le nombre de résultats
     establishments = establishments.slice(0, limit);
     
     // Formater la réponse (conversion snake_case -> camelCase)
-    const formattedEstablishments = establishments.map((est: any) => ({
-      id: est.id,
-      name: est.name,
-      slug: est.slug,
-      address: est.address,
-      city: est.city,
-      description: est.description,
-      latitude: est.latitude,
-      longitude: est.longitude,
-      priceMin: est.price_min,
-      priceMax: est.price_max,
-      status: est.status,
-      subscription: est.subscription,
-      imageUrl: est.image_url,
-      images: (est.images || []).slice(0, 5).map((img: any) => ({
-        id: img.id,
-        url: img.url,
-        altText: img.alt_text,
-        isPrimary: img.is_primary,
-        isCardImage: img.is_card_image
-      })),
-      rating: est.avg_rating,
-      reviewCount: est.total_comments,
-      viewsCount: est.views_count,
-      clicksCount: est.clicks_count,
-      createdAt: est.created_at,
-      lastModifiedAt: est.last_modified_at
-    }));
+    const formattedEstablishments = establishments.map((est: any) => {
+      const images = imagesMap.get(est.id) || [];
+      return {
+        id: est.id,
+        name: est.name,
+        slug: est.slug,
+        address: est.address,
+        city: est.city,
+        description: est.description,
+        latitude: est.latitude,
+        longitude: est.longitude,
+        priceMin: est.price_min,
+        priceMax: est.price_max,
+        status: est.status,
+        subscription: est.subscription,
+        imageUrl: est.image_url,
+        images: images.slice(0, 5).map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          altText: img.alt_text,
+          isPrimary: img.is_primary,
+          isCardImage: img.is_card_image
+        })),
+        rating: est.avg_rating,
+        reviewCount: est.total_comments,
+        viewsCount: est.views_count,
+        clicksCount: est.clicks_count,
+        createdAt: est.created_at,
+        lastModifiedAt: est.last_modified_at
+      };
+    });
     
     const response = {
       success: true,

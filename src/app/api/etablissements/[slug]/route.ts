@@ -134,7 +134,6 @@ export async function PUT(
     
     // Vérifier l'authentification et les permissions
     const isDevelopment = request.url.includes('localhost') || request.url.includes('127.0.0.1');
-    const supabase = createClient();
     
     let user;
     if (isDevelopment) {
@@ -193,6 +192,23 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels authentifiés)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [PUT Establishment] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     // Vérifier si l'établissement existe
     console.log('🔍 Recherche d\'établissement avec slug:', slug);
@@ -349,28 +365,30 @@ export async function PUT(
         : body.envieTags;
     }
 
-    // Mettre à jour l'établissement
+    // Mettre à jour l'établissement (sans relations pour éviter les problèmes)
     const { data: establishment, error: updateError } = await supabase
       .from('establishments')
       .update(updateData)
       .eq('slug', slug)
-      .select(`
-        *,
-        images (*),
-        events (*),
-        owner:professionals!establishments_owner_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email
-        )
-      `)
+      .select('*')
       .single();
 
     if (updateError) {
-      console.error('Erreur mise à jour établissement:', updateError);
+      console.error('❌ [PUT Establishment] Erreur mise à jour établissement:', {
+        error: updateError,
+        code: updateError?.code,
+        message: updateError?.message,
+        details: updateError?.details,
+        hint: updateError?.hint,
+        slug,
+        updateDataKeys: Object.keys(updateData)
+      });
       return NextResponse.json(
-        { error: "Erreur lors de la mise à jour" },
+        { 
+          error: "Erreur lors de la mise à jour",
+          details: updateError.message,
+          code: updateError.code
+        },
         { status: 500 }
       );
     }
@@ -398,19 +416,22 @@ export async function PUT(
       }
     }
 
-    // Récupérer les compteurs
-    const [favoritesCount, likesCount, commentsCount] = await Promise.all([
+    // Récupérer les données supplémentaires séparément
+    const [favoritesCountResult, likesCountResult, commentsCountResult, imagesResult, eventsResult, ownerResult] = await Promise.all([
       supabase.from('user_favorites').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
       supabase.from('user_likes').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
-      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id)
+      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('images').select('id, url, alt_text, is_primary, is_card_image, ordre').eq('establishment_id', establishment.id).order('ordre', { ascending: true }),
+      supabase.from('events').select('id, title, start_date, end_date').eq('establishment_id', establishment.id).gte('start_date', new Date().toISOString()).order('start_date', { ascending: true }).limit(5),
+      supabase.from('professionals').select('id, first_name, last_name, email').eq('id', establishment.owner_id).single()
     ]);
 
-    // Filtrer et trier les événements
-    const now = new Date().toISOString();
-    const sortedEvents = (establishment.events || [])
-      .filter((event: any) => event.start_date >= now)
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 5);
+    const favoritesCount = favoritesCountResult.count || 0;
+    const likesCount = likesCountResult.count || 0;
+    const commentsCount = commentsCountResult.count || 0;
+    const images = imagesResult.data || [];
+    const sortedEvents = eventsResult.data || [];
+    const owner = ownerResult.data;
 
     // Parser les JSON fields avec gestion des erreurs
     const parseJsonField = (field: any) => {
@@ -427,18 +448,18 @@ export async function PUT(
 
     const response = {
       ...establishment,
-      images: establishment.images || [],
+      images: images,
       events: sortedEvents,
-      owner: establishment.owner ? {
-        id: establishment.owner.id,
-        firstName: establishment.owner.first_name,
-        lastName: establishment.owner.last_name,
-        email: establishment.owner.email
+      owner: owner ? {
+        id: owner.id,
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+        email: owner.email
       } : null,
       _count: {
-        favorites: favoritesCount.count || 0,
-        likes: likesCount.count || 0,
-        comments: commentsCount.count || 0
+        favorites: favoritesCount,
+        likes: likesCount,
+        comments: commentsCount
       },
       activities: parseJsonField(establishment.activities) || [],
       services: parseJsonField(establishment.services) || [],
@@ -502,7 +523,7 @@ export async function DELETE(
   try {
     // ✅ Await params pour Next.js 15
     const { slug } = await params;
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier l'authentification et les permissions
     let user;
@@ -617,7 +638,7 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Récupérer l'établissement avec relations
     const { data: establishment, error: establishmentError } = await supabase

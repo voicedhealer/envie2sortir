@@ -10,7 +10,7 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Récupérer l'établissement par son slug
     const { data: establishment, error: establishmentError } = await supabase
@@ -45,7 +45,7 @@ export async function GET(
       .select('*')
       .eq('establishment_id', establishment.id)
       .eq('is_active', true)
-      .order('ordre', { ascending: true });
+      .order('order', { ascending: true });
 
     if (menusError) {
       console.error('Erreur récupération menus:', menusError);
@@ -63,7 +63,7 @@ export async function GET(
       fileUrl: menu.file_url,
       fileName: menu.file_name,
       fileSize: menu.file_size,
-      order: menu.ordre
+      order: menu.order
     }));
 
     return NextResponse.json({

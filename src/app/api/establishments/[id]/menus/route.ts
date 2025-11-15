@@ -14,7 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id: establishmentId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
@@ -49,7 +49,7 @@ export async function GET(
       .select('*')
       .eq('establishment_id', establishmentId)
       .eq('is_active', true)
-      .order('ordre', { ascending: true });
+      .order('order', { ascending: true });
 
     if (menusError) {
       console.error('Erreur récupération menus:', menusError);
@@ -67,7 +67,7 @@ export async function GET(
       fileUrl: menu.file_url,
       fileName: menu.file_name,
       fileSize: menu.file_size,
-      order: menu.ordre,
+      order: menu.order,
       isActive: menu.is_active,
       createdAt: menu.created_at,
       updatedAt: menu.updated_at
