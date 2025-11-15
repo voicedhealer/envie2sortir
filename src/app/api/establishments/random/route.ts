@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       whereConditions.city = city;
     }
     
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Construire la requête Supabase
     let query = supabase
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         clicks_count,
         created_at,
         last_modified_at,
-        images (
+        images:images!images_establishment_id_fkey (
           id,
           url,
           alt_text,
@@ -87,6 +87,8 @@ export async function GET(request: NextRequest) {
         { 
           success: false,
           error: "Erreur lors du chargement des établissements",
+          details: process.env.NODE_ENV === 'production' ? undefined : establishmentsError.message,
+          code: process.env.NODE_ENV === 'production' ? undefined : establishmentsError.code,
           establishments: [],
           count: 0
         },
@@ -115,6 +117,11 @@ export async function GET(request: NextRequest) {
         }
         return false;
       });
+
+      // Si aucun établissement ne rentre dans le rayon, faire un fallback sur les plus récents
+      if (establishments.length === 0) {
+        establishments = (allEstablishments || []).slice(0, limit);
+      }
     }
     
     // Limiter le nombre de résultats

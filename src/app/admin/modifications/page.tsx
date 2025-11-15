@@ -1,67 +1,88 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/lib/supabase/helpers';
 import { redirect } from 'next/navigation';
 import ModificationsManager from './ModificationsManager';
+import { createClient } from '@/lib/supabase/server';
 
 export default async function AdminModificationsPage() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    redirect('/auth');
-  }
-
   // Vérifier que l'utilisateur est un admin
-  if (session.user.role !== 'admin') {
+  const adminCheck = await isAdmin();
+  if (!adminCheck) {
     redirect('/auth?error=AccessDenied');
   }
 
+  const supabase = await createClient();
+
   // Récupérer toutes les demandes en attente
-  const pendingRequests = await prisma.professionalUpdateRequest.findMany({
-    where: {
-      status: 'pending'
-    },
-    include: {
-      professional: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          companyName: true,
-          phone: true,
-          siret: true
-        }
-      }
-    },
-    orderBy: {
-      requestedAt: 'desc'
-    }
-  });
+  const { data: pendingRequestsData, error: pendingError } = await supabase
+    .from('professional_update_requests')
+    .select(`
+      *,
+      professional:professionals!professional_update_requests_professional_id_fkey (
+        id,
+        email,
+        first_name,
+        last_name,
+        company_name,
+        phone,
+        siret
+      )
+    `)
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: false });
+
+  if (pendingError) {
+    console.error('Erreur récupération demandes en attente:', pendingError);
+  }
 
   // Récupérer l'historique récent
-  const recentHistory = await prisma.professionalUpdateRequest.findMany({
-    where: {
-      status: {
-        in: ['approved', 'rejected']
-      }
-    },
-    include: {
-      professional: {
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          companyName: true
-        }
-      }
-    },
-    orderBy: {
-      reviewedAt: 'desc'
-    },
-    take: 20
-  });
+  const { data: recentHistoryData, error: historyError } = await supabase
+    .from('professional_update_requests')
+    .select(`
+      *,
+      professional:professionals!professional_update_requests_professional_id_fkey (
+        id,
+        email,
+        first_name,
+        last_name,
+        company_name
+      )
+    `)
+    .in('status', ['approved', 'rejected'])
+    .order('reviewed_at', { ascending: false })
+    .limit(20);
+
+  if (historyError) {
+    console.error('Erreur récupération historique:', historyError);
+  }
+
+  // Transformer les données pour correspondre au format attendu
+  const pendingRequests = (pendingRequestsData || []).map((req: any) => ({
+    ...req,
+    requestedAt: req.requested_at,
+    reviewedAt: req.reviewed_at,
+    professional: req.professional ? {
+      id: req.professional.id,
+      email: req.professional.email,
+      firstName: req.professional.first_name,
+      lastName: req.professional.last_name,
+      companyName: req.professional.company_name,
+      phone: req.professional.phone,
+      siret: req.professional.siret
+    } : null
+  }));
+
+  const recentHistory = (recentHistoryData || []).map((req: any) => ({
+    ...req,
+    requestedAt: req.requested_at,
+    reviewedAt: req.reviewed_at,
+    professional: req.professional ? {
+      id: req.professional.id,
+      email: req.professional.email,
+      firstName: req.professional.first_name,
+      lastName: req.professional.last_name,
+      companyName: req.professional.company_name
+    } : null
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">

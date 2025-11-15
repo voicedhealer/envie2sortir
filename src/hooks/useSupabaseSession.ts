@@ -11,7 +11,6 @@ interface SessionUser {
   lastName?: string;
   role: 'user' | 'professional' | 'admin';
   userType?: 'user' | 'professional';
-  establishmentId?: string;
 }
 
 interface UseSupabaseSessionReturn {
@@ -33,6 +32,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
       try {
         console.log('🔄 [useSupabaseSession] Getting initial session...');
         
+        // Lire la session (créée côté client via signInWithPassword)
         const { data: { session: currentSession }, error } = await supabase.auth.getSession();
         
         console.log('📋 [useSupabaseSession] Session result:', { 
@@ -120,7 +120,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
       // Sinon vérifier dans professionals
       const { data: professionalData, error: profError } = await supabase
         .from('professionals')
-        .select('id, email, first_name, last_name, establishment_id')
+        .select('id, email, first_name, last_name')
         .eq('id', authUser.id)
         .maybeSingle();
 
@@ -133,8 +133,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           firstName: professionalData.first_name,
           lastName: professionalData.last_name,
           role: 'professional' as const,
-          userType: 'professional' as const,
-          establishmentId: professionalData.establishment_id
+          userType: 'professional' as const
         };
         console.log('✅ [useSupabaseSession] Setting user from professionals table:', newUser);
         setUser(newUser);
@@ -175,10 +174,9 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
 
   return {
     user,
-    session: session ? { user, ...session } : null,
+    session: session ? { ...session, user: user } : null, // Remplacer explicitement session.user par notre user enrichi
     loading,
-    signOut: handleSignOut,
-    status: loading ? 'loading' : (session ? 'authenticated' : 'unauthenticated')
+    signOut: handleSignOut
   };
 }
 

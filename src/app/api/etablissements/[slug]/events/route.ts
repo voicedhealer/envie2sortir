@@ -9,7 +9,7 @@ export async function GET(
   try {
     const { slug } = await params;
     
-    const supabase = createClient();
+    const supabase = await createClient();
     const now = new Date();
     const nowISO = now.toISOString();
 
@@ -185,7 +185,7 @@ export async function POST(
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { slug } = await params;
     const body = await request.json();
     const { title, description, startDate, endDate, price, maxCapacity } = body;

@@ -66,11 +66,11 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
       >
         <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
           <span className="text-white font-bold text-sm">
-            {session.firstName?.charAt(0) || session.email?.charAt(0)}
+            {session.user?.firstName?.charAt(0) || session.user?.email?.charAt(0)}
           </span>
         </div>
-        {!isMobile && <span className="hidden md:block">{session.firstName || 'Utilisateur'}</span>}
-        {isMobile && <span>{session.firstName || 'Utilisateur'}</span>}
+        {!isMobile && <span className="hidden md:block">{session.user?.firstName || 'Utilisateur'}</span>}
+        {isMobile && <span>{session.user?.firstName || 'Utilisateur'}</span>}
       </button>
 
       {showUserMenu && (

@@ -1,7 +1,64 @@
 "use client";
 
-import { Establishment } from '@prisma/client';
 import { MapPin, Phone, Globe, Clock, Star, Users, Car, CreditCard, Utensils, Wifi, Coffee, ChevronDown, ChevronUp, Instagram, Facebook, Music, Youtube } from 'lucide-react';
+
+// Type Establishment pour remplacer le type Prisma
+interface Establishment {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  address: string;
+  city?: string | null;
+  postalCode?: string | null;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  phone?: string | null;
+  whatsappPhone?: string | null;
+  messengerUrl?: string | null;
+  email?: string | null;
+  website?: string | null;
+  instagram?: string | null;
+  facebook?: string | null;
+  tiktok?: string | null;
+  youtube?: string | null;
+  activities?: any;
+  services?: any;
+  ambiance?: any;
+  paymentMethods?: any;
+  horairesOuverture?: any;
+  prixMoyen?: number | null;
+  capaciteMax?: number | null;
+  accessibilite?: boolean;
+  parking?: boolean;
+  terrasse?: boolean;
+  status?: string;
+  subscription?: string;
+  ownerId?: string;
+  rejectionReason?: string | null;
+  rejectedAt?: Date | string | null;
+  lastModifiedAt?: Date | string | null;
+  viewsCount?: number;
+  clicksCount?: number;
+  avgRating?: number | null;
+  totalComments?: number;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+  imageUrl?: string | null;
+  priceMin?: number | null;
+  priceMax?: number | null;
+  informationsPratiques?: any;
+  googlePlaceId?: string | null;
+  googleBusinessUrl?: string | null;
+  enriched?: boolean;
+  enrichmentData?: any;
+  envieTags?: any;
+  googleRating?: number | null;
+  googleReviewCount?: number | null;
+  theForkLink?: string | null;
+  uberEatsLink?: string | null;
+}
 import { useState, useEffect } from 'react';
 import { useLinkTracking, useScheduleTracking } from '@/hooks/useClickTracking';
 import DailyDealCard from './DailyDealCard';

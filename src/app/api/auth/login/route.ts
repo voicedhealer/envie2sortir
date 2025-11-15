@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
     const validatedData = loginSchema.parse(sanitizedBody);
     
     // Créer le client Supabase pour cette requête avec gestion explicite des cookies
-    // Dans les API routes, on doit utiliser NextResponse pour gérer les cookies
     const { createServerClient } = await import('@supabase/ssr');
-    const cookieStore = await import('next/headers').then(m => m.cookies());
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
     
     // Stocker les cookies à retourner dans la réponse
     const cookiesToReturn: Array<{ name: string; value: string; options?: any }> = [];
@@ -44,11 +44,9 @@ export async function POST(request: NextRequest) {
             return cookieStore.getAll();
           },
           setAll(cookiesToSet) {
-            // Stocker les cookies pour les retourner dans la réponse
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-              cookiesToReturn.push({ name, value, options });
-            });
+            // NE PAS set dans cookieStore (read-only dans les API routes)
+            // Juste stocker pour les retourner dans la réponse
+            cookiesToReturn.push(...cookiesToSet);
           },
         },
       }
@@ -161,8 +159,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Ajouter tous les cookies Supabase à la réponse
+    console.log('🍪 [API Login] Setting cookies:', cookiesToReturn.length, 'cookies');
     cookiesToReturn.forEach(({ name, value, options }) => {
-      response.cookies.set(name, value, options);
+      console.log('🍪 [API Login] Setting cookie:', name, 'with options:', options);
+      // S'assurer que les cookies sont accessibles au client (pas httpOnly)
+      const cookieOptions = {
+        ...options,
+        httpOnly: false, // Permettre au client JavaScript de lire les cookies
+        sameSite: 'lax' as const, // Pour la compatibilité cross-site
+        secure: process.env.NODE_ENV === 'production', // HTTPS en production
+        path: '/'
+      };
+      response.cookies.set(name, value, cookieOptions);
     });
 
     return response;

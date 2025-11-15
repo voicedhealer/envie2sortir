@@ -216,25 +216,6 @@ export default function DynamicEstablishmentsSection() {
           </div>
         </div>
       </div>
-      
-      <style jsx>{`
-        @keyframes scroll-infinite {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
-        
-        .animate-scroll-infinite {
-          animation: scroll-infinite 60s linear infinite;
-        }
-        
-        .animate-scroll-infinite:hover {
-          animation-play-state: paused;
-        }
-      `}</style>
     </section>
   );
 }

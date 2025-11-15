@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const city = searchParams.get('city');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const now = new Date().toISOString();
     
     // Construire la requête Supabase pour les événements à venir ou en cours
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       .from('events')
       .select(`
         *,
-        establishment:establishments!events_establishment_id_fkey (
+        establishment:establishments!events_establishment_id_fkey!inner (
           id,
           name,
           slug,
@@ -34,18 +34,18 @@ export async function GET(request: NextRequest) {
           latitude,
           longitude
         ),
-        engagements:event_engagements (
+        engagements:event_engagements!event_engagements_event_id_fkey (
           type
         )
       `)
-      .eq('establishment.status', 'approved')
+      .eq('establishments.status', 'approved')
       .or(`start_date.gte.${now},and(start_date.lte.${now},or(end_date.gte.${now},end_date.is.null))`)
       .order('start_date', { ascending: true })
       .limit(limit);
 
     // Filtrer par ville si spécifiée
     if (city) {
-      query = query.eq('establishment.city', city);
+      query = query.eq('establishments.city', city);
     }
 
     const { data: events, error: eventsError } = await query;
@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
         { 
           success: false,
           error: "Erreur lors du chargement des événements",
+          details: process.env.NODE_ENV === 'production' ? undefined : eventsError.message,
+          code: process.env.NODE_ENV === 'production' ? undefined : eventsError.code,
           events: []
         },
         { status: 500 }

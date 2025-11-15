@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { prisma } from '@/lib/prisma';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { Download, Mail, Users, TrendingUp, Calendar, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
 
@@ -25,7 +24,7 @@ interface NewsletterStats {
 }
 
 export default function NewsletterDashboard() {
-  const { data: session } = useSession();
+  const { session } = useSupabaseSession();
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [stats, setStats] = useState<NewsletterStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,7 +33,7 @@ export default function NewsletterDashboard() {
   const [selectedSubscribers, setSelectedSubscribers] = useState<string[]>([]);
 
   // Vérifier les permissions admin
-  if (!session || (session.user as any)?.role !== 'admin') {
+  if (!session || session.user?.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

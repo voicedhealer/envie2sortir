@@ -22,12 +22,26 @@ export async function GET(
     // Date actuelle
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     
-    const supabase = createClient();
+    // Utiliser le client admin pour bypass RLS (route publique)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !serviceKey) {
+      console.error('API deals/active - Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+    
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     // Récupérer les bons plans actifs
-    console.log('API deals/active - Recherche des deals pour:', { establishmentId, today, tomorrow });
+    console.log('API deals/active - Recherche des deals pour:', { establishmentId, today });
     
     // Récupérer tous les deals actifs de l'établissement
     const { data: activeDeals, error: dealsError } = await supabase
@@ -35,12 +49,18 @@ export async function GET(
       .select('*')
       .eq('establishment_id', establishmentId)
       .eq('is_active', true)
-      .or(`is_recurring.eq.true,and(is_recurring.eq.false,date_debut.lte.${tomorrow.toISOString()},date_fin.gte.${today.toISOString()})`)
       .order('created_at', { ascending: false });
 
     if (dealsError) {
       console.error('Erreur récupération deals:', dealsError);
-      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération des bons plans',
+          details: process.env.NODE_ENV === 'production' ? undefined : dealsError.message,
+          code: process.env.NODE_ENV === 'production' ? undefined : dealsError.code
+        },
+        { status: 500 }
+      );
     }
 
     console.log('API deals/active - Deals trouvés:', activeDeals?.length || 0);
@@ -83,7 +103,10 @@ export async function GET(
   } catch (error) {
     console.error('Erreur lors de la récupération des bons plans actifs:', error);
     return NextResponse.json(
-      { error: 'Erreur serveur' },
+      { 
+        error: 'Erreur serveur',
+        details: process.env.NODE_ENV === 'production' ? undefined : (error as Error).message
+      },
       { status: 500 }
     );
   }

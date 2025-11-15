@@ -33,7 +33,15 @@ export async function updateSession(request: NextRequest) {
 
   const {
     data: { user },
+    error: getUserError
   } = await supabase.auth.getUser();
+  
+  console.log('🔧 [Middleware] getUser result:', {
+    hasUser: !!user,
+    userId: user?.id,
+    error: getUserError?.message,
+    path: request.nextUrl.pathname
+  });
 
   // Pages publiques qui ne nécessitent pas d'authentification
   const publicPaths = [

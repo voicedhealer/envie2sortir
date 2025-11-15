@@ -72,63 +72,30 @@ function AuthContent() {
 
     try {
       if (isLogin) {
-        // Utiliser directement le client Supabase pour la connexion côté client
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabase = createClient();
+        console.log('🔐 Tentative de connexion via API route avec:', formData.email);
         
-        console.log('🔐 Tentative de connexion avec:', formData.email);
-        
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
+        // Utiliser l'API route pour créer la session côté serveur (cookies server-side)
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // Important pour que les cookies soient envoyés et reçus
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
         });
 
-        if (authError) {
-          console.error('❌ Erreur de connexion:', authError);
-          
-          if (authError.message.includes('Invalid') || authError.message.includes('credentials')) {
-            setError('Email ou mot de passe incorrect');
-          } else if (authError.message.includes('Email not confirmed')) {
-            setError('Veuillez vérifier votre email avant de vous connecter. Un lien de vérification vous a été envoyé.');
-          } else {
-            setError(authError.message || 'Erreur lors de la connexion');
-          }
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          console.error('❌ Erreur de connexion:', result);
+          setError(result.message || 'Email ou mot de passe incorrect');
           return;
         }
 
-        if (!authData.user) {
-          setError('Erreur lors de la connexion');
-          return;
-        }
-
-        console.log('✅ Connexion Supabase réussie:', authData.user.email);
-
-        // Déterminer le type d'utilisateur en interrogeant les tables
-        const { data: userData } = await supabase
-          .from('users')
-          .select('id, role')
-          .eq('id', authData.user.id)
-          .maybeSingle();
-
-        let userRole = 'user';
+        console.log('✅ Connexion réussie via API route:', result.user);
         
-        if (userData) {
-          userRole = userData.role === 'admin' ? 'admin' : 'user';
-        } else {
-          // Vérifier dans professionals
-          const { data: professionalData } = await supabase
-            .from('professionals')
-            .select('id')
-            .eq('id', authData.user.id)
-            .maybeSingle();
-
-          if (professionalData) {
-            userRole = 'pro';
-          }
-        }
-
-        console.log('🔐 Rôle détecté:', userRole);
-        console.log('🔐 Rôle sélectionné:', selectedRole);
+        const userRole = result.user.role;
 
         // Vérifier que le rôle correspond
         if (userRole !== selectedRole) {
@@ -138,9 +105,6 @@ function AuthContent() {
             'admin': 'administrateur'
           };
           setError(`Ce compte est un compte ${roleNames[userRole as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
-          
-          // Déconnecter l'utilisateur
-          await supabase.auth.signOut();
           return;
         }
 
@@ -154,9 +118,29 @@ function AuthContent() {
 
         console.log('✅ Redirection vers:', redirectUrl);
         
-        // Pas besoin de flag localStorage, la session est maintenant côté client
-        // Utiliser window.location.href pour forcer le rechargement complet de la page
-        window.location.href = decodeURIComponent(redirectUrl);
+        // Créer aussi une session côté client pour que le client Supabase puisse la lire
+        // (Les cookies httpOnly créés par l'API route ne sont pas accessibles au JavaScript)
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        
+        // Créer la session côté client avec les mêmes identifiants
+        const { data: clientAuthData, error: clientAuthError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+        
+        if (clientAuthError) {
+          console.error('⚠️ [Auth] Erreur création session client:', clientAuthError);
+          // Continuer quand même, le serveur a la session
+        } else {
+          console.log('✅ [Auth] Session client créée avec succès');
+        }
+        
+        // Attendre un peu pour que tout se synchronise
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // Forcer un hard refresh pour que Next.js recharge les server components avec la nouvelle session
+        window.location.replace(decodeURIComponent(redirectUrl));
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');
