@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, TrendingUp, Maximize2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './Toast';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 
 interface EventCardNewProps {
@@ -63,7 +63,7 @@ interface EngagementData {
 }
 
 export default function EventCardNew({ event, establishment }: EventCardNewProps) {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const { showToast, ToastContainer } = useToast();
   
@@ -135,17 +135,17 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
   };
 
   const handleVote = async (levelId: string) => {
-    if (status === 'unauthenticated') {
+    if (!user) {
       router.push('/auth');
       return;
     }
 
-    if (status === 'loading') {
+    if (sessionLoading) {
       return;
     }
 
     // Vérifier si l'utilisateur est le propriétaire de l'établissement
-    if (session?.user?.id && session.user.id === establishment?.userId) {
+    if (user?.id && user.id === establishment?.userId) {
       showToast('Vous êtes le propriétaire de cet établissement, vous ne pouvez donc pas voter', 'info');
       return;
     }
@@ -350,7 +350,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                 </p>
               )}
               
-              <div className="flex flex-nowrap items-center justify-center md:justify-start gap-1.5 overflow-x-auto">
+              <div className="flex flex-nowrap items-center justify-center md:justify-start gap-1.5 sm:gap-2 overflow-x-auto">
                 {/* Badge de statut */}
                 <div className={`flex items-center gap-1 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0 ${
                   eventStatus.status === 'in-progress' 
@@ -359,7 +359,7 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                     ? 'bg-yellow-400 text-black'
                     : 'bg-gray-500/30 text-gray-100'
                 }`}>
-                  <span className="text-xs font-medium">{eventStatus.label}</span>
+                  <span className="font-medium">{eventStatus.label}</span>
                 </div>
                 
                 <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">

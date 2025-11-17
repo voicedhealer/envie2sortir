@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { MapPin, Star, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import PhotoGallery from './PhotoGallery';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface LatestReview {
   id: string;
@@ -34,7 +35,8 @@ export default function EstablishmentHeroWithGallery({
 }: EstablishmentHeroWithGalleryProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [latestReview, setLatestReview] = useState<LatestReview | null>(null);
+  const [reviews, setReviews] = useState<LatestReview[]>([]);
+  const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
 
   // Détecter si on est sur mobile
   useEffect(() => {
@@ -48,38 +50,39 @@ export default function EstablishmentHeroWithGallery({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Récupérer le dernier avis
-  const fetchLatestReview = async () => {
+  // Récupérer les avis
+  const fetchReviews = async () => {
     if (!establishment.slug) return;
     
     try {
-      const response = await fetch(`/api/public/establishments/${establishment.slug}/comments?limit=1`);
+      const response = await fetch(`/api/public/establishments/${establishment.slug}/comments?limit=10`);
       if (response.ok) {
         const data = await response.json();
         if (data.comments && data.comments.length > 0) {
-          const review = data.comments[0];
-          setLatestReview({
+          const reviewsData = data.comments.map((review: any) => ({
             id: review.id,
             content: review.content,
             rating: review.rating || 0,
             userName: review.user?.firstName || 'Anonyme',
             createdAt: review.createdAt
-          });
+          }));
+          setReviews(reviewsData);
+          setCurrentReviewIndex(0);
         } else {
-          setLatestReview(null);
+          setReviews([]);
         }
       }
     } catch (error) {
-      console.error('Erreur lors de la récupération du dernier avis:', error);
+      console.error('Erreur lors de la récupération des avis:', error);
     }
   };
 
   useEffect(() => {
-    fetchLatestReview();
+    fetchReviews();
 
     // Écouter les événements de création/mise à jour d'avis
     const handleReviewUpdate = () => {
-      fetchLatestReview();
+      fetchReviews();
     };
 
     window.addEventListener('review-created', handleReviewUpdate);
@@ -91,6 +94,17 @@ export default function EstablishmentHeroWithGallery({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [establishment.slug]);
+
+  // Carousel automatique des avis (seulement si plusieurs avis)
+  useEffect(() => {
+    if (reviews.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentReviewIndex((prev) => (prev + 1) % reviews.length);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [reviews.length]);
   
   
   // ✅ CORRECTION : Utiliser l'ordre correct des images
@@ -206,34 +220,51 @@ export default function EstablishmentHeroWithGallery({
               </div>
             )}
 
-            {/* Condensé du dernier avis */}
-            {latestReview && (
-              <div className="mt-3 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 max-w-md">
-                <div className="flex items-start gap-2">
-                  <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-sm">{latestReview.userName}</span>
-                      {latestReview.rating > 0 && (
-                        <div className="flex items-center gap-0.5">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-3 h-3 ${
-                                i < latestReview.rating
-                                  ? 'fill-yellow-400 text-yellow-400'
-                                  : 'fill-white/30 text-white/30'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-sm line-clamp-2 opacity-95">{latestReview.content}</p>
+            {/* Condensé des avis avec carousel */}
+            <div className="mt-3 max-w-sm">
+              {reviews.length > 0 ? (
+                <div className="relative overflow-hidden">
+                  <AnimatePresence mode="wait">
+                    {reviews.map((review, index) => {
+                      if (index !== currentReviewIndex) return null;
+                      return (
+                        <motion.div
+                          key={review.id}
+                          initial={{ y: -20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: 20, opacity: 0 }}
+                          transition={{ duration: 0.4, ease: 'easeInOut' }}
+                          className="p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20"
+                        >
+                          <div className="flex items-start gap-2">
+                            <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-semibold text-sm">{review.userName}</span>
+                                {review.rating > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-sm font-medium">{review.rating}</span>
+                                    <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-sm line-clamp-2 opacity-95">{review.content}</p>
+                            </div>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                <div className="p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                  <div className="flex items-center gap-2 text-sm opacity-75">
+                    <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>Soyez le premier à laisser un avis</span>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       ) : (
@@ -280,34 +311,51 @@ export default function EstablishmentHeroWithGallery({
                 </div>
               )}
 
-              {/* Condensé du dernier avis */}
-              {latestReview && (
-                <div className="mt-3 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 max-w-sm">
-                  <div className="flex items-start gap-2">
-                    <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-sm">{latestReview.userName}</span>
-                        {latestReview.rating > 0 && (
-                          <div className="flex items-center gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-3 h-3 ${
-                                  i < latestReview.rating
-                                    ? 'fill-yellow-400 text-yellow-400'
-                                    : 'fill-white/30 text-white/30'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-sm line-clamp-2 opacity-95">{latestReview.content}</p>
+              {/* Condensé des avis avec carousel */}
+              <div className="mt-3 max-w-sm">
+                {reviews.length > 0 ? (
+                  <div className="relative overflow-hidden">
+                    <AnimatePresence mode="wait">
+                      {reviews.map((review, index) => {
+                        if (index !== currentReviewIndex) return null;
+                        return (
+                          <motion.div
+                            key={review.id}
+                            initial={{ y: -20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 20, opacity: 0 }}
+                            transition={{ duration: 0.4, ease: 'easeInOut' }}
+                            className="p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20"
+                          >
+                            <div className="flex items-start gap-2">
+                              <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-sm">{review.userName}</span>
+                                  {review.rating > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-sm font-medium">{review.rating}</span>
+                                      <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-sm line-clamp-2 opacity-95">{review.content}</p>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20">
+                    <div className="flex items-center gap-2 text-sm opacity-75">
+                      <MessageCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>Soyez le premier à laisser un avis</span>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
           </div>
         </div>
         ) : (

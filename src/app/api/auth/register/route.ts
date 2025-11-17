@@ -3,6 +3,8 @@ import { signUp } from '@/lib/supabase/auth-actions';
 import { z } from 'zod';
 import { sanitizeInput, sanitizeEmail } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'Le prénom doit contenir au moins 2 caractères'),
@@ -41,27 +43,115 @@ export async function POST(request: NextRequest) {
       validatedData.password
     );
 
+    // Créer la session immédiatement après l'inscription
+    const cookieStore = await cookies();
+    const cookiesToReturn: Array<{ name: string; value: string; options?: any }> = [];
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToReturn.push(...cookiesToSet);
+          },
+        },
+      }
+    );
+
+    // Se connecter automatiquement avec les identifiants
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: validatedData.email,
+      password: validatedData.password
+    });
+
+    if (authError) {
+      console.error('⚠️ Erreur lors de la connexion automatique après inscription:', authError);
+      // Ne pas bloquer l'inscription, mais retourner un avertissement
+      const responseTime = Date.now() - startTime;
+      recordAPIMetric('/api/auth/register', 'POST', 200, responseTime, {
+        userId: result.user.id,
+        ipAddress
+      });
+
+      await requestLogger.warn('Registration successful but auto-login failed', {
+        email: validatedData.email,
+        userId: result.user.id,
+        error: authError.message,
+        responseTime
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Compte créé avec succès. Veuillez vous connecter.',
+        user: {
+          id: result.user.id,
+          email: result.user.email,
+          firstName: result.user.firstName
+        },
+        requiresManualLogin: true
+      });
+    }
+
+    // Récupérer les infos utilisateur
+    const { data: userData } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
+
+    const user = userData ? {
+      id: userData.id,
+      email: userData.email,
+      firstName: userData.first_name,
+      lastName: userData.last_name,
+      role: userData.role,
+      userType: 'user' as const
+    } : null;
+
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/auth/register', 'POST', 200, responseTime, {
       userId: result.user.id,
       ipAddress
     });
 
-    await requestLogger.info('Successful registration', {
+    await requestLogger.info('Successful registration with auto-login', {
       email: validatedData.email,
       userId: result.user.id,
       responseTime
     });
 
-    return NextResponse.json({
+    // Créer la réponse avec les cookies de session
+    const response = NextResponse.json({
       success: true,
       message: 'Compte créé avec succès',
-      user: {
+      user: user || {
         id: result.user.id,
         email: result.user.email,
         firstName: result.user.firstName
       }
     });
+
+    // Ajouter tous les cookies Supabase à la réponse
+    console.log('🍪 [API Register] Setting cookies:', cookiesToReturn.length, 'cookies');
+    cookiesToReturn.forEach(({ name, value, options }) => {
+      console.log('🍪 [API Register] Setting cookie:', name);
+      const cookieOptions = {
+        ...options,
+        httpOnly: options?.httpOnly !== false,
+        sameSite: (options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+        secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
+        path: options?.path || '/',
+        ...(options?.maxAge && { maxAge: options.maxAge }),
+        ...(options?.expires && { expires: options.expires })
+      };
+      response.cookies.set(name, value, cookieOptions);
+    });
+
+    return response;
 
   } catch (error: any) {
     const responseTime = Date.now() - startTime;

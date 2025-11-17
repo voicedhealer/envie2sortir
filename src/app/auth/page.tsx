@@ -165,32 +165,21 @@ function AuthContent() {
         const data = await response.json();
 
         if (data.success) {
-          console.log('✅ Inscription réussie, tentative de connexion automatique...');
+          console.log('✅ Inscription réussie');
           
-          // Connexion automatique après inscription avec Supabase Auth
-          const loginResponse = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: formData.email,
-              password: formData.password
-            }),
-          });
-
-          const loginResult = await loginResponse.json();
-
-          if (loginResponse.ok && loginResult.success) {
-            console.log('✅ Connexion réussie, redirection vers:', callbackUrl);
+          // La session est maintenant créée directement dans l'API d'inscription
+          if (data.requiresManualLogin) {
+            // Si la connexion automatique a échoué, demander à l'utilisateur de se connecter
+            console.log('⚠️ Connexion automatique échouée, redirection vers auth');
+            setError('Compte créé avec succès. Veuillez vous connecter.');
+            router.push('/auth?registered=true');
+          } else {
+            // La session a été créée avec succès, rediriger
+            console.log('✅ Session créée, redirection vers:', callbackUrl);
             // Pour les nouveaux comptes, ajouter le paramètre welcome si on va vers l'accueil
             const redirectUrl = callbackUrl === '/' ? '/?welcome=true' : decodeURIComponent(callbackUrl);
             // Utiliser window.location.href pour forcer le rechargement complet de la page et synchroniser la session
             window.location.href = redirectUrl;
-          } else {
-            console.log('❌ Échec connexion, redirection vers auth');
-            setError('Compte créé mais connexion échouée. Veuillez vous connecter manuellement.');
-            router.push('/auth?registered=true');
           }
         } else {
           setError(data.message || 'Erreur lors de la création du compte');

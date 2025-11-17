@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import EstablishmentCard from './EstablishmentCard';
 import Link from 'next/link';
 import { useLocation } from '@/hooks/useLocation';
@@ -49,7 +49,7 @@ interface Establishment {
 }
 
 export default function DynamicEstablishmentsSection() {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const { currentCity, searchRadius, loading: locationLoading } = useLocation();
   const [allEstablishments, setAllEstablishments] = useState<Establishment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,8 +60,8 @@ export default function DynamicEstablishmentsSection() {
       try {
         setLoading(true);
         
-        // Prioriser la localisation de l'utilisateur (currentCity) sur la ville favorite de session
-        const cityToUse = currentCity?.name || (session?.user as any)?.favoriteCity;
+        // Prioriser la localisation de l'utilisateur (currentCity) sur la ville favorite de l'utilisateur
+        const cityToUse = currentCity?.name || (user as any)?.favoriteCity;
         
         // Construire l'URL avec ville, coordonnées et rayon
         const params = new URLSearchParams();
@@ -96,7 +96,7 @@ export default function DynamicEstablishmentsSection() {
     }, 100); // Délai pour décaler du chargement EventsCarousel
     
     return () => clearTimeout(timer);
-  }, [session, currentCity, searchRadius]);
+  }, [user, currentCity, searchRadius]);
 
   // 📍 Les établissements sont déjà filtrés par l'API, on limite juste l'affichage
   const filteredEstablishments = useMemo(() => {

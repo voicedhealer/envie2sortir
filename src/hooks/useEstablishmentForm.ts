@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { 
   ProfessionalData, 
   FormStep, 
@@ -33,7 +33,7 @@ interface UseEstablishmentFormProps {
 
 export function useEstablishmentForm({ establishment, isEditMode = false }: UseEstablishmentFormProps) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   
   // États principaux
   const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 2 : 0);

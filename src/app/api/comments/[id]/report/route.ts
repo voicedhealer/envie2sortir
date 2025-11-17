@@ -8,7 +8,21 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const user = await getCurrentUser();
+    let user;
+    try {
+      user = await getCurrentUser();
+    } catch (authError: any) {
+      console.error('❌ Erreur d\'authentification lors du signalement:', authError);
+      // Si c'est une erreur de refresh token invalide, retourner une erreur 401
+      if (authError?.message?.includes('Refresh Token') || authError?.message?.includes('Invalid Refresh Token')) {
+        return NextResponse.json(
+          { error: 'Session expirée. Veuillez vous reconnecter.' },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    }
+    
     if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }

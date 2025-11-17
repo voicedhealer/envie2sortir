@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import MessageForm from "./MessageForm";
@@ -51,7 +51,7 @@ export default function ConversationDetail({
   isAdmin,
   onMessageSent,
 }: ConversationDetailProps) {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -120,7 +120,7 @@ export default function ConversationDetail({
     if (isAdmin) {
       return message.senderType === "ADMIN";
     }
-    return message.senderId === session?.user?.id;
+    return message.senderId === user?.id;
   };
 
   if (isLoading) {

@@ -18,7 +18,20 @@ export async function getCurrentUser() {
     console.log('⚠️ Aucun cookie Supabase trouvé. Tous les cookies:', allCookies.map(c => c.name).slice(0, 10));
   }
   
-  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+  let authUser, authError;
+  try {
+    const result = await supabase.auth.getUser();
+    authUser = result.data?.user;
+    authError = result.error;
+  } catch (error: any) {
+    // Capturer les erreurs de refresh token invalide
+    console.error('❌ Erreur lors de la récupération de l\'utilisateur:', error);
+    if (error?.message?.includes('Refresh Token') || error?.message?.includes('Invalid Refresh Token')) {
+      console.log('💡 Refresh token invalide - session expirée');
+      throw error; // Propager l'erreur pour qu'elle soit gérée par l'appelant
+    }
+    authError = error;
+  }
   
   console.log('👤 getUser result:', {
     hasUser: !!authUser,
@@ -32,6 +45,10 @@ export async function getCurrentUser() {
     // Si l'erreur indique que la session est manquante, c'est normal si les cookies ne sont pas définis
     if (authError?.message?.includes('session') || authError?.message?.includes('JWT')) {
       console.log('💡 Session Supabase manquante - les cookies ne sont peut-être pas correctement définis');
+    }
+    // Si c'est une erreur de refresh token, la propager
+    if (authError?.message?.includes('Refresh Token') || authError?.message?.includes('Invalid Refresh Token')) {
+      throw authError;
     }
     return null;
   }

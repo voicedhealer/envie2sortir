@@ -9,6 +9,7 @@ import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 interface Review {
   id: string;
   userName: string;
+  userId?: string;
   rating: number;
   comment: string;
   date: string;
@@ -67,6 +68,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
           const formattedReviews = data.comments.map((comment: any) => ({
             id: comment.id,
             userName: comment.user.firstName || 'Anonyme',
+            userId: comment.userId || comment.user?.id,
             rating: comment.rating || 0,
             comment: comment.content,
             date: comment.createdAt,
@@ -267,7 +269,15 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
         window.location.reload();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Erreur lors du signalement');
+        // Si la session est expirée, rediriger vers la page de connexion
+        if (response.status === 401) {
+          toast.error(error.error || 'Session expirée. Veuillez vous reconnecter.');
+          setTimeout(() => {
+            router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+          }, 1500);
+        } else {
+          toast.error(error.error || 'Erreur lors du signalement');
+        }
       }
     } catch (error) {
       console.error('Erreur lors du signalement:', error);
@@ -403,7 +413,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                           {review.rating}/5
                         </span>
                       </div>
-                      {user && (
+                      {user && user.id !== review.userId && (
                         <button
                           onClick={() => handleOpenReportModal(review.id)}
                           className="text-gray-400 hover:text-red-500 transition-colors p-1"

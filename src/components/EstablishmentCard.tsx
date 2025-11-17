@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp, Sparkles, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { toast } from '@/lib/fake-toast';
 import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
@@ -246,7 +246,7 @@ export default function EstablishmentCard({
   searchParams,
   isCompact = false
 }: EstablishmentCardProps) {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const [isLiked, setIsLiked] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -264,10 +264,10 @@ export default function EstablishmentCard({
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
-    if (session?.user?.role === 'user') {
+    if (user?.role === 'user' || user?.userType === 'user') {
       checkFavoriteStatus();
     }
-  }, [session, establishment.id]);
+  }, [user, establishment.id]);
 
   const checkFavoriteStatus = async () => {
     try {
@@ -520,7 +520,7 @@ export default function EstablishmentCard({
     e.stopPropagation();
     
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+    if (!user || (user.userType !== 'user' && user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }
