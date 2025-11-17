@@ -1,12 +1,12 @@
 'use client';
 
 import { Phone, MapPin, Star, Heart, FileText, MessageSquare, Share, X, MessageCircle, Mail } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
 import { PublicMenuDisplay } from '@/types/menu.types';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 
 interface EstablishmentActionsProps {
   establishment: {
@@ -25,7 +25,7 @@ interface EstablishmentActionsProps {
 }
 
 export default function EstablishmentActions({ establishment }: EstablishmentActionsProps) {
-  const { data: session } = useSession();
+  const { session, user } = useSupabaseSession();
   const router = useRouter();
   const { incrementClick } = useEstablishmentStats();
   const [isLiked, setIsLiked] = useState(false);
@@ -47,7 +47,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   // Vérifier si l'utilisateur a déjà un avis pour cet établissement
   useEffect(() => {
     const checkExistingReview = async () => {
-      if (!session?.user?.id || session.user.userType !== 'user' && session.user.role !== 'user') return;
+      if (!user?.id || (user.userType !== 'user' && user.role !== 'user')) return;
       
       try {
         const response = await fetch('/api/user/comments');
@@ -66,12 +66,12 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     };
 
     checkExistingReview();
-  }, [session, establishment.id]);
+  }, [user, establishment.id]);
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) return;
+    if (!user || (user.userType !== 'user' && user.role !== 'user')) return;
     
     const checkFavoriteStatus = async () => {
       try {
@@ -98,11 +98,11 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
     checkFavoriteStatus();
     window.addEventListener('favorite-changed', handleFavoriteChanged as EventListener);
-    
+
     return () => {
       window.removeEventListener('favorite-changed', handleFavoriteChanged as EventListener);
     };
-  }, [session?.user?.role, establishment.id]);
+  }, [user?.role, establishment.id]);
 
   // Charger les menus publics pour cet établissement
   useEffect(() => {
@@ -251,7 +251,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   // Gestion des favoris
   const handleFavorite = async () => {
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+    if (!user || (user.userType !== 'user' && user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }
@@ -314,7 +314,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
   // Gestion du clic sur "Laisser un avis"
   const handleReviewClick = () => {
-    if (!session) {
+    if (!user) {
       // Utilisateur non connecté : afficher le modal d'inscription
       setSignupModalAction('review');
       setShowSignupModal(true);
@@ -322,7 +322,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
     }
 
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
+    if (user.userType !== 'user' && user.role !== 'user') {
       // Utilisateur connecté mais pas client : afficher le modal d'inscription
       setSignupModalAction('review');
       setShowSignupModal(true);
@@ -373,7 +373,9 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         setIsEditMode(false);
         setExistingUserReview(null);
         setShowCommentForm(false);
-        // Recharger la page pour voir les changements
+        // Déclencher un événement pour rafraîchir le dernier avis dans le hero
+        window.dispatchEvent(new CustomEvent('review-created'));
+        // Recharger la page pour voir les changements (statistiques, etc.)
         window.location.reload();
       } else {
         const error = await response.json();
@@ -505,7 +507,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           <button
             onClick={() => {
               // Si l'utilisateur n'est pas connecté ou n'est pas un utilisateur simple
-              if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+              if (!user || (user.userType !== 'user' && user.role !== 'user')) {
                 setSignupModalAction('favorite');
                 setShowSignupModal(true);
                 return;
@@ -514,8 +516,8 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
               handleFavorite();
               incrementClick(establishment.id);
             }}
-            disabled={isLoading && session?.user?.role === 'user'}
-            className={`flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors ${isLoading && session?.user?.role === 'user' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isLoading && user?.role === 'user'}
+            className={`flex flex-col items-center justify-center p-4 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors ${isLoading && user?.role === 'user' ? 'opacity-50 cursor-not-allowed' : ''}`}
             title={isLiked ? "Retirer des favoris" : "Ajouter aux favoris"}
           >
             <Heart className={`w-5 h-5 mb-2 ${isLiked ? 'text-red-500 fill-current' : 'text-gray-700'}`} />

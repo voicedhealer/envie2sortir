@@ -1,9 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MapPin, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Star, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import PhotoGallery from './PhotoGallery';
+
+interface LatestReview {
+  id: string;
+  content: string;
+  rating: number;
+  userName: string;
+  createdAt: string;
+}
 
 interface EstablishmentHeroWithGalleryProps {
   establishment: {
@@ -17,6 +25,7 @@ interface EstablishmentHeroWithGalleryProps {
     images?: string[]; // ✅ CORRECTION : Le parent passe déjà des strings
     category?: string;
     activities?: string[];
+    slug?: string;
   };
 }
 
@@ -25,6 +34,7 @@ export default function EstablishmentHeroWithGallery({
 }: EstablishmentHeroWithGalleryProps) {
   const [isMobile, setIsMobile] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [latestReview, setLatestReview] = useState<LatestReview | null>(null);
 
   // Détecter si on est sur mobile
   useEffect(() => {
@@ -37,6 +47,50 @@ export default function EstablishmentHeroWithGallery({
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Récupérer le dernier avis
+  const fetchLatestReview = async () => {
+    if (!establishment.slug) return;
+    
+    try {
+      const response = await fetch(`/api/public/establishments/${establishment.slug}/comments?limit=1`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.comments && data.comments.length > 0) {
+          const review = data.comments[0];
+          setLatestReview({
+            id: review.id,
+            content: review.content,
+            rating: review.rating || 0,
+            userName: review.user?.firstName || 'Anonyme',
+            createdAt: review.createdAt
+          });
+        } else {
+          setLatestReview(null);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la récupération du dernier avis:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLatestReview();
+
+    // Écouter les événements de création/mise à jour d'avis
+    const handleReviewUpdate = () => {
+      fetchLatestReview();
+    };
+
+    window.addEventListener('review-created', handleReviewUpdate);
+    window.addEventListener('review-updated', handleReviewUpdate);
+
+    return () => {
+      window.removeEventListener('review-created', handleReviewUpdate);
+      window.removeEventListener('review-updated', handleReviewUpdate);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [establishment.slug]);
   
   
   // ✅ CORRECTION : Utiliser l'ordre correct des images
@@ -139,7 +193,7 @@ export default function EstablishmentHeroWithGallery({
 
             {/* Note et avis */}
             {establishment.avgRating && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 mb-2">
                 <div className="flex items-center space-x-1">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   <span className="font-semibold">{establishment.avgRating.toFixed(1)}</span>
@@ -149,6 +203,35 @@ export default function EstablishmentHeroWithGallery({
                     ({establishment.totalComments} avis)
                   </span>
                 )}
+              </div>
+            )}
+
+            {/* Condensé du dernier avis */}
+            {latestReview && (
+              <div className="mt-3 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 max-w-md">
+                <div className="flex items-start gap-2">
+                  <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-semibold text-sm">{latestReview.userName}</span>
+                      {latestReview.rating > 0 && (
+                        <div className="flex items-center gap-0.5">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${
+                                i < latestReview.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'fill-white/30 text-white/30'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-sm line-clamp-2 opacity-95">{latestReview.content}</p>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -184,7 +267,7 @@ export default function EstablishmentHeroWithGallery({
 
               {/* Note et avis */}
               {establishment.avgRating && (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 mb-2">
                   <div className="flex items-center space-x-1">
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                     <span className="font-semibold">{establishment.avgRating.toFixed(1)}</span>
@@ -194,6 +277,35 @@ export default function EstablishmentHeroWithGallery({
                       ({establishment.totalComments} avis)
                     </span>
                   )}
+                </div>
+              )}
+
+              {/* Condensé du dernier avis */}
+              {latestReview && (
+                <div className="mt-3 p-3 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 max-w-sm">
+                  <div className="flex items-start gap-2">
+                    <MessageCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-sm">{latestReview.userName}</span>
+                        {latestReview.rating > 0 && (
+                          <div className="flex items-center gap-0.5">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`w-3 h-3 ${
+                                  i < latestReview.rating
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'fill-white/30 text-white/30'
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm line-clamp-2 opacity-95">{latestReview.content}</p>
+                    </div>
+                  </div>
                 </div>
               )}
           </div>

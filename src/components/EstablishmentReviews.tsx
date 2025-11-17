@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Star, MessageCircle, X, Flag } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 
 interface Review {
   id: string;
@@ -28,7 +28,7 @@ interface EstablishmentReviewsProps {
 }
 
 export default function EstablishmentReviews({ establishment }: EstablishmentReviewsProps) {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const router = useRouter();
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -100,15 +100,15 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
 
   // Vérifier si l'utilisateur connecté a déjà un avis
   useEffect(() => {
-    if (session?.user && reviews.length > 0) {
+    if (user && reviews.length > 0) {
       const userReview = reviews.find(review => 
-        review.userName === (session.user.firstName || session.user.name)
+        review.userName === (user.firstName || user.email?.split('@')[0])
       );
       if (userReview) {
         setExistingUserReview(userReview);
       }
     }
-  }, [session, reviews]);
+  }, [user, reviews]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -143,14 +143,14 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
 
   // Gestion du clic sur "Laisser un avis"
   const handleReviewClick = () => {
-    if (!session) {
+    if (!user) {
       // Utilisateur non connecté : afficher le modal d'inscription
       setShowSignupModal(true);
       return;
     }
 
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
+    if (user.userType !== 'user' && user.role !== 'user') {
       // Utilisateur connecté mais pas client : afficher le modal d'inscription
       setShowSignupModal(true);
       return;
@@ -174,7 +174,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
   // Soumission de l'avis
   const handleSubmitComment = async () => {
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+    if (!user || (user.userType !== 'user' && user.role !== 'user')) {
       toast.error('Vous devez être connecté pour laisser un avis');
       return;
     }
@@ -210,7 +210,9 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
         setIsEditMode(false);
         setExistingUserReview(null);
         setShowCommentForm(false);
-        // Recharger la page pour voir les changements
+        // Déclencher un événement pour rafraîchir le dernier avis dans le hero
+        window.dispatchEvent(new CustomEvent('review-created'));
+        // Recharger la page pour voir les changements (statistiques, etc.)
         window.location.reload();
       } else {
         const error = await response.json();
@@ -401,7 +403,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                           {review.rating}/5
                         </span>
                       </div>
-                      {session?.user && (
+                      {user && (
                         <button
                           onClick={() => handleOpenReportModal(review.id)}
                           className="text-gray-400 hover:text-red-500 transition-colors p-1"
@@ -438,7 +440,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
 
                   {/* Bouton de réponse pour le professionnel (seulement si pas de réponse existante) */}
                   {!review.establishmentReply && 
-                   session?.user?.userType === 'professional' && (
+                   user?.userType === 'professional' && (
                     <div className="mt-3">
                       {replyingTo === review.id ? (
                         <div className="border border-gray-200 rounded-lg p-3 bg-gray-50">

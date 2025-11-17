@@ -69,6 +69,19 @@ export async function signUp(firstName: string, lastName: string, email: string,
       throw new Error('Erreur lors de la création du compte');
     }
 
+    // Vérifier automatiquement l'email pour permettre la connexion immédiate
+    // (nécessite le client admin pour contourner la vérification d'email)
+    try {
+      const adminClient = getAdminClient();
+      await adminClient.auth.admin.updateUserById(authData.user.id, {
+        email_confirm: true
+      });
+      console.log('✅ Email vérifié automatiquement pour:', email);
+    } catch (verifyError) {
+      console.warn('⚠️ Impossible de vérifier automatiquement l\'email:', verifyError);
+      // Ne pas bloquer l'inscription si la vérification automatique échoue
+    }
+
     // Créer l'entrée dans la table users
     const { data: userData, error: userError } = await supabase
       .from('users')

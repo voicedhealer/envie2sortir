@@ -22,7 +22,10 @@ export async function GET(
     }
 
     // Récupérer les commentaires de l'établissement
-    const { data: comments, error: commentsError } = await supabase
+    const { searchParams } = new URL(request.url);
+    const limit = searchParams.get('limit');
+    
+    let query = supabase
       .from('user_comments')
       .select(`
         *,
@@ -35,6 +38,15 @@ export async function GET(
       `)
       .eq('establishment_id', establishment.id)
       .order('created_at', { ascending: false });
+    
+    if (limit) {
+      const limitNum = parseInt(limit, 10);
+      if (!isNaN(limitNum) && limitNum > 0) {
+        query = query.limit(limitNum);
+      }
+    }
+    
+    const { data: comments, error: commentsError } = await query;
 
     if (commentsError) {
       console.error('Erreur récupération commentaires:', commentsError);

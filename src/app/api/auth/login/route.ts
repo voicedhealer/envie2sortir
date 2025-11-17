@@ -162,13 +162,18 @@ export async function POST(request: NextRequest) {
     console.log('🍪 [API Login] Setting cookies:', cookiesToReturn.length, 'cookies');
     cookiesToReturn.forEach(({ name, value, options }) => {
       console.log('🍪 [API Login] Setting cookie:', name, 'with options:', options);
-      // S'assurer que les cookies sont accessibles au client (pas httpOnly)
+      // Utiliser les options par défaut de Supabase SSR, mais s'assurer que httpOnly est correct
+      // Les cookies Supabase doivent être httpOnly pour la sécurité, sauf pour les cookies de session access_token
       const cookieOptions = {
         ...options,
-        httpOnly: false, // Permettre au client JavaScript de lire les cookies
-        sameSite: 'lax' as const, // Pour la compatibilité cross-site
-        secure: process.env.NODE_ENV === 'production', // HTTPS en production
-        path: '/'
+        // Garder httpOnly tel que défini par Supabase (généralement true pour la sécurité)
+        httpOnly: options?.httpOnly !== false, // Respecter la valeur de Supabase, mais par défaut true
+        sameSite: (options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+        secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
+        path: options?.path || '/',
+        // S'assurer que maxAge est défini si fourni
+        ...(options?.maxAge && { maxAge: options.maxAge }),
+        ...(options?.expires && { expires: options.expires })
       };
       response.cookies.set(name, value, cookieOptions);
     });

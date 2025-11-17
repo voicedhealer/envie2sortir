@@ -13,16 +13,26 @@ export async function getCurrentUser() {
   const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'));
   console.log('🍪 Cookies Supabase trouvés:', supabaseCookies.length, supabaseCookies.map(c => c.name));
   
+  // Afficher tous les cookies pour debug
+  if (supabaseCookies.length === 0) {
+    console.log('⚠️ Aucun cookie Supabase trouvé. Tous les cookies:', allCookies.map(c => c.name).slice(0, 10));
+  }
+  
   const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
   
   console.log('👤 getUser result:', {
     hasUser: !!authUser,
     userId: authUser?.id,
-    error: authError?.message
+    error: authError?.message,
+    errorCode: authError?.status
   });
   
   if (authError || !authUser) {
     console.log('❌ Pas d\'utilisateur authentifié:', authError?.message || 'No user');
+    // Si l'erreur indique que la session est manquante, c'est normal si les cookies ne sont pas définis
+    if (authError?.message?.includes('session') || authError?.message?.includes('JWT')) {
+      console.log('💡 Session Supabase manquante - les cookies ne sont peut-être pas correctement définis');
+    }
     return null;
   }
   

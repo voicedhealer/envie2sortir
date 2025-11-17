@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Heart, MapPin, Star, MessageSquare, Settings, LogOut, Edit3, Trash2, Save, X, Trophy } from 'lucide-react';
@@ -56,6 +56,8 @@ function MonCompteContent() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const hasLoadedData = useRef(false);
+  const hasRedirected = useRef(false);
 
   // Initialiser l'onglet actif depuis l'URL
   useEffect(() => {
@@ -65,47 +67,12 @@ function MonCompteContent() {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (loading) return;
-
-    if (!session) {
-      router.push('/auth');
-      return;
-    }
-
-    if (session.user?.role === 'user' || session.user?.userType === 'user') {
-      loadUserData();
-      // Initialiser les données du profil
-      setProfileData({
-        firstName: session.user.firstName || '',
-        lastName: session.user.lastName || '',
-        email: session.user.email || '',
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } else if (session.user?.role === 'professional' || session.user?.userType === 'professional') {
-      router.push('/dashboard');
-    } else if (session.user?.role === 'admin') {
-      router.push('/admin');
-    }
-  }, [session, loading, router]);
-
-  // Mettre à jour profileData quand la session change
-  useEffect(() => {
-    if (session?.user && !isEditingProfile) {
-      setProfileData(prev => ({
-        ...prev,
-        firstName: session.user.firstName || '',
-        lastName: session.user.lastName || '',
-        email: session.user.email || ''
-      }));
-    }
-  }, [session, isEditingProfile]);
-
-  const loadUserData = async () => {
+  const loadUserData = useCallback(async () => {
+    if (hasLoadedData.current) return;
+    
     try {
       setIsLoading(true);
+      hasLoadedData.current = true;
       
       // Charger les favoris
       const favoritesResponse = await fetch('/api/user/favorites');
@@ -122,10 +89,63 @@ function MonCompteContent() {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des données:', error);
+      hasLoadedData.current = false; // Réessayer en cas d'erreur
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!session) {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        router.push('/auth');
+      }
+      return;
+    }
+
+    // Réinitialiser le flag de redirection si on a une session
+    hasRedirected.current = false;
+
+    if (session.user?.role === 'user' || session.user?.userType === 'user') {
+      // Initialiser les données du profil une seule fois
+      if (!hasLoadedData.current) {
+        setProfileData({
+          firstName: session.user.firstName || '',
+          lastName: session.user.lastName || '',
+          email: session.user.email || '',
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        loadUserData();
+      }
+    } else if (session.user?.role === 'professional' || session.user?.userType === 'professional') {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        router.push('/dashboard');
+      }
+    } else if (session.user?.role === 'admin') {
+      if (!hasRedirected.current) {
+        hasRedirected.current = true;
+        router.push('/admin');
+      }
+    }
+  }, [session, loading, loadUserData]);
+
+  // Mettre à jour profileData quand la session change (seulement si on n'est pas en mode édition)
+  useEffect(() => {
+    if (session?.user && !isEditingProfile && hasLoadedData.current) {
+      setProfileData(prev => ({
+        ...prev,
+        firstName: session.user.firstName || prev.firstName,
+        lastName: session.user.lastName || prev.lastName,
+        email: session.user.email || prev.email
+      }));
+    }
+  }, [session?.user?.firstName, session?.user?.lastName, session?.user?.email, isEditingProfile]);
 
   const handleRemoveFavorite = async (favoriteId: string) => {
     try {

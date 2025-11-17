@@ -357,7 +357,8 @@ export default function EstablishmentDetail({ establishment, isDashboard = false
               totalComments: establishment.totalComments,
               imageUrl: establishment.imageUrl,
               images: establishment.images?.map((img: any) => typeof img === 'string' ? img : img.url).filter(Boolean) || [],
-              activities: establishment.activities
+              activities: establishment.activities,
+              slug: establishment.slug
             }}
           />
         </div>
