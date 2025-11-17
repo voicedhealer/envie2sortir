@@ -543,6 +543,10 @@ export default function EstablishmentCard({
             if (deleteResponse.ok) {
               setIsLiked(false);
               toast.success('Retiré des favoris');
+              // Notifier le MapComponent du changement
+              window.dispatchEvent(new CustomEvent('favorite-changed', {
+                detail: { establishmentId: establishment.id, isFavorite: false }
+              }));
             }
           }
         }
@@ -559,6 +563,10 @@ export default function EstablishmentCard({
         if (response.ok) {
           setIsLiked(true);
           toast.success('Ajouté aux favoris');
+          // Notifier le MapComponent du changement
+          window.dispatchEvent(new CustomEvent('favorite-changed', {
+            detail: { establishmentId: establishment.id, isFavorite: true }
+          }));
         } else {
           const error = await response.json();
           toast.error(error.error || 'Erreur lors de l\'ajout aux favoris');
