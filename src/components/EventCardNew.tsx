@@ -135,12 +135,16 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
   };
 
   const handleVote = async (levelId: string) => {
-    if (!user) {
-      router.push('/auth');
+    // Attendre que le chargement de la session soit terminé
+    if (sessionLoading) {
       return;
     }
 
-    if (sessionLoading) {
+    if (!user) {
+      showToast('Vous devez être connecté pour voter', 'error');
+      setTimeout(() => {
+        router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+      }, 1500);
       return;
     }
 
@@ -171,7 +175,16 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'engagement');
+        const errorData = await response.json().catch(() => ({}));
+        // Si erreur 401, rediriger vers la page de connexion
+        if (response.status === 401) {
+          showToast(errorData.error || 'Session expirée. Veuillez vous reconnecter.', 'error');
+          setTimeout(() => {
+            router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+          }, 1500);
+          return;
+        }
+        throw new Error(errorData.error || 'Erreur lors de l\'engagement');
       }
 
       const data = await response.json();

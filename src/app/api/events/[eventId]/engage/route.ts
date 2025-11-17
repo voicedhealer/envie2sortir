@@ -45,7 +45,24 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    let user;
+    try {
+      user = await getCurrentUser();
+    } catch (authError: any) {
+      console.error('❌ Erreur d\'authentification lors du vote:', authError);
+      // Si c'est une erreur de refresh token invalide, retourner une erreur 401
+      if (authError?.message?.includes('Refresh Token') || authError?.message?.includes('Invalid Refresh Token')) {
+        return NextResponse.json(
+          { error: 'Session expirée. Veuillez vous reconnecter.' },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json(
+        { error: 'Vous devez être connecté pour réagir à un événement' },
+        { status: 401 }
+      );
+    }
+    
     if (!user || !user.id) {
       return NextResponse.json(
         { error: 'Vous devez être connecté pour réagir à un événement' },
