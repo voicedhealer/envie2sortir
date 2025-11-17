@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
-import { uploadFile } from '@/lib/supabase/helpers';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 import { MENU_CONSTRAINTS } from '@/types/menu.types';
 
 // POST /api/establishments/[id]/menus/upload - Uploader un menu PDF
@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id: establishmentId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
@@ -103,7 +103,7 @@ export async function POST(
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
     
-    const { data: uploadData, error: uploadError } = await uploadFile(
+    const { data: uploadData, error: uploadError } = await uploadFileAdmin(
       'menus',
       filePath,
       buffer,

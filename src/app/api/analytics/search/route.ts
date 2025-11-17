@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const startDateISO = startDate.toISOString();
 
     // Récupérer toutes les recherches pour la période

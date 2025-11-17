@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard?error=InvalidToken', request.url));
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Trouver la demande de modification avec ce token
     const { data: updateRequest, error: requestError } = await supabase

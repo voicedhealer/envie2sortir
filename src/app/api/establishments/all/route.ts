@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`🏢 TOUS LES ÉTABLISSEMENTS - Filtre: ${filter}, Page: ${page}, Limite: ${limit}`);
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Charger tous les établissements actifs avec relations
     const { data: establishments, error: establishmentsError } = await supabase

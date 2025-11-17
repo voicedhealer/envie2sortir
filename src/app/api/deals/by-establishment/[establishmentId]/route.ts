@@ -9,7 +9,21 @@ export async function GET(
     const { establishmentId } = await params;
     console.log('🔍 API GET /api/deals/by-establishment - Recherche pour:', establishmentId);
 
-    const supabase = createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [Deals By Establishment] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
 
     // Récupérer l'établissement pour vérifier s'il existe
     const { data: establishment, error: establishmentError } = await supabase

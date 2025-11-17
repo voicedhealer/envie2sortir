@@ -26,7 +26,7 @@ export async function POST(
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement existe
     const { data: establishment, error: establishmentError } = await supabase

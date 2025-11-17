@@ -10,7 +10,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const userId = user.id;
 
     // Supprimer toutes les données associées à l'utilisateur

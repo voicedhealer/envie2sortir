@@ -8,7 +8,7 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Trouver l'établissement par son slug
     const { data: establishment, error: establishmentError } = await supabase

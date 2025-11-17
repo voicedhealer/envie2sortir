@@ -9,7 +9,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { name, description, address, city, phone, email, website, instagram, facebook } = body;
 

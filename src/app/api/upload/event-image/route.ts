@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { requireEstablishment } from '@/lib/supabase/helpers';
+import { requireEstablishment, uploadFileAdmin } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
-import { uploadFile } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -53,12 +52,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement existe et est Premium
     const { data: establishment, error: establishmentError } = await supabase
       .from('establishments')
-      .select('id, subscription, name')
+      .select('id, subscription, name, owner_id')
       .eq('id', user.establishmentId)
       .single();
 
@@ -76,6 +75,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`📸 Upload d'image d'événement autorisé pour ${establishment.name} (${establishment.subscription})`);
 
+    // Log pour debug RLS
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    console.log('🔐 Auth UID:', authUser?.id);
+    console.log('🏢 Establishment owner_id:', establishment.owner_id);
+    console.log('🏢 Establishment ID:', user.establishmentId);
+    console.log('✅ Match?', authUser?.id === establishment.owner_id);
+
     // Générer un nom de fichier unique
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
@@ -84,13 +90,14 @@ export async function POST(request: NextRequest) {
     
     // Chemin dans Supabase Storage : events/{establishmentId}/{fileName}
     const storagePath = `events/${user.establishmentId}/${fileName}`;
+    console.log('📁 Storage path:', storagePath);
     
     // Convertir le fichier en Blob
     const bytes = await file.arrayBuffer();
     const fileBlob = new Blob([bytes], { type: file.type });
     
-    // Uploader vers Supabase Storage
-    const uploadResult = await uploadFile(
+    // Uploader vers Supabase Storage avec les droits admin pour bypass RLS
+    const uploadResult = await uploadFileAdmin(
       'images',
       storagePath,
       fileBlob,

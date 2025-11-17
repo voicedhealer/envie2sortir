@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { generateAllImageVariants, cleanupTempFiles } from '@/lib/image-management';
-import { uploadFile } from '@/lib/supabase/helpers';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'utilisateur est propriétaire de l'établissement
     const { data: establishment, error: establishmentError } = await supabase
@@ -104,13 +104,12 @@ export async function POST(request: NextRequest) {
       
       // Lire le fichier optimisé
       const optimizedFile = await import('fs/promises').then(fs => fs.readFile(path));
-      const fileBlob = new Blob([optimizedFile], { type: file.type });
       
-      // Uploader vers Supabase Storage
+      // Uploader vers Supabase Storage (client admin pour contourner RLS)
       uploadPromises.push(
-        uploadFile('images', storagePath, fileBlob, {
+        uploadFileAdmin('images', storagePath, optimizedFile, {
           cacheControl: '3600',
-          contentType: file.type,
+          contentType: 'image/webp',
           upsert: false
         }).then(uploadResult => {
           if (uploadResult.data) {
@@ -123,6 +122,14 @@ export async function POST(request: NextRequest) {
     }
 
     await Promise.all(uploadPromises);
+
+    if (Object.keys(variants).length === 0) {
+      console.error('❌ Aucune variante uploadée pour', { establishmentId, imageType, resultKeys: Object.keys(result.variants) });
+      return NextResponse.json(
+        { error: "Échec de l'upload des images optimisées" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ 
       success: true,

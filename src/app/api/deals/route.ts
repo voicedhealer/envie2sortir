@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const body = await request.json();
     console.log('📦 Corps de la requête reçu:', {
@@ -91,36 +91,45 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Création du bon plan pour:', establishment.name);
 
+    // Préparer les données à insérer
+    const dealData = {
+      establishment_id: establishmentId,
+      title,
+      description,
+      modality: modality || null,
+      original_price: originalPrice ? parseFloat(originalPrice) : null,
+      discounted_price: discountedPrice ? parseFloat(discountedPrice) : null,
+      image_url: imageUrl || null,
+      pdf_url: pdfUrl || null,
+      date_debut: new Date(dateDebut).toISOString(),
+      date_fin: new Date(dateFin).toISOString(),
+      heure_debut: heureDebut || null,
+      heure_fin: heureFin || null,
+      is_active: isActive !== undefined ? isActive : true,
+      is_recurring: isRecurring || false,
+      recurrence_type: recurrenceType || null,
+      recurrence_days: recurrenceDays ? JSON.stringify(recurrenceDays) : null,
+      recurrence_end_date: recurrenceEndDate ? new Date(recurrenceEndDate).toISOString() : null,
+      promo_url: promoUrl || null
+    };
+
+    console.log('📝 Données à insérer:', dealData);
+
     // Créer le bon plan
     const { data: deal, error: dealError } = await supabase
       .from('daily_deals')
-      .insert({
-        establishment_id: establishmentId,
-        title,
-        description,
-        modality: modality || null,
-        original_price: originalPrice ? parseFloat(originalPrice) : null,
-        discounted_price: discountedPrice ? parseFloat(discountedPrice) : null,
-        image_url: imageUrl || null,
-        pdf_url: pdfUrl || null,
-        date_debut: new Date(dateDebut).toISOString(),
-        date_fin: new Date(dateFin).toISOString(),
-        heure_debut: heureDebut || null,
-        heure_fin: heureFin || null,
-        is_active: isActive !== undefined ? isActive : true,
-        is_recurring: isRecurring || false,
-        recurrence_type: recurrenceType || null,
-        recurrence_days: recurrenceDays ? JSON.stringify(recurrenceDays) : null,
-        recurrence_end_date: recurrenceEndDate ? new Date(recurrenceEndDate).toISOString() : null,
-        promo_url: promoUrl || null
-      })
+      .insert(dealData)
       .select()
       .single();
 
     if (dealError || !deal) {
-      console.error('Erreur création deal:', dealError);
+      console.error('❌ Erreur création deal:', dealError);
+      console.error('❌ Code:', dealError?.code);
+      console.error('❌ Message:', dealError?.message);
+      console.error('❌ Details:', dealError?.details);
+      console.error('❌ Hint:', dealError?.hint);
       return NextResponse.json({ 
-        error: 'Erreur lors de la création du bon plan' 
+        error: `Erreur lors de la création du bon plan: ${dealError?.message || 'Erreur inconnue'}` 
       }, { status: 500 });
     }
 

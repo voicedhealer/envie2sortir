@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: comments, error: commentsError } = await supabase
       .from('user_comments')
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     console.log('📝 Données reçues:', body);
     

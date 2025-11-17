@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     
     try {
       // Test simple de connexion à la base de données Supabase
-      const supabase = createClient();
+      const supabase = await createClient();
       const { error } = await supabase.from('users').select('id').limit(1);
       // Si l'erreur est "table not found", c'est normal si les migrations ne sont pas appliquées
       // Mais si c'est une erreur de connexion, c'est un problème

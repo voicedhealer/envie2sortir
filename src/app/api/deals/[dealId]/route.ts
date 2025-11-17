@@ -12,7 +12,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { dealId } = await params;
     const body = await request.json();
 
@@ -117,7 +117,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { dealId } = await params;
 
     // Vérifier que le bon plan existe et que l'utilisateur en est le propriétaire

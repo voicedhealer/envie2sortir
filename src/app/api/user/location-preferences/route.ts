@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Récupérer les préférences
     const { data: locationPreference, error: preferenceError } = await supabase
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Récupérer les données du body
     const body = await request.json();

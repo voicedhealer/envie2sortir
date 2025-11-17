@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Vérifier si l'utilisateur est un professionnel
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: professional } = await supabase
       .from('professionals')
       .select('id')

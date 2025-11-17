@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Traitement de la récurrence des bons plans...');
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Récupérer tous les bons plans récurrents actifs
     const { data: recurringDeals, error: dealsError } = await supabase
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
 // Fonction pour générer les bons plans récurrents
 async function generateRecurringDeals(deal: any) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const now = new Date();
   const createdDeals = [];
 

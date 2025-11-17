@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { email, consent } = validationResult.data;
 
     // 🔒 Vérifier si l'email existe déjà

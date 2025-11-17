@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Utilisateur non trouvé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId, action, reason, previousStatus, newStatus, details } = await request.json();
 
     if (!establishmentId || !action) {
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const page = parseInt(searchParams.get('page') || '1');

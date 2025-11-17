@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId, enrichmentData } = await request.json();
 
     if (!establishmentId || !enrichmentData) {

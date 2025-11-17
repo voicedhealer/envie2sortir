@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 1. Charger TOUS les établissements actifs avec coordonnées
-    const supabase = createClient();
+    const supabase = await createClient();
     
     const { data: establishments, error: establishmentsError } = await supabase
       .from('establishments')

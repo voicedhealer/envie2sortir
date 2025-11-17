@@ -222,7 +222,7 @@ export async function uploadFile(
 export async function uploadFileAdmin(
   bucket: string,
   path: string,
-  file: File | Blob,
+  file: File | Blob | ArrayBuffer | Buffer,
   options?: {
     cacheControl?: string;
     contentType?: string;
@@ -247,11 +247,19 @@ export async function uploadFileAdmin(
     }
   });
   
+  const resolvedContentType =
+    options?.contentType ||
+    (typeof (file as any)?.type === 'string' ? (file as any).type : 'application/octet-stream');
+
+  const uploadPayload =
+    file instanceof ArrayBuffer || file instanceof Buffer ? file : file;
+
   const { data, error } = await adminClient.storage
     .from(bucket)
-    .upload(path, file, {
+    // @ts-expect-error - supabase-js accepte Buffer/ArrayBuffer côté serveur
+    .upload(path, uploadPayload, {
       cacheControl: options?.cacheControl || '3600',
-      contentType: options?.contentType || file.type,
+      contentType: resolvedContentType,
       upsert: options?.upsert || false
     });
   

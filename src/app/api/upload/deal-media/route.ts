@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
-import { uploadFile } from '@/lib/supabase/helpers';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 
 const PDF_VALIDATION = {
   maxSize: 10 * 1024 * 1024, // 10MB
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ID de l\'établissement requis' }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'utilisateur est propriétaire de l'établissement
     const { data: establishment, error: establishmentError } = await supabase
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Uploader vers Supabase Storage (bucket 'menus' pour les PDF, 'images' pour les images)
     const bucket = fileType === 'pdf' ? 'menus' : 'images';
     
-    const uploadResult = await uploadFile(
+    const uploadResult = await uploadFileAdmin(
       bucket,
       storagePath,
       fileBlob,

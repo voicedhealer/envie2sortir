@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🏗️ Création d\'établissement par admin...');
     
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Récupérer l'utilisateur admin
     const { data: adminUser, error: userError } = await supabase

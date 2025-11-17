@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw, X as CloseIcon } from 'lucide-react';
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
 import DealEngagementStats from '@/components/DealEngagementStats';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface DailyDeal {
   id: string;
@@ -42,6 +43,10 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
   const [editingDeal, setEditingDeal] = useState<DailyDeal | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const isUploadingMedia = uploadingImage || uploadingPdf;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -127,7 +132,11 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       
       if (data.success) {
         // Utiliser la variante 'main' pour l'affichage principal
-        const mainImageUrl = data.variants.main || data.variants.hero;
+        const mainImageUrl = data.variants.main || data.variants.hero || Object.values(data.variants)[0];
+        
+        if (!mainImageUrl) {
+          throw new Error("Impossible de récupérer l'URL de l'image optimisée");
+        }
         
         setFormData(prev => ({ 
           ...prev, 
@@ -190,6 +199,11 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isUploadingMedia) {
+      alert('Veuillez patienter, un upload est en cours...');
+      return;
+    }
     
     // Validation : exactement un média (image OU PDF) doit être fourni
     if (!formData.imageUrl && !formData.pdfUrl) {
@@ -582,8 +596,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
 
               {/* Horaires */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Heure de début (optionnel)
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Plage horaire actif - De
+                  <HelpTooltip content="Définissez l'heure de début de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
                 </label>
                 <input
                   type="time"
@@ -595,8 +610,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Heure de fin (optionnel)
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Plage horaire actif - À
+                  <HelpTooltip content="Définissez l'heure de fin de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
                 </label>
                 <input
                   type="time"
@@ -719,17 +735,33 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                     accept="image/*"
                     onChange={handleImageUpload}
                     disabled={uploadingImage}
+                    ref={imageInputRef}
                     className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                   />
                   {formData.imageUrl && (
-                    <a
-                      href={formData.imageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-500 hover:text-orange-600"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={formData.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-500 hover:text-orange-600"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, imageUrl: '' }));
+                          if (imageInputRef.current) {
+                            imageInputRef.current.value = '';
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Supprimer l'image"
+                      >
+                        <CloseIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {uploadingImage && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
@@ -749,17 +781,33 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                     accept=".pdf"
                     onChange={handlePdfUpload}
                     disabled={uploadingPdf}
+                    ref={pdfInputRef}
                     className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                   />
                   {formData.pdfUrl && (
-                    <a
-                      href={formData.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-500 hover:text-orange-600"
-                    >
-                      <FileText className="w-5 h-5" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={formData.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-500 hover:text-orange-600"
+                      >
+                        <FileText className="w-5 h-5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, pdfUrl: '' }));
+                          if (pdfInputRef.current) {
+                            pdfInputRef.current.value = '';
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Supprimer le PDF"
+                      >
+                        <CloseIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {uploadingPdf && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
@@ -787,7 +835,10 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                disabled={isUploadingMedia}
+                className={`bg-orange-500 text-white px-6 py-2 rounded-lg transition-colors ${
+                  isUploadingMedia ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'
+                }`}
               >
                 {editingDeal ? 'Mettre à jour' : 'Créer le bon plan'}
               </button>

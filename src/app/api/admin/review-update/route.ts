@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { requestId, action, rejectionReason } = body;
 

@@ -8,7 +8,7 @@ export async function GET() {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Compter les établissements par statut
     const [pendingResult, activeResult] = await Promise.all([

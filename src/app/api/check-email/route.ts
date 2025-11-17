@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Nettoyer l'email (trim et lowercase)
     const cleanedEmail = email.trim().toLowerCase();

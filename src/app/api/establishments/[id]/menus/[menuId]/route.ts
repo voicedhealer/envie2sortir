@@ -14,7 +14,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id: establishmentId, menuId } = await params;
 
     // Vérifier que l'établissement appartient à l'utilisateur professionnel
@@ -110,7 +110,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id: establishmentId, menuId } = await params;
     const body = await request.json();
     const { name, description, order, isActive } = body;

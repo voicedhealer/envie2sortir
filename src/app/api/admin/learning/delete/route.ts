@@ -16,7 +16,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Pattern ID is required' }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { error } = await supabase
       .from('establishment_learning_patterns')

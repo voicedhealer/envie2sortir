@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: favorites, error: favoritesError } = await supabase
       .from('user_favorites')
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { establishmentId } = await request.json();
 
     if (!establishmentId) {

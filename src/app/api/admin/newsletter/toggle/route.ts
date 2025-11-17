@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const validationResult = toggleSchema.safeParse(body);
 

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Nettoyer le SIRET (enlever les espaces)
     const cleanedSiret = siret.replace(/\s/g, '');

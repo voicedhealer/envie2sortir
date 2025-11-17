@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { slug } = await params;
     
     // Récupérer l'établissement avec ses images
@@ -68,7 +68,7 @@ export async function PUT(
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { slug } = await params;
     const { imageUrl } = await request.json();
 

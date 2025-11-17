@@ -971,7 +971,7 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
  */
 export async function GET(request: Request) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     
     // Extraction des paramètres de recherche
     const { searchParams } = new URL(request.url);

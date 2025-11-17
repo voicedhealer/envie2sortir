@@ -14,7 +14,7 @@ export async function GET() {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: professionals, error: professionalsError } = await supabase
       .from('professionals')

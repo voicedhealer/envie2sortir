@@ -53,7 +53,7 @@ export async function POST(
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { type } = body;
 
@@ -296,7 +296,7 @@ export async function GET(
 ) {
   try {
     const user = await getCurrentUser();
-    const supabase = createClient();
+    const supabase = await createClient();
     const { eventId } = await params;
 
     // Vérifier que l'événement existe

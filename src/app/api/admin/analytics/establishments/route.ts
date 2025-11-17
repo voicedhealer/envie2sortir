@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Récupérer tous les établissements
     const { data: establishments, error: establishmentsError } = await supabase

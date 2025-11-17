@@ -19,7 +19,7 @@ export async function PUT(
       return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement est Premium
     const { data: establishment, error: establishmentError } = await supabase
@@ -117,7 +117,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Non authentifié ou aucun établissement associé" }, { status: 401 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Vérifier que l'établissement est Premium
     const { data: establishment, error: establishmentError } = await supabase
