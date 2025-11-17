@@ -616,10 +616,7 @@ export default function EventsCarousel() {
                                     {event.price === 0 ? (
                                       'Gratuit'
                                     ) : (
-                                      <>
-                                        <Euro className="w-3 h-3" />
-                                        {event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}
-                                      </>
+                                      <span>{event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
                                     )}
                                   </div>
                                 ) : (

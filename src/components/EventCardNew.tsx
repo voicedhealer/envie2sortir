@@ -350,9 +350,9 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                 </p>
               )}
               
-              <div className="flex flex-wrap justify-center md:justify-start gap-2">
+              <div className="flex flex-nowrap items-center justify-center md:justify-start gap-1.5 overflow-x-auto">
                 {/* Badge de statut */}
-                <div className={`flex items-center gap-1 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm ${
+                <div className={`flex items-center gap-1 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0 ${
                   eventStatus.status === 'in-progress' 
                     ? 'bg-emerald-600 text-white border border-white' 
                     : eventStatus.status === 'upcoming'
@@ -362,27 +362,27 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                   <span className="text-xs font-medium">{eventStatus.label}</span>
                 </div>
                 
-                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                  <Calendar className={`w-3 h-3 ${
+                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                  <Calendar className={`w-3 h-3 flex-shrink-0 ${
                     eventStatus.status === 'in-progress' 
                       ? 'text-green-600' 
                       : 'text-yellow-600'
                   }`} />
                   <span>{formatEventDate(event.startDate)}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                  <Clock className="w-3 h-3 flex-shrink-0" />
                   <span>{formatEventTime(event.startDate)}</span>
                 </div>
                 {event.endDate && (
-                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                    <Clock className="w-3 h-3" />
+                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                    <Clock className="w-3 h-3 flex-shrink-0" />
                     <span>Fin: {formatEventTime(event.endDate)}</span>
                   </div>
                 )}
                 {event.price !== null && event.price !== undefined && event.price > 0 && (
-                  <div className="flex items-center gap-1 bg-white/30 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm font-semibold">
-                    <span>€ {event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
+                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                    <span>{event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
                   </div>
                 )}
               </div>
