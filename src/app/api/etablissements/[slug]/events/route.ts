@@ -33,25 +33,77 @@ export async function GET(
       .order('start_date', { ascending: true });
 
     if (eventsError) {
-      console.error('Erreur récupération événements:', eventsError);
+      console.error('❌ Erreur récupération événements:', eventsError);
+      console.error('❌ Code:', eventsError.code);
+      console.error('❌ Message:', eventsError.message);
+      console.error('❌ Details:', eventsError.details);
       return NextResponse.json({ 
-        error: 'Erreur lors de la récupération des événements' 
+        error: 'Erreur lors de la récupération des événements',
+        details: eventsError.message
       }, { status: 500 });
     }
 
     // Filtrer les événements à venir ou en cours
-    const filteredEvents = (allEvents || []).filter((event: any) => {
+    console.log(`📊 API /api/etablissements/${slug}/events - ${allEvents?.length || 0} événements trouvés avant filtrage`);
+    
+    if (!allEvents) {
+      console.log('⚠️ allEvents est null ou undefined, retour d\'un tableau vide');
+      return NextResponse.json({ events: [] });
+    }
+    
+    const filteredEvents = allEvents.filter((event: any) => {
       const startDate = new Date(event.start_date);
       const endDate = event.end_date ? new Date(event.end_date) : null;
       
+      // Si startDate et endDate sont identiques, considérer l'événement comme actif toute la journée
+      const isSameDayEvent = endDate && startDate.getTime() === endDate.getTime();
+      
+      console.log(`🔍 Filtrage événement "${event.title}":`, {
+        startDate: startDate.toISOString(),
+        endDate: endDate?.toISOString() || 'null',
+        now: now.toISOString(),
+        isSameDayEvent,
+        startDateAfterNow: startDate > now,
+        isOngoing: startDate <= now && (!endDate || endDate >= now)
+      });
+      
+      // Si les dates sont identiques, vérifier si c'est aujourd'hui
+      if (isSameDayEvent) {
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        
+        if (startDay.getTime() === nowDay.getTime()) {
+          // C'est aujourd'hui, l'événement est actif toute la journée
+          console.log(`✅ Événement "${event.title}" - Actif aujourd'hui (dates identiques)`);
+          return true;
+        } else if (startDay > nowDay) {
+          // C'est dans le futur
+          console.log(`✅ Événement "${event.title}" - À venir (dates identiques)`);
+          return true;
+        } else {
+          // C'est dans le passé
+          console.log(`❌ Événement "${event.title}" - Rejeté (déjà passé, dates identiques)`);
+          return false;
+        }
+      }
+      
       // Événements à venir (pas encore commencés)
-      if (startDate > now) return true;
+      if (startDate > now) {
+        console.log(`✅ Événement "${event.title}" - À venir`);
+        return true;
+      }
       
       // Événements en cours (commencés mais pas encore finis)
-      if (startDate <= now && (!endDate || endDate >= now)) return true;
+      if (startDate <= now && (!endDate || endDate >= now)) {
+        console.log(`✅ Événement "${event.title}" - En cours`);
+        return true;
+      }
       
+      console.log(`❌ Événement "${event.title}" - Rejeté (déjà terminé)`);
       return false;
     });
+    
+    console.log(`📊 API /api/etablissements/${slug}/events - ${filteredEvents.length} événements après filtrage date`);
 
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
@@ -157,6 +209,7 @@ export async function GET(
         endDate: event.end_date,
         imageUrl: event.image_url,
         price: event.price,
+        priceUnit: event.price_unit,
         maxCapacity: event.max_capacity,
         isRecurring: event.is_recurring,
         modality: event.modality,
@@ -168,9 +221,14 @@ export async function GET(
     return NextResponse.json({ events: eventsWithStatus });
 
   } catch (error) {
-    console.error('Erreur lors de la récupération des événements:', error);
+    console.error('❌ Erreur lors de la récupération des événements:', error);
+    if (error instanceof Error) {
+      console.error('❌ Message:', error.message);
+      console.error('❌ Stack:', error.stack);
+    }
     return NextResponse.json({ 
-      error: 'Erreur lors de la récupération des événements' 
+      error: 'Erreur lors de la récupération des événements',
+      details: error instanceof Error ? error.message : 'Erreur inconnue'
     }, { status: 500 });
   }
 }

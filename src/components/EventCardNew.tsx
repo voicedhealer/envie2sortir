@@ -15,6 +15,7 @@ interface EventCardNewProps {
     startDate: string;
     endDate?: string | null;
     price?: number | null;
+    priceUnit?: string | null;
     maxCapacity?: number | null;
     imageUrl?: string | null;
     location?: string;
@@ -377,6 +378,11 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                   <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
                     <Clock className="w-3 h-3" />
                     <span>Fin: {formatEventTime(event.endDate)}</span>
+                  </div>
+                )}
+                {event.price !== null && event.price !== undefined && event.price > 0 && (
+                  <div className="flex items-center gap-1 bg-white/30 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm font-semibold">
+                    <span>€ {event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
                   </div>
                 )}
               </div>

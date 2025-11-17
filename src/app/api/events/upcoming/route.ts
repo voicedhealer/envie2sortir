@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
     const now = new Date().toISOString();
     
     // Construire la requête Supabase pour les événements à venir ou en cours
+    // On récupère tous les événements récents (7 derniers jours) et on filtre ensuite
+    // pour gérer le cas où start_date = end_date
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
     let query = supabase
       .from('events')
       .select(`
@@ -39,9 +44,9 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('establishments.status', 'approved')
-      .or(`start_date.gte.${now},and(start_date.lte.${now},or(end_date.gte.${now},end_date.is.null))`)
+      .gte('start_date', sevenDaysAgo.toISOString())
       .order('start_date', { ascending: true })
-      .limit(limit);
+      .limit(limit * 2); // Récupérer plus pour compenser le filtrage
 
     // Filtrer par ville si spécifiée
     if (city) {
@@ -64,6 +69,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(`📊 API /api/events/upcoming - ${events?.length || 0} événements trouvés avant filtrage horaires`);
+
     // 🔍 FILTRAGE PAR HORAIRES QUOTIDIENS pour les événements récurrents
     const nowDate = new Date();
     const currentHour = nowDate.getHours();
@@ -78,6 +85,28 @@ export async function GET(request: NextRequest) {
       // 🔍 DÉTECTION AUTOMATIQUE : Est-ce un événement récurrent ?
       const startDate = new Date(event.start_date);
       const endDate = event.end_date ? new Date(event.end_date) : null;
+      
+      // Si startDate et endDate sont identiques, considérer l'événement comme actif toute la journée
+      const isSameDayEvent = endDate && startDate.getTime() === endDate.getTime();
+      
+      if (isSameDayEvent) {
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const nowDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+        
+        if (startDay.getTime() === nowDay.getTime()) {
+          // C'est aujourd'hui, l'événement est actif toute la journée
+          console.log(`✅ [API Upcoming] Événement "${event.title}" - Actif aujourd'hui (dates identiques)`);
+          return true;
+        } else if (startDay > nowDay) {
+          // C'est dans le futur
+          console.log(`✅ [API Upcoming] Événement "${event.title}" - À venir (dates identiques)`);
+          return true;
+        } else {
+          // C'est dans le passé
+          console.log(`❌ [API Upcoming] Événement "${event.title}" - Rejeté (déjà passé, dates identiques)`);
+          return false;
+        }
+      }
       
       // Calculer la durée en jours
       const durationInDays = endDate ? 
@@ -125,8 +154,13 @@ export async function GET(request: NextRequest) {
       return isStillValid;
     });
 
+    console.log(`📊 API /api/events/upcoming - ${filteredEvents.length} événements après filtrage horaires`);
+
+    // Limiter le nombre d'événements retournés
+    const limitedEvents = filteredEvents.slice(0, limit);
+
     // Calculer le score d'engagement et le statut pour chaque événement
-    const eventsWithScore = filteredEvents.map((event: any) => {
+    const eventsWithScore = limitedEvents.map((event: any) => {
       const SCORES = {
         'envie': 1,
         'grande-envie': 3,

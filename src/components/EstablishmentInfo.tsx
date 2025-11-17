@@ -163,7 +163,7 @@ const getPaymentMethods = (detailedPayments: any): string[] => {
           methods.push('Espèces');
           break;
         case 'mobilePayments':
-          methods.push('Paiements mobiles NFC');
+          methods.push('Paiement mobile NFC'); // Normalisé au singulier
           break;
         case 'contactlessPayments':
         case 'contactless':
@@ -378,14 +378,14 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     if (typeof establishment.paymentMethods === 'object' && !Array.isArray(establishment.paymentMethods)) {
       const paymentObj = establishment.paymentMethods as any;
       
-      // Convertir les clés en libellés lisibles
+      // Convertir les clés en libellés lisibles (NORMALISÉS pour éviter les doublons)
       const paymentLabels: { [key: string]: string } = {
         creditCards: 'Cartes de crédit',
         debitCards: 'Cartes de débit',
         cash: 'Espèces',
         cashOnly: 'Espèces uniquement',
-        nfc: 'Paiements mobiles NFC',
-        mobilePayments: 'Paiements mobiles',
+        nfc: 'Paiement mobile NFC', // Normalisé au singulier
+        mobilePayments: 'Paiement mobile NFC', // Normalisé
         contactlessPayments: 'Paiements sans contact',
         mealVouchers: 'Titres restaurant',
         restaurantVouchers: 'Titres restaurant',
@@ -400,7 +400,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     
     // Si c'est un array de strings
     if (Array.isArray(establishment.paymentMethods)) {
-      return establishment.paymentMethods;
+      return establishment.paymentMethods.map(item => cleanItemDisplay(String(item)));
     }
     
     return [];
@@ -548,23 +548,18 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   const informationsPratiques = parseGooglePlacesField(establishment.informationsPratiques, 'informationsPratiques');
   
   // ✅ CORRECTION : Extraire les moyens de paiement depuis le champ dédié paymentMethods
+  // ⚠️ NOTE : On évite de réextraire si finalPaymentMethods vient déjà de fallbackPaymentMethods
   const traditionalPayments = (() => {
-    if (!establishment.paymentMethods) return [];
+    // Si finalPaymentMethods vient de fallbackPaymentMethods, on ne réextrait pas
+    if (uniquePaymentMethods.length === 0 && fallbackPaymentMethods.length > 0) {
+      return []; // On utilise déjà fallbackPaymentMethods via finalPaymentMethods
+    }
     
-    console.log('🔍 DEBUG traditionalPayments - Type:', typeof establishment.paymentMethods);
-    console.log('🔍 DEBUG traditionalPayments - IsArray:', Array.isArray(establishment.paymentMethods));
-    console.log('🔍 DEBUG traditionalPayments - Valeur:', establishment.paymentMethods);
+    if (!establishment.paymentMethods) return [];
     
     // Si c'est un array de strings (format direct)
     if (Array.isArray(establishment.paymentMethods)) {
-      const cleaned = establishment.paymentMethods.map(item => {
-        const strItem = String(item);
-        const cleaned = cleanItemDisplay(strItem);
-        console.log('🔍 Nettoyage:', strItem, '->', cleaned);
-        return cleaned;
-      });
-      console.log('✅ Moyens de paiement nettoyés:', cleaned);
-      return cleaned;
+      return establishment.paymentMethods.map(item => cleanItemDisplay(String(item)));
     }
     
     // Si c'est un objet JSON (format clé-valeur)
@@ -573,12 +568,17 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
       return Object.entries(paymentObj)
         .filter(([key, value]) => value === true)
         .map(([key]) => {
-          // Convertir les clés en libellés lisibles
+          // Convertir les clés en libellés lisibles (NORMALISÉS)
           const labels: { [key: string]: string } = {
             creditCards: 'Cartes de crédit',
             debitCards: 'Cartes de débit',
             cash: 'Espèces',
-            nfc: 'Paiement mobile NFC',
+            cashOnly: 'Espèces uniquement',
+            nfc: 'Paiement mobile NFC', // Normalisé
+            mobilePayments: 'Paiement mobile NFC', // Normalisé
+            contactlessPayments: 'Paiements sans contact',
+            mealVouchers: 'Titres restaurant',
+            restaurantVouchers: 'Titres restaurant',
             pluxee: 'Pluxee',
             checks: 'Chèques',
             visa: 'Visa',
@@ -592,9 +592,25 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
     return [];
   })();
 
-  // Combiner les moyens de paiement traditionnels et hybrides + DÉDUPLIQUER
+  // Combiner les moyens de paiement traditionnels et hybrides + DÉDUPLIQUER avec normalisation
   const allPaymentsCombined = [...traditionalPayments, ...finalPaymentMethods];
-  const moyensPaiement = [...new Set(allPaymentsCombined.map(p => cleanItemDisplay(p)))];
+  
+  // Normaliser et dédupliquer : nettoyer, mettre en minuscules pour comparaison, puis garder la version nettoyée
+  const normalizedPayments = allPaymentsCombined.map(p => {
+    const cleaned = cleanItemDisplay(p).trim();
+    return cleaned;
+  });
+  
+  // Dédupliquer en utilisant une clé normalisée (minuscules, sans espaces multiples)
+  const seen = new Set<string>();
+  const moyensPaiement = normalizedPayments.filter(p => {
+    const key = p.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
   
   console.log('🔍 DEBUG MOYENS PAIEMENT FINAL:');
   console.log('  - traditionalPayments:', traditionalPayments);
