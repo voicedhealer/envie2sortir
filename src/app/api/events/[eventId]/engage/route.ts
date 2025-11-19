@@ -249,13 +249,20 @@ export async function POST(
     let totalScore = 0;
 
     (engagements || []).forEach((eng: any) => {
-      stats[eng.type as EngagementType]++;
-      totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
+      // Vérifier que le type d'engagement est valide
+      if (!eng.type || !Object.keys(ENGAGEMENT_SCORES).includes(eng.type)) {
+        console.warn(`Type d'engagement invalide ignoré: ${eng.type}`);
+        return;
+      }
+
+      const engagementType = eng.type as EngagementType;
+      stats[engagementType]++;
+      totalScore += ENGAGEMENT_SCORES[engagementType];
       
       // Ajouter l'utilisateur à la liste correspondante
       const user = Array.isArray(eng.user) ? eng.user[0] : eng.user;
-      if (user) {
-        usersByEngagement[eng.type as EngagementType].push({
+      if (user && usersByEngagement[engagementType]) {
+        usersByEngagement[engagementType].push({
           id: eng.user_id,
           firstName: user.first_name,
           lastName: user.last_name,
@@ -312,7 +319,15 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    // Récupérer l'utilisateur de manière optionnelle (peut être null si non connecté)
+    let user = null;
+    try {
+      user = await getCurrentUser();
+    } catch (authError) {
+      // L'utilisateur n'est pas connecté, ce n'est pas une erreur pour la route GET
+      console.log('Utilisateur non connecté, récupération des stats sans engagement utilisateur');
+    }
+    
     const supabase = await createClient();
     const { eventId } = await params;
 
@@ -371,13 +386,20 @@ export async function GET(
     let userEngagement = null;
 
     (engagements || []).forEach((eng: any) => {
-      stats[eng.type as EngagementType]++;
-      totalScore += ENGAGEMENT_SCORES[eng.type as EngagementType];
+      // Vérifier que le type d'engagement est valide
+      if (!eng.type || !Object.keys(ENGAGEMENT_SCORES).includes(eng.type)) {
+        console.warn(`Type d'engagement invalide ignoré: ${eng.type}`);
+        return;
+      }
+
+      const engagementType = eng.type as EngagementType;
+      stats[engagementType]++;
+      totalScore += ENGAGEMENT_SCORES[engagementType];
       
       // Ajouter l'utilisateur à la liste correspondante
       const userData = Array.isArray(eng.user) ? eng.user[0] : eng.user;
-      if (userData) {
-        usersByEngagement[eng.type as EngagementType].push({
+      if (userData && usersByEngagement[engagementType]) {
+        usersByEngagement[engagementType].push({
           id: eng.user_id,
           firstName: userData.first_name,
           lastName: userData.last_name,
@@ -414,10 +436,15 @@ export async function GET(
       usersByEngagement
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erreur lors de la récupération des stats:', error);
+    console.error('Détails de l\'erreur:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name
+    });
     return NextResponse.json(
-      { error: 'Erreur lors de la récupération des stats' },
+      { error: 'Erreur lors de la récupération des stats', details: error?.message },
       { status: 500 }
     );
   }

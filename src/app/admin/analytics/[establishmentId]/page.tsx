@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useRef } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, BarChart3, Building2, TrendingUp, Users, Eye } from 'lucide-react';
@@ -22,6 +22,8 @@ export default function EstablishmentAnalyticsPage({ params }: { params: Promise
   const [establishment, setEstablishment] = useState<EstablishmentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef<string | null>(null);
   
   // Déballer les params avec React.use()
   const { establishmentId } = use(params);
@@ -29,19 +31,28 @@ export default function EstablishmentAnalyticsPage({ params }: { params: Promise
   useEffect(() => {
     if (sessionLoading) return;
     
-    if (!session) {
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user?.role !== 'admin') {
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/dashboard');
+      return;
+    }
+
+    // Éviter les appels multiples pour le même établissement
+    if (!session || session.user?.role !== 'admin' || hasFetchedRef.current === establishmentId) {
       return;
     }
 
     const fetchEstablishmentDetails = async () => {
       try {
+        hasFetchedRef.current = establishmentId;
         setLoading(true);
         const response = await fetch(`/api/admin/analytics/establishments`);
         
@@ -59,13 +70,14 @@ export default function EstablishmentAnalyticsPage({ params }: { params: Promise
         setEstablishment(establishmentData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
+        hasFetchedRef.current = null; // Permettre de réessayer en cas d'erreur
       } finally {
         setLoading(false);
       }
     };
 
     fetchEstablishmentDetails();
-  }, [session, sessionLoading, router, establishmentId]);
+  }, [session, sessionLoading, establishmentId]); // Retirer router des dépendances
 
   if (sessionLoading || loading) {
     return (

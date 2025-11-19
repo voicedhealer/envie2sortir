@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import CloudflareMetricsCharts from '@/components/admin/CloudflareMetricsCharts';
+import { CloudflareDetailedMetrics } from '@/lib/cloudflare-api';
 
 interface DashboardStats {
   pendingCount: number;
@@ -47,13 +49,7 @@ interface HealthStatus {
 }
 
 interface RealtimeMetrics {
-  cloudflare: {
-    requests: number;
-    bandwidth: number;
-    errors: number;
-    cacheHitRate: number;
-    lastUpdate: string;
-  } | null;
+  cloudflare: CloudflareDetailedMetrics | null;
   railway: {
     cpu: number;
     memory: number;
@@ -163,14 +159,45 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Créer un AbortController pour gérer le timeout manuellement
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes
+
     try {
-      const response = await fetch("/api/admin/realtime-metrics");
+      const response = await fetch("/api/admin/realtime-metrics", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const data = await response.json();
         setRealtimeMetrics(data);
+      } else {
+        // Logger l'erreur mais ne pas bloquer l'interface
+        console.warn("Erreur lors du chargement des métriques temps réel:", response.status, response.statusText);
+        // Ne pas définir realtimeMetrics à null pour garder les anciennes valeurs
       }
     } catch (error) {
-      console.error("Erreur lors du chargement des métriques temps réel:", error);
+      clearTimeout(timeoutId);
+      
+      // Gérer spécifiquement les erreurs de timeout ou de réseau
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.warn("Timeout lors du chargement des métriques temps réel (30s) - la route API prend trop de temps");
+        } else if (error.message.includes('Failed to fetch')) {
+          console.warn("Erreur réseau lors du chargement des métriques temps réel - la route API peut être indisponible");
+        } else {
+          console.error("Erreur lors du chargement des métriques temps réel:", error.message);
+        }
+      } else {
+        console.error("Erreur lors du chargement des métriques temps réel:", error);
+      }
+      // Ne pas définir realtimeMetrics à null pour garder les anciennes valeurs
     }
   }, [session, loading]);
 
@@ -187,6 +214,24 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error("Erreur lors du chargement des événements de sécurité:", error);
+    }
+  }, [session, loading]);
+
+  const [configStatus, setConfigStatus] = useState<any>(null);
+  
+  const fetchConfigStatus = useCallback(async () => {
+    if (!session || session.user?.role !== 'admin' || loading) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/check-config");
+      if (response.ok) {
+        const data = await response.json();
+        setConfigStatus(data);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification de la configuration:", error);
     }
   }, [session, loading]);
 
@@ -211,7 +256,8 @@ export default function AdminDashboard() {
         fetchSystemMetrics(),
         fetchHealthStatus(),
         fetchRealtimeMetrics(),
-        fetchSecurityEvents()
+        fetchSecurityEvents(),
+        fetchConfigStatus()
       ]);
       setLastUpdate(new Date());
     } catch (error) {
@@ -220,7 +266,7 @@ export default function AdminDashboard() {
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [session, loading, fetchDashboardStats, fetchSystemMetrics, fetchHealthStatus, fetchRealtimeMetrics, fetchSecurityEvents]);
+  }, [session, loading, fetchDashboardStats, fetchSystemMetrics, fetchHealthStatus, fetchRealtimeMetrics, fetchSecurityEvents, fetchConfigStatus]);
 
   // Vérifier l'authentification admin
   useEffect(() => {
@@ -281,6 +327,83 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Vérification de la configuration */}
+      {configStatus && (
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            ⚙️ État de la Configuration
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Cloudflare */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.config.cloudflare.configured 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">☁️</span>
+                <h4 className="font-semibold text-gray-900">Cloudflare</h4>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className={configStatus.config.cloudflare.hasToken ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.cloudflare.hasToken ? '✅' : '❌'} Token: {configStatus.config.cloudflare.hasToken ? 'Configuré' : 'Manquant'}
+                </div>
+                <div className={configStatus.config.cloudflare.hasZoneId ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.cloudflare.hasZoneId ? '✅' : '❌'} Zone ID: {configStatus.config.cloudflare.hasZoneId ? 'Configuré' : 'Manquant'}
+                </div>
+              </div>
+            </div>
+
+            {/* Railway */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.config.railway.configured 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">🚂</span>
+                <h4 className="font-semibold text-gray-900">Railway</h4>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className={configStatus.config.railway.hasToken ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.railway.hasToken ? '✅' : '❌'} Token: {configStatus.config.railway.hasToken ? 'Configuré' : 'Manquant'}
+                </div>
+                <div className={configStatus.config.railway.hasProjectId ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.railway.hasProjectId ? '✅' : '❌'} Project ID: {configStatus.config.railway.hasProjectId ? 'Configuré' : 'Manquant'}
+                </div>
+              </div>
+            </div>
+
+            {/* Table Security Events */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.securityTable.exists 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">🔒</span>
+                <h4 className="font-semibold text-gray-900">Table Sécurité</h4>
+              </div>
+              <div className={`text-sm ${configStatus.securityTable.exists ? 'text-green-600' : 'text-red-600'}`}>
+                {configStatus.securityTable.status}
+              </div>
+            </div>
+          </div>
+
+          {/* Recommandations */}
+          {configStatus.recommendations && configStatus.recommendations.length > 0 && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-yellow-800 mb-2">📋 Recommandations :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                {configStatus.recommendations.map((rec: string, index: number) => (
+                  <li key={index}>{rec}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status de santé système */}
       {health && (
@@ -406,7 +529,7 @@ export default function AdminDashboard() {
             ⚡ Métriques Temps Réel
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Cloudflare */}
+            {/* Cloudflare - Résumé */}
             {realtimeMetrics.cloudflare ? (
               <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
                 <div className="flex items-center mb-3">
@@ -415,7 +538,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Requêtes (24h)</span>
+                    <span className="text-gray-600">Requêtes (7j)</span>
                     <span className="font-medium">{realtimeMetrics.cloudflare.requests.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
@@ -500,6 +623,43 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Métriques Cloudflare Détaillées avec Graphiques */}
+      {realtimeMetrics?.cloudflare && realtimeMetrics.cloudflare.dailyData && realtimeMetrics.cloudflare.dailyData.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-medium text-gray-900">
+              📊 Métriques Cloudflare Détaillées
+            </h3>
+            <div className="text-sm text-gray-500">
+              Dernière mise à jour: {new Date(realtimeMetrics.cloudflare.lastUpdate).toLocaleTimeString('fr-FR')}
+            </div>
+          </div>
+          
+          {/* Métriques de base en cartes */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <p className="text-sm text-gray-600 mb-1">Requêtes (7j)</p>
+              <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.cloudflare.requests.toLocaleString()}</p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-sm text-gray-600 mb-1">Bande passante</p>
+              <p className="text-2xl font-bold text-gray-900">{(realtimeMetrics.cloudflare.bandwidth / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <p className="text-sm text-gray-600 mb-1">Cache Hit Rate</p>
+              <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.cloudflare.cacheHitRate.toFixed(1)}%</p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <p className="text-sm text-gray-600 mb-1">Erreurs</p>
+              <p className="text-2xl font-bold text-red-600">{realtimeMetrics.cloudflare.errors}</p>
+            </div>
+          </div>
+          
+          {/* Graphiques */}
+          <CloudflareMetricsCharts metrics={realtimeMetrics.cloudflare} />
         </div>
       )}
 

@@ -372,9 +372,13 @@ export default function EstablishmentCard({
         console.log('🔍 Données d\'engagement récupérées:', data);
         setEventEngagementData(data);
       } else {
-        console.error('❌ Erreur API engagement:', response.status, response.statusText);
+        // Ne logger que les erreurs serveur (500), pas les erreurs client (404, etc.)
+        if (response.status >= 500) {
+          console.error('❌ Erreur API engagement:', response.status, response.statusText);
+        }
       }
     } catch (error) {
+      // Ne logger que les erreurs réseau réelles
       console.error('Erreur lors du chargement de l\'engagement:', error);
     }
   };

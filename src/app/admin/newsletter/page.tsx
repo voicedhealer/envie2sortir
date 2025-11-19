@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useRouter } from 'next/navigation';
 import { Download, Mail, Users, TrendingUp, Calendar, Trash2, Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
 
@@ -24,34 +25,25 @@ interface NewsletterStats {
 }
 
 export default function NewsletterDashboard() {
-  const { session } = useSupabaseSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
+  const router = useRouter();
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [stats, setStats] = useState<NewsletterStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive' | 'unverified'>('all');
   const [selectedSubscribers, setSelectedSubscribers] = useState<string[]>([]);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
-  // Vérifier les permissions admin
-  if (!session || session.user?.role !== 'admin') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Accès refusé</h1>
-          <p className="text-gray-600">Vous devez être administrateur pour accéder à cette page.</p>
-        </div>
-      </div>
-    );
-  }
+  const fetchSubscribers = useCallback(async () => {
+    // Éviter les appels multiples
+    if (hasFetchedRef.current) {
+      return;
+    }
 
-  // Charger les données
-  useEffect(() => {
-    fetchSubscribers();
-    fetchStats();
-  }, []);
-
-  const fetchSubscribers = async () => {
     try {
+      hasFetchedRef.current = true;
       setLoading(true);
       const response = await fetch('/api/admin/newsletter/subscribers');
       const data = await response.json();
@@ -60,16 +52,18 @@ export default function NewsletterDashboard() {
         setSubscribers(data.subscribers);
       } else {
         toast.error('Erreur lors du chargement des abonnés');
+        hasFetchedRef.current = false; // Permettre de réessayer
       }
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur de connexion');
+      hasFetchedRef.current = false; // Permettre de réessayer
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
       const response = await fetch('/api/admin/newsletter/stats');
       const data = await response.json();
@@ -80,7 +74,47 @@ export default function NewsletterDashboard() {
     } catch (error) {
       console.error('Erreur stats:', error);
     }
-  };
+  }, []);
+
+  // Vérifier les permissions admin et charger les données
+  useEffect(() => {
+    if (sessionLoading) return;
+
+    // Éviter les redirections multiples
+    if (!session || session.user?.role !== 'admin') {
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        router.push('/auth');
+      }
+      return;
+    }
+
+    // Charger les données uniquement une fois
+    if (!hasFetchedRef.current) {
+      fetchSubscribers();
+      fetchStats();
+    }
+  }, [session, sessionLoading, fetchSubscribers, fetchStats]);
+
+  // Vérifier les permissions admin (pour l'affichage)
+  if (sessionLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  if (!session || session.user?.role !== 'admin') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Accès refusé</h1>
+          <p className="text-gray-600">Vous devez être administrateur pour accéder à cette page.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Filtrer les abonnés
   const filteredSubscribers = subscribers.filter(subscriber => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus } from "lucide-react";
@@ -22,12 +22,49 @@ export default function AdminMessagingPage() {
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
+
+  const fetchProfessionals = useCallback(async () => {
+    // Éviter les appels multiples
+    if (hasFetchedRef.current) {
+      return;
+    }
+
+    try {
+      hasFetchedRef.current = true;
+      const response = await fetch("/api/admin/professionals");
+      if (response.ok) {
+        const data = await response.json();
+        setProfessionals(data.professionals || []);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des professionnels:", error);
+      hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
+    }
+  }, []);
 
   useEffect(() => {
-    if (session?.user?.role === "admin") {
+    if (loading) return;
+
+    // Éviter les redirections multiples
+    if (!session?.user && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push("/auth");
+      return;
+    }
+
+    if (session?.user && session.user?.role !== "admin" && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push("/auth");
+      return;
+    }
+
+    // Charger les professionnels uniquement si admin
+    if (session?.user?.role === "admin" && !hasFetchedRef.current) {
       fetchProfessionals();
     }
-  }, [session]);
+  }, [session, loading, fetchProfessionals]);
 
   // Redirection si non authentifié ou pas admin
   if (loading) {
@@ -39,21 +76,8 @@ export default function AdminMessagingPage() {
   }
 
   if (!session?.user || session.user?.role !== "admin") {
-    router.push("/auth");
-    return null;
+    return null; // Le useEffect gère la redirection
   }
-
-  const fetchProfessionals = async () => {
-    try {
-      const response = await fetch("/api/admin/professionals");
-      if (response.ok) {
-        const data = await response.json();
-        setProfessionals(data.professionals || []);
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des professionnels:", error);
-    }
-  };
 
   const handleConversationCreated = (conversationId: string) => {
     setSelectedConversationId(conversationId);

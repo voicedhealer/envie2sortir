@@ -43,6 +43,7 @@ export class ServerLearningService {
   
   /**
    * Sauvegarde un pattern d'apprentissage lors de l'ajout d'un établissement
+   * Évite les doublons en vérifiant l'existence d'un pattern similaire
    */
   async saveLearningPattern(data: {
     name: string;
@@ -55,10 +56,60 @@ export class ServerLearningService {
   }): Promise<void> {
     try {
       const supabase = this.getAdminClient();
+      
+      // Arrondir la confiance à 5% près pour la comparaison
+      const confidenceRounded = Math.round(data.confidence * 20) / 20;
+      
+      // Vérifier s'il existe déjà un pattern similaire
+      // Un doublon est défini comme : même nom (insensible à la casse) + même type détecté + confiance similaire
+      const { data: existingPatterns, error: findError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*')
+        .ilike('name', data.name.trim())
+        .eq('detected_type', data.detectedType)
+        .limit(10); // Limiter pour éviter trop de résultats
+      
+      if (findError) {
+        console.error('❌ Erreur recherche pattern existant:', findError);
+        // Continuer quand même avec l'insertion si la recherche échoue
+      } else if (existingPatterns && existingPatterns.length > 0) {
+        // Vérifier si un pattern a une confiance similaire (±5%)
+        const duplicate = existingPatterns.find((pattern: any) => {
+          const patternConfidenceRounded = Math.round(pattern.confidence * 20) / 20;
+          return Math.abs(patternConfidenceRounded - confidenceRounded) <= 0.05;
+        });
+        
+        if (duplicate) {
+          // Si le nouveau pattern est corrigé et l'ancien ne l'est pas, mettre à jour
+          if (data.correctedType && !duplicate.is_corrected) {
+            const { error: updateError } = await supabase
+              .from('establishment_learning_patterns')
+              .update({
+                corrected_type: data.correctedType,
+                is_corrected: true,
+                corrected_by: data.correctedBy,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', duplicate.id);
+            
+            if (updateError) {
+              console.error('❌ Erreur mise à jour pattern:', updateError);
+            } else {
+              console.log('✅ Pattern d\'apprentissage mis à jour (doublon corrigé):', data.name);
+            }
+          } else {
+            // Pattern similaire déjà existant, ignorer l'insertion
+            console.log('⚠️ Pattern d\'apprentissage déjà existant (doublon ignoré):', data.name);
+          }
+          return; // Ne pas insérer de doublon
+        }
+      }
+      
+      // Aucun doublon trouvé, procéder à l'insertion
       const { error } = await supabase
         .from('establishment_learning_patterns')
         .insert({
-          name: data.name,
+          name: data.name.trim(),
           detected_type: data.detectedType,
           corrected_type: data.correctedType,
           google_types: JSON.stringify(data.googleTypes),

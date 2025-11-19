@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Brain, TrendingUp, Target, BarChart3, Users, CheckCircle, AlertCircle } from 'lucide-react';
@@ -40,6 +40,8 @@ export default function LearningDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [editingPattern, setEditingPattern] = useState<string | null>(null);
   const [correctedType, setCorrectedType] = useState<string>('');
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
   // Options de types d'établissements (organisées par catégories) - LISTE COMPLÈTE
   const typeOptions: TypeOption[] = [
@@ -181,24 +183,14 @@ export default function LearningDashboard() {
     { value: 'autre', label: '❓ Autre' }
   ];
 
-  useEffect(() => {
-    if (sessionLoading) return;
-    
-    if (!session) {
-      router.push('/auth?error=AccessDenied');
+  const fetchLearningData = useCallback(async () => {
+    // Éviter les appels multiples
+    if (hasFetchedRef.current) {
       return;
     }
 
-    if (session.user?.role !== 'admin') {
-      router.push('/auth?error=AccessDenied');
-      return;
-    }
-
-    fetchLearningData();
-  }, [session, sessionLoading, router]);
-
-  const fetchLearningData = async () => {
     try {
+      hasFetchedRef.current = true;
       setLoading(true);
       
       // Récupérer les statistiques
@@ -216,10 +208,35 @@ export default function LearningDashboard() {
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push('/auth?error=AccessDenied');
+      return;
+    }
+
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push('/auth?error=AccessDenied');
+      return;
+    }
+
+    // Éviter les appels multiples
+    if (!session || session.user?.role !== 'admin' || hasFetchedRef.current) {
+      return;
+    }
+
+    fetchLearningData();
+  }, [session, sessionLoading, fetchLearningData]); // Retirer router des dépendances
 
   const handleCorrectType = async (patternId: string, patternName: string) => {
     if (!correctedType) return;
@@ -240,6 +257,7 @@ export default function LearningDashboard() {
 
       if (response.ok) {
         // Recharger les données
+        hasFetchedRef.current = false; // Réinitialiser pour permettre le rechargement
         await fetchLearningData();
         setEditingPattern(null);
         setCorrectedType('');
@@ -267,6 +285,7 @@ export default function LearningDashboard() {
 
       if (response.ok) {
         // Recharger les données
+        hasFetchedRef.current = false; // Réinitialiser pour permettre le rechargement
         await fetchLearningData();
       } else {
         setError('Erreur lors de la suppression du pattern');
@@ -297,6 +316,7 @@ export default function LearningDashboard() {
 
       if (response.ok) {
         // Recharger les données
+        hasFetchedRef.current = false; // Réinitialiser pour permettre le rechargement
         await fetchLearningData();
       } else {
         setError('Erreur lors de la validation du pattern');
@@ -560,7 +580,10 @@ export default function LearningDashboard() {
         {/* Actions */}
         <div className="mt-8 flex justify-between">
           <button
-            onClick={fetchLearningData}
+            onClick={() => {
+              hasFetchedRef.current = false; // Réinitialiser pour permettre le rechargement
+              fetchLearningData();
+            }}
             className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
             🔄 Actualiser

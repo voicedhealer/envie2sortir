@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { BarChart3, TrendingUp, Users, Eye, Building2 } from 'lucide-react';
@@ -21,23 +21,34 @@ export default function AdminAnalyticsPage() {
   const [establishments, setEstablishments] = useState<EstablishmentAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
   useEffect(() => {
     if (sessionLoading) return;
     
-    if (!session) {
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user?.role !== 'admin') {
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/dashboard');
+      return;
+    }
+
+    // Éviter les appels multiples
+    if (!session || session.user?.role !== 'admin' || hasFetchedRef.current) {
       return;
     }
 
     const fetchEstablishmentsAnalytics = async () => {
       try {
+        hasFetchedRef.current = true;
         setLoading(true);
         const response = await fetch('/api/admin/analytics/establishments');
         
@@ -49,13 +60,14 @@ export default function AdminAnalyticsPage() {
         setEstablishments(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
+        hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
       } finally {
         setLoading(false);
       }
     };
 
     fetchEstablishmentsAnalytics();
-  }, [session, sessionLoading, router]);
+  }, [session, sessionLoading]); // Retirer router des dépendances
 
   if (sessionLoading || loading) {
     return (

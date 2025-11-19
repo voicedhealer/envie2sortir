@@ -71,3 +71,6 @@ Si vous migrez depuis Prisma vers Supabase, assurez-vous que :
 3. Les variables d'environnement sont correctement configurées
 
 
+
+
+

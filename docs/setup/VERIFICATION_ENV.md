@@ -90,3 +90,6 @@ NEXT_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co
 4. **Vérifier les logs au démarrage** : Next.js affiche parfois des warnings si des variables sont manquantes.
 
 
+
+
+

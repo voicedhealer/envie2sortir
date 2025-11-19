@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Users, AlertCircle } from 'lucide-react';
@@ -33,41 +33,57 @@ export default function AdminRecherchesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef<string | null>(null);
+
+  const fetchSearchAnalytics = useCallback(async () => {
+    // Éviter les appels multiples pour la même période
+    if (hasFetchedRef.current === period) {
+      return;
+    }
+
+    try {
+      hasFetchedRef.current = period;
+      setLoading(true);
+      const response = await fetch(`/api/analytics/search?period=${period}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch search analytics');
+      }
+      
+      const analyticsData = await response.json();
+      setData(analyticsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      hasFetchedRef.current = null; // Permettre de réessayer en cas d'erreur
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
 
   useEffect(() => {
     if (sessionLoading) return;
     
-    if (!session) {
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/auth');
       return;
     }
 
-    // Vérifier que l'utilisateur est admin
-    if (session.user?.role !== 'admin') {
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/dashboard');
       return;
     }
 
-    const fetchSearchAnalytics = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/analytics/search?period=${period}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch search analytics');
-        }
-        
-        const analyticsData = await response.json();
-        setData(analyticsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Éviter les appels multiples
+    if (!session || session.user?.role !== 'admin') {
+      return;
+    }
 
     fetchSearchAnalytics();
-  }, [session, sessionLoading, router, period]);
+  }, [session, sessionLoading, fetchSearchAnalytics]); // Retirer router et period des dépendances
 
   if (sessionLoading || loading) {
     return (

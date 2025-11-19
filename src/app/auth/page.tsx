@@ -2,7 +2,8 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn as nextAuthSignIn, signUp as nextAuthSignUp, getSession } from 'next-auth/react';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -24,6 +25,8 @@ function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const supabase = createClient();
+  const { user: authUser } = useAuth();
 
   // Gérer les erreurs et messages depuis l'URL
   useEffect(() => {
@@ -118,29 +121,12 @@ function AuthContent() {
 
         console.log('✅ Redirection vers:', redirectUrl);
         
-        // Créer aussi une session côté client pour que le client Supabase puisse la lire
-        // (Les cookies httpOnly créés par l'API route ne sont pas accessibles au JavaScript)
-        const { createClient } = await import('@/lib/supabase/client');
-        const supabase = createClient();
+        // La session Supabase est déjà créée par l'API route
+        // Attendre un peu pour que le contexte se synchronise
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Créer la session côté client avec les mêmes identifiants
-        const { data: clientAuthData, error: clientAuthError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password
-        });
-        
-        if (clientAuthError) {
-          console.error('⚠️ [Auth] Erreur création session client:', clientAuthError);
-          // Continuer quand même, le serveur a la session
-        } else {
-          console.log('✅ [Auth] Session client créée avec succès');
-        }
-        
-        // Attendre un peu pour que tout se synchronise
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
-        // Forcer un hard refresh pour que Next.js recharge les server components avec la nouvelle session
-        window.location.replace(decodeURIComponent(redirectUrl));
+        // Rediriger vers l'URL de callback
+        router.push(decodeURIComponent(redirectUrl));
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');
@@ -207,32 +193,34 @@ function AuthContent() {
     try {
       console.log(`🔐 Tentative de connexion ${provider}...`);
       
-      const result = await nextAuthSignIn(provider, {
-        redirect: false
+      // Utiliser Supabase OAuth
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
+        }
       });
 
-      console.log(`🔐 Résultat connexion ${provider}:`, result);
-
-      if (result?.error) {
-        console.error(`❌ Erreur ${provider}:`, result.error);
-        if (result.error === 'Configuration') {
-          setError(`${provider} n'est pas configuré. Veuillez utiliser la connexion par email/mot de passe.`);
+      if (error) {
+        console.error(`❌ Erreur ${provider}:`, error);
+        if (error.message?.includes('not configured') || error.message?.includes('Configuration')) {
+          setError(`${provider === 'google' ? 'Google' : 'Facebook'} n'est pas configuré. Veuillez utiliser la connexion par email/mot de passe.`);
         } else {
-          setError(`Erreur lors de la connexion avec ${provider}`);
+          setError(`Erreur lors de la connexion avec ${provider === 'google' ? 'Google' : 'Facebook'}: ${error.message}`);
         }
-      } else if (result?.ok) {
-        console.log(`✅ Connexion ${provider} réussie`);
-        // Forcer la synchronisation de la session
-        await getSession();
-        // Rediriger vers l'URL de callback ou la page d'accueil
-        router.push(decodeURIComponent(callbackUrl));
+        setLoading(false);
+      } else if (data?.url) {
+        // Rediriger vers la page OAuth
+        console.log(`✅ Redirection vers ${provider} OAuth`);
+        window.location.href = data.url;
+        // Ne pas mettre setLoading(false) car on redirige
       } else {
         setError(`Erreur inattendue lors de la connexion avec ${provider}`);
+        setLoading(false);
       }
     } catch (err: any) {
       console.error(`❌ Exception ${provider}:`, err);
-      setError(`Erreur lors de la connexion avec ${provider}`);
-    } finally {
+      setError(`Erreur lors de la connexion avec ${provider}: ${err.message || 'Erreur inconnue'}`);
       setLoading(false);
     }
   };

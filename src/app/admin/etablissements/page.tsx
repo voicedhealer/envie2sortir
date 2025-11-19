@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 
@@ -76,10 +76,20 @@ export default function AdminEstablishmentsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const hasFetchedRef = useRef<string>('');
 
   // Charger les établissements
-  const loadEstablishments = async () => {
+  const loadEstablishments = useCallback(async () => {
+    // Créer une clé unique pour cette combinaison de paramètres
+    const fetchKey = `${selectedStatus}-${searchTerm}`;
+    
+    // Éviter les appels multiples pour la même combinaison
+    if (hasFetchedRef.current === fetchKey) {
+      return;
+    }
+
     try {
+      hasFetchedRef.current = fetchKey;
       setLoading(true);
       const params = new URLSearchParams();
       if (selectedStatus !== 'all') params.append('status', selectedStatus);
@@ -93,14 +103,15 @@ export default function AdminEstablishmentsPage() {
       setStats(data.stats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      hasFetchedRef.current = ''; // Permettre de réessayer en cas d'erreur
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStatus, searchTerm]);
 
   useEffect(() => {
     loadEstablishments();
-  }, [selectedStatus, searchTerm]);
+  }, [loadEstablishments]);
 
   // Le layout admin s'occupe de la vérification d'authentification
 
@@ -124,6 +135,7 @@ export default function AdminEstablishmentsPage() {
       const result = await response.json();
       
       // Mettre à jour la liste
+      hasFetchedRef.current = ''; // Réinitialiser pour forcer le rechargement
       await loadEstablishments();
       
       // Fermer les modals
