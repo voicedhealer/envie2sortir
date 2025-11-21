@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -26,7 +25,6 @@ function AuthContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
   const supabase = createClient();
-  const { user: authUser } = useAuth();
 
   // Gérer les erreurs et messages depuis l'URL
   useEffect(() => {

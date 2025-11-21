@@ -964,6 +964,13 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           throw new Error(errorMessage);
         }
         
+        // Si une URL de checkout Stripe est fournie, rediriger vers Stripe
+        if (result.checkoutUrl) {
+          console.log('💳 Redirection vers Stripe Checkout...');
+          window.location.href = result.checkoutUrl;
+          return; // Ne pas continuer avec la connexion automatique
+        }
+
         if (result.autoLogin && result.professional) {
           try {
             console.log('🔄 Tentative de connexion automatique avec Supabase Auth...');

@@ -334,7 +334,7 @@ export async function POST(request: NextRequest) {
     try {
       await logSubscriptionChange(
         result.establishment.id,
-        professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
+        'FREE', // Toujours créer en FREE, l'upgrade se fait via Stripe
         result.professional.id,
         'Inscription professionnelle'
       );
@@ -343,12 +343,82 @@ export async function POST(request: NextRequest) {
       // Non bloquant
     }
 
+    // Si premium est sélectionné, créer une session Stripe
+    let checkoutUrl = null;
+    if (professionalData.subscriptionPlan === 'premium') {
+      try {
+        const { isStripeConfigured } = await import('@/lib/stripe/config');
+        if (isStripeConfigured()) {
+          const { stripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
+          const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+          
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          
+          if (supabaseUrl && supabaseServiceKey) {
+            const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+              auth: { autoRefreshToken: false, persistSession: false }
+            });
+
+            // Créer ou récupérer le customer Stripe
+            let customerId = result.professional.stripe_customer_id;
+            if (!customerId) {
+              const customer = await stripe.customers.create({
+                email: result.professional.email,
+                name: `${result.professional.firstName} ${result.professional.lastName}`,
+                metadata: { professional_id: result.professional.id },
+              });
+              customerId = customer.id;
+
+              // Sauvegarder le customer_id
+              await adminClient
+                .from('professionals')
+                .update({ stripe_customer_id: customerId })
+                .eq('id', result.professional.id);
+            }
+
+            // Créer la session de checkout avec le plan mensuel par défaut
+            const priceId = STRIPE_PRICE_IDS.monthly || STRIPE_PRICE_IDS.annual;
+            if (!priceId) {
+              throw new Error('Aucun prix Stripe configuré');
+            }
+
+            const session = await stripe.checkout.sessions.create({
+              customer: customerId,
+              mode: 'subscription',
+              payment_method_types: ['card'],
+              line_items: [{ price: priceId, quantity: 1 }],
+              success_url: `${getBaseUrl()}/dashboard/subscription?success=true`,
+              cancel_url: `${getBaseUrl()}/dashboard/subscription?canceled=true`,
+              metadata: { 
+                professional_id: result.professional.id,
+                plan_type: STRIPE_PRICE_IDS.monthly ? 'monthly' : 'annual',
+              },
+              subscription_data: { 
+                metadata: { 
+                  professional_id: result.professional.id,
+                  plan_type: STRIPE_PRICE_IDS.monthly ? 'monthly' : 'annual',
+                } 
+              },
+            });
+
+            checkoutUrl = session.url;
+          }
+        }
+      } catch (stripeError) {
+        console.warn('Erreur lors de la création de la session Stripe:', stripeError);
+        // Ne pas bloquer l'inscription si Stripe échoue
+      }
+    }
+
     // TODO: Upload des photos (prochaine étape)
     // TODO: Envoyer email de confirmation (prochaine étape)
 
     return NextResponse.json({ 
       success: true,
-      message: 'Inscription réussie ! Votre établissement sera vérifié sous 24h.',
+      message: professionalData.subscriptionPlan === 'premium' 
+        ? 'Inscription réussie ! Vous allez être redirigé vers le paiement.'
+        : 'Inscription réussie ! Votre établissement sera vérifié sous 24h.',
       professional: {
         id: result.professional.id,
         email: result.professional.email,
@@ -361,7 +431,8 @@ export async function POST(request: NextRequest) {
         name: result.establishment.name,
         slug: result.establishment.slug
       },
-      autoLogin: true // Indique au client de faire la connexion automatique
+      autoLogin: true, // Indique au client de faire la connexion automatique
+      checkoutUrl // URL de checkout Stripe si premium
     });
 
   } catch (error) {
