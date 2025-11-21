@@ -67,10 +67,25 @@ export async function POST(request: NextRequest) {
         ipAddress
       });
 
+      // Messages d'erreur plus spécifiques
+      let errorMessage = 'Email ou mot de passe incorrect';
+      
+      if (authError.message?.includes('Invalid login credentials') || 
+          authError.message?.includes('invalid_credentials')) {
+        errorMessage = 'Email ou mot de passe incorrect. Vérifiez vos identifiants.';
+      } else if (authError.message?.includes('email') && authError.message?.includes('confirm')) {
+        errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail ou contactez le support.';
+      } else if (authError.message?.includes('Email not confirmed')) {
+        errorMessage = 'Votre email n\'est pas encore confirmé. Vérifiez votre boîte mail.';
+      } else {
+        errorMessage = authError.message || errorMessage;
+      }
+
       return NextResponse.json(
         { 
           success: false, 
-          message: authError.message || 'Email ou mot de passe incorrect' 
+          message: errorMessage,
+          errorCode: authError.status || 'AUTH_ERROR'
         },
         { status: 401 }
       );

@@ -69,6 +69,35 @@ export default function CGVPage() {
                 <p>
                   Le paiement s'effectue par carte bancaire lors de la souscription. Les abonnements Premium sont renouvelés automatiquement sauf résiliation.
                 </p>
+                
+                <div className="bg-blue-50 rounded-xl p-6 mt-6">
+                  <h3 className="text-xl font-semibold text-blue-900 mb-4">💳 Traitement sécurisé des paiements</h3>
+                  <div className="space-y-3 text-blue-800">
+                    <p>
+                      Les paiements sont traités de manière sécurisée via <strong>Stripe</strong>, notre prestataire de paiement certifié PCI-DSS.
+                    </p>
+                    <ul className="space-y-2 ml-4">
+                      <li>• <strong>Sécurité maximale :</strong> Toutes les transactions sont chiffrées et sécurisées</li>
+                      <li>• <strong>Protection des données :</strong> Aucune donnée bancaire n'est stockée sur nos serveurs</li>
+                      <li>• <strong>Conformité :</strong> Stripe est conforme aux normes internationales de sécurité des paiements</li>
+                      <li>• <strong>Modes de paiement :</strong> Cartes bancaires (Visa, Mastercard, American Express)</li>
+                    </ul>
+                    <p className="text-sm mt-4">
+                      En effectuant un paiement, vous acceptez que vos informations de paiement soient traitées par Stripe conformément à leur 
+                      <a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 underline ml-1">
+                        politique de confidentialité
+                      </a>.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 rounded-xl p-6 mt-4">
+                  <h3 className="text-xl font-semibold text-yellow-900 mb-3">⚠️ Important</h3>
+                  <p className="text-yellow-800 text-sm">
+                    En cas de problème de paiement ou de remboursement, veuillez nous contacter à <strong>support@envie2sortir.fr</strong>. 
+                    Les remboursements sont traités selon notre politique de remboursement et peuvent prendre 5 à 10 jours ouvrés.
+                  </p>
+                </div>
               </div>
             </div>
 

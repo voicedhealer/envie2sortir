@@ -86,11 +86,25 @@ function AuthContent() {
           })
         });
 
-        const result = await response.json();
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          console.error('❌ Erreur de parsing de la réponse:', parseError);
+          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
+          setLoading(false);
+          return;
+        }
 
         if (!response.ok || !result.success) {
-          console.error('❌ Erreur de connexion:', result);
-          setError(result.message || 'Email ou mot de passe incorrect');
+          const errorMessage = result?.message || result?.error || 'Email ou mot de passe incorrect';
+          console.error('❌ Erreur de connexion:', {
+            status: response.status,
+            message: errorMessage,
+            result: result
+          });
+          setError(errorMessage);
+          setLoading(false);
           return;
         }
 
@@ -173,8 +187,9 @@ function AuthContent() {
         stack: err?.stack,
         error: err
       });
-      const errorMessage = err?.message || err?.toString() || 'Une erreur est survenue';
+      const errorMessage = err?.message || err?.toString() || 'Une erreur est survenue lors de la connexion';
       setError(errorMessage);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
