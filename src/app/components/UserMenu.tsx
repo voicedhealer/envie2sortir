@@ -132,31 +132,42 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
             onClick={async () => {
               setShowUserMenu(false);
               
+              console.log('🚪 Déconnexion en cours...');
+              
+              // Nettoyer le localStorage immédiatement
+              if (typeof window !== 'undefined') {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith('sb-')) {
+                    keysToRemove.push(key);
+                  }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log('🧹 LocalStorage nettoyé');
+              }
+              
               try {
-                console.log('🚪 Déconnexion en cours...');
+                // Appeler l'API de déconnexion pour supprimer les cookies serveur
+                await fetch('/api/auth/signout', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
+                });
                 
-                await signOut();
+                // Tenter aussi la déconnexion côté client
+                await signOut().catch(e => console.warn('Client signOut error:', e));
                 
-                console.log('✅ SignOut réussi, redirection...');
-                
-                // Redirection manuelle après signOut
-                window.location.href = '/';
+                console.log('✅ Déconnexion réussie');
                 
               } catch (error) {
                 console.error('❌ Erreur lors de la déconnexion:', error);
-                
-                // Fallback: appel direct à l'API de déconnexion
-                try {
-                  console.log('🔄 Tentative de fallback avec API directe...');
-                  await fetch('/api/auth/signout', { method: 'POST' });
-                  console.log('✅ API signout appelée avec succès');
-                } catch (apiError) {
-                  console.error('❌ API signout échoué:', apiError);
-                }
-                
-                // Redirection forcée dans tous les cas
-                window.location.href = '/';
               }
+              
+              // Redirection forcée
+              console.log('🔄 Redirection...');
+              window.location.replace('/');
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >

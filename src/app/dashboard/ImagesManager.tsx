@@ -425,6 +425,30 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       setError(null);
       console.log('📤 Remplacement d\'image:', file.name);
 
+      // Compresser l'image si nécessaire
+      let fileToUpload = file;
+      const { compressImage, shouldCompressImage } = await import('@/lib/image-compression');
+      
+      if (shouldCompressImage(file, 5)) {
+        try {
+          console.log('🔄 Compression de l\'image...');
+          fileToUpload = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.85,
+            maxSizeMB: 5
+          });
+          const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          const compressedSizeMB = (fileToUpload.size / (1024 * 1024)).toFixed(2);
+          console.log(`✅ Image compressée: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
+        } catch (compressionError) {
+          console.error('❌ Erreur compression:', compressionError);
+          setError('Erreur lors de la compression. Veuillez utiliser une image plus petite.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Si on a déjà une image, on la supprime d'abord
       if (images.length > 0) {
         console.log('🗑️ Suppression de l\'ancienne image avant remplacement');
@@ -433,7 +457,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
       // Maintenant on peut uploader la nouvelle image
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', fileToUpload);
       formData.append('establishmentId', establishmentId);
 
       const response = await fetch('/api/upload/image', {
@@ -657,7 +681,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           }
           console.log('📁 Fichier sélectionné:', file.name, file.size, 'bytes');
           
-          // Appeler la fonction d'upload existante
+          // Vérifier la taille avant upload
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSize * 2) {
+            // Si le fichier est vraiment trop gros (plus de 10MB), avertir mais tenter quand même la compression
+            console.warn('⚠️ Fichier très volumineux, compression en cours...');
+          }
+          
+          // Appeler la fonction d'upload existante (qui compresse automatiquement)
           await handleFileUpload(file);
         }}
         className="hidden"

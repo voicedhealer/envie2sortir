@@ -156,13 +156,45 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
 
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('🚪 [SupabaseAuthContext] Starting sign out...');
+      
+      // Nettoyer l'état local immédiatement
       setUser(null);
       setSession(null);
-      // Rediriger vers la page d'accueil
-      window.location.href = '/';
+      
+      // Nettoyer le localStorage
+      if (typeof window !== 'undefined') {
+        // Supprimer tous les items Supabase du localStorage
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('sb-')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('🧹 [SupabaseAuthContext] LocalStorage cleaned');
+      }
+      
+      // Tenter la déconnexion Supabase avec timeout et scope global
+      const signOutPromise = supabase.auth.signOut({ scope: 'global' });
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('SignOut timeout')), 1000)
+      );
+      
+      await Promise.race([signOutPromise, timeoutPromise])
+        .catch(error => {
+          console.warn('⚠️ [SupabaseAuthContext] SignOut timeout or error:', error);
+          // Continuer quand même
+        });
+      
+      console.log('✅ [SupabaseAuthContext] Sign out completed');
+      
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error('❌ [SupabaseAuthContext] Error signing out:', error);
+      // Même en cas d'erreur, nettoyer l'état local
+      setUser(null);
+      setSession(null);
     }
   };
 

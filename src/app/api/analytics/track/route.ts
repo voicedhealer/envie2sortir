@@ -234,6 +234,66 @@ export async function GET(request: NextRequest) {
       hourLabel: `${hour.toString().padStart(2, '0')}h`,
     }));
 
+    // Statistiques des avis
+    const { data: comments, error: commentsError } = await supabase
+      .from('user_comments')
+      .select('rating, created_at')
+      .eq('establishment_id', establishmentId)
+      .gte('created_at', startDateISO)
+      .order('created_at', { ascending: false });
+
+    let reviewsStats = {
+      totalReviews: 0,
+      averageRating: 0,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      recentReviews: 0, // Avis des 7 derniers jours
+      trend: 'stable' as 'positive' | 'negative' | 'stable',
+      previousPeriodAverage: 0,
+    };
+
+    if (!commentsError && comments && comments.length > 0) {
+      const totalRating = comments.reduce((sum, c) => sum + (c.rating || 0), 0);
+      reviewsStats.totalReviews = comments.length;
+      reviewsStats.averageRating = totalRating / comments.length;
+
+      // Distribution des notes
+      comments.forEach((c: any) => {
+        const rating = c.rating || 0;
+        if (rating >= 1 && rating <= 5) {
+          reviewsStats.ratingDistribution[rating as keyof typeof reviewsStats.ratingDistribution]++;
+        }
+      });
+
+      // Avis récents (7 derniers jours)
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      reviewsStats.recentReviews = comments.filter((c: any) => 
+        new Date(c.created_at) >= new Date(sevenDaysAgo)
+      ).length;
+
+      // Calcul de la tendance (comparaison avec la période précédente)
+      const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime())).toISOString();
+      const { data: previousComments } = await supabase
+        .from('user_comments')
+        .select('rating')
+        .eq('establishment_id', establishmentId)
+        .gte('created_at', previousPeriodStart)
+        .lt('created_at', startDateISO);
+
+      if (previousComments && previousComments.length > 0) {
+        const previousTotalRating = previousComments.reduce((sum, c) => sum + (c.rating || 0), 0);
+        reviewsStats.previousPeriodAverage = previousTotalRating / previousComments.length;
+        
+        const diff = reviewsStats.averageRating - reviewsStats.previousPeriodAverage;
+        if (diff > 0.2) {
+          reviewsStats.trend = 'positive';
+        } else if (diff < -0.2) {
+          reviewsStats.trend = 'negative';
+        } else {
+          reviewsStats.trend = 'stable';
+        }
+      }
+    }
+
     return NextResponse.json({
       period,
       startDate,
@@ -241,6 +301,7 @@ export async function GET(request: NextRequest) {
       topElements: stats.slice(0, 10),
       statsByType,
       hourlyStats,
+      reviewsStats,
     });
   } catch (error) {
     console.error('Analytics retrieval error:', error);

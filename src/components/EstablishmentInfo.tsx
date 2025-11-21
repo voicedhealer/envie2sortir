@@ -802,6 +802,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-green-600 hover:text-green-800"
+                    onClick={() => trackLinkClick('thefork', 'TheFork', 'website')}
                   >
                     Réserver une table
                   </a>
@@ -819,6 +820,7 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-800"
+                    onClick={() => trackLinkClick('ubereats', 'Uber Eats', 'website')}
                   >
                     Commander en livraison
                   </a>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Calendar, Heart, Users, TrendingUp, ThumbsUp, ThumbsDown, Star, MessageSquare, TrendingDown } from 'lucide-react';
 
 interface AnalyticsData {
   period: string;
@@ -22,6 +22,14 @@ interface AnalyticsData {
     clicks: number;
     hourLabel: string;
   }>;
+  reviewsStats?: {
+    totalReviews: number;
+    averageRating: number;
+    ratingDistribution: { 1: number; 2: number; 3: number; 4: number; 5: number };
+    recentReviews: number;
+    trend: 'positive' | 'negative' | 'stable';
+    previousPeriodAverage: number;
+  };
 }
 
 
@@ -30,11 +38,39 @@ interface ClickAnalyticsDashboardProps {
   period?: '7d' | '30d' | '90d' | '1y';
 }
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+interface EventsAnalyticsData {
+  totalEvents: number;
+  totalEngagements: number;
+  statsByType: {
+    envie: number;
+    'grande-envie': number;
+    decouvrir: number;
+    'pas-envie': number;
+  };
+  totalScore: number;
+  eventsStats: Array<{
+    eventId: string;
+    title: string;
+    startDate: string;
+    endDate: string | null;
+    totalEngagements: number;
+    stats: {
+      envie: number;
+      'grande-envie': number;
+      decouvrir: number;
+      'pas-envie': number;
+    };
+    score: number;
+  }>;
+  period: string;
+  startDate: string;
+}
 
 export default function ClickAnalyticsDashboard({ establishmentId, period = '30d' }: ClickAnalyticsDashboardProps) {
   const [data, setData] = useState<AnalyticsData | null>(null);
+  const [eventsData, setEventsData] = useState<EventsAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [eventsLoading, setEventsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,7 +92,28 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
       }
     };
 
+    const fetchEventsAnalytics = async () => {
+      try {
+        setEventsLoading(true);
+        const response = await fetch(`/api/analytics/events?establishmentId=${establishmentId}&period=${period}`);
+        
+        if (!response.ok) {
+          // Ne pas bloquer si l'API échoue, juste ne pas afficher les stats d'événements
+          console.warn('Failed to fetch events analytics');
+          return;
+        }
+        
+        const eventsAnalyticsData = await response.json();
+        setEventsData(eventsAnalyticsData);
+      } catch (err) {
+        console.warn('Error fetching events analytics:', err);
+      } finally {
+        setEventsLoading(false);
+      }
+    };
+
     fetchAnalytics();
+    fetchEventsAnalytics();
   }, [establishmentId, period]);
 
   if (loading) {
@@ -226,112 +283,340 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
         </div>
       </div>
 
-      {/* Top 10 des éléments les plus cliqués */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">Top 10 des éléments les plus populaires</h4>
-        <div className="mb-4 text-sm text-gray-600">
-          <p>Classement des éléments les plus consultés par vos visiteurs.</p>
-        </div>
-        
-        {/* En-têtes du tableau */}
-        <div className="grid grid-cols-12 gap-4 mb-3 px-3">
-          <div className="col-span-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Rang
+      {/* Statistiques des avis */}
+      {data.reviewsStats && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <MessageSquare className="w-5 h-5 text-yellow-600" />
+            <h4 className="text-lg font-semibold text-gray-900">Statistiques des avis</h4>
           </div>
-          <div className="col-span-8 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Élément
+          <div className="mb-4 text-sm text-gray-600">
+            <p>Analyse des avis laissés par vos visiteurs et évolution de la satisfaction.</p>
           </div>
-          <div className="col-span-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Nombre de clics
-          </div>
-        </div>
-        
-        {/* Corps du tableau */}
-        <div className="space-y-2">
-          {data.topElements.slice(0, 10).map((element, index) => (
-            <div key={element.elementId} className="grid grid-cols-12 gap-4 items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-              <div className="col-span-1 text-center">
-                <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold mx-auto">
-                  {index + 1}
-                </div>
-              </div>
-              <div className="col-span-8">
-                <div className="font-medium text-gray-900">
-                  {element.elementName || element.elementId}
-                </div>
-                <div className="text-sm text-gray-500">
-                  {element.elementType === 'schedule' ? 'Horaires' : 
-                   element.elementType === 'section' ? 'Section' :
-                   element.elementType === 'link' ? 'Lien' :
-                   element.elementType === 'button' ? 'Bouton' :
-                   element.elementType} • {element.elementId}
-                </div>
-              </div>
-              <div className="col-span-3 text-right">
-                <div className="text-lg font-semibold text-gray-900">
-                  {element._count.id}
-                </div>
-                <div className="text-xs text-gray-500">clics</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Graphique de répartition par heure */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">Répartition des interactions par heure</h4>
-        <div className="mb-4 text-sm text-gray-600">
-          <p>Ce graphique montre les heures de la journée où vos visiteurs sont les plus actifs.</p>
-          <p>Utile pour identifier les créneaux de forte affluence et optimiser vos horaires d'ouverture.</p>
+          {data.reviewsStats.totalReviews === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">Aucun avis pour cette période.</p>
+            </div>
+          ) : (
+            <>
+              {/* Statistiques principales */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Star className="w-4 h-4 text-yellow-600" />
+                    <span className="text-sm font-medium text-yellow-800">Note moyenne</span>
+                  </div>
+                  <div className="text-2xl font-bold text-yellow-600">
+                    {data.reviewsStats.averageRating.toFixed(1)}
+                  </div>
+                  <div className="text-xs text-yellow-600 mt-1">sur 5 étoiles</div>
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MessageSquare className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Total avis</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {data.reviewsStats.totalReviews}
+                  </div>
+                  <div className="text-xs text-blue-600 mt-1">avis reçus</div>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Calendar className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">Avis récents</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {data.reviewsStats.recentReviews}
+                  </div>
+                  <div className="text-xs text-green-600 mt-1">7 derniers jours</div>
+                </div>
+
+                <div className={`rounded-lg p-4 ${
+                  data.reviewsStats.trend === 'positive' ? 'bg-green-50' :
+                  data.reviewsStats.trend === 'negative' ? 'bg-red-50' :
+                  'bg-gray-50'
+                }`}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    {data.reviewsStats.trend === 'positive' ? (
+                      <TrendingUp className="w-4 h-4 text-green-600" />
+                    ) : data.reviewsStats.trend === 'negative' ? (
+                      <TrendingDown className="w-4 h-4 text-red-600" />
+                    ) : (
+                      <TrendingUp className="w-4 h-4 text-gray-600" />
+                    )}
+                    <span className={`text-sm font-medium ${
+                      data.reviewsStats.trend === 'positive' ? 'text-green-800' :
+                      data.reviewsStats.trend === 'negative' ? 'text-red-800' :
+                      'text-gray-800'
+                    }`}>
+                      Tendance
+                    </span>
+                  </div>
+                  <div className={`text-lg font-bold ${
+                    data.reviewsStats.trend === 'positive' ? 'text-green-600' :
+                    data.reviewsStats.trend === 'negative' ? 'text-red-600' :
+                    'text-gray-600'
+                  }`}>
+                    {data.reviewsStats.trend === 'positive' ? '📈 En hausse' :
+                     data.reviewsStats.trend === 'negative' ? '📉 En baisse' :
+                     '➡️ Stable'}
+                  </div>
+                  {data.reviewsStats.previousPeriodAverage > 0 && (
+                    <div className={`text-xs mt-1 ${
+                      data.reviewsStats.trend === 'positive' ? 'text-green-600' :
+                      data.reviewsStats.trend === 'negative' ? 'text-red-600' :
+                      'text-gray-600'
+                    }`}>
+                      vs {data.reviewsStats.previousPeriodAverage.toFixed(1)} précédemment
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Distribution des notes */}
+              <div className="mb-6">
+                <h5 className="font-medium text-gray-900 mb-3">Répartition des notes</h5>
+                <div className="space-y-2">
+                  {[5, 4, 3, 2, 1].map((rating) => {
+                    const count = data.reviewsStats.ratingDistribution[rating as keyof typeof data.reviewsStats.ratingDistribution];
+                    const percentage = data.reviewsStats.totalReviews > 0 
+                      ? (count / data.reviewsStats.totalReviews) * 100 
+                      : 0;
+                    const isPositive = rating >= 4;
+                    
+                    return (
+                      <div key={rating} className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-1 w-16">
+                          <span className="text-sm font-medium text-gray-700">{rating}</span>
+                          <Star className={`w-4 h-4 ${isPositive ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`} />
+                        </div>
+                        <div className="flex-1 bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              isPositive ? 'bg-green-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-xs font-medium text-gray-700">
+                              {count} avis ({percentage.toFixed(0)}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Insights */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h5 className="text-sm font-medium text-blue-800 mb-2">💡 Insights</h5>
+                <div className="text-sm text-blue-700 space-y-1">
+                  {data.reviewsStats.averageRating >= 4.5 ? (
+                    <p>Excellent ! Vos clients sont très satisfaits. Continuez ainsi ! ⭐</p>
+                  ) : data.reviewsStats.averageRating >= 4 ? (
+                    <p>Très bon score ! Vos clients sont satisfaits. 🎉</p>
+                  ) : data.reviewsStats.averageRating >= 3 ? (
+                    <p>Score correct. Il y a de la marge pour améliorer la satisfaction client.</p>
+                  ) : (
+                    <p>Attention : Le score est en dessous de la moyenne. Analysez les avis négatifs pour améliorer l'expérience client.</p>
+                  )}
+                  {data.reviewsStats.recentReviews > 0 && (
+                    <p className="mt-2">
+                      <strong>{data.reviewsStats.recentReviews}</strong> nou{data.reviewsStats.recentReviews > 1 ? 'veaux' : 'vel'} avis cette semaine.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart 
-            data={data.hourlyStats}
-            layout="horizontal"
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis 
-              type="number"
-              domain={[0, 'dataMax']}
-              tickFormatter={(value) => Math.round(value).toString()}
-            />
-            <YAxis 
-              type="category" 
-              dataKey="hourLabel"
-              width={60}
-              tick={{ fontSize: 12 }}
-            />
-            <Tooltip 
-              labelFormatter={(value) => `Heure: ${value}`}
-              formatter={(value) => [value, 'Interactions']}
-            />
-            <Bar 
-              dataKey="clicks" 
-              fill="#10B981" 
-              radius={[0, 4, 4, 0]}
-              maxBarSize={20}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-        
-        {/* Légende et insights */}
-        <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <h5 className="text-sm font-medium text-green-800 mb-2">💡 Insights :</h5>
-          <div className="text-sm text-green-700">
-            {data.hourlyStats.length > 0 && (
-              <p>
-                Heure la plus active : <strong>
-                  {data.hourlyStats.reduce((max, hour) => hour.clicks > max.clicks ? hour : max).hourLabel}h
-                </strong> avec <strong>
-                  {data.hourlyStats.reduce((max, hour) => hour.clicks > max.clicks ? hour : max).clicks}
-                </strong> interactions
-              </p>
-            )}
+      )}
+
+      {/* Statistiques des événements */}
+      {!eventsLoading && eventsData && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center space-x-2 mb-4">
+            <Calendar className="w-5 h-5 text-orange-600" />
+            <h4 className="text-lg font-semibold text-gray-900">Statistiques des événements</h4>
           </div>
+          <div className="mb-4 text-sm text-gray-600">
+            <p>Analyse des interactions et votes sur vos événements.</p>
+          </div>
+
+          {eventsData.totalEvents === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600">Aucun événement avec des interactions pour cette période.</p>
+            </div>
+          ) : (
+            <>
+              {/* Statistiques globales */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-800">Événements</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">{eventsData.totalEvents}</div>
+                  <div className="text-xs text-blue-600 mt-1">Total événements</div>
+                </div>
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Users className="w-4 h-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-800">Interactions</span>
+                  </div>
+                  <div className="text-2xl font-bold text-green-600">{eventsData.totalEngagements}</div>
+                  <div className="text-xs text-green-600 mt-1">Total votes</div>
+                </div>
+
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-800">Score</span>
+                  </div>
+                  <div className="text-2xl font-bold text-purple-600">{eventsData.totalScore}</div>
+                  <div className="text-xs text-purple-600 mt-1">Score total</div>
+                </div>
+
+                <div className="bg-orange-50 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Heart className="w-4 h-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-800">Moyenne</span>
+                  </div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {eventsData.totalEvents > 0 
+                      ? Math.round(eventsData.totalEngagements / eventsData.totalEvents)
+                      : 0}
+                  </div>
+                  <div className="text-xs text-orange-600 mt-1">Votes/événement</div>
+                </div>
+              </div>
+
+              {/* Répartition par type d'engagement */}
+              <div className="mb-6">
+                <h5 className="font-medium text-gray-900 mb-3">Répartition des votes</h5>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-green-800">Grande envie</span>
+                      <ThumbsUp className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="text-xl font-bold text-green-600">{eventsData.statsByType['grande-envie']}</div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {eventsData.totalEngagements > 0 
+                        ? Math.round((eventsData.statsByType['grande-envie'] / eventsData.totalEngagements) * 100)
+                        : 0}%
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-blue-800">Découvrir</span>
+                      <Users className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div className="text-xl font-bold text-blue-600">{eventsData.statsByType.decouvrir}</div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {eventsData.totalEngagements > 0 
+                        ? Math.round((eventsData.statsByType.decouvrir / eventsData.totalEngagements) * 100)
+                        : 0}%
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-yellow-800">Envie</span>
+                      <Heart className="w-4 h-4 text-yellow-600" />
+                    </div>
+                    <div className="text-xl font-bold text-yellow-600">{eventsData.statsByType.envie}</div>
+                    <div className="text-xs text-yellow-600 mt-1">
+                      {eventsData.totalEngagements > 0 
+                        ? Math.round((eventsData.statsByType.envie / eventsData.totalEngagements) * 100)
+                        : 0}%
+                    </div>
+                  </div>
+
+                  <div className="bg-red-50 rounded-lg p-3 border border-red-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-red-800">Pas envie</span>
+                      <ThumbsDown className="w-4 h-4 text-red-600" />
+                    </div>
+                    <div className="text-xl font-bold text-red-600">{eventsData.statsByType['pas-envie']}</div>
+                    <div className="text-xs text-red-600 mt-1">
+                      {eventsData.totalEngagements > 0 
+                        ? Math.round((eventsData.statsByType['pas-envie'] / eventsData.totalEngagements) * 100)
+                        : 0}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top événements */}
+              {eventsData.eventsStats.length > 0 && (
+                <div>
+                  <h5 className="font-medium text-gray-900 mb-3">Événements les plus interactifs</h5>
+                  <div className="space-y-3">
+                    {eventsData.eventsStats.slice(0, 5).map((event, index) => {
+                      const totalEventEngagements = Object.values(event.stats).reduce((a, b) => a + b, 0);
+                      return (
+                        <div key={event.eventId} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <div className="w-6 h-6 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-sm font-semibold">
+                                  {index + 1}
+                                </div>
+                                <h6 className="font-medium text-gray-900">{event.title}</h6>
+                              </div>
+                              <div className="text-sm text-gray-500 ml-8 mb-3">
+                                {new Date(event.startDate).toLocaleDateString('fr-FR', {
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                              <div className="grid grid-cols-4 gap-2 ml-8">
+                                <div className="text-center">
+                                  <div className="text-sm font-semibold text-green-600">{event.stats['grande-envie']}</div>
+                                  <div className="text-xs text-gray-500">Grande envie</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm font-semibold text-blue-600">{event.stats.decouvrir}</div>
+                                  <div className="text-xs text-gray-500">Découvrir</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm font-semibold text-yellow-600">{event.stats.envie}</div>
+                                  <div className="text-xs text-gray-500">Envie</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-sm font-semibold text-red-600">{event.stats['pas-envie']}</div>
+                                  <div className="text-xs text-gray-500">Pas envie</div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right ml-4">
+                              <div className="text-2xl font-bold text-gray-900">{totalEventEngagements}</div>
+                              <div className="text-xs text-gray-500">interactions</div>
+                              <div className="text-sm font-semibold text-purple-600 mt-1">Score: {event.score}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
-      </div>
+      )}
     </div>
   );
 }

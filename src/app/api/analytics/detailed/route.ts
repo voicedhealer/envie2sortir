@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
           mostViewedDay: null,
         },
         contactStats: [],
+        linkStats: [],
       });
     }
 
@@ -282,6 +283,64 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.clicks - a.clicks);
 
+    // Statistiques des liens (réseaux sociaux et sites web)
+    const linkAnalytics = formattedAnalytics.filter(a => a.elementType === 'link');
+    const linkMap = new Map<string, { linkName: string; linkUrl?: string; clicks: number }>();
+    
+    linkAnalytics.forEach(analytics => {
+      const linkId = analytics.elementId;
+      const linkName = analytics.elementName || `Lien ${linkId}`;
+      
+      // Essayer d'extraire l'URL ou le type de lien depuis elementName ou elementId
+      let linkUrl: string | undefined;
+      let linkType = 'website';
+      
+      // Détecter le type de lien depuis le nom ou l'ID
+      const lowerName = linkName.toLowerCase();
+      const lowerId = linkId.toLowerCase();
+      
+      if (lowerName.includes('instagram') || lowerId.includes('instagram')) {
+        linkType = 'instagram';
+      } else if (lowerName.includes('facebook') || lowerId.includes('facebook')) {
+        linkType = 'facebook';
+      } else if (lowerName.includes('tiktok') || lowerId.includes('tiktok')) {
+        linkType = 'tiktok';
+      } else if (lowerName.includes('youtube') || lowerId.includes('youtube')) {
+        linkType = 'youtube';
+      } else if (lowerName.includes('twitter') || lowerName.includes('x.com') || lowerId.includes('twitter')) {
+        linkType = 'twitter';
+      } else if (lowerName.includes('linkedin') || lowerId.includes('linkedin')) {
+        linkType = 'linkedin';
+      } else if (lowerName.includes('thefork') || lowerId.includes('thefork')) {
+        linkType = 'thefork';
+      } else if (lowerName.includes('ubereats') || lowerId.includes('ubereats') || lowerName.includes('uber eats')) {
+        linkType = 'ubereats';
+      } else if (lowerName.includes('http') || lowerId.includes('http')) {
+        linkType = 'website';
+        linkUrl = linkName.startsWith('http') ? linkName : linkId.startsWith('http') ? linkId : undefined;
+      }
+      
+      const linkKey = `${linkType}-${linkId}`;
+      if (!linkMap.has(linkKey)) {
+        linkMap.set(linkKey, { linkName, linkUrl, clicks: 0 });
+      }
+      linkMap.get(linkKey)!.clicks++;
+    });
+
+    const totalLinkClicks = Array.from(linkMap.values()).reduce((sum, link) => sum + link.clicks, 0);
+    const linkStats = Array.from(linkMap.entries())
+      .map(([linkKey, link]) => {
+        const linkType = linkKey.split('-')[0];
+        return {
+          linkType,
+          linkName: link.linkName,
+          linkUrl: link.linkUrl,
+          clicks: link.clicks,
+          percentage: totalLinkClicks > 0 ? (link.clicks / totalLinkClicks) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.clicks - a.clicks);
+
     return NextResponse.json({
       totalInteractions,
       uniqueVisitors,
@@ -296,6 +355,7 @@ export async function GET(request: NextRequest) {
         mostViewedDay,
       },
       contactStats,
+      linkStats,
     });
 
   } catch (error) {

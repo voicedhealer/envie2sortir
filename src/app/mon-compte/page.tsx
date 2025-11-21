@@ -600,7 +600,33 @@ function MonCompteContent() {
                   <div className="mt-8 pt-6 border-t border-gray-200 space-y-4">
                     <button
                       onClick={async () => {
-                        await signOut({ callbackUrl: '/' });
+                        try {
+                          // Nettoyer le localStorage
+                          if (typeof window !== 'undefined') {
+                            const keysToRemove = [];
+                            for (let i = 0; i < localStorage.length; i++) {
+                              const key = localStorage.key(i);
+                              if (key && key.startsWith('sb-')) {
+                                keysToRemove.push(key);
+                              }
+                            }
+                            keysToRemove.forEach(key => localStorage.removeItem(key));
+                          }
+                          
+                          // Appeler l'API de déconnexion
+                          await fetch('/api/auth/signout', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json'
+                            }
+                          });
+                          
+                          await signOut().catch(e => console.warn('SignOut error:', e));
+                          window.location.replace('/');
+                        } catch (error) {
+                          console.error('Erreur déconnexion:', error);
+                          window.location.replace('/');
+                        }
                       }}
                       className="flex items-center text-red-600 hover:text-red-700"
                     >
