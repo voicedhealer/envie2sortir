@@ -113,10 +113,20 @@ export async function getCurrentUser() {
 
 /**
  * Vérifie si l'utilisateur est un admin
+ * ✅ Utilise les métadonnées JWT au lieu de lire la table users
  */
 export async function isAdmin(): Promise<boolean> {
-  const user = await getCurrentUser();
-  return user?.role === 'admin';
+  const supabase = await createClient();
+  
+  // Récupérer l'utilisateur directement depuis l'auth (pas besoin de lire users)
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return false;
+  }
+  
+  // Vérifier le rôle dans les métadonnées JWT
+  return user.app_metadata?.role === 'admin';
 }
 
 /**
