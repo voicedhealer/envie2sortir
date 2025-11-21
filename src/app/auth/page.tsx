@@ -119,12 +119,9 @@ function AuthContent() {
 
         console.log('✅ Redirection vers:', redirectUrl);
         
-        // La session Supabase est déjà créée par l'API route
-        // Attendre un peu pour que le contexte se synchronise
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Rediriger vers l'URL de callback
-        router.push(decodeURIComponent(redirectUrl));
+        // La session Supabase est déjà créée par l'API route avec des cookies
+        // Forcer un rechargement complet de la page pour que le client Supabase puisse lire les cookies
+        window.location.href = decodeURIComponent(redirectUrl);
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');

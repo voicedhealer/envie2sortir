@@ -165,6 +165,26 @@ export async function POST(request: NextRequest) {
         break;
       }
 
+      case 'subscription_schedule.created':
+      case 'subscription_schedule.updated': {
+        const schedule = event.data.object as Stripe.SubscriptionSchedule;
+        console.log(`📅 Subscription Schedule ${event.type}:`, schedule.id);
+        
+        // Récupérer l'abonnement associé
+        if (schedule.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(
+            schedule.subscription as string
+          );
+          const professionalId = subscription.metadata?.professional_id;
+          
+          if (professionalId) {
+            console.log(`✅ Schedule créé/mis à jour pour le professionnel ${professionalId}`);
+            // Le changement sera visible lors de la prochaine récupération de l'abonnement
+          }
+        }
+        break;
+      }
+
       default:
         console.log(`Événement non géré: ${event.type}`);
     }

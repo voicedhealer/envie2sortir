@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { MessageSquare } from 'lucide-react';
 import { Icons } from '@/components/Icons';
 
 interface SubscriptionData {
@@ -12,6 +13,12 @@ interface SubscriptionData {
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
     canceledAt: string | null;
+    planType?: 'monthly' | 'annual';
+    scheduledChange?: {
+      newPriceId: string;
+      effectiveDate: string;
+      planType: 'monthly' | 'annual';
+    } | null;
   } | null;
   plan: 'FREE' | 'PREMIUM';
 }
@@ -23,7 +30,9 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [canceling, setCanceling] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     loadSubscription();
@@ -106,11 +115,13 @@ export default function SubscriptionPage() {
     }
   };
 
-  const handleCancel = async () => {
-    if (!confirm('Êtes-vous sûr de vouloir annuler votre abonnement ? Il restera actif jusqu\'à la fin de la période en cours.')) {
-      return;
-    }
+  const handleCancel = () => {
+    setShowCancelModal(true);
+  };
 
+  const confirmCancel = async () => {
+    setShowCancelModal(false);
+    
     try {
       setCanceling(true);
       const response = await fetch('/api/stripe/subscription', {
@@ -147,6 +158,34 @@ export default function SubscriptionPage() {
       setError(err.message);
     } finally {
       setReactivating(false);
+    }
+  };
+
+  const handleChangeToAnnual = async () => {
+    try {
+      setChangingPlan(true);
+      setError(null);
+
+      const response = await fetch('/api/stripe/subscription', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newPlanType: 'annual' }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erreur lors du changement de plan');
+      }
+
+      const result = await response.json();
+      alert(`✅ ${result.message}`);
+      await loadSubscription();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setChangingPlan(false);
     }
   };
 
@@ -268,7 +307,11 @@ export default function SubscriptionPage() {
                   <h2 className="text-2xl font-bold text-gray-900">
                     Plan Premium
                   </h2>
-                  <p className="text-gray-600 mt-1">29,90€/mois</p>
+                  <p className="text-gray-600 mt-1">
+                    {subscription?.subscription?.planType === 'annual' 
+                      ? '305€/an (25,42€/mois)' 
+                      : '29,90€/mois'}
+                  </p>
                 </div>
                 <span className="px-4 py-2 bg-[#ff751f] text-white rounded-full font-semibold">
                   Actif
@@ -285,7 +328,53 @@ export default function SubscriptionPage() {
                     </p>
                   </div>
 
-                  {subscription.subscription.cancelAtPeriodEnd ? (
+                  {/* Message si un changement est programmé */}
+                  {subscription.subscription.scheduledChange && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-blue-800 font-semibold mb-2">
+                        📅 Changement programmé
+                      </p>
+                      <p className="text-blue-700 text-sm">
+                        Votre abonnement passera au plan{' '}
+                        <span className="font-semibold">
+                          {subscription.subscription.scheduledChange.planType === 'annual' 
+                            ? 'Annuel (305€/an)' 
+                            : 'Mensuel (29,90€/mois)'}
+                        </span>{' '}
+                        le {new Date(subscription.subscription.scheduledChange.effectiveDate).toLocaleDateString('fr-FR')}.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bouton pour passer à l'annuel si abonnement mensuel */}
+                  {subscription.subscription.planType === 'monthly' && !subscription.subscription.scheduledChange && !subscription.subscription.cancelAtPeriodEnd && (
+                    <div className="p-4 bg-gradient-to-br from-green-50 to-white border border-green-200 rounded-lg">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-green-800 font-semibold mb-2">
+                            💰 Économisez avec le plan annuel !
+                          </p>
+                          <p className="text-green-700 text-sm mb-3">
+                            Passez au plan annuel et économisez 15% (53,80€/an). Le changement prendra effet à la fin de votre période mensuelle actuelle.
+                          </p>
+                          <ul className="text-xs text-green-600 space-y-1 mb-3">
+                            <li>✓ Prix : <span className="font-semibold">305€/an</span> au lieu de 358,80€</li>
+                            <li>✓ Soit <span className="font-semibold">25,42€/mois</span> au lieu de 29,90€</li>
+                            <li>✓ Changement automatique le {new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}</li>
+                          </ul>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleChangeToAnnual}
+                        disabled={changingPlan}
+                        className="w-full bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50"
+                      >
+                        {changingPlan ? 'Programmation...' : 'Passer au plan annuel'}
+                      </button>
+                    </div>
+                  )}
+
+                  {subscription.subscription.cancelAtPeriodEnd && (
                     <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
                       <p className="text-orange-800 font-semibold mb-2">
                         ⚠️ Abonnement annulé
@@ -302,14 +391,6 @@ export default function SubscriptionPage() {
                         {reactivating ? 'Réactivation...' : 'Réactiver l\'abonnement'}
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      onClick={handleCancel}
-                      disabled={canceling}
-                      className="bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
-                    >
-                      {canceling ? 'Annulation...' : 'Annuler l\'abonnement'}
-                    </button>
                   )}
                 </div>
               )}
@@ -343,10 +424,153 @@ export default function SubscriptionPage() {
                   </li>
                 </ul>
               </div>
+
+              {/* Bouton d'annulation en bas de page */}
+              {subscription?.subscription && !subscription.subscription.cancelAtPeriodEnd && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    onClick={handleCancel}
+                    disabled={canceling}
+                    className="bg-transparent text-red-600 border-2 border-red-600 px-6 py-2 rounded-lg font-semibold hover:bg-red-50 transition-colors disabled:opacity-50"
+                  >
+                    {canceling ? 'Annulation...' : 'Annuler l\'abonnement'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation d'annulation */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Nous sommes désolés de vous voir arrêter votre plan Premium
+                </h2>
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <Icons.X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Message principal avec bouton messagerie */}
+              <div className="mb-6">
+                <p className="text-gray-700 mb-3">
+                  Voulez-vous nous en parler ?
+                </p>
+                <div className="flex items-center gap-3 mb-4">
+                  <button
+                    onClick={() => {
+                      setShowCancelModal(false);
+                      router.push('/dashboard/messagerie');
+                    }}
+                    className="bg-[#ff751f] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#ff8a3d] transition-colors flex items-center gap-2"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Rejoindre la messagerie
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Votre abonnement restera actif jusqu'au{' '}
+                  {subscription?.subscription?.currentPeriodEnd 
+                    ? new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      })
+                    : 'la fin de la période en cours'
+                  }.
+                </p>
+                
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+                  <p className="text-orange-800 font-semibold mb-2">
+                    ⚠️ Attention : En passant au plan gratuit, vous perdrez :
+                  </p>
+                </div>
+              </div>
+
+              {/* Liste des fonctionnalités perdues */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <ul className="space-y-3 text-sm text-gray-700">
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Effet Papillon :</span> Vous ne pourrez plus ajouter que 1 photo au lieu de 5
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Badge Premium :</span> Votre établissement perdra son badge Premium et sa mise en avant visuelle
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Événements :</span> Vous ne pourrez plus créer d'événements temporaires pour promouvoir votre établissement
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Bons Plans :</span> Vous ne pourrez plus publier de bons plans quotidiens pour attirer plus de clients
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Visibilité :</span> Votre établissement ne sera plus mis en avant prioritairement dans les résultats de recherche
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Analytics :</span> Vous perdrez l'accès aux statistiques avancées et au profil détaillé de vos visiteurs
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-red-600 font-bold mt-0.5">✗</span>
+                    <div>
+                      <span className="font-semibold text-gray-900">Support :</span> Vous n'aurez plus accès au support client prioritaire et dédié
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Message de rassurance */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-blue-800 text-sm">
+                  💡 <strong>Bon à savoir :</strong> Vous pourrez réactiver votre abonnement Premium à tout moment depuis cette page, sans perdre vos données.
+                </p>
+              </div>
+
+              {/* Boutons d'action */}
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={() => setShowCancelModal(false)}
+                  className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                >
+                  Conserver mon abonnement
+                </button>
+                <button
+                  onClick={confirmCancel}
+                  disabled={canceling}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {canceling ? 'Annulation...' : 'Oui, annuler mon abonnement'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus, ArrowLeft } from "lucide-react";
@@ -16,7 +16,14 @@ export default function MessagingPage() {
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Redirection si non authentifié ou pas pro
+  // Redirection si non authentifié ou pas pro (dans useEffect pour éviter l'erreur React)
+  useEffect(() => {
+    if (!loading && (!session?.user || (session.user.userType !== "professional" && session.user.role !== "professional"))) {
+      router.push("/auth");
+    }
+  }, [loading, session, router]);
+
+  // Affichage du chargement
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -25,9 +32,13 @@ export default function MessagingPage() {
     );
   }
 
+  // Si pas de session ou pas professionnel, ne rien afficher (redirection en cours)
   if (!session?.user || (session.user.userType !== "professional" && session.user.role !== "professional")) {
-    router.push("/auth");
-    return null;
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-gray-500">Redirection...</div>
+      </div>
+    );
   }
 
   const handleConversationCreated = (conversationId: string) => {
