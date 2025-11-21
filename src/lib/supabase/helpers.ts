@@ -129,29 +129,16 @@ export async function isProfessional(): Promise<boolean> {
 
 /**
  * Récupère l'établissement d'un professionnel
+ * ✅ Utilise RLS - l'utilisateur doit être authentifié et propriétaire
  */
 export async function getProfessionalEstablishment(professionalId: string) {
   console.log('🔍 Recherche établissement pour professionalId:', professionalId);
   
-  // Utiliser le client admin pour contourner RLS
-  // On sait déjà que l'utilisateur est authentifié et est le propriétaire
-  const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est propriétaire
+  const { createClient } = await import('@/lib/supabase/server');
+  const supabase = await createClient();
   
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('❌ Variables d\'environnement Supabase manquantes');
-    return null;
-  }
-  
-  const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  });
-  
-  const { data, error } = await adminClient
+  const { data, error } = await supabase
     .from('establishments')
     .select('*')
     .eq('owner_id', professionalId)

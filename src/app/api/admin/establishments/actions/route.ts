@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { isAdmin, getCurrentUser } from '@/lib/supabase/helpers';
-import { createClient as createAdminClient } from '@supabase/supabase-js';
 
 // Actions sur les établissements avec historique
 export async function PATCH(request: NextRequest) {
@@ -15,21 +14,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ message: 'Utilisateur non trouvé' }, { status: 401 });
     }
 
-    // Utiliser le client ADMIN pour contourner les RLS
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.error('❌ Variables d\'environnement manquantes pour le client admin');
-      return NextResponse.json({ message: 'Configuration serveur manquante' }, { status: 500 });
-    }
-
-    const supabase = createAdminClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est admin
+    // La politique RLS "Only owner or admin can update establishments" garantit
+    // que seuls les admins peuvent modifier tous les établissements
+    const supabase = await createClient();
     const { establishmentId, action, reason } = await request.json();
 
     if (!establishmentId || !action) {

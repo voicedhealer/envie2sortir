@@ -10,26 +10,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels et admins authentifiés)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('❌ [Messaging Conversations GET] Clés Supabase manquantes');
-      return NextResponse.json(
-        { error: 'Configuration Supabase manquante' },
-        { status: 500 }
-      );
-    }
-
-    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
-      auth: { persistSession: false }
-    });
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
+    // Les politiques RLS pour conversations et messages garantissent que :
+    // - Les professionnels voient leurs conversations
+    // - Les admins voient toutes les conversations
+    const supabase = await createClient();
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const unreadOnly = searchParams.get("unreadOnly") === "true";
+    const limit = parseInt(searchParams.get("limit") || "20"); // Limiter à 20 conversations
+    const page = parseInt(searchParams.get("page") || "1");
+    const offset = (page - 1) * limit;
 
     let conversations;
 
@@ -56,7 +48,8 @@ export async function GET(request: NextRequest) {
             email
           )
         `)
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false })
+        .range(offset, offset + limit - 1); // Pagination
 
       if (status) {
         query = query.eq('status', status);
@@ -69,26 +62,43 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
       }
 
-      // Récupérer le dernier message et le count pour chaque conversation
-      conversations = await Promise.all((conversationsData || []).map(async (conv: any) => {
-        const [lastMessageResult, unreadCountResult] = await Promise.all([
-          supabase
-            .from('messages')
-            .select('id, content, created_at, sender_type, is_read')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single(),
-          supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .eq('is_read', false)
-            .eq('sender_type', 'PROFESSIONAL')
-        ]);
-
-        const lastMessage = lastMessageResult.data;
-        const unreadCount = unreadCountResult.count || 0;
+      // Optimisation: Récupérer tous les IDs de conversations
+      const conversationIds = (conversationsData || []).map((conv: any) => conv.id);
+      
+      // Récupérer tous les derniers messages en une seule requête
+      const { data: allLastMessages } = await supabase
+        .from('messages')
+        .select('id, content, created_at, sender_type, is_read, conversation_id')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: false });
+      
+      // Grouper les messages par conversation_id et prendre le premier
+      const lastMessagesByConv = new Map<string, any>();
+      allLastMessages?.forEach((msg: any) => {
+        if (!lastMessagesByConv.has(msg.conversation_id)) {
+          lastMessagesByConv.set(msg.conversation_id, msg);
+        }
+      });
+      
+      // Récupérer tous les counts de messages non lus en une seule requête
+      const { data: allUnreadMessages } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .in('conversation_id', conversationIds)
+        .eq('is_read', false)
+        .eq('sender_type', 'PROFESSIONAL');
+      
+      // Compter les messages non lus par conversation
+      const unreadCountsByConv = new Map<string, number>();
+      allUnreadMessages?.forEach((msg: any) => {
+        const count = unreadCountsByConv.get(msg.conversation_id) || 0;
+        unreadCountsByConv.set(msg.conversation_id, count + 1);
+      });
+      
+      // Construire les conversations avec les données récupérées
+      conversations = (conversationsData || []).map((conv: any) => {
+        const lastMessage = lastMessagesByConv.get(conv.id);
+        const unreadCount = unreadCountsByConv.get(conv.id) || 0;
 
         const professional = Array.isArray(conv.professional) ? conv.professional[0] : conv.professional;
         const admin = Array.isArray(conv.admin) ? conv.admin[0] : conv.admin;
@@ -124,7 +134,7 @@ export async function GET(request: NextRequest) {
             messages: unreadCount
           }
         };
-      }));
+      });
 
       // Filtrer par messages non lus si demandé
       if (unreadOnly) {
@@ -151,7 +161,8 @@ export async function GET(request: NextRequest) {
           )
         `)
         .eq('professional_id', user.id)
-        .order('last_message_at', { ascending: false });
+        .order('last_message_at', { ascending: false})
+        .range(offset, offset + limit - 1); // Pagination
 
       if (status) {
         query = query.eq('status', status);
@@ -164,26 +175,43 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
       }
 
-      // Récupérer le dernier message et le count pour chaque conversation
-      conversations = await Promise.all((conversationsData || []).map(async (conv: any) => {
-        const [lastMessageResult, unreadCountResult] = await Promise.all([
-          supabase
-            .from('messages')
-            .select('id, content, created_at, sender_type, is_read')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single(),
-          supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('conversation_id', conv.id)
-            .eq('is_read', false)
-            .eq('sender_type', 'ADMIN')
-        ]);
-
-        const lastMessage = lastMessageResult.data;
-        const unreadCount = unreadCountResult.count || 0;
+      // Optimisation: Récupérer tous les IDs de conversations
+      const conversationIds = (conversationsData || []).map((conv: any) => conv.id);
+      
+      // Récupérer tous les derniers messages en une seule requête
+      const { data: allLastMessages } = await supabase
+        .from('messages')
+        .select('id, content, created_at, sender_type, is_read, conversation_id')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: false });
+      
+      // Grouper les messages par conversation_id et prendre le premier
+      const lastMessagesByConv = new Map<string, any>();
+      allLastMessages?.forEach((msg: any) => {
+        if (!lastMessagesByConv.has(msg.conversation_id)) {
+          lastMessagesByConv.set(msg.conversation_id, msg);
+        }
+      });
+      
+      // Récupérer tous les counts de messages non lus en une seule requête
+      const { data: allUnreadMessages } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .in('conversation_id', conversationIds)
+        .eq('is_read', false)
+        .eq('sender_type', 'ADMIN');
+      
+      // Compter les messages non lus par conversation
+      const unreadCountsByConv = new Map<string, number>();
+      allUnreadMessages?.forEach((msg: any) => {
+        const count = unreadCountsByConv.get(msg.conversation_id) || 0;
+        unreadCountsByConv.set(msg.conversation_id, count + 1);
+      });
+      
+      // Construire les conversations avec les données récupérées
+      conversations = (conversationsData || []).map((conv: any) => {
+        const lastMessage = lastMessagesByConv.get(conv.id);
+        const unreadCount = unreadCountsByConv.get(conv.id) || 0;
 
         const professional = Array.isArray(conv.professional) ? conv.professional[0] : conv.professional;
         const admin = Array.isArray(conv.admin) ? conv.admin[0] : conv.admin;
@@ -219,7 +247,7 @@ export async function GET(request: NextRequest) {
             messages: unreadCount
           }
         };
-      }));
+      });
 
       // Filtrer par messages non lus si demandé
       if (unreadOnly) {
@@ -250,22 +278,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { subject, professionalId, initialMessage } = body;
 
-    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels et admins authentifiés)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('❌ [Messaging Conversations] Clés Supabase manquantes');
-      return NextResponse.json(
-        { error: 'Configuration Supabase manquante' },
-        { status: 500 }
-      );
-    }
-
-    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
-      auth: { persistSession: false }
-    });
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
+    const supabase = await createClient();
 
     if (!subject || !initialMessage) {
       return NextResponse.json(

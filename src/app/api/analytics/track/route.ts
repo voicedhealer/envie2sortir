@@ -96,22 +96,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      console.error('❌ [Analytics] Clés Supabase manquantes');
-      return NextResponse.json(
-        { error: 'Configuration Supabase manquante' },
-        { status: 500 }
-      );
-    }
-
-    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
-      auth: { persistSession: false }
-    });
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est propriétaire
+    const supabase = await createClient();
 
     // Vérifier le plan d'abonnement de l'établissement
     const { data: establishment, error: establishmentError } = await supabase

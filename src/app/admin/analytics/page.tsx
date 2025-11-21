@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { BarChart3, TrendingUp, Users, Eye, Building2 } from 'lucide-react';
@@ -24,6 +24,7 @@ export default function AdminAnalyticsPage() {
   const hasRedirectedRef = useRef(false);
   const hasFetchedRef = useRef(false);
 
+  // Vérification d'authentification (séparée du fetch)
   useEffect(() => {
     if (sessionLoading) return;
     
@@ -40,11 +41,13 @@ export default function AdminAnalyticsPage() {
       router.push('/dashboard');
       return;
     }
+  }, [sessionLoading, session, router]);
 
-    // Éviter les appels multiples
-    if (!session || session.user?.role !== 'admin' || hasFetchedRef.current) {
-      return;
-    }
+  // Fetch des données (une seule fois quand la session est prête)
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || session.user?.role !== 'admin') return;
+    if (hasFetchedRef.current) return;
 
     const fetchEstablishmentsAnalytics = async () => {
       try {
@@ -58,6 +61,7 @@ export default function AdminAnalyticsPage() {
         
         const data = await response.json();
         setEstablishments(data);
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
         hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
@@ -67,7 +71,8 @@ export default function AdminAnalyticsPage() {
     };
 
     fetchEstablishmentsAnalytics();
-  }, [session, sessionLoading]); // Retirer router des dépendances
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading, session?.user?.id, session?.user?.role]); // Utiliser les valeurs primitives
 
   if (sessionLoading || loading) {
     return (
