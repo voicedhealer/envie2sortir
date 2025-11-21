@@ -18,22 +18,26 @@ export async function GET(request: NextRequest) {
 
     if (isUserAdmin) {
       // Compter les messages non lus des professionnels
-      const { count, error: countError } = await supabase
+      // Utiliser une requête SELECT normale puis compter côté serveur pour éviter les problèmes RLS avec count
+      const { data: messages, error: countError } = await supabase
         .from('messages')
-        .select('*', { count: 'exact', head: true })
+        .select('id')
         .eq('sender_type', 'PROFESSIONAL')
         .eq('is_read', false);
 
       if (countError) {
-        console.error('Erreur comptage messages:', countError);
-        console.error('Détails erreur:', JSON.stringify(countError, null, 2));
+        console.error('❌ Erreur comptage messages (admin):', countError);
+        console.error('❌ Code:', countError.code);
+        console.error('❌ Message:', countError.message);
+        console.error('❌ Détails:', JSON.stringify(countError, null, 2));
         return NextResponse.json({ 
           error: "Erreur serveur",
-          details: countError.message || 'Erreur RLS lors du comptage'
+          details: countError.message || 'Erreur RLS lors du comptage',
+          code: countError.code
         }, { status: 500 });
       }
 
-      unreadCount = count || 0;
+      unreadCount = messages?.length || 0;
     } else if (user.userType === "professional") {
       // Compter les messages non lus de l'admin dans les conversations du pro
       const { data: conversations, error: conversationsError } = await supabase
@@ -49,19 +53,27 @@ export async function GET(request: NextRequest) {
       const conversationIds = (conversations || []).map((c: any) => c.id);
 
       if (conversationIds.length > 0) {
-        const { count, error: countError } = await supabase
+        // Utiliser une requête SELECT normale puis compter côté serveur
+        const { data: messages, error: countError } = await supabase
           .from('messages')
-          .select('*', { count: 'exact', head: true })
+          .select('id')
           .in('conversation_id', conversationIds)
           .eq('sender_type', 'ADMIN')
           .eq('is_read', false);
 
         if (countError) {
-          console.error('Erreur comptage messages:', countError);
-          return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+          console.error('❌ Erreur comptage messages (pro):', countError);
+          console.error('❌ Code:', countError.code);
+          console.error('❌ Message:', countError.message);
+          console.error('❌ Détails:', JSON.stringify(countError, null, 2));
+          return NextResponse.json({ 
+            error: "Erreur serveur",
+            details: countError.message || 'Erreur RLS lors du comptage',
+            code: countError.code
+          }, { status: 500 });
         }
 
-        unreadCount = count || 0;
+        unreadCount = messages?.length || 0;
       }
     } else {
       return NextResponse.json({ error: "Accès non autorisé" }, { status: 403 });
