@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
-import { Download, Mail, Users, TrendingUp, Calendar, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Download, Mail, Users, TrendingUp, Calendar, Trash2, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import { toast } from '@/lib/fake-toast';
 
 interface NewsletterSubscriber {
@@ -159,6 +159,33 @@ export default function NewsletterDashboard() {
       }
     } catch (error) {
       toast.error('Erreur lors de la modification');
+    }
+  };
+
+  const verifySubscriber = async (subscriberId: string) => {
+    try {
+      const response = await fetch('/api/admin/newsletter/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriberId })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSubscribers(prev => prev.map(sub => 
+          sub.id === subscriberId 
+            ? { ...sub, isVerified: true }
+            : sub
+        ));
+        // Rafraîchir les stats
+        fetchStats();
+        toast.success(data.message || 'Email vérifié avec succès');
+      } else {
+        toast.error(data.error);
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la vérification');
     }
   };
 
@@ -366,6 +393,15 @@ export default function NewsletterDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
+                        {!subscriber.isVerified && subscriber.newsletterOptIn && (
+                          <button
+                            onClick={() => verifySubscriber(subscriber.id)}
+                            className="p-2 rounded-lg transition-colors text-green-600 hover:bg-green-50"
+                            title="Vérifier l'email"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => toggleSubscription(subscriber.id, subscriber.newsletterOptIn)}
                           className={`p-2 rounded-lg transition-colors ${

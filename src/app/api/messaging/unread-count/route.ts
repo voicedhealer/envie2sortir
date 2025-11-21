@@ -26,7 +26,11 @@ export async function GET(request: NextRequest) {
 
       if (countError) {
         console.error('Erreur comptage messages:', countError);
-        return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+        console.error('Détails erreur:', JSON.stringify(countError, null, 2));
+        return NextResponse.json({ 
+          error: "Erreur serveur",
+          details: countError.message || 'Erreur RLS lors du comptage'
+        }, { status: 500 });
       }
 
       unreadCount = count || 0;

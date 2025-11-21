@@ -83,7 +83,8 @@ export default function AdminRecherchesPage() {
     }
 
     fetchSearchAnalytics();
-  }, [session, sessionLoading, fetchSearchAnalytics]); // Retirer router et period des dépendances
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, session?.user?.role, sessionLoading, period]); // Utiliser des valeurs primitives pour éviter les re-renders
 
   if (sessionLoading || loading) {
     return (
