@@ -63,16 +63,25 @@ export async function GET(request: NextRequest) {
       planType = 'monthly';
     }
 
-    // Vérifier si un changement est programmé
+    // Vérifier si un changement est programmé ou une annulation
     let scheduledChange = null;
+    let isCanceledViaSchedule = false;
+    
     if (subscription.schedule) {
       try {
         const schedule = await stripe.subscriptionSchedules.retrieve(subscription.schedule as string);
         console.log('📅 Schedule trouvé:', {
           scheduleId: schedule.id,
           phasesCount: schedule.phases.length,
+          endBehavior: schedule.end_behavior,
           currentTime: Math.floor(Date.now() / 1000),
         });
+        
+        // Vérifier si le schedule est configuré pour annuler
+        if (schedule.end_behavior === 'cancel') {
+          isCanceledViaSchedule = true;
+          console.log('⚠️ Annulation détectée via schedule');
+        }
         
         // Chercher la phase actuelle et les phases futures
         const now = Math.floor(Date.now() / 1000);
@@ -123,13 +132,16 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Si annulé via schedule, on considère que cancelAtPeriodEnd est true
+    const cancelAtPeriodEnd = subscription.cancel_at_period_end || isCanceledViaSchedule;
+    
     return NextResponse.json({
       subscription: {
         id: subscription.id,
         status: subscription.status,
         currentPeriodStart: new Date(subscription.current_period_start * 1000).toISOString(),
         currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        cancelAtPeriodEnd: cancelAtPeriodEnd,
         canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000).toISOString() : null,
         planType,
         scheduledChange,
@@ -188,8 +200,59 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Annuler l'abonnement à la fin de la période en cours
-    const subscription = await stripe.subscriptions.update(
+    // Récupérer l'abonnement pour vérifier s'il a un schedule
+    const subscription = await stripe.subscriptions.retrieve(
+      professional.stripe_subscription_id
+    );
+
+    // Si l'abonnement est géré par un Subscription Schedule, il faut modifier le schedule
+    if (subscription.schedule) {
+      const scheduleId = subscription.schedule as string;
+      const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      
+      // Annuler le schedule à la fin de la période actuelle
+      // On modifie le schedule pour qu'il se termine à la fin de la période en cours
+      const currentPeriodEnd = subscription.current_period_end;
+      
+      // Récupérer la phase actuelle
+      const now = Math.floor(Date.now() / 1000);
+      const currentPhase = schedule.phases.find(phase => 
+        phase.start_date <= now && 
+        (phase.end_date === null || phase.end_date > now)
+      ) || schedule.phases[0];
+      
+      if (currentPhase) {
+        // Mettre à jour le schedule pour qu'il se termine à la fin de la période actuelle
+        await stripe.subscriptionSchedules.update(scheduleId, {
+          phases: [
+            {
+              items: currentPhase.items.map(item => ({
+                price: typeof item.price === 'string' ? item.price : item.price?.id || '',
+                quantity: item.quantity || 1,
+              })),
+              start_date: currentPhase.start_date,
+              end_date: currentPeriodEnd,
+            },
+          ],
+          end_behavior: 'cancel',
+        });
+        
+        // Récupérer l'abonnement mis à jour
+        const updatedSubscription = await stripe.subscriptions.retrieve(
+          professional.stripe_subscription_id
+        );
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Abonnement annulé. Il restera actif jusqu\'à la fin de la période en cours.',
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: new Date(currentPeriodEnd * 1000).toISOString(),
+        });
+      }
+    }
+
+    // Si pas de schedule, annuler directement l'abonnement
+    const updatedSubscription = await stripe.subscriptions.update(
       professional.stripe_subscription_id,
       {
         cancel_at_period_end: true,
@@ -199,8 +262,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Abonnement annulé. Il restera actif jusqu\'à la fin de la période en cours.',
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
+      currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000).toISOString(),
     });
 
   } catch (error: any) {
@@ -488,8 +551,51 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Réactiver l'abonnement
-    const subscription = await stripe.subscriptions.update(
+    // Récupérer l'abonnement pour vérifier s'il a un schedule
+    const subscription = await stripe.subscriptions.retrieve(
+      professional.stripe_subscription_id
+    );
+
+    // Si l'abonnement est géré par un Subscription Schedule, il faut modifier le schedule
+    if (subscription.schedule) {
+      const scheduleId = subscription.schedule as string;
+      const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      
+      // Si le schedule est configuré pour annuler, on le supprime pour réactiver
+      if (schedule.end_behavior === 'cancel') {
+        // Supprimer le schedule pour réactiver l'abonnement
+        await stripe.subscriptionSchedules.cancel(scheduleId);
+        console.log(`✅ Schedule ${scheduleId} annulé, abonnement réactivé`);
+      } else {
+        // Sinon, modifier le schedule pour qu'il continue
+        const now = Math.floor(Date.now() / 1000);
+        const currentPhase = schedule.phases.find(phase => 
+          phase.start_date <= now && 
+          (phase.end_date === null || phase.end_date > now)
+        ) || schedule.phases[0];
+        
+        if (currentPhase) {
+          // Modifier le schedule pour qu'il continue indéfiniment
+          await stripe.subscriptionSchedules.update(scheduleId, {
+            end_behavior: 'release', // Continue après la dernière phase
+          });
+        }
+      }
+      
+      // Récupérer l'abonnement mis à jour
+      const updatedSubscription = await stripe.subscriptions.retrieve(
+        professional.stripe_subscription_id
+      );
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Abonnement réactivé avec succès.',
+        cancelAtPeriodEnd: false,
+      });
+    }
+
+    // Si pas de schedule, réactiver directement l'abonnement
+    const updatedSubscription = await stripe.subscriptions.update(
       professional.stripe_subscription_id,
       {
         cancel_at_period_end: false,
@@ -499,7 +605,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'Abonnement réactivé avec succès.',
-      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      cancelAtPeriodEnd: updatedSubscription.cancel_at_period_end,
     });
 
   } catch (error: any) {

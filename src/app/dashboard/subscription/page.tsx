@@ -328,8 +328,38 @@ export default function SubscriptionPage() {
                     </p>
                   </div>
 
-                  {/* Message si un changement est programmé */}
-                  {subscription.subscription.scheduledChange && (
+                  {/* Message d'annulation programmée - Prioritaire et visible */}
+                  {subscription.subscription.cancelAtPeriodEnd && (
+                    <div className="p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0">
+                          <span className="text-2xl">⚠️</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-orange-900 font-bold text-base mb-1">
+                            Annulation prévue le {new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}
+                          </p>
+                          <p className="text-orange-800 text-sm mb-3">
+                            Votre abonnement Premium restera actif jusqu'au{' '}
+                            <span className="font-semibold">
+                              {new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}
+                            </span>.
+                            Après cette date, votre compte repassera automatiquement en plan Basic (Gratuit).
+                          </p>
+                          <button
+                            onClick={handleReactivate}
+                            disabled={reactivating}
+                            className="bg-[#ff751f] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#ff8a3d] transition-colors disabled:opacity-50"
+                          >
+                            {reactivating ? 'Réactivation...' : 'Réactiver l\'abonnement'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Message si un changement est programmé (mais pas d'annulation) */}
+                  {subscription.subscription.scheduledChange && !subscription.subscription.cancelAtPeriodEnd && (
                     <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-blue-800 font-semibold mb-2">
                         📅 Changement programmé
@@ -374,24 +404,6 @@ export default function SubscriptionPage() {
                     </div>
                   )}
 
-                  {subscription.subscription.cancelAtPeriodEnd && (
-                    <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-                      <p className="text-orange-800 font-semibold mb-2">
-                        ⚠️ Abonnement annulé
-                      </p>
-                      <p className="text-orange-700 text-sm mb-4">
-                        Votre abonnement restera actif jusqu'au{' '}
-                        {new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR')}.
-                      </p>
-                      <button
-                        onClick={handleReactivate}
-                        disabled={reactivating}
-                        className="bg-[#ff751f] text-white px-4 py-2 rounded-lg font-semibold hover:bg-[#ff8a3d] transition-colors disabled:opacity-50"
-                      >
-                        {reactivating ? 'Réactivation...' : 'Réactiver l\'abonnement'}
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
 
