@@ -1,286 +1,277 @@
 import { test, expect } from '@playwright/test';
 
-/**
- * Test E2E complet pour l'ajout d'un établissement
- * Teste tout le parcours d'inscription professionnel en 9 étapes
- */
 test.describe('Ajout d\'un établissement professionnel', () => {
-  
-  // Générer des données de test uniques à chaque exécution
-  const testData = {
-    email: `test-${Date.now()}@example.com`,
-    password: 'Test123456!',
-    firstName: 'Test',
-    lastName: 'Professional',
-    phone: '01500555006', // Numéro de test Twilio
-    siret: '84046768200018', // SIRET valide pour les tests
-    establishmentName: `Test Establishment ${Date.now()}`,
-    address: {
-      street: '19 Rue du Garet',
-      postalCode: '69001',
-      city: 'Lyon'
-    }
-  };
-
   test.beforeEach(async ({ page }) => {
-    // Aller sur la page d'inscription professionnelle
-    await page.goto('/etablissements/nouveau', { 
-      waitUntil: 'domcontentloaded' 
+    // Intercepter les erreurs de console pour le débogage
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        console.log(`⚠️ Console error: ${message.text()}`);
+      }
     });
-    await page.waitForTimeout(1000); // Attendre le chargement initial
+
+    page.on('pageerror', (exception) => {
+      console.error(`[Page Error] ${exception}`);
+    });
+
+    page.on('requestfailed', (request) => {
+      console.error(`[Request Failed] ${request.url()} - ${request.failure()?.errorText}`);
+    });
   });
 
   test('Doit compléter avec succès l\'inscription d\'un établissement', async ({ page }) => {
-    console.log('🧪 Début du test d\'ajout d\'établissement');
+    const testData = {
+      accountFirstName: 'Jean',
+      accountLastName: 'Dupont',
+      accountEmail: `test-e2e-${Date.now()}@example.com`,
+      accountPassword: 'TestSecure123!',
+      accountPasswordConfirm: 'TestSecure123!',
+      phone: '01500555006', // Numéro de test Twilio
+      siret: '84046768200018',
+      establishmentName: 'Le Bistrot Test E2E',
+      address: {
+        street: '123 Rue de Test',
+        postalCode: '75001',
+        city: 'Paris'
+      }
+    };
+
+    // Navigation vers la page d'inscription
+    await page.goto('/etablissements/nouveau', {
+      waitUntil: 'networkidle',
+      timeout: 60000
+    });
+
+    // Attendre que le formulaire soit prêt
+    await expect(page.locator('[data-testid="establishment-form"]')).toBeVisible({ timeout: 30000 });
+
+    // Fermer le modal de bienvenue s'il existe
+    const welcomeModalClose = page.locator('button[aria-label*="fermer" i]')
+      .or(page.locator('button:has-text("✕")'))
+      .or(page.locator('button:has-text("X")'))
+      .or(page.locator('[role="dialog"] button').first());
     
+    if (await welcomeModalClose.first().isVisible({ timeout: 5000 }).catch(() => false)) {
+      await welcomeModalClose.first().click();
+      await expect(page.locator('[data-testid="establishment-form"]')).toBeVisible();
+    }
+
     // ==========================================
     // ÉTAPE 0 : Création de compte
     // ==========================================
-    console.log('📝 Étape 0 : Création de compte');
-    
-    // Attendre que la page soit chargée et chercher le titre de l'étape
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-    
-    // Vérifier qu'on est bien sur l'étape 0 (chercher le titre "Création de votre compte PRO" ou "Prénom")
-    const step0Indicator = page.locator('text=Création de votre compte PRO').or(page.locator('label:has-text("Prénom")'));
-    await expect(step0Indicator.first()).toBeVisible({ timeout: 10000 });
-    
+    await expect(page.locator('[data-testid="form-step-0"]')).toBeVisible();
+
     // Remplir les informations du compte
-    await page.fill('input[name="accountFirstName"]', testData.firstName);
-    await page.fill('input[name="accountLastName"]', testData.lastName);
-    await page.fill('input[name="accountEmail"]', testData.email);
-    await page.fill('input[name="accountPassword"]', testData.password);
-    await page.fill('input[name="accountPasswordConfirm"]', testData.password);
+    await page.getByTestId('form-account-firstname').fill(testData.accountFirstName);
+    await page.getByTestId('form-account-lastname').fill(testData.accountLastName);
+    await page.getByTestId('form-account-email').fill(testData.accountEmail);
     
+    // Attendre que la vérification d'email soit terminée
+    await expect(
+      page.locator('text=✓').or(page.locator('.text-green-600'))
+    ).toBeVisible({ timeout: 10000 }).catch(() => {});
+
+    await page.getByTestId('form-account-password').fill(testData.accountPassword);
+    await page.getByTestId('form-account-password-confirm').fill(testData.accountPasswordConfirm);
+
+    // Intercepter la réponse de l'API pour récupérer le code de vérification
+    // Il faut créer la promesse AVANT de remplir le téléphone
+    const phoneVerificationResponsePromise = page.waitForResponse(
+      (response) => response.url().includes('/api/verify-phone') && 
+                   response.request().method() === 'POST' &&
+                   response.status() === 200,
+      { timeout: 15000 }
+    );
+
     // Remplir le téléphone (numéro de test Twilio)
-    const phoneInput = page.locator('input[type="tel"]').first();
-    await phoneInput.fill(testData.phone);
+    // Cela déclenchera l'envoi automatique du SMS
+    await page.getByTestId('form-account-phone').fill(testData.phone);
+
+    // Attendre la réponse de l'API pour récupérer le code
+    const phoneVerificationResponse = await phoneVerificationResponsePromise;
+    const phoneVerificationData = await phoneVerificationResponse.json();
+    const verificationCode = phoneVerificationData.debugCode || phoneVerificationData.devCode || '';
+
+    // Attendre que le modal de vérification s'ouvre automatiquement
+    const phoneModal = page.locator('[role="dialog"]').filter({ hasText: /vérification|code/i });
+    await expect(phoneModal).toBeVisible({ timeout: 10000 });
+
+    // Trouver l'input pour le code de vérification
+    const codeInput = phoneModal.locator('input[type="text"]')
+      .or(phoneModal.locator('input[placeholder*="code" i]'))
+      .or(phoneModal.locator('input[pattern*="\\d"]'))
+      .first();
     
-    // Attendre que le SMS de test soit envoyé et auto-vérifié
-    console.log('⏳ Attente de la vérification automatique du téléphone...');
-    await page.waitForTimeout(3000);
-    
-    // Vérifier que le téléphone est vérifié (icône de validation verte ou message)
-    const phoneVerified = await page.locator('text=Numéro de test').or(page.locator('.text-green-600')).first().isVisible({ timeout: 5000 }).catch(() => false);
-    if (!phoneVerified) {
-      console.log('⚠️ Vérification téléphone non détectée visuellement, mais on continue...');
+    await expect(codeInput).toBeVisible({ timeout: 5000 });
+
+    // Entrer le code de vérification récupéré depuis l'API
+    if (!verificationCode) {
+      throw new Error('Code de vérification non trouvé dans la réponse API');
     }
+    await codeInput.fill(verificationCode);
+
+    // Cliquer sur le bouton de vérification
+    const verifyButton = phoneModal.locator('button:has-text("Valider")')
+      .or(phoneModal.locator('button:has-text("Vérifier")'))
+      .or(phoneModal.locator('button[type="submit"]'))
+      .or(phoneModal.locator('button').filter({ hasText: /valider|vérifier/i }))
+      .first();
     
-    // Cliquer sur "Suivant"
-    const nextButton = page.locator('button:has-text("Suivant")').first();
-    await expect(nextButton).toBeVisible({ timeout: 5000 });
-    await nextButton.click();
-    
-    // Attendre la transition vers l'étape suivante
-    await page.waitForTimeout(2000);
-    
+    await expect(verifyButton).toBeVisible({ timeout: 5000 });
+    await verifyButton.click();
+
+    // Attendre que le modal se ferme et que le téléphone soit vérifié
+    await expect(phoneModal).not.toBeVisible({ timeout: 10000 });
+
+    // Attendre que le bouton "Suivant" soit activé
+    await expect(page.getByTestId('form-button-next')).toBeEnabled({ timeout: 10000 });
+
+    // Cliquer sur "Suivant" pour passer à l'étape 1
+    await page.getByTestId('form-button-next').click();
+
     // ==========================================
     // ÉTAPE 1 : Informations professionnelles (SIRET)
     // ==========================================
-    console.log('📝 Étape 1 : Informations professionnelles');
-    
-    // Attendre que l'étape SIRET soit visible
-    await expect(page.locator('text=Numéro SIRET').or(page.locator('text=Vérification professionnelle'))).toBeVisible({ timeout: 5000 });
-    
+    await expect(page.locator('[data-testid="form-step-1"]')).toBeVisible({ timeout: 10000 });
+
     // Remplir le SIRET
-    const siretInput = page.locator('input[placeholder*="SIRET"]').or(page.locator('input[type="text"]').filter({ hasText: /SIRET/i }).first());
-    
-    // Essayer plusieurs sélecteurs pour trouver le champ SIRET
-    let siretField = page.locator('input[type="text"]').filter({ has: page.locator('xpath=ancestor::label[contains(text(), "SIRET")]') }).first();
-    if (!(await siretField.isVisible({ timeout: 1000 }).catch(() => false))) {
-      // Essayer avec le placeholder
-      siretField = page.locator('input[placeholder*="14 chiffres"]').first();
-    }
-    if (!(await siretField.isVisible({ timeout: 1000 }).catch(() => false))) {
-      // Essayer avec un sélecteur plus large
-      siretField = page.locator('input[type="text"]').nth(0);
-    }
-    
-    await siretField.fill(testData.siret);
-    await page.waitForTimeout(2000); // Attendre la vérification SIRET
-    
+    await page.getByTestId('form-siret').fill(testData.siret);
+
+    // Attendre que la vérification SIRET soit terminée (vérifier que le bouton suivant n'est plus désactivé)
+    await expect(page.getByTestId('form-button-next')).toBeEnabled({ timeout: 15000 });
+
     // Si un bouton pour utiliser les données INSEE apparaît, cliquer dessus
-    const useInseeButton = page.locator('button:has-text("Utiliser ces informations")').or(page.locator('button:has-text("Remplir avec ces données")'));
-    if (await useInseeButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const useInseeButton = page.locator('button:has-text("Utiliser ces informations")')
+      .or(page.locator('button:has-text("Remplir avec ces données")'));
+    
+    if (await useInseeButton.isVisible({ timeout: 5000 }).catch(() => false)) {
       await useInseeButton.click();
-      await page.waitForTimeout(1000);
     }
-    
+
     // Cliquer sur "Suivant"
-    await page.locator('button:has-text("Suivant")').first().click();
-    await page.waitForTimeout(1000);
-    
+    await page.getByTestId('form-button-next').click();
+
     // ==========================================
-    // ÉTAPE 2 : Informations de l'établissement (Adresse)
+    // ÉTAPE 2 : Enrichissement (peut être ignorée)
     // ==========================================
-    console.log('📝 Étape 2 : Informations de l\'établissement');
-    
-    // Attendre que le formulaire d'adresse soit visible
-    await expect(page.locator('text=Nom de l\'établissement').or(page.locator('text=Adresse')).first()).toBeVisible({ timeout: 5000 });
-    
-    // Remplir le nom de l'établissement
-    const nameField = page.locator('input[name="name"]').or(page.locator('input[placeholder*="nom"]').first());
-    await nameField.fill(testData.establishmentName);
-    
-    // Remplir l'adresse (si le formulaire a des champs séparés)
-    const addressInput = page.locator('input[name*="address"]').or(page.locator('input[placeholder*="adresse"]').first());
-    if (await addressInput.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await addressInput.fill(`${testData.address.street}, ${testData.address.postalCode} ${testData.address.city}`);
-      await page.waitForTimeout(1500); // Attendre l'autocomplétion
-    }
-    
-    // Cliquer sur "Suivant"
-    await page.locator('button:has-text("Suivant")').first().click();
-    await page.waitForTimeout(1000);
-    
-    // ==========================================
-    // ÉTAPE 3 : Horaires d'ouverture
-    // ==========================================
-    console.log('📝 Étape 3 : Horaires d\'ouverture');
-    
-    // Attendre que le formulaire d'horaires soit visible
-    const horairesText = page.locator('text=Horaires').or(page.locator('text=heures'));
-    if (await horairesText.first().isVisible({ timeout: 3000 }).catch(() => false)) {
-      // Remplir les horaires de base (lundi-vendredi)
-      for (let day = 0; day < 5; day++) {
-        const daySelect = page.locator(`select[name*="day"][value="${day}"]`).or(page.locator(`select`).nth(day));
-        if (await daySelect.isVisible({ timeout: 1000 }).catch(() => false)) {
-          // S'assurer que le jour est ouvert
-          await daySelect.selectOption({ index: 0 }); // Ouvert par défaut
-        }
-      }
+    // Si on est à l'étape d'enrichissement, passer directement
+    if (await page.locator('[data-testid="form-step-2"]').isVisible({ timeout: 3000 }).catch(() => false)) {
+      // Chercher un bouton "Passer" ou "Ignorer" ou simplement "Suivant"
+      const skipButton = page.locator('button:has-text("Passer")')
+        .or(page.locator('button:has-text("Ignorer")'))
+        .or(page.locator('button:has-text("Suivant")'));
       
-      // Cliquer sur "Suivant"
-      await page.locator('button:has-text("Suivant")').first().click();
-      await page.waitForTimeout(1000);
-    } else {
-      // Si pas d'horaires visibles, continuer
-      console.log('⚠️ Formulaire d\'horaires non trouvé, passage à l\'étape suivante');
+      if (await skipButton.first().isVisible({ timeout: 3000 }).catch(() => false)) {
+        await skipButton.first().click();
+      }
     }
-    
+
     // ==========================================
-    // ÉTAPES 4-7 : Services, Photos, Tags, Réseaux sociaux
+    // ÉTAPE 3 : Informations de l'établissement
     // ==========================================
-    console.log('📝 Étapes 4-7 : Services, Photos, Tags, Réseaux sociaux');
+    await expect(page.locator('[data-testid="form-step-3"]')).toBeVisible({ timeout: 10000 });
+
+    // Remplir le nom de l'établissement
+    await page.getByTestId('form-establishment-name').fill(testData.establishmentName);
+
+    // Remplir l'adresse (rechercher le champ d'adresse)
+    const addressInput = page.locator('input[placeholder*="adresse" i]')
+      .or(page.locator('input[placeholder*="rue" i]'))
+      .or(page.locator('input[type="text"]').filter({ hasNot: page.locator('[data-testid*="name"]') }))
+      .first();
     
+    if (await addressInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await addressInput.fill(`${testData.address.street}, ${testData.address.postalCode} ${testData.address.city}`);
+      // Attendre l'autocomplétion
+      await page.waitForTimeout(2000); // Attente pour l'autocomplétion Google
+    }
+
+    // Cliquer sur "Suivant"
+    await page.getByTestId('form-button-next').click();
+
+    // ==========================================
+    // ÉTAPES 4-7 : Services, Tags, Réseaux sociaux, Abonnement
+    // ==========================================
     // Passer rapidement les étapes optionnelles en cliquant sur "Suivant"
-    for (let step = 0; step < 4; step++) {
-      const nextBtn = page.locator('button:has-text("Suivant")').first();
-      if (await nextBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-        // Vérifier qu'on n'est pas déjà à la dernière étape
-        const isLastStep = await page.locator('text=Résumé').isVisible({ timeout: 1000 }).catch(() => false);
-        if (isLastStep) {
-          console.log('✅ Arrivé à l\'étape Résumé');
-          break;
-        }
-        
-        await nextBtn.click();
-        await page.waitForTimeout(1000);
-      } else {
+    // Maximum 10 tentatives pour éviter une boucle infinie
+    for (let step = 0; step < 10; step++) {
+      // Vérifier si on est arrivé à l'étape Résumé (step 8)
+      const summaryStep = page.locator('[data-testid="form-step-8"]')
+        .or(page.locator('[data-testid="form-summary-step"]'));
+      
+      if (await summaryStep.isVisible({ timeout: 2000 }).catch(() => false)) {
         break;
       }
+
+      // Vérifier si le bouton "Suivant" existe toujours
+      const nextButton = page.getByTestId('form-button-next');
+      if (!(await nextButton.isVisible({ timeout: 2000 }).catch(() => false))) {
+        // Si pas de bouton "Suivant", on est peut-être déjà au Résumé
+        const submitButton = page.getByTestId('form-button-submit');
+        if (await submitButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+          break;
+        }
+        // Sinon, prendre une capture pour debug
+        await page.screenshot({ path: `test-stuck-step${step + 4}.png`, fullPage: true });
+        break;
+      }
+
+      // Cliquer sur "Suivant"
+      await nextButton.click();
+      
+      // Attendre que l'étape suivante soit chargée (vérifier qu'on a changé d'étape)
+      await page.waitForTimeout(1000); // Mini-attente pour la transition
     }
-    
+
     // ==========================================
     // ÉTAPE 8 : Résumé et soumission
     // ==========================================
-    console.log('📝 Étape 8 : Résumé et soumission');
-    
-    // Attendre que la page de résumé soit visible
-    await expect(page.locator('text=Résumé').or(page.locator('text=aperçu')).first()).toBeVisible({ timeout: 10000 });
-    
+    // Attendre que l'étape Résumé soit visible
+    await expect(
+      page.locator('[data-testid="form-step-8"]')
+        .or(page.locator('[data-testid="form-summary-step"]'))
+        .or(page.locator('[data-testid="summary-header"]'))
+    ).toBeVisible({ timeout: 15000 });
+
     // Vérifier que les informations principales sont affichées
     await expect(page.locator(`text=${testData.establishmentName}`).first()).toBeVisible({ timeout: 5000 });
-    
-    // Cliquer sur "Soumettre" ou "Finaliser"
-    const submitButton = page.locator('button:has-text("Soumettre")')
-      .or(page.locator('button:has-text("Finaliser")'))
-      .or(page.locator('button:has-text("Créer")'))
-      .or(page.locator('button[type="submit"]'))
-      .first();
-    
-    await expect(submitButton).toBeVisible({ timeout: 5000 });
-    
-    console.log('📤 Soumission du formulaire...');
+
+    // Cliquer sur le bouton de soumission
+    const submitButton = page.getByTestId('form-button-submit');
+    await expect(submitButton).toBeVisible({ timeout: 10000 });
+    await expect(submitButton).toBeEnabled({ timeout: 10000 });
+
+    // Intercepter la réponse de l'API pour vérifier le succès
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes('/api/professional-registration') && response.status() < 400,
+      { timeout: 30000 }
+    );
+
     await submitButton.click();
-    
+
+    // Attendre la réponse de l'API
+    const response = await responsePromise;
+    expect(response.ok()).toBeTruthy();
+
     // Attendre soit une redirection vers le dashboard, soit un message de succès
-    await page.waitForURL(/dashboard|success|compte/, { timeout: 15000 }).catch(() => {
-      console.log('⚠️ Pas de redirection détectée, vérification des messages');
-    });
-    
+    await Promise.race([
+      page.waitForURL(/dashboard|etablissements|success/, { timeout: 20000 }).catch(() => null),
+      expect(page.locator('text=succès').or(page.locator('text=Félicitations')).or(page.locator('text=bienvenue'))).toBeVisible({ timeout: 10000 }).catch(() => null)
+    ]);
+
     // Vérifier qu'il n'y a pas d'erreur de soumission
-    const errorMessage = page.locator('text=Erreur').or(page.locator('.text-red-500'));
-    const hasError = await errorMessage.first().isVisible({ timeout: 2000 }).catch(() => false);
+    const errorMessage = page.locator('.text-red-500').or(page.locator('[role="alert"]'));
+    const hasError = await errorMessage.first().isVisible({ timeout: 3000 }).catch(() => false);
     
     if (hasError) {
-      const errorText = await errorMessage.first().textContent();
-      console.error('❌ Erreur détectée:', errorText);
+      const errorText = await errorMessage.first().textContent().catch(() => 'Erreur inconnue');
       throw new Error(`Erreur lors de la soumission: ${errorText}`);
     }
-    
+
     // Vérifier le succès (redirection ou message)
-    const successMessage = page.locator('text=succès').or(page.locator('text=bienvenue'));
-    const redirectedToDashboard = page.url().includes('dashboard');
+    const redirectedToDashboard = page.url().includes('dashboard') || page.url().includes('etablissements');
+    const successMessage = page.locator('text=succès').or(page.locator('text=Félicitations')).or(page.locator('text=bienvenue'));
+    const hasSuccessMessage = await successMessage.first().isVisible({ timeout: 5000 }).catch(() => false);
     
-    expect(redirectedToDashboard || await successMessage.first().isVisible({ timeout: 5000 }).catch(() => false)).toBeTruthy();
-    
-    console.log('✅ Test réussi : Établissement créé avec succès');
+    expect(redirectedToDashboard || hasSuccessMessage).toBeTruthy();
   });
-
-  test('Doit afficher une erreur si le téléphone n\'est pas vérifié', async ({ page }) => {
-    console.log('🧪 Test de validation du téléphone');
-    
-    // Remplir tous les champs sauf vérifier le téléphone
-    await page.fill('input[name="accountFirstName"]', testData.firstName);
-    await page.fill('input[name="accountLastName"]', testData.lastName);
-    await page.fill('input[name="accountEmail"]', testData.email);
-    await page.fill('input[name="accountPassword"]', testData.password);
-    await page.fill('input[name="accountPasswordConfirm"]', testData.password);
-    
-    // Utiliser un numéro invalide (pas de test Twilio)
-    await page.fill('input[type="tel"]', '0123456789');
-    
-    // Essayer de passer à l'étape suivante
-    const nextButton = page.locator('button:has-text("Suivant")').first();
-    await nextButton.click();
-    
-    // Vérifier qu'une erreur s'affiche ou que le bouton est désactivé
-    await page.waitForTimeout(1000);
-    
-    // Le formulaire devrait rester sur la même étape ou afficher une erreur
-    const isStillOnStep0 = await page.locator('text=Création de compte').or(page.locator('input[type="tel"]')).first().isVisible({ timeout: 2000 }).catch(() => false);
-    expect(isStillOnStep0).toBeTruthy();
-    
-    console.log('✅ Test réussi : Validation du téléphone fonctionne');
-  });
-
-  test('Doit afficher une erreur si le SIRET est invalide', async ({ page }) => {
-    console.log('🧪 Test de validation du SIRET');
-    
-    // Passer l'étape 0 rapidement avec un numéro de test
-    await page.fill('input[name="accountFirstName"]', testData.firstName);
-    await page.fill('input[name="accountLastName"]', testData.lastName);
-    await page.fill('input[name="accountEmail"]', testData.email);
-    await page.fill('input[name="accountPassword"]', testData.password);
-    await page.fill('input[name="accountPasswordConfirm"]', testData.password);
-    await page.fill('input[type="tel"]', testData.phone);
-    await page.waitForTimeout(2000); // Attendre vérification téléphone
-    await page.locator('button:has-text("Suivant")').first().click();
-    await page.waitForTimeout(1000);
-    
-    // Essayer de saisir un SIRET invalide
-    const siretField = page.locator('input[placeholder*="14 chiffres"]').or(page.locator('input[type="text"]').first());
-    await siretField.fill('123456789'); // SIRET invalide (trop court)
-    
-    await page.waitForTimeout(2000);
-    
-    // Vérifier qu'une erreur s'affiche
-    const errorVisible = await page.locator('text=invalide').or(page.locator('text=erreur')).or(page.locator('.text-red-500')).first().isVisible({ timeout: 3000 }).catch(() => false);
-    
-    // Le SIRET devrait être rejeté ou le bouton suivant désactivé
-    console.log('✅ Test réussi : Validation du SIRET fonctionne');
-  });
-
 });

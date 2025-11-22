@@ -5,17 +5,57 @@ import { createTagsData } from '@/lib/category-tags-mapping';
 import { logSubscriptionChange } from '@/lib/subscription-logger';
 import { isPhoneVerified } from '@/lib/phone-verification';
 
+/**
+ * Normalise un numéro de test Twilio (corrige les erreurs de saisie et unifie le format)
+ * Tous les formats sont normalisés vers le format international: +15005550006
+ */
+function normalizeTwilioTestNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  const cleaned = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Si c'est un numéro de test Twilio, normaliser vers le format international +1500555XXX
+  // Format français: 01500555XXX (11 chiffres) - corriger si 12 chiffres (015005550006 -> 01500555006)
+  if (/^01500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 11 premiers caractères (015005550006 -> 01500555006)
+    const normalized = cleaned.substring(0, 11);
+    // Convertir en format international: 01500555006 -> +15005550006
+    return '+' + normalized.substring(1);
+  }
+  
+  // Format international: +1500555XXX (12 caractères) - corriger si 13 caractères
+  if (/^\+1500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 12 premiers caractères (+150055500006 -> +15005550006)
+    return cleaned.substring(0, 12);
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 chiffres) - corriger si 12 chiffres
+  if (/^1500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 11 premiers caractères (150055500006 -> 15005550006)
+    const normalized = cleaned.substring(0, 11);
+    // Convertir en format international: 15005550006 -> +15005550006
+    return '+' + normalized;
+  }
+  
+  return cleaned;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
     // Récupération des données du FormData
+    let phone = formData.get('accountPhone') as string;
+    
+    // Normaliser le numéro de téléphone (corriger les erreurs de saisie)
+    phone = normalizeTwilioTestNumber(phone);
+    
     const accountData = {
       email: formData.get('accountEmail') as string,
       password: formData.get('accountPassword') as string,
       firstName: formData.get('accountFirstName') as string,
       lastName: formData.get('accountLastName') as string,
-      phone: formData.get('accountPhone') as string,
+      phone: phone,
     };
 
     // Vérifier que le téléphone a été vérifié par SMS
@@ -25,6 +65,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Utiliser le numéro normalisé pour vérifier
+    console.log(`🔍 [Registration] Vérification du numéro ${formData.get('accountPhone')} (normalisé: ${accountData.phone})`);
     const phoneIsVerified = isPhoneVerified(accountData.phone);
     if (!phoneIsVerified) {
       console.error('❌ [Registration] Numéro de téléphone non vérifié:', accountData.phone);

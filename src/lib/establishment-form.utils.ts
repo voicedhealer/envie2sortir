@@ -324,31 +324,60 @@ const TWILIO_TEST_NUMBERS = [
 ];
 
 /**
+ * Normalise un numéro de test Twilio (corrige les erreurs de saisie comme 015005550006 -> 01500555006)
+ */
+function normalizeTwilioTestNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Si c'est un numéro qui commence par 01500555 ou +1500555, normaliser
+  // Format français: 01500555XXX (11 chiffres) - corriger si 12 chiffres (015005550006 -> 01500555006)
+  if (/^01500555\d{4}$/.test(cleanPhone)) {
+    // Si 12 chiffres, prendre les 11 premiers (015005550006 -> 01500555006)
+    return cleanPhone.substring(0, 11);
+  }
+  
+  // Format international: +1500555XXX (12 caractères) - corriger si 13 caractères
+  if (/^\+1500555\d{4}$/.test(cleanPhone)) {
+    return cleanPhone.substring(0, 12);
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 chiffres) - corriger si 12 chiffres
+  if (/^1500555\d{4}$/.test(cleanPhone)) {
+    return cleanPhone.substring(0, 11);
+  }
+  
+  return cleanPhone;
+}
+
+/**
  * Vérifie si un numéro est un numéro de test Twilio
  */
 function isTwilioTestNumber(phone: string): boolean {
   if (!phone) return false;
   
   const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  const normalized = normalizeTwilioTestNumber(cleanPhone);
   
   // Vérifier dans la liste exacte
-  if (TWILIO_TEST_NUMBERS.includes(cleanPhone)) {
+  if (TWILIO_TEST_NUMBERS.includes(normalized)) {
     return true;
   }
   
   // Vérifier si c'est un numéro qui commence par 01500555 ou +1500555 (numéros de test Twilio)
-  // Format français: 01500555006 à 01500555008
-  if (/^01500555\d{3}$/.test(cleanPhone)) {
+  // Format français: 01500555006 à 01500555008 (11 chiffres)
+  if (/^01500555\d{3}$/.test(normalized)) {
     return true;
   }
   
-  // Format international: +15005550006 à +15005550008
-  if (/^\+1500555\d{3}$/.test(cleanPhone)) {
+  // Format international: +15005550006 à +15005550008 (12 caractères)
+  if (/^\+1500555\d{3}$/.test(normalized)) {
     return true;
   }
   
-  // Format sans 0 initial: 15005550006 à 15005550008
-  if (/^1500555\d{3}$/.test(cleanPhone)) {
+  // Format sans 0 initial: 15005550006 à 15005550008 (11 chiffres)
+  if (/^1500555\d{3}$/.test(normalized)) {
     return true;
   }
   
@@ -361,8 +390,11 @@ export function isValidFrenchPhone(phone: string): boolean {
   
   const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
   
+  // Normaliser les numéros de test Twilio (corriger les erreurs de saisie)
+  const normalized = normalizeTwilioTestNumber(cleanPhone);
+  
   // Accepter les numéros de test Twilio
-  if (isTwilioTestNumber(cleanPhone)) {
+  if (isTwilioTestNumber(normalized)) {
     return true;
   }
   

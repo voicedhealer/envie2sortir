@@ -417,12 +417,28 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     
     // Gestion spéciale pour le téléphone - validation en temps réel
     if (field === 'accountPhone' && typeof value === 'string') {
-      const cleanPhone = value.replace(/\s/g, '').replace(/[^\d+]/g, '');
+      let cleanPhone = value.replace(/\s/g, '').replace(/[^\d+]/g, '');
+      
+      // Normaliser les numéros de test Twilio (corriger 015005550006 -> 01500555006)
+      if (/^01500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 11);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      } else if (/^\+1500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 12);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      } else if (/^1500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 11);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      }
+      
+      // Utiliser le numéro normalisé
+      setFormData(prev => ({ ...prev, [field]: cleanPhone }));
+      
       // Utiliser la fonction importée qui accepte aussi les numéros de test
-      const isValidPhone = isValidFrenchPhone(value);
+      const isValidPhone = isValidFrenchPhone(cleanPhone);
       
       // Si le numéro change et qu'il était vérifié, reset l'état
-      if (phoneVerification.isVerified && value !== formData.accountPhone) {
+      if (phoneVerification.isVerified && cleanPhone !== formData.accountPhone) {
         setPhoneVerification(prev => ({
           ...prev,
           isVerified: false,
@@ -431,13 +447,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       }
       
       // Si le numéro n'est plus valide ou est vide, reset l'état de vérification
-      if (phoneVerification.isVerified && (!isValidPhone || !value.trim())) {
+      if (phoneVerification.isVerified && (!isValidPhone || !cleanPhone.trim())) {
         setPhoneVerification(prev => ({
           ...prev,
           isVerified: false,
           error: ''
         }));
       }
+      
+      // Ne pas continuer avec le reste du traitement pour ce champ
+      return;
     }
     
     if (field === 'siret' && typeof value === 'string') {
@@ -495,25 +514,24 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       const data = await response.json();
 
       if (data.success) {
-        // Si c'est un numéro de test Twilio, marquer automatiquement comme vérifié
-        if (data.isTestMode && data.autoVerified) {
-          console.log('🧪 [Hook] Numéro de test détecté - Marquage automatique comme vérifié');
-          setPhoneVerification(prev => ({ 
-            ...prev, 
+        // Si le backend a auto-validé (numéro de test), marquer directement comme vérifié
+        if (data.autoVerified) {
+          console.log('🧪 [Hook] Numéro de test auto-validé. Aucun code à saisir.');
+          setPhoneVerification(prev => ({
+            ...prev,
             isSending: false,
             isVerified: true,
             error: ''
           }));
-          // Ne pas ouvrir le modal pour les numéros de test
-          console.log('✅ [Hook] Vérification automatique réussie pour le numéro de test');
+          setShowPhoneModal(false);
         } else {
+          // Sinon, ouvrir le modal pour saisir le code
           setPhoneVerification(prev => ({ 
             ...prev, 
             isSending: false,
             error: ''
           }));
-          console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode);
-          // Ouvrir automatiquement le modal de vérification
+          console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode || data.devCode);
           setShowPhoneModal(true);
         }
       } else {
@@ -574,12 +592,14 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
 
   // Fonctions pour gérer le modal de vérification téléphone
   const handlePhoneVerificationSuccess = () => {
+    console.log(`✅ [Hook] handlePhoneVerificationSuccess appelé pour le numéro: ${formData.accountPhone}`);
     setPhoneVerification(prev => ({ 
       ...prev, 
       isVerified: true,
       error: ''
     }));
     setShowPhoneModal(false);
+    console.log(`✅ [Hook] État phoneVerification.isVerified mis à jour à: true`);
   };
 
   const handleClosePhoneModal = () => {
@@ -940,12 +960,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         });
         
         // Ajouter le flag de vérification SMS si le téléphone a été vérifié
+        console.log(`🔍 [Hook] État phoneVerification.isVerified avant soumission: ${phoneVerification.isVerified}`);
+        console.log(`🔍 [Hook] Numéro de téléphone dans formData: ${formData.accountPhone}`);
+        
         if (phoneVerification.isVerified) {
           formDataToSend.append('smsVerified', 'true');
           console.log('✅ Vérification SMS confirmée dans FormData');
         } else {
           console.error('❌ Le téléphone n\'a pas été vérifié');
-          setSubmitError('Vérification du numéro de téléphone requise');
+          console.error('❌ État phoneVerification:', phoneVerification);
+          setSubmitError('Vérification du numéro de téléphone requise. Veuillez vérifier votre numéro de téléphone via SMS avant de continuer.');
           setIsSubmitting(false);
           clearTimeout(timeoutId);
           return;

@@ -134,6 +134,7 @@ export default function ProfessionalStep({
         <div className="relative">
           <input
             type="text"
+            data-testid="form-siret"
             value={formData.siret}
             onChange={(e) => {
               // Nettoyer automatiquement les espaces lors de la saisie

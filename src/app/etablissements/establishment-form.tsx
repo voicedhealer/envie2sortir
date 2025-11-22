@@ -345,14 +345,17 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-lg p-8">
+      <div className="bg-white rounded-lg shadow-lg p-8" data-testid="establishment-form">
         {/* Bouton d'aide flottant - sera positionné en bas à droite */}
 
-        {renderStep()}
+        <div data-testid={`form-step-${currentStep}`}>
+          {renderStep()}
+        </div>
 
         <div className="flex justify-between mt-8 pt-6 border-t">
           <button
             type="button"
+            data-testid="form-button-previous"
             onClick={prevStep}
             disabled={isEditMode ? currentStep === 2 : currentStep === 0}
             className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -363,6 +366,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           {currentStep < 8 ? (
             <button
               type="button"
+              data-testid="form-button-next"
               onClick={() => {
                 // Si on est à l'étape 2 (enrichissement) et qu'on a des données enrichies,
                 // les transmettre avant de passer à l'étape suivante
@@ -385,6 +389,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           ) : currentStep === 8 ? (
             <button
               type="button"
+              data-testid="form-button-submit"
               onClick={handleSubmit}
               disabled={isSubmitting}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"

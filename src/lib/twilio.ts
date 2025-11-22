@@ -47,19 +47,59 @@ function getTwilioClient() {
 }
 
 /**
+ * Normalise un numéro de test Twilio (corrige les erreurs de saisie comme 015005550006 -> 01500555006)
+ */
+function normalizeTwilioTestNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  const cleaned = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Si c'est un numéro qui commence par 01500555 ou +1500555, normaliser
+  // Format français: 01500555XXX (11 chiffres) - corriger si 12 chiffres (015005550006 -> 01500555006)
+  if (/^01500555\d{4}$/.test(cleaned)) {
+    // Si 12 chiffres, prendre les 11 premiers (015005550006 -> 01500555006)
+    return cleaned.substring(0, 11);
+  }
+  
+  // Format international: +1500555XXX (12 caractères) - corriger si 13 caractères
+  if (/^\+1500555\d{4}$/.test(cleaned)) {
+    return cleaned.substring(0, 12);
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 chiffres) - corriger si 12 chiffres
+  if (/^1500555\d{4}$/.test(cleaned)) {
+    return cleaned.substring(0, 11);
+  }
+  
+  return cleaned;
+}
+
+/**
  * Formate un numéro de téléphone français pour Twilio
  */
 function formatPhoneNumber(phone: string): string {
   // Nettoyer le numéro
   let cleaned = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
   
-  // Vérifier si c'est un numéro de test Twilio (format français 01500555006)
+  // IMPORTANT: Vérifier d'abord si c'est un numéro de test Twilio AVANT de normaliser
+  // pour éviter qu'il soit traité comme un numéro français
+  const isTestBeforeNormalize = isTestNumber(cleaned);
+  
+  // Normaliser les numéros de test Twilio (corriger les erreurs de saisie)
+  cleaned = normalizeTwilioTestNumber(cleaned);
+  
+  // Vérifier si c'est un numéro de test Twilio (format français 01500555006 ou international +15005550006)
   // Les numéros de test Twilio commencent par 01500555 ou +1500555
-  if (cleaned.startsWith('01500555') || cleaned.startsWith('+1500555')) {
+  if (isTestBeforeNormalize || cleaned.startsWith('01500555') || cleaned.startsWith('+1500555') || cleaned.startsWith('1500555')) {
     // Convertir le format français en format international Twilio
     if (cleaned.startsWith('0')) {
       cleaned = '+' + cleaned.substring(1);
+    } else if (cleaned.startsWith('1500555')) {
+      // Format sans 0 initial
+      cleaned = '+' + cleaned;
     }
+    // Si c'est déjà au format international, le retourner tel quel
+    console.log(`🧪 [Twilio] Numéro de test détecté, formaté en: ${cleaned}`);
     return cleaned;
   }
   
@@ -90,24 +130,42 @@ function isTestNumber(phone: string): boolean {
   
   const cleaned = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
   
+  // IMPORTANT: Vérifier AVANT normalisation pour détecter aussi les numéros avec erreurs de saisie
+  // Format français: 01500555XXX (11 ou 12 chiffres - avec ou sans erreur de saisie)
+  if (/^01500555\d{3,4}$/.test(cleaned)) {
+    return true;
+  }
+  
+  // Format international: +1500555XXX (12 ou 13 caractères - avec ou sans erreur de saisie)
+  if (/^\+1500555\d{3,4}$/.test(cleaned)) {
+    return true;
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 ou 12 chiffres - avec ou sans erreur de saisie)
+  if (/^1500555\d{3,4}$/.test(cleaned)) {
+    return true;
+  }
+  
+  const normalized = normalizeTwilioTestNumber(cleaned);
+  
   // Vérifier dans la liste exacte
-  if (Object.values(TWILIO_TEST_NUMBERS).includes(cleaned as any)) {
+  if (Object.values(TWILIO_TEST_NUMBERS).includes(normalized as any)) {
     return true;
   }
   
   // Vérifier si c'est un numéro de test Twilio par pattern (1500555XXX ou +1500555XXX)
   // Les numéros de test Twilio ont toujours ce pattern : 1500555XXX
-  if (/^\+?1?500555\d{3}$/.test(cleaned.replace(/^\+33/, '').replace(/^0/, ''))) {
+  if (/^\+?1?500555\d{3}$/.test(normalized.replace(/^\+33/, '').replace(/^0/, ''))) {
     return true;
   }
   
-  // Vérifier format français (01500555XXX)
-  if (/^01500555\d{3}$/.test(cleaned)) {
+  // Vérifier format français (01500555XXX - 11 chiffres)
+  if (/^01500555\d{3}$/.test(normalized)) {
     return true;
   }
   
-  // Vérifier format international (+1500555XXX)
-  if (/^\+1500555\d{3}$/.test(cleaned)) {
+  // Vérifier format international (+1500555XXX - 12 caractères)
+  if (/^\+1500555\d{3}$/.test(normalized)) {
     return true;
   }
   

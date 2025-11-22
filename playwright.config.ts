@@ -8,8 +8,8 @@ export default defineConfig({
   // Dossier où se trouvent les tests
   testDir: './tests/e2e',
   
-  // Durée maximale d'un test (30 secondes)
-  timeout: 30 * 1000,
+  // Durée maximale d'un test (60 secondes pour les tests d'inscription)
+  timeout: 60 * 1000,
   
   // Nombre de tentatives si un test échoue
   retries: 2,

@@ -37,6 +37,7 @@ export default function PhoneVerificationModal({
   // Envoyer le code automatiquement à l'ouverture du modal
   useEffect(() => {
     if (isOpen && phoneNumber) {
+      console.log(`📱 [Phone Modal] Modal ouvert pour le numéro: ${phoneNumber}`);
       sendVerificationCode();
     }
   }, [isOpen, phoneNumber]);
@@ -106,6 +107,7 @@ export default function PhoneVerificationModal({
     setError('');
 
     try {
+      console.log(`🔍 [Phone Modal] Vérification du code pour le numéro: ${phoneNumber}`);
       const response = await fetch('/api/verify-phone', {
         method: 'POST',
         headers: {
@@ -119,17 +121,22 @@ export default function PhoneVerificationModal({
       });
 
       const data = await response.json();
+      console.log(`🔍 [Phone Modal] Réponse de l'API:`, data);
 
       if (data.success) {
+        console.log(`✅ [Phone Modal] Code vérifié avec succès pour ${phoneNumber}`);
         setSuccess('Numéro de téléphone vérifié avec succès !');
         setTimeout(() => {
+          console.log(`🔄 [Phone Modal] Appel de onVerificationSuccess`);
           onVerificationSuccess();
           onClose();
         }, 1000);
       } else {
+        console.error(`❌ [Phone Modal] Échec de la vérification:`, data.error);
         setError(data.error || 'Code de vérification incorrect');
       }
     } catch (error) {
+      console.error(`❌ [Phone Modal] Erreur lors de la vérification:`, error);
       setError('Erreur de connexion');
     } finally {
       setIsVerifying(false);
