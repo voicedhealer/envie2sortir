@@ -26,7 +26,10 @@ interface DailyDeal {
  * Vérifie si un bon plan est actif (dans sa période de validité)
  */
 export function isDealActive(deal: DailyDeal): boolean {
-  if (!deal.isActive) return false;
+  if (!deal.isActive) {
+    console.log(`❌ Deal ${deal.id} rejeté: isActive = false`);
+    return false;
+  }
 
   const now = new Date();
   
@@ -36,6 +39,7 @@ export function isDealActive(deal: DailyDeal): boolean {
     if (deal.recurrenceEndDate) {
       const recurrenceEnd = new Date(deal.recurrenceEndDate);
       if (now > recurrenceEnd) {
+        console.log(`❌ Deal ${deal.id} rejeté: récurrence terminée (${recurrenceEnd})`);
         return false;
       }
     }
@@ -46,6 +50,7 @@ export function isDealActive(deal: DailyDeal): boolean {
       const adjustedDay = currentDay === 0 ? 7 : currentDay; // Convertir dimanche de 0 à 7
       
       if (!deal.recurrenceDays.includes(adjustedDay)) {
+        console.log(`❌ Deal ${deal.id} rejeté: jour actuel ${adjustedDay} pas dans ${deal.recurrenceDays}`);
         return false;
       }
     }
@@ -61,29 +66,49 @@ export function isDealActive(deal: DailyDeal): boolean {
     const dateFin = new Date(deal.dateFin);
 
     if (now < dateDebut || now > dateFin) {
+      console.log(`❌ Deal ${deal.id} rejeté: dates invalides (${dateDebut} - ${dateFin}, maintenant: ${now})`);
       return false;
     }
   }
 
   // Vérifier les horaires (pour tous les types de bons plans)
   if (!deal.heureDebut && !deal.heureFin) {
+    console.log(`✅ Deal ${deal.id} actif: pas d'horaires définis`);
     return true; // Actif toute la journée
   }
 
   const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
   
+  // Si les deux heures sont identiques, considérer comme actif toute la journée
+  if (deal.heureDebut && deal.heureFin && deal.heureDebut === deal.heureFin) {
+    console.log(`✅ Deal ${deal.id} actif: horaires identiques (${deal.heureDebut}), considéré comme toute la journée`);
+    return true;
+  }
+  
   // Si seulement heure de début définie
   if (deal.heureDebut && !deal.heureFin) {
-    return currentTime >= deal.heureDebut;
+    const isActive = currentTime >= deal.heureDebut;
+    if (!isActive) {
+      console.log(`❌ Deal ${deal.id} rejeté: heure actuelle ${currentTime} < ${deal.heureDebut}`);
+    }
+    return isActive;
   }
   
   // Si seulement heure de fin définie
   if (!deal.heureDebut && deal.heureFin) {
-    return currentTime <= deal.heureFin;
+    const isActive = currentTime <= deal.heureFin;
+    if (!isActive) {
+      console.log(`❌ Deal ${deal.id} rejeté: heure actuelle ${currentTime} > ${deal.heureFin}`);
+    }
+    return isActive;
   }
   
   // Si les deux heures sont définies
-  return currentTime >= deal.heureDebut && currentTime <= deal.heureFin;
+  const isActive = currentTime >= deal.heureDebut! && currentTime <= deal.heureFin!;
+  if (!isActive) {
+    console.log(`❌ Deal ${deal.id} rejeté: heure actuelle ${currentTime} pas dans [${deal.heureDebut}, ${deal.heureFin}]`);
+  }
+  return isActive;
 }
 
 /**

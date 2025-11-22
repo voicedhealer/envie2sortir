@@ -237,9 +237,34 @@ export default function TermsOfServicePage() {
               </div>
             </div>
 
+            {/* Paiements */}
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">8. Paiements et traitement des transactions</h2>
+              <div className="space-y-4 text-gray-700">
+                <p>
+                  Pour les abonnements payants (Plan Premium), les paiements sont traités de manière sécurisée via notre prestataire de paiement Stripe.
+                </p>
+                <div className="bg-blue-50 rounded-xl p-6">
+                  <h3 className="text-xl font-semibold text-blue-900 mb-4">Sécurité des paiements</h3>
+                  <ul className="space-y-2 text-blue-800">
+                    <li>• Les transactions sont sécurisées et chiffrées conformément aux normes PCI-DSS</li>
+                    <li>• Aucune donnée bancaire n'est stockée sur nos serveurs</li>
+                    <li>• Les informations de paiement sont gérées exclusivement par Stripe</li>
+                    <li>• En utilisant notre service de paiement, vous acceptez les conditions d'utilisation de Stripe</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-gray-600">
+                  Pour plus d'informations sur la protection de vos données de paiement, consultez la 
+                  <a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-500 underline ml-1">
+                    politique de confidentialité de Stripe
+                  </a>.
+                </p>
+              </div>
+            </div>
+
             {/* Données personnelles */}
             <div className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">8. Données personnelles</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">9. Données personnelles</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
                   La collecte et le traitement de vos données personnelles sont régis par notre 
@@ -252,7 +277,7 @@ export default function TermsOfServicePage() {
 
             {/* Modification des CGU */}
             <div className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">9. Modification des CGU</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">10. Modification des CGU</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
                   Nous nous réservons le droit de modifier les présentes CGU à tout moment. Les modifications prendront effet dès leur publication sur cette page.
@@ -262,7 +287,7 @@ export default function TermsOfServicePage() {
 
             {/* Droit applicable */}
             <div className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">10. Droit applicable</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">11. Droit applicable</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
                   Les présentes CGU sont régies par le droit français. Tout litige relatif à leur application relève de la compétence des tribunaux français.
@@ -272,7 +297,7 @@ export default function TermsOfServicePage() {
 
             {/* Contact */}
             <div className="mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">11. Contact</h2>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">12. Contact</h2>
               <div className="space-y-4 text-gray-700">
                 <p>
                   Pour toute question concernant les présentes CGU, vous pouvez nous contacter à :

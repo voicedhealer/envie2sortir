@@ -15,6 +15,7 @@ interface Event {
   startDate: string;
   endDate?: string;
   price?: number;
+  priceUnit?: string;
   maxCapacity?: number;
   isRecurring: boolean;
   modality?: string;
@@ -615,10 +616,7 @@ export default function EventsCarousel() {
                                     {event.price === 0 ? (
                                       'Gratuit'
                                     ) : (
-                                      <>
-                                        <Euro className="w-3 h-3" />
-                                        {event.price}
-                                      </>
+                                      <span>{event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
                                     )}
                                   </div>
                                 ) : (

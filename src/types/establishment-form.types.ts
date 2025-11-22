@@ -290,7 +290,7 @@ export const SUBSCRIPTION_PLANS = {
       "💬 Support client prioritaire et dédié",
       "✨ Description enrichie avec intelligence artificielle"
     ],
-    price: "29€/mois",
+    price: "29,90€/mois",
     badge: "Recommandé",
     color: "orange",
     savings: undefined

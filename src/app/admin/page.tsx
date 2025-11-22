@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import CloudflareMetricsCharts from '@/components/admin/CloudflareMetricsCharts';
+import { CloudflareDetailedMetrics } from '@/lib/cloudflare-api';
 
 interface DashboardStats {
   pendingCount: number;
@@ -46,35 +48,68 @@ interface HealthStatus {
   overall: boolean;
 }
 
+interface RealtimeMetrics {
+  cloudflare: CloudflareDetailedMetrics | null;
+  railway: {
+    cpu: number;
+    memory: number;
+    network: {
+      ingress: number;
+      egress: number;
+    };
+    uptime: number;
+    lastUpdate: string;
+  } | null;
+  system: {
+    memory: {
+      used: number;
+      total: number;
+      percentage: number;
+    };
+    uptime: number;
+    timestamp: string;
+  };
+}
+
+interface SecurityEvents {
+  events: Array<{
+    id: string;
+    type: string;
+    ip_address: string;
+    user_agent?: string;
+    email?: string;
+    details?: any;
+    created_at: string;
+  }>;
+  stats: {
+    last24h: {
+      failed_login: number;
+      blocked_request: number;
+      suspicious_activity: number;
+      rate_limit_exceeded: number;
+    };
+    total: number;
+  };
+  topIPs: Array<{
+    ip: string;
+    count: number;
+  }>;
+}
+
 export default function AdminDashboard() {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [realtimeMetrics, setRealtimeMetrics] = useState<RealtimeMetrics | null>(null);
+  const [securityEvents, setSecurityEvents] = useState<SecurityEvents | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const isFetchingRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
-  // Vérifier l'authentification admin
-  useEffect(() => {
-    if (status === 'loading') return; // En cours de chargement
-    
-    if (!session || session.user.role !== 'admin') {
-      router.push('/auth?error=AccessDenied');
-      return;
-    }
-    
-    fetchAllData();
-    
-    // Actualiser toutes les 30 secondes
-    const interval = setInterval(() => {
-      fetchAllData();
-    }, 30000);
-    
-    return () => clearInterval(interval);
-  }, [session, status, router]);
-
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/stats");
       if (response.ok) {
@@ -84,11 +119,11 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erreur lors du chargement des stats:", error);
     }
-  };
+  }, []);
 
-  const fetchSystemMetrics = async () => {
+  const fetchSystemMetrics = useCallback(async () => {
     // Vérifier que la session est toujours valide
-    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+    if (!session || session.user?.role !== 'admin' || loading) {
       return;
     }
 
@@ -105,9 +140,9 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erreur lors du chargement des métriques:", error);
     }
-  };
+  }, [session, loading]);
 
-  const fetchHealthStatus = async () => {
+  const fetchHealthStatus = useCallback(async () => {
     try {
       const response = await fetch("/api/monitoring/health");
       if (response.ok) {
@@ -117,31 +152,147 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error("Erreur lors du chargement du statut:", error);
     }
-  };
+  }, []);
 
-  const fetchAllData = async () => {
+  const fetchRealtimeMetrics = useCallback(async () => {
+    if (!session || session.user?.role !== 'admin' || loading) {
+      return;
+    }
+
+    // Créer un AbortController pour gérer le timeout manuellement
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes
+
+    try {
+      const response = await fetch("/api/admin/realtime-metrics", {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setRealtimeMetrics(data);
+      } else {
+        // Logger l'erreur mais ne pas bloquer l'interface
+        console.warn("Erreur lors du chargement des métriques temps réel:", response.status, response.statusText);
+        // Ne pas définir realtimeMetrics à null pour garder les anciennes valeurs
+      }
+    } catch (error) {
+      clearTimeout(timeoutId);
+      
+      // Gérer spécifiquement les erreurs de timeout ou de réseau
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.warn("Timeout lors du chargement des métriques temps réel (30s) - la route API prend trop de temps");
+        } else if (error.message.includes('Failed to fetch')) {
+          console.warn("Erreur réseau lors du chargement des métriques temps réel - la route API peut être indisponible");
+        } else {
+          console.error("Erreur lors du chargement des métriques temps réel:", error.message);
+        }
+      } else {
+        console.error("Erreur lors du chargement des métriques temps réel:", error);
+      }
+      // Ne pas définir realtimeMetrics à null pour garder les anciennes valeurs
+    }
+  }, [session, loading]);
+
+  const fetchSecurityEvents = useCallback(async () => {
+    if (!session || session.user?.role !== 'admin' || loading) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/security-events?limit=10");
+      if (response.ok) {
+        const data = await response.json();
+        setSecurityEvents(data);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des événements de sécurité:", error);
+    }
+  }, [session, loading]);
+
+  const [configStatus, setConfigStatus] = useState<any>(null);
+  
+  const fetchConfigStatus = useCallback(async () => {
+    if (!session || session.user?.role !== 'admin' || loading) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/admin/check-config");
+      if (response.ok) {
+        const data = await response.json();
+        setConfigStatus(data);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la vérification de la configuration:", error);
+    }
+  }, [session, loading]);
+
+  const fetchAllData = useCallback(async () => {
+    // Éviter les appels multiples simultanés
+    if (isFetchingRef.current) {
+      return;
+    }
+
     // Vérifier que la session est toujours valide avant de faire les requêtes
-    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+    if (!session || session.user?.role !== 'admin' || loading) {
       setIsLoading(false);
       return;
     }
+
+    isFetchingRef.current = true;
+    setIsLoading(true);
 
     try {
       await Promise.all([
         fetchDashboardStats(),
         fetchSystemMetrics(),
-        fetchHealthStatus()
+        fetchHealthStatus(),
+        fetchRealtimeMetrics(),
+        fetchSecurityEvents(),
+        fetchConfigStatus()
       ]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, [session, loading, fetchDashboardStats, fetchSystemMetrics, fetchHealthStatus, fetchRealtimeMetrics, fetchSecurityEvents, fetchConfigStatus]);
+
+  // Vérifier l'authentification admin
+  useEffect(() => {
+    if (loading) return; // En cours de chargement
+    
+    if (!session || session.user?.role !== 'admin') {
+      router.push('/auth?error=AccessDenied');
+      return;
+    }
+    
+    // Ne faire le fetch initial qu'une seule fois
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      fetchAllData();
+    }
+    
+    // Actualiser toutes les 30 secondes
+    const interval = setInterval(() => {
+      fetchAllData();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [session, loading, router, fetchAllData]);
 
   // Afficher un loader pendant la vérification de l'authentification
-  if (status === 'loading' || isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-gray-500">Chargement...</div>
@@ -150,7 +301,7 @@ export default function AdminDashboard() {
   }
 
   // Si pas de session ou pas admin, ne rien afficher (redirection en cours)
-  if (!session || session.user.role !== 'admin') {
+  if (!session || session.user?.role !== 'admin') {
     return null;
   }
 
@@ -176,6 +327,83 @@ export default function AdminDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Vérification de la configuration */}
+      {configStatus && (
+        <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            ⚙️ État de la Configuration
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            {/* Cloudflare */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.config.cloudflare.configured 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">☁️</span>
+                <h4 className="font-semibold text-gray-900">Cloudflare</h4>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className={configStatus.config.cloudflare.hasToken ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.cloudflare.hasToken ? '✅' : '❌'} Token: {configStatus.config.cloudflare.hasToken ? 'Configuré' : 'Manquant'}
+                </div>
+                <div className={configStatus.config.cloudflare.hasZoneId ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.cloudflare.hasZoneId ? '✅' : '❌'} Zone ID: {configStatus.config.cloudflare.hasZoneId ? 'Configuré' : 'Manquant'}
+                </div>
+              </div>
+            </div>
+
+            {/* Railway */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.config.railway.configured 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-yellow-50 border-yellow-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">🚂</span>
+                <h4 className="font-semibold text-gray-900">Railway</h4>
+              </div>
+              <div className="text-sm space-y-1">
+                <div className={configStatus.config.railway.hasToken ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.railway.hasToken ? '✅' : '❌'} Token: {configStatus.config.railway.hasToken ? 'Configuré' : 'Manquant'}
+                </div>
+                <div className={configStatus.config.railway.hasProjectId ? 'text-green-600' : 'text-red-600'}>
+                  {configStatus.config.railway.hasProjectId ? '✅' : '❌'} Project ID: {configStatus.config.railway.hasProjectId ? 'Configuré' : 'Manquant'}
+                </div>
+              </div>
+            </div>
+
+            {/* Table Security Events */}
+            <div className={`p-4 rounded-lg border ${
+              configStatus.securityTable.exists 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-red-50 border-red-200'
+            }`}>
+              <div className="flex items-center mb-2">
+                <span className="text-xl mr-2">🔒</span>
+                <h4 className="font-semibold text-gray-900">Table Sécurité</h4>
+              </div>
+              <div className={`text-sm ${configStatus.securityTable.exists ? 'text-green-600' : 'text-red-600'}`}>
+                {configStatus.securityTable.status}
+              </div>
+            </div>
+          </div>
+
+          {/* Recommandations */}
+          {configStatus.recommendations && configStatus.recommendations.length > 0 && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-yellow-800 mb-2">📋 Recommandations :</h4>
+              <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                {configStatus.recommendations.map((rec: string, index: number) => (
+                  <li key={index}>{rec}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Status de santé système */}
       {health && (
@@ -290,6 +518,236 @@ export default function AdminDashboard() {
                 <span className="text-lg text-gray-400">🚨</span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Métriques Temps Réel */}
+      {realtimeMetrics && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            ⚡ Métriques Temps Réel
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Cloudflare - Résumé */}
+            {realtimeMetrics.cloudflare ? (
+              <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">☁️</span>
+                  <h4 className="font-semibold text-gray-900">Cloudflare</h4>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Requêtes (7j)</span>
+                    <span className="font-medium">{realtimeMetrics.cloudflare.requests.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Bande passante</span>
+                    <span className="font-medium">{(realtimeMetrics.cloudflare.bandwidth / 1024 / 1024).toFixed(2)} MB</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Erreurs</span>
+                    <span className="font-medium text-red-600">{realtimeMetrics.cloudflare.errors}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Cache Hit Rate</span>
+                    <span className="font-medium">{realtimeMetrics.cloudflare.cacheHitRate.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">☁️</span>
+                  <h4 className="font-semibold text-gray-500">Cloudflare</h4>
+                </div>
+                <p className="text-sm text-gray-400">Non configuré</p>
+              </div>
+            )}
+
+            {/* Railway */}
+            {realtimeMetrics.railway ? (
+              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">🚂</span>
+                  <h4 className="font-semibold text-gray-900">Railway</h4>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">CPU</span>
+                    <span className="font-medium">{realtimeMetrics.railway.cpu.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Mémoire</span>
+                    <span className="font-medium">{realtimeMetrics.railway.memory.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Uptime</span>
+                    <span className="font-medium">{Math.round(realtimeMetrics.railway.uptime / 3600)}h</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Réseau (ingress)</span>
+                    <span className="font-medium">{(realtimeMetrics.railway.network.ingress / 1024).toFixed(2)} KB</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                <div className="flex items-center mb-3">
+                  <span className="text-xl mr-2">🚂</span>
+                  <h4 className="font-semibold text-gray-500">Railway</h4>
+                </div>
+                <p className="text-sm text-gray-400">Non configuré</p>
+              </div>
+            )}
+
+            {/* Système Node.js */}
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center mb-3">
+                <span className="text-xl mr-2">💻</span>
+                <h4 className="font-semibold text-gray-900">Système Node.js</h4>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Mémoire</span>
+                  <span className="font-medium">{realtimeMetrics.system.memory.percentage.toFixed(1)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Utilisée</span>
+                  <span className="font-medium">{realtimeMetrics.system.memory.used} MB</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Uptime</span>
+                  <span className="font-medium">{Math.round(realtimeMetrics.system.uptime / 3600)}h</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Métriques Cloudflare Détaillées avec Graphiques */}
+      {realtimeMetrics?.cloudflare && realtimeMetrics.cloudflare.dailyData && realtimeMetrics.cloudflare.dailyData.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-medium text-gray-900">
+              📊 Métriques Cloudflare Détaillées
+            </h3>
+            <div className="text-sm text-gray-500">
+              Dernière mise à jour: {new Date(realtimeMetrics.cloudflare.lastUpdate).toLocaleTimeString('fr-FR')}
+            </div>
+          </div>
+          
+          {/* Métriques de base en cartes */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+              <p className="text-sm text-gray-600 mb-1">Requêtes (7j)</p>
+              <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.cloudflare.requests.toLocaleString()}</p>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <p className="text-sm text-gray-600 mb-1">Bande passante</p>
+              <p className="text-2xl font-bold text-gray-900">{(realtimeMetrics.cloudflare.bandwidth / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <p className="text-sm text-gray-600 mb-1">Cache Hit Rate</p>
+              <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.cloudflare.cacheHitRate.toFixed(1)}%</p>
+            </div>
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <p className="text-sm text-gray-600 mb-1">Erreurs</p>
+              <p className="text-2xl font-bold text-red-600">{realtimeMetrics.cloudflare.errors}</p>
+            </div>
+          </div>
+          
+          {/* Graphiques */}
+          <CloudflareMetricsCharts metrics={realtimeMetrics.cloudflare} />
+        </div>
+      )}
+
+      {/* Données de Sécurité */}
+      {securityEvents && (
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            🔒 Données de Sécurité
+          </h3>
+          
+          {/* Statistiques des 24 dernières heures */}
+          <div className="mb-6">
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Événements (24h)</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+                <div className="text-xs text-gray-600 mb-1">Connexions échouées</div>
+                <div className="text-2xl font-bold text-red-600">{securityEvents.stats.last24h.failed_login}</div>
+              </div>
+              <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                <div className="text-xs text-gray-600 mb-1">Requêtes bloquées</div>
+                <div className="text-2xl font-bold text-orange-600">{securityEvents.stats.last24h.blocked_request}</div>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                <div className="text-xs text-gray-600 mb-1">Activité suspecte</div>
+                <div className="text-2xl font-bold text-yellow-600">{securityEvents.stats.last24h.suspicious_activity}</div>
+              </div>
+              <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                <div className="text-xs text-gray-600 mb-1">Rate limit</div>
+                <div className="text-2xl font-bold text-purple-600">{securityEvents.stats.last24h.rate_limit_exceeded}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Top IPs */}
+          {securityEvents.topIPs.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Top IPs (24h)</h4>
+              <div className="space-y-2">
+                {securityEvents.topIPs.slice(0, 5).map((item, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <span className="text-sm font-mono text-gray-700">{item.ip}</span>
+                    <span className="text-sm font-semibold text-gray-900">{item.count} événements</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Derniers événements */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Derniers événements</h4>
+            {securityEvents.events.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {securityEvents.events.map((event) => (
+                      <tr key={event.id}>
+                        <td className="px-4 py-2 text-sm">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            event.type === 'failed_login' ? 'bg-red-100 text-red-800' :
+                            event.type === 'blocked_request' ? 'bg-orange-100 text-orange-800' :
+                            event.type === 'suspicious_activity' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-purple-100 text-purple-800'
+                          }`}>
+                            {event.type.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-sm font-mono text-gray-700">{event.ip_address}</td>
+                        <td className="px-4 py-2 text-sm text-gray-600">{event.email || '-'}</td>
+                        <td className="px-4 py-2 text-sm text-gray-500">
+                          {new Date(event.created_at).toLocaleString('fr-FR')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 text-center py-4">Aucun événement récent</p>
+            )}
           </div>
         </div>
       )}
@@ -424,413 +882,6 @@ export default function AdminDashboard() {
               </p>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Patterns d'Apprentissage Récents */}
-      <div className="bg-white rounded-lg shadow-sm border">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            🧠 Patterns d'Apprentissage Récents
-          </h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Détection et correction automatique des types d'activités
-          </p>
-        </div>
-        <div className="p-6">
-          {/* Tableau des patterns */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    TYPE DÉTECTÉ
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    TYPE CORRIGÉ
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    CONFIANCE
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    STATUT
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    DATE
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ACTIONS
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {/* Exemples de patterns - à remplacer par des données réelles */}
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    parc_loisir_indoor
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    -
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '95%'}}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">95%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      En attente
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    22/10/2025
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-green-600 hover:text-green-900">Valider</button>
-                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
-                      <button className="text-red-600 hover:text-red-900">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    restaurant
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    -
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '91%'}}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">91%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      En attente
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    21/10/2025
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-green-600 hover:text-green-900">Valider</button>
-                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
-                      <button className="text-red-600 hover:text-red-900">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    escape_game
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    -
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '95%'}}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">95%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      En attente
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    21/10/2025
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button className="text-green-600 hover:text-green-900">Valider</button>
-                      <button className="text-blue-600 hover:text-blue-900">Corriger</button>
-                      <button className="text-red-600 hover:text-red-900">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    other
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    -
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div className="bg-red-500 h-2 rounded-full" style={{width: '35%'}}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">35%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                      En attente
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    20/10/2025
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <select className="text-sm border border-gray-300 rounded px-2 py-1">
-                      <option>Sélectionner...</option>
-                      <option>restaurant_general</option>
-                      <option>bar_general</option>
-                      <option>parc_loisir_indoor</option>
-                      <option>escape_game</option>
-                      <option>bowling</option>
-                      <option>karting</option>
-                      <option>laser_game</option>
-                      <option>autre</option>
-                    </select>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    bar
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    bar_general
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                        <div className="bg-orange-500 h-2 rounded-full" style={{width: '92%'}}></div>
-                      </div>
-                      <span className="text-sm text-gray-600">92%</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Corrigé
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    14/10/2025
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <span className="text-green-600">✅ Corrigé</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Dropdown avec toutes les activités disponibles */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">
-              📋 Liste complète des activités disponibles
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-              {/* Bars & Boissons */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🍹 Bars & Boissons</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• bar_ambiance</div>
-                  <div>• bar_lounge</div>
-                  <div>• bar_cocktails</div>
-                  <div>• bar_vins</div>
-                  <div>• bar_sports</div>
-                  <div>• rooftop_bar</div>
-                  <div>• bar_karaoke</div>
-                  <div>• bar_bières</div>
-                  <div>• bar_jus_smoothies</div>
-                  <div>• bar_tapas</div>
-                  <div>• bar_plage</div>
-                  <div>• bar_rooftop</div>
-                  <div>• bar_brasserie</div>
-                  <div>• bar_whisky</div>
-                  <div>• bar_rhum</div>
-                  <div>• bar_gin</div>
-                  <div>• bar_tequila</div>
-                  <div>• bar_champagne</div>
-                  <div>• bar_apéritif</div>
-                  <div>• bar_afterwork</div>
-                  <div>• bar_brunch</div>
-                  <div>• bar_glacé</div>
-                  <div>• bar_healthy</div>
-                  <div>• bar_vegan</div>
-                  <div>• bar_gluten_free</div>
-                  <div>• bar_halal</div>
-                  <div>• bar_kosher</div>
-                  <div>• bar_jeux</div>
-                  <div>• pub_traditionnel</div>
-                  <div>• brasserie_artisanale</div>
-                  <div>• bar_general</div>
-                </div>
-              </div>
-
-              {/* Restaurants */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🍽️ Restaurants</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• restaurant_gastronomique</div>
-                  <div>• restaurant_traditionnel</div>
-                  <div>• restaurant_familial</div>
-                  <div>• bistrot</div>
-                  <div>• restaurant_general</div>
-                </div>
-              </div>
-
-              {/* Cuisines du monde */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🌍 Cuisines du monde</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• restaurant_italien</div>
-                  <div>• restaurant_chinois</div>
-                  <div>• restaurant_japonais</div>
-                  <div>• restaurant_thai</div>
-                  <div>• restaurant_vietnamien</div>
-                  <div>• restaurant_coreen</div>
-                  <div>• restaurant_asiatique</div>
-                  <div>• restaurant_oriental</div>
-                  <div>• restaurant_indien</div>
-                  <div>• restaurant_libanais</div>
-                  <div>• restaurant_turc</div>
-                  <div>• restaurant_grec</div>
-                  <div>• restaurant_espagnol</div>
-                  <div>• restaurant_portugais</div>
-                  <div>• restaurant_allemand</div>
-                  <div>• restaurant_russe</div>
-                  <div>• restaurant_marocain</div>
-                  <div>• restaurant_ethiopien</div>
-                  <div>• restaurant_brasilien</div>
-                  <div>• restaurant_peruvien</div>
-                  <div>• restaurant_mexicain</div>
-                </div>
-              </div>
-
-              {/* Fast Food & Street Food */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🥙 Fast Food</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• kebab</div>
-                  <div>• tacos_mexicain</div>
-                  <div>• burger</div>
-                  <div>• pizzeria</div>
-                </div>
-              </div>
-
-              {/* Sorties nocturnes */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎉 Sorties nocturnes</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• discotheque</div>
-                  <div>• club_techno</div>
-                  <div>• boite_nuit_mainstream</div>
-                </div>
-              </div>
-
-              {/* Sports & Activités */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎯 Sports & Activités</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• bowling</div>
-                  <div>• billard_americain</div>
-                  <div>• billard_francais</div>
-                  <div>• roller_indoor</div>
-                  <div>• moto_electrique_indoor</div>
-                  <div>• futsal</div>
-                  <div>• karting</div>
-                  <div>• laser_game</div>
-                  <div>• vr_experience</div>
-                </div>
-              </div>
-
-              {/* Escape Games */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎮 Escape Games</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• escape_game</div>
-                  <div>• escape_game_horreur</div>
-                  <div>• escape_game_aventure</div>
-                  <div>• escape_game_mystere</div>
-                  <div>• escape_game_sf</div>
-                  <div>• escape_game_fantasy</div>
-                  <div>• escape_game_familial</div>
-                </div>
-              </div>
-
-              {/* Blind Test & Quiz */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">🎵 Blind Test & Quiz</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• blind_test</div>
-                  <div>• quiz_room</div>
-                  <div>• salle_jeux_amis</div>
-                  <div>• complexe_multiactivites</div>
-                </div>
-              </div>
-
-              {/* Enfants & Famille */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">👶 Enfants & Famille</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• trampoline_parc</div>
-                  <div>• parc_loisirs_enfants</div>
-                  <div>• centre_aquatique</div>
-                  <div>• parc_aventure_enfants</div>
-                  <div>• ludotheque</div>
-                  <div>• centre_loisirs_enfants</div>
-                  <div>• ferme_pedagogique</div>
-                  <div>• musee_enfants</div>
-                  <div>• parc_theme_enfants</div>
-                  <div>• centre_sportif_enfants</div>
-                  <div>• atelier_creatif_enfants</div>
-                  <div>• parc_jeux_interieur</div>
-                  <div>• mini_golf</div>
-                  <div>• parc_attractions_familial</div>
-                  <div>• centre_anniversaires</div>
-                  <div>• parc_animalier</div>
-                  <div>• parc_plage_enfants</div>
-                  <div>• centre_equitation_enfants</div>
-                  <div>• parc_skate_enfants</div>
-                  <div>• centre_cirque_enfants</div>
-                  <div>• parc_loisir_indoor</div>
-                </div>
-              </div>
-
-              {/* Autres */}
-              <div className="space-y-1">
-                <h5 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">❓ Autres</h5>
-                <div className="space-y-1 text-xs text-gray-600">
-                  <div>• autre</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Actions rapides */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">
-          Actions rapides
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link
-            href="/api/monitoring/health"
-            target="_blank"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors text-center"
-          >
-            Health Check
-          </Link>
-          <button
-            onClick={fetchAllData}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-          >
-            Actualiser
-          </button>
         </div>
       </div>
     </div>

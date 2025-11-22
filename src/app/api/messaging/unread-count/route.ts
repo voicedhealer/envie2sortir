@@ -1,66 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
-// GET /api/messaging/unread-count - Compter les messages non lus
+// GET /api/messaging/unread-count
+// Utilise une fonction RPC sécurisée pour éviter les erreurs de permission RLS
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const supabase = await createClient();
     
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    // Vérifier l'authentification basique
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    let unreadCount = 0;
+    // Appel de la fonction RPC 'get_unread_messages_count'
+    // Cette fonction gère toute la logique (Admin vs Pro) directement en base de données
+    const { data: unreadCount, error } = await supabase.rpc('get_unread_messages_count');
 
-    if (session.user.role === "admin") {
-      // Compter les messages non lus des professionnels
-      unreadCount = await prisma.message.count({
-        where: {
-          senderType: "PROFESSIONAL",
-          isRead: false,
-        },
-      });
-    } else if (session.user.userType === "professional") {
-      // Compter les messages non lus de l'admin dans les conversations du pro
-      const conversations = await prisma.conversation.findMany({
-        where: {
-          professionalId: session.user.id,
-        },
-        select: {
-          id: true,
-        },
-      });
-
-      const conversationIds = conversations.map((c) => c.id);
-
-      unreadCount = await prisma.message.count({
-        where: {
-          conversationId: {
-            in: conversationIds,
-          },
-          senderType: "ADMIN",
-          isRead: false,
-        },
-      });
-    } else {
-      return NextResponse.json(
-        { error: "Accès non autorisé" },
-        { status: 403 }
-      );
+    if (error) {
+      console.error('❌ Erreur RPC get_unread_messages_count:', error);
+      // En cas d'erreur RPC, retourner 0 pour ne pas bloquer l'interface
+      return NextResponse.json({ unreadCount: 0, error: error.message });
     }
 
-    return NextResponse.json({ unreadCount });
+    return NextResponse.json({ unreadCount: unreadCount || 0 });
+    
   } catch (error) {
-    console.error("Erreur lors du comptage des messages non lus:", error);
-    return NextResponse.json(
-      { error: "Erreur serveur" },
-      { status: 500 }
-    );
+    console.error("Erreur serveur lors du comptage des messages:", error);
+    return NextResponse.json({ unreadCount: 0 }, { status: 500 });
   }
 }
-

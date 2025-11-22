@@ -181,8 +181,8 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
   };
 
   return (
-    <div className="space-y-8">
-      <div className="text-center mb-8">
+    <div className="space-y-8" data-testid="form-summary-step">
+      <div className="text-center mb-8" data-testid="summary-header">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">
           Résumé de l'inscription de votre établissement
         </h2>

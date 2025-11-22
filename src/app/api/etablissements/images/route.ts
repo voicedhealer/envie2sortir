@@ -1,117 +1,98 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment, getProfessionalEstablishment } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 API GET /api/etablissements/images appelée');
-    
-    const session = await getServerSession(authOptions);
-    console.log('👤 Session utilisateur complète:', {
-      id: session?.user?.id,
-      email: session?.user?.email,
-      role: session?.user?.role,
-      userType: session?.user?.userType,
-      companyName: session?.user?.companyName
-    });
-    
-    if (!session?.user) {
-      console.log('❌ Utilisateur non authentifié');
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Vérifier que c'est bien un professionnel
-    if (session.user.role !== 'pro' || session.user.userType !== 'professional') {
-      console.log('❌ Utilisateur n\'est pas un professionnel:', session.user.role, session.user.userType);
-      return NextResponse.json({ error: "Accès refusé - Professionnel requis" }, { status: 403 });
-    }
+    const supabase = await createClient();
+    const establishmentId = (user as any).establishmentId || null;
 
-    console.log('🔍 Recherche de l\'établissement avec ownerId:', session.user.id);
-
-    // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
-    const establishment = await prisma.establishment.findFirst({
-      where: { ownerId: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        imageUrl: true,
-        images: {
-          select: {
-            id: true,
-            url: true,
-            isPrimary: true,
-            createdAt: true,
-            ordre: true
-          },
-          orderBy: { ordre: 'asc' } // ✅ CORRECTION : Trier par ordre, pas par date
-        }
-      }
+    console.log('📸 [GET] Images API - user context:', {
+      userId: user.id,
+      establishmentId,
+      hasProfessional: user.userType === 'professional'
     });
 
-    console.log('🏢 Établissement trouvé:', establishment?.id, establishment?.name);
+    // Préparer la requête pour récupérer l'établissement
+    let query = supabase
+      .from('establishments')
+      .select(`
+        id,
+        name,
+        slug,
+        image_url,
+        images!images_establishment_id_fkey (
+          id,
+          url,
+          is_primary,
+          is_card_image,
+          created_at,
+          ordre
+        )
+      `)
+      .limit(1);
 
-    if (!establishment) {
-      console.log('❌ Aucun établissement trouvé pour ownerId:', session.user.id);
-      
-      // Debug: lister tous les établissements avec leurs propriétaires
-      const allEstablishments = await prisma.establishment.findMany({
-        select: { 
-          id: true, 
-          name: true, 
-          ownerId: true,
-          status: true,
-          createdAt: true
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-      
-      // Debug: lister tous les professionnels
-      const allProfessionals = await prisma.professional.findMany({
-        select: { 
-          id: true, 
-          email: true, 
-          firstName: true, 
-          lastName: true,
-          companyName: true
-        }
-      });
-      
-      console.log('📋 Tous les établissements:', allEstablishments);
-      console.log('👥 Tous les professionnels:', allProfessionals);
-      
-      // Vérifier s'il y a un établissement avec un ownerId qui ne correspond à aucun professionnel
-      const invalidOwners = allEstablishments.filter(est => 
-        est.ownerId && !allProfessionals.some(p => p.id === est.ownerId)
-      );
-      
-      if (invalidOwners.length > 0) {
-        console.log('⚠️ Établissements avec ownerId invalide:', invalidOwners);
-      }
-      
-      return NextResponse.json({ 
-        error: "Établissement non trouvé",
-        debug: {
-          userId: session.user.id,
-          userEmail: session.user.email,
-          userRole: session.user.role,
-          userType: session.user.userType,
-          allEstablishments: allEstablishments,
-          allProfessionals: allProfessionals,
-          invalidOwners: invalidOwners
-        }
-      }, { status: 404 });
+    if (establishmentId) {
+      query = query.eq('id', establishmentId);
+    } else {
+      query = query.eq('owner_id', user.id);
     }
 
-    console.log('✅ Retour des données de l\'établissement');
+    const { data: establishment, error: establishmentError } = await query.single();
+
+    let finalEstablishment = establishment;
+    if (establishmentError || !establishment) {
+      console.error('❌ [GET] Établissement non trouvé via client standard', {
+        establishmentId,
+        ownerId: user.id,
+        error: establishmentError
+      });
+
+      // Fallback avec client admin (contourne RLS éventuels)
+      const fallbackEstablishment = await getProfessionalEstablishment(user.id);
+      if (!fallbackEstablishment) {
+        return NextResponse.json({ 
+          error: "Établissement non trouvé",
+          details: establishmentError?.message
+        }, { status: 404 });
+      }
+
+      finalEstablishment = fallbackEstablishment;
+
+      // Récupérer les images séparément
+      const { data: adminImages } = await supabase
+        .from('images')
+        .select('id, url, is_primary, is_card_image, created_at, ordre')
+        .eq('establishment_id', fallbackEstablishment.id)
+        .order('ordre', { ascending: true });
+
+      finalEstablishment.images = adminImages || [];
+    }
+
+    // Trier les images par ordre
+    const sortedImages = (finalEstablishment.images || []).sort((a: any, b: any) => 
+      (a.ordre || 0) - (b.ordre || 0)
+    );
+
     return NextResponse.json({
       establishment: {
-        id: establishment.id,
-        name: establishment.name,
-        slug: establishment.slug,
-        imageUrl: establishment.imageUrl,
-        images: establishment.images
+        id: finalEstablishment.id,
+        name: finalEstablishment.name,
+        slug: finalEstablishment.slug,
+        imageUrl: finalEstablishment.image_url,
+        images: sortedImages.map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          isPrimary: img.is_primary,
+          isCardImage: img.is_card_image,
+          createdAt: img.created_at,
+          ordre: img.ordre
+        }))
       }
     });
 
@@ -126,87 +107,79 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    console.log('🔄 API PUT /api/etablissements/images appelée');
-    
-    // Debug des headers de la requête
-    const cookies = request.headers.get('cookie');
-    console.log('🍪 Cookies reçus:', cookies);
-    
-    const session = await getServerSession(authOptions);
-    console.log('👤 Session utilisateur complète:', {
-      id: session?.user?.id,
-      email: session?.user?.email,
-      role: session?.user?.role,
-      userType: session?.user?.userType,
-      hasSession: !!session,
-      hasUser: !!session?.user
-    });
-    
-    if (!session?.user) {
-      console.log('❌ Utilisateur non authentifié');
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // Récupérer l'établissement de l'utilisateur (nouvelle architecture)
-    const establishment = await prisma.establishment.findFirst({
-      where: { ownerId: session.user.id },
-      select: {
-        id: true,
-        name: true,
-        status: true,
-        imageUrl: true
-      }
+    const supabase = await createClient();
+    const establishmentId = (user as any).establishmentId || null;
+
+    console.log('📸 [PUT] Images API - user context:', {
+      userId: user.id,
+      establishmentId,
+      hasProfessional: user.userType === 'professional'
     });
 
-    console.log('🏢 Établissement trouvé:', establishment?.id, establishment?.name, establishment?.status);
+    let query = supabase
+      .from('establishments')
+      .select('id, name, status, image_url')
+      .limit(1);
 
-    if (!establishment) {
-      console.log('❌ Aucun établissement associé');
+    if (establishmentId) {
+      query = query.eq('id', establishmentId);
+    } else {
+      query = query.eq('owner_id', user.id);
+    }
+
+    const { data: establishment, error: establishmentError } = await query.single();
+
+    if (establishmentError || !establishment) {
+      console.error('❌ [PUT] Établissement non trouvé', {
+        establishmentId,
+        ownerId: user.id,
+        error: establishmentError
+      });
       return NextResponse.json({ error: "Aucun établissement associé" }, { status: 404 });
     }
 
-    // Vérifier que l'établissement est actif (pas nécessaire pour l'upload d'images)
-    // Les établissements en attente peuvent aussi uploader des images
-    console.log('📊 Statut de l\'établissement:', establishment.status);
-
     const body = await request.json();
-    console.log('📝 Données reçues:', body);
-    
     const { imageUrl } = body;
 
     if (!imageUrl) {
-      console.log('❌ imageUrl manquant');
       return NextResponse.json({ error: "URL de l'image requise" }, { status: 400 });
     }
 
     // Mettre à jour l'image principale
-    console.log('💾 Mise à jour de l\'image principale:', imageUrl);
-    
-    // Transaction pour mettre à jour l'établissement ET les images
-    await prisma.$transaction(async (tx) => {
-      // 1. Mettre à jour l'imageUrl de l'établissement
-      await tx.establishment.update({
-        where: { id: establishment.id },
-        data: { imageUrl }
-      });
-      
-      // 2. Marquer toutes les images comme non-principales
-      await tx.image.updateMany({
-        where: { establishmentId: establishment.id },
-        data: { isPrimary: false }
-      });
-      
-      // 3. Marquer l'image sélectionnée comme principale
-      await tx.image.updateMany({
-        where: { 
-          establishmentId: establishment.id,
-          url: imageUrl
-        },
-        data: { isPrimary: true }
-      });
-    });
+    // 1. Mettre à jour l'imageUrl de l'établissement
+    const { error: updateError } = await supabase
+      .from('establishments')
+      .update({ 
+        image_url: imageUrl,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', establishment.id);
 
-    console.log('✅ Image principale mise à jour avec succès');
+    if (updateError) {
+      console.error('Erreur mise à jour image_url:', updateError);
+      return NextResponse.json({ 
+        error: "Erreur serveur"
+      }, { status: 500 });
+    }
+
+    // 2. Marquer toutes les images comme non-principales
+    await supabase
+      .from('images')
+      .update({ is_primary: false })
+      .eq('establishment_id', establishment.id);
+
+    // 3. Marquer l'image sélectionnée comme principale
+    await supabase
+      .from('images')
+      .update({ is_primary: true })
+      .eq('establishment_id', establishment.id)
+      .eq('url', imageUrl);
+
     return NextResponse.json({ 
       success: true,
       message: 'Image principale mise à jour'

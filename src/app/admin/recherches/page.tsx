@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Search, TrendingUp, Users, AlertCircle } from 'lucide-react';
 
@@ -27,49 +27,66 @@ interface SearchAnalyticsData {
 }
 
 export default function AdminRecherchesPage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [data, setData] = useState<SearchAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    if (status === 'loading') return;
-    
-    if (!session) {
-      router.push('/auth/signin');
+  const fetchSearchAnalytics = useCallback(async () => {
+    // Éviter les appels multiples pour la même période
+    if (hasFetchedRef.current === period) {
       return;
     }
 
-    // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    try {
+      hasFetchedRef.current = period;
+      setLoading(true);
+      const response = await fetch(`/api/analytics/search?period=${period}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch search analytics');
+      }
+      
+      const analyticsData = await response.json();
+      setData(analyticsData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      hasFetchedRef.current = null; // Permettre de réessayer en cas d'erreur
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => {
+    if (sessionLoading) return;
+    
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push('/auth');
+      return;
+    }
+
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/dashboard');
       return;
     }
 
-    const fetchSearchAnalytics = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/analytics/search?period=${period}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch search analytics');
-        }
-        
-        const analyticsData = await response.json();
-        setData(analyticsData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Éviter les appels multiples
+    if (!session || session.user?.role !== 'admin') {
+      return;
+    }
 
     fetchSearchAnalytics();
-  }, [session, status, router, period]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id, session?.user?.role, sessionLoading, period]); // Utiliser des valeurs primitives pour éviter les re-renders
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>

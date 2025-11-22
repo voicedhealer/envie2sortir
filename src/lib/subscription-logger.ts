@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 
 export interface SubscriptionChangeLog {
   establishmentId: string;
@@ -17,18 +17,17 @@ export async function logSubscriptionChange(
   reason?: string
 ) {
   try {
+    const supabase = await createClient();
+    
     // Récupérer les infos de l'établissement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { 
-        name: true, 
-        subscription: true,
-        ownerId: true
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('name, subscription, owner_id')
+      .eq('id', establishmentId)
+      .maybeSingle();
 
-    if (!establishment) {
-      console.error('❌ Établissement introuvable pour le log de subscription:', establishmentId);
+    if (establishmentError || !establishment) {
+      console.error('❌ Établissement introuvable pour le log de subscription:', establishmentId, establishmentError);
       return;
     }
 
@@ -53,7 +52,8 @@ export async function logSubscriptionChange(
     });
 
     // TODO: Sauvegarder en base de données si nécessaire
-    // await prisma.subscriptionChangeLog.create({ data: logData });
+    // Créer une table subscription_change_logs dans Supabase si besoin
+    // await supabase.from('subscription_change_logs').insert({ ... });
 
   } catch (error) {
     console.error('❌ Erreur lors du logging de subscription:', error);

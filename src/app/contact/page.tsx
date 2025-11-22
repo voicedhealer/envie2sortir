@@ -1,18 +1,29 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, Phone, MapPin, Clock, Send } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Mail, Phone, MapPin, Clock, Send, LogIn } from "lucide-react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
+import Link from "next/link";
 
 export default function ContactPage() {
+  const { session, loading } = useSupabaseSession();
+  const router = useRouter();
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
     subject: "",
     message: "",
     type: "general"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Rediriger vers la connexion si l'utilisateur n'est pas authentifié
+  useEffect(() => {
+    if (!loading && !session) {
+      // Ne pas rediriger automatiquement, afficher un message à la place
+    }
+  }, [session, loading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -25,12 +36,44 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     
-    // Simulation d'envoi (à remplacer par un vrai appel API)
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Erreur de parsing de la réponse:', parseError);
+        throw new Error('Erreur de communication avec le serveur. Veuillez réessayer.');
+      }
+
+      if (!response.ok) {
+        const errorMsg = data?.error || data?.message || 'Erreur lors de l\'envoi du message';
+        console.error('Erreur API:', {
+          status: response.status,
+          error: errorMsg,
+          details: data?.details
+        });
+        throw new Error(errorMsg);
+      }
+
+      // Succès
+      setIsSubmitted(true);
+      setFormData({ subject: "", message: "", type: "general" });
+    } catch (err) {
+      console.error('Erreur lors de l\'envoi du message:', err);
+      setError(err instanceof Error ? err.message : 'Erreur lors de l\'envoi du message. Veuillez réessayer.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -47,7 +90,7 @@ export default function ContactPage() {
           <button 
             onClick={() => {
               setIsSubmitted(false);
-              setFormData({ name: "", email: "", subject: "", message: "", type: "general" });
+              setFormData({ subject: "", message: "", type: "general" });
             }}
             className="inline-block px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-pink-600 transition-colors"
           >
@@ -108,109 +151,123 @@ export default function ContactPage() {
             {/* Formulaire de contact */}
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">Envoyez-nous un message</h2>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                      Nom complet *
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="Votre nom"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder="votre@email.com"
-                    />
+              
+              {/* Vérification de l'authentification */}
+              {loading ? (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+                  <p className="text-blue-800 text-sm">Vérification de votre session...</p>
+                </div>
+              ) : !session ? (
+                <div className="mb-6 p-6 bg-orange-50 border border-orange-200 rounded-xl">
+                  <div className="flex items-start space-x-3">
+                    <LogIn className="w-6 h-6 text-orange-600 mt-1" />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-orange-900 mb-2">
+                        Connexion requise
+                      </h3>
+                      <p className="text-orange-800 mb-4">
+                        Vous devez être connecté pour envoyer un message. Cela nous permet de vous répondre directement.
+                      </p>
+                      <Link
+                        href="/auth?redirect=/contact"
+                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-semibold rounded-xl hover:from-orange-600 hover:to-pink-600 transition-colors"
+                      >
+                        <LogIn className="w-5 h-5 mr-2" />
+                        Se connecter ou créer un compte
+                      </Link>
+                    </div>
                   </div>
                 </div>
-
-                <div>
-                  <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
-                    Type de demande
-                  </label>
-                  <select
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  >
-                    <option value="general">Question générale</option>
-                    <option value="technical">Problème technique</option>
-                    <option value="business">Partenariat professionnel</option>
-                    <option value="bug">Signaler un bug</option>
-                    <option value="feature">Demande de fonctionnalité</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-                    Sujet *
-                  </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="Résumé de votre demande"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                    Message *
-                  </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleInputChange}
-                    required
-                    rows={6}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="Décrivez votre demande en détail..."
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                      Envoi en cours...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5 mr-2" />
-                      Envoyer le message
-                    </>
+              ) : (
+                <>
+                  {/* Informations de l'utilisateur connecté */}
+                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+                    <p className="text-sm text-green-800">
+                      <strong>Connecté en tant que :</strong> {session.user?.email}
+                      {session.user?.user_metadata?.first_name && session.user?.user_metadata?.last_name && (
+                        <span> ({session.user.user_metadata.first_name} {session.user.user_metadata.last_name})</span>
+                      )}
+                    </p>
+                  </div>
+                  
+                  {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+                      <p className="text-red-800 text-sm">{error}</p>
+                    </div>
                   )}
-                </button>
-              </form>
+                  
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-2">
+                        Type de demande
+                      </label>
+                      <select
+                        id="type"
+                        name="type"
+                        value={formData.type}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      >
+                        <option value="general">Question générale</option>
+                        <option value="technical">Problème technique</option>
+                        <option value="business">Partenariat professionnel</option>
+                        <option value="bug">Signaler un bug</option>
+                        <option value="feature">Demande de fonctionnalité</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
+                        Sujet *
+                      </label>
+                      <input
+                        type="text"
+                        id="subject"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleInputChange}
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="Résumé de votre demande"
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
+                        Message *
+                      </label>
+                      <textarea
+                        id="message"
+                        name="message"
+                        value={formData.message}
+                        onChange={handleInputChange}
+                        required
+                        rows={6}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                        placeholder="Décrivez votre demande en détail..."
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full px-8 py-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white font-bold rounded-xl hover:from-orange-600 hover:to-pink-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-5 h-5 mr-2" />
+                          Envoyer le message
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </>
+              )}
             </div>
 
             {/* Informations supplémentaires */}

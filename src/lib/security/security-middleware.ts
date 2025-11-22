@@ -10,7 +10,12 @@ export async function applySecurityMiddleware(
   let rateLimitResult;
   const method = request.method;
   
-  if (endpoint.includes('/search') || endpoint.includes('/recherche')) {
+  // Exclure les routes admin analytics du rate limiting strict
+  // /api/analytics/search est une route admin, pas une recherche utilisateur
+  const isAdminAnalyticsRoute = endpoint.includes('/api/analytics/');
+  
+  if ((endpoint.includes('/search') || endpoint.includes('/recherche')) && !isAdminAnalyticsRoute) {
+    // Rate limiting strict uniquement pour les recherches utilisateur
     rateLimitResult = await searchRateLimit(request);
   } else if (endpoint.includes('/upload') || (endpoint.includes('/images') && method === 'POST')) {
     // Rate limiting pour les uploads de nouveaux fichiers uniquement

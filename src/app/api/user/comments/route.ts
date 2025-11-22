@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 import { Filter } from 'bad-words';
 
 // Initialiser le filtre de mots interdits
@@ -76,36 +75,53 @@ function validateAndCleanContent(content: string): { isValid: boolean; cleanedCo
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!user || user.userType !== 'user') {
+      return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+    const supabase = await createClient();
+
+    const { data: comments, error: commentsError } = await supabase
+      .from('user_comments')
+      .select(`
+        *,
+        establishment:establishments!user_comments_establishment_id_fkey (
+          id,
+          name,
+          slug
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (commentsError) {
+      console.error('Erreur récupération commentaires:', commentsError);
+      return NextResponse.json({ error: 'Erreur lors de la récupération des avis' }, { status: 500 });
     }
 
-    const comments = await prisma.userComment.findMany({
-      where: {
-        userId: session.user.id
-      },
-      include: {
-        establishment: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+    // Convertir snake_case -> camelCase
+    const formattedComments = (comments || []).map((comment: any) => {
+      const establishment = Array.isArray(comment.establishment) ? comment.establishment[0] : comment.establishment;
+      
+      return {
+        id: comment.id,
+        userId: comment.user_id,
+        establishmentId: comment.establishment_id,
+        content: comment.content,
+        rating: comment.rating,
+        createdAt: comment.created_at,
+        updatedAt: comment.updated_at,
+        establishment: establishment ? {
+          id: establishment.id,
+          name: establishment.name,
+          slug: establishment.slug
+        } : null
+      };
     });
 
-    return NextResponse.json({ comments });
+    return NextResponse.json({ comments: formattedComments });
 
   } catch (error) {
     console.error('Erreur lors de la récupération des avis:', error);
@@ -118,17 +134,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!user || user.userType !== 'user') {
+      return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = await createClient();
     const body = await request.json();
     console.log('📝 Données reçues:', body);
     
@@ -158,90 +170,122 @@ export async function POST(request: NextRequest) {
     const validRating = rating && typeof rating === 'number' && rating > 0 && rating <= 5 ? rating : null;
 
     // Vérifier que l'établissement existe
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('id', establishmentId)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 });
     }
 
     // Vérifier s'il existe déjà un avis de cet utilisateur pour cet établissement
-    const existingComment = await prisma.userComment.findFirst({
-      where: {
-        userId: session.user.id,
-        establishmentId: establishmentId
-      }
-    });
+    const { data: existingComment } = await supabase
+      .from('user_comments')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('establishment_id', establishmentId)
+      .single();
 
     let comment;
     if (existingComment) {
       // Mettre à jour l'avis existant
-      comment = await prisma.userComment.update({
-        where: { id: existingComment.id },
-        data: {
+      const { data: updatedComment, error: updateError } = await supabase
+        .from('user_comments')
+        .update({
           content: cleanedContent,
           rating: validRating,
-          updatedAt: new Date()
-        },
-        include: {
-          establishment: {
-            select: {
-              id: true,
-              name: true,
-              slug: true
-            }
-          }
-        }
-      });
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingComment.id)
+        .select(`
+          *,
+          establishment:establishments!user_comments_establishment_id_fkey (
+            id,
+            name,
+            slug
+          )
+        `)
+        .single();
+
+      if (updateError || !updatedComment) {
+        console.error('Erreur mise à jour commentaire:', updateError);
+        return NextResponse.json({ error: 'Erreur lors de la mise à jour de l\'avis' }, { status: 500 });
+      }
+
+      comment = updatedComment;
     } else {
       // Créer un nouvel avis
-      comment = await prisma.userComment.create({
-        data: {
-          userId: session.user.id,
-          establishmentId: establishmentId,
+      const { data: newComment, error: createError } = await supabase
+        .from('user_comments')
+        .insert({
+          user_id: user.id,
+          establishment_id: establishmentId,
           content: cleanedContent,
           rating: validRating
-        },
-        include: {
-          establishment: {
-            select: {
-              id: true,
-              name: true,
-              slug: true
-            }
-          }
-        }
-      });
+        })
+        .select(`
+          *,
+          establishment:establishments!user_comments_establishment_id_fkey (
+            id,
+            name,
+            slug
+          )
+        `)
+        .single();
+
+      if (createError || !newComment) {
+        console.error('Erreur création commentaire:', createError);
+        return NextResponse.json({ error: 'Erreur lors de l\'ajout de l\'avis' }, { status: 500 });
+      }
+
+      comment = newComment;
     }
 
     // Mettre à jour la note moyenne de l'établissement
     if (validRating && validRating > 0) {
-      const allComments = await prisma.userComment.findMany({
-        where: {
-          establishmentId: establishmentId
-        },
-        select: { rating: true }
-      });
+      const { data: allComments } = await supabase
+        .from('user_comments')
+        .select('rating')
+        .eq('establishment_id', establishmentId);
 
       // Filtrer les commentaires avec rating valide
-      const commentsWithRating = allComments.filter(c => c.rating && c.rating > 0);
+      const commentsWithRating = (allComments || []).filter((c: any) => c.rating && c.rating > 0);
       const avgRating = commentsWithRating.length > 0 
-        ? commentsWithRating.reduce((sum, c) => sum + c.rating!, 0) / commentsWithRating.length 
+        ? commentsWithRating.reduce((sum: number, c: any) => sum + c.rating, 0) / commentsWithRating.length 
         : 0;
 
-      await prisma.establishment.update({
-        where: { id: establishmentId },
-        data: {
-          avgRating: avgRating,
-          totalComments: commentsWithRating.length
-        }
-      });
+      await supabase
+        .from('establishments')
+        .update({
+          avg_rating: avgRating,
+          total_comments: commentsWithRating.length
+        })
+        .eq('id', establishmentId);
     }
+
+    // Convertir snake_case -> camelCase
+    const establishmentData = comment.establishment ? (Array.isArray(comment.establishment) ? comment.establishment[0] : comment.establishment) : null;
+
+    const formattedComment = {
+      id: comment.id,
+      userId: comment.user_id,
+      establishmentId: comment.establishment_id,
+      content: comment.content,
+      rating: comment.rating,
+      createdAt: comment.created_at,
+      updatedAt: comment.updated_at,
+      establishment: establishmentData ? {
+        id: establishmentData.id,
+        name: establishmentData.name,
+        slug: establishmentData.slug
+      } : null
+    };
 
     return NextResponse.json({ 
       success: true, 
-      comment,
+      comment: formattedComment,
       message: existingComment ? 'Avis mis à jour' : 'Avis ajouté' 
     });
 

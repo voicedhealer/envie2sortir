@@ -306,9 +306,98 @@ export function parseAddress(fullAddress: string) {
   };
 }
 
-// Fonction pour valider un numéro de téléphone mobile français (06 ou 07)
-export function isValidFrenchPhone(phone: string): boolean {
+/**
+ * Numéros de test Twilio (pour les tests sans frais)
+ * Format international : +15005550006, +15005550007, +15005550008
+ * Format français : 01500555006, 01500555007, 01500555008 (10 chiffres avec le 0 initial)
+ */
+const TWILIO_TEST_NUMBERS = [
+  '+15005550006', // SMS réussi
+  '+15005550007', // Erreur
+  '+15005550008', // Invalide
+  '01500555006', // Format français - 10 chiffres
+  '01500555007',
+  '01500555008',
+  '15005550006', // Sans le 0 initial
+  '15005550007',
+  '15005550008'
+];
+
+/**
+ * Normalise un numéro de test Twilio (corrige les erreurs de saisie comme 015005550006 -> 01500555006)
+ */
+function normalizeTwilioTestNumber(phone: string): string {
+  if (!phone) return phone;
+  
   const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Si c'est un numéro qui commence par 01500555 ou +1500555, normaliser
+  // Format français: 01500555XXX (11 chiffres) - corriger si 12 chiffres (015005550006 -> 01500555006)
+  if (/^01500555\d{4}$/.test(cleanPhone)) {
+    // Si 12 chiffres, prendre les 11 premiers (015005550006 -> 01500555006)
+    return cleanPhone.substring(0, 11);
+  }
+  
+  // Format international: +1500555XXX (12 caractères) - corriger si 13 caractères
+  if (/^\+1500555\d{4}$/.test(cleanPhone)) {
+    return cleanPhone.substring(0, 12);
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 chiffres) - corriger si 12 chiffres
+  if (/^1500555\d{4}$/.test(cleanPhone)) {
+    return cleanPhone.substring(0, 11);
+  }
+  
+  return cleanPhone;
+}
+
+/**
+ * Vérifie si un numéro est un numéro de test Twilio
+ */
+function isTwilioTestNumber(phone: string): boolean {
+  if (!phone) return false;
+  
+  const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  const normalized = normalizeTwilioTestNumber(cleanPhone);
+  
+  // Vérifier dans la liste exacte
+  if (TWILIO_TEST_NUMBERS.includes(normalized)) {
+    return true;
+  }
+  
+  // Vérifier si c'est un numéro qui commence par 01500555 ou +1500555 (numéros de test Twilio)
+  // Format français: 01500555006 à 01500555008 (11 chiffres)
+  if (/^01500555\d{3}$/.test(normalized)) {
+    return true;
+  }
+  
+  // Format international: +15005550006 à +15005550008 (12 caractères)
+  if (/^\+1500555\d{3}$/.test(normalized)) {
+    return true;
+  }
+  
+  // Format sans 0 initial: 15005550006 à 15005550008 (11 chiffres)
+  if (/^1500555\d{3}$/.test(normalized)) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Fonction pour valider un numéro de téléphone mobile français (06 ou 07) ou numéros de test Twilio
+export function isValidFrenchPhone(phone: string): boolean {
+  if (!phone) return false;
+  
+  const cleanPhone = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Normaliser les numéros de test Twilio (corriger les erreurs de saisie)
+  const normalized = normalizeTwilioTestNumber(cleanPhone);
+  
+  // Accepter les numéros de test Twilio
+  if (isTwilioTestNumber(normalized)) {
+    return true;
+  }
+  
   // Accepter seulement les numéros mobiles : 06, 07, +336, +337
   return /^(0[67]|\+33[67])[0-9]{8}$/.test(cleanPhone);
 }
@@ -337,8 +426,18 @@ export function getPhoneFieldState(phone: string, isVerified: boolean): {
     return {
       state: 'empty',
       className: 'border-gray-300',
-      message: '📱 Un SMS de vérification sera envoyé à ce numéro mobile (06 ou 07 uniquement)',
+      message: '📱 Un SMS de vérification sera envoyé à ce numéro mobile (06 ou 07 uniquement, ou numéro de test Twilio: 01500555006)',
       disabled: false
+    };
+  }
+  
+  // Vérifier si c'est un numéro de test Twilio
+  if (isTwilioTestNumber(phone)) {
+    return {
+      state: 'valid',
+      className: 'border-blue-500 bg-blue-50',
+      message: '🧪 Numéro de test Twilio détecté - Envoi du SMS de test...',
+      disabled: false // Permettre la modification même si validé
     };
   }
   
@@ -350,7 +449,7 @@ export function getPhoneFieldState(phone: string, isVerified: boolean): {
       state: 'valid',
       className: 'border-green-500 bg-green-50',
       message: '📱 Envoi automatique du SMS en cours...',
-      disabled: true
+      disabled: false // Permettre la modification même si validé
     };
   }
   
@@ -361,7 +460,7 @@ export function getPhoneFieldState(phone: string, isVerified: boolean): {
     return {
       state: 'invalid',
       className: 'border-red-300 bg-red-50',
-      message: '⚠️ Numéro invalide : Le numéro doit commencer par 06 ou 07 et contenir 10 chiffres',
+      message: '⚠️ Numéro invalide : Le numéro doit commencer par 06 ou 07 et contenir 10 chiffres, ou utiliser un numéro de test Twilio (ex: 01500555006)',
       disabled: false
     };
   }
@@ -373,7 +472,7 @@ export function getPhoneFieldState(phone: string, isVerified: boolean): {
     return {
       state: 'empty',
       className: 'border-gray-300',
-      message: '📱 Un SMS de vérification sera envoyé à ce numéro mobile (06 ou 07 uniquement)',
+      message: '📱 Un SMS de vérification sera envoyé à ce numéro mobile (06 ou 07 uniquement, ou numéro de test Twilio)',
       disabled: false
     };
   }
@@ -382,7 +481,7 @@ export function getPhoneFieldState(phone: string, isVerified: boolean): {
   return {
     state: 'invalid',
     className: 'border-red-300 bg-red-50',
-    message: '⚠️ Numéro invalide : Le numéro doit commencer par 06 ou 07 et contenir 10 chiffres',
+    message: '⚠️ Numéro invalide : Le numéro doit commencer par 06 ou 07 et contenir 10 chiffres, ou utiliser un numéro de test Twilio (ex: 01500555006)',
     disabled: false
   };
 }

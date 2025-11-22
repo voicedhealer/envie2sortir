@@ -24,13 +24,28 @@
     "test:messaging:integration": "jest --testPathPatterns=messaging-integration",
     "test:messaging:components": "jest --testPathPatterns=messaging-components",
     "test:messaging:quick": "node scripts/test-messaging.js",
-    "test:messaging:all": "npm run test:messaging && npm run test:messaging:quick"
+    "test:messaging:all": "npm run test:messaging && npm run test:messaging:quick",
+    "test:supabase": "tsx scripts/test-supabase-connection.ts",
+    "test:routes": "tsx scripts/test-routes-supabase.ts",
+    "test:railway": "tsx scripts/test-railway-api.ts",
+    "test:railway:compare": "tsx scripts/test-railway-comparison.ts",
+    "test:cloudflare": "tsx scripts/test-cloudflare-api.ts",
+    "verify:email": "tsx scripts/verify-user-email.ts",
+    "fix:images-ordre": "tsx scripts/fix-images-ordre.ts",
+    "check:establishment": "tsx scripts/check-establishment.ts",
+    "check:status": "tsx scripts/check-establishment-status.ts",
+    "export:prisma-to-supabase": "tsx scripts/export-prisma-to-supabase.ts",
+    "cleanup:test-data": "tsx scripts/cleanup-test-data.ts",
+    "cleanup:test-professionals": "tsx scripts/cleanup-test-professionals.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@prisma/client": "^6.14.0",
+    "@stripe/stripe-js": "^8.5.2",
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.81.1",
     "@types/leaflet": "^1.9.20",
     "bad-words": "^4.0.0",
     "bcryptjs": "^3.0.2",
@@ -39,7 +54,6 @@
     "leaflet": "^1.9.4",
     "lucide-react": "^0.542.0",
     "next": "15.4.7",
-    "next-auth": "^4.24.11",
     "node-fetch": "^2.7.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
@@ -47,6 +61,8 @@
     "react-select": "^5.10.2",
     "recharts": "^3.2.1",
     "sonner": "^2.0.7",
+    "stripe": "^20.0.0",
+    "twilio": "^5.10.6",
     "zod": "^4.1.12"
   },
   "devDependencies": {
@@ -61,6 +77,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.7",
     "jest": "^30.1.3",
@@ -70,6 +87,7 @@
     "sharp": "^0.34.4",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

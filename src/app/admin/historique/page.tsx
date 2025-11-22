@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
+import { useRouter } from 'next/navigation';
 
 interface AdminAction {
   id: string;
@@ -23,30 +23,27 @@ interface AdminAction {
 }
 
 export default function AdminHistoriquePage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
+  const router = useRouter();
   const [actions, setActions] = useState<AdminAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const hasRedirectedRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const lastPageRef = useRef(0);
+  const userIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    loadActions();
-  }, [page]);
-
-  // Redirection si pas admin
-  if (status === 'loading') {
-    return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
-  }
-
-  if (!session || session.user.role !== 'admin') {
-    redirect('/');
-  }
-
-  const loadActions = async () => {
+  const loadActions = useCallback(async (currentPage: number) => {
+    if (isFetchingRef.current) return;
+    if (lastPageRef.current === currentPage) return;
+    
     try {
+      isFetchingRef.current = true;
+      lastPageRef.current = currentPage;
       setLoading(true);
-      const response = await fetch(`/api/admin/actions?page=${page}&limit=20`);
+      const response = await fetch(`/api/admin/actions?page=${currentPage}&limit=20`);
       
       if (!response.ok) throw new Error('Erreur lors du chargement');
       
@@ -55,10 +52,49 @@ export default function AdminHistoriquePage() {
       setTotalPages(data.totalPages);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      lastPageRef.current = 0; // Réinitialiser en cas d'erreur
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  };
+  }, []);
+
+  // Vérification de l'authentification et redirection
+  useEffect(() => {
+    if (sessionLoading) return;
+    
+    if (!session || session.user?.role !== 'admin') {
+      if (!hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        router.push('/');
+      }
+      return;
+    }
+    
+    // Stocker l'ID utilisateur pour détecter les changements
+    const currentUserId = session.user?.id;
+    if (userIdRef.current !== currentUserId) {
+      userIdRef.current = currentUserId;
+      lastPageRef.current = 0; // Réinitialiser pour forcer le rechargement
+    }
+  }, [session, sessionLoading]); // Retirer router des dépendances
+
+  // Chargement des données (quand la page change ou au montage)
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || session.user?.role !== 'admin') return;
+    
+    loadActions(page);
+  }, [page, sessionLoading, session?.user?.id, loadActions]);
+
+  // Redirection si pas admin
+  if (sessionLoading) {
+    return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
+  }
+
+  if (!session || session.user?.role !== 'admin') {
+    return null;
+  }
 
   const getActionIcon = (action: string) => {
     switch (action) {
@@ -154,7 +190,10 @@ export default function AdminHistoriquePage() {
           <div className="text-red-500 text-xl mb-4">❌</div>
           <p className="text-red-600">{error}</p>
           <button 
-            onClick={loadActions}
+            onClick={() => {
+              lastPageRef.current = 0;
+              loadActions(page);
+            }}
             className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
           >
             Réessayer

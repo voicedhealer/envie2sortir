@@ -175,7 +175,7 @@ const ProfessionalWelcomeModal = memo(function ProfessionalWelcomeModal({ isOpen
                 </div>
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-gray-900 mb-2">Plan Premium</h4>
-                  <div className="text-3xl font-bold text-pink-500 mb-2">29€</div>
+                  <div className="text-3xl font-bold text-pink-500 mb-2">29,90€</div>
                   <div className="text-sm text-gray-600 mb-4">par mois</div>
                   <ul className="text-sm text-gray-700 space-y-2 text-left">
                     <li className="flex items-center">

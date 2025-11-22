@@ -1,45 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, requireEstablishment } from "@/lib/supabase/helpers";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
+    const supabase = await createClient();
     const { slug } = await params;
     
-    // Récupérer l'établissement
-    const establishment = await prisma.establishment.findUnique({
-      where: { slug },
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        images: {
-          select: {
-            id: true,
-            url: true,
-            isPrimary: true,
-            createdAt: true,
-            ordre: true
-          },
-          orderBy: { ordre: 'asc' } // ✅ CORRECTION : Trier par ordre, pas par date
-        }
-      }
-    });
+    // Récupérer l'établissement avec ses images
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select(`
+        id,
+        name,
+        image_url,
+        images (
+          id,
+          url,
+          is_primary,
+          created_at,
+          ordre
+        )
+      `)
+      .eq('slug', slug)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
+
+    // Trier les images par ordre
+    const sortedImages = (establishment.images || []).sort((a: any, b: any) => 
+      (a.ordre || 0) - (b.ordre || 0)
+    );
 
     return NextResponse.json({
       establishment: {
         id: establishment.id,
         name: establishment.name,
-        imageUrl: establishment.imageUrl,
-        images: establishment.images
+        imageUrl: establishment.image_url,
+        images: sortedImages.map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          isPrimary: img.is_primary,
+          createdAt: img.created_at,
+          ordre: img.ordre
+        }))
       }
     });
 
@@ -51,37 +60,43 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    const supabase = await createClient();
     const { slug } = await params;
     const { imageUrl } = await request.json();
 
     // Vérifier que l'utilisateur est le propriétaire
-    const establishment = await prisma.establishment.findUnique({
-      where: { slug },
-      select: { id: true, ownerId: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, owner_id')
+      .eq('slug', slug)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    if (establishment.ownerId !== session.user.id) {
+    if (establishment.owner_id !== user.id) {
       return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
     }
 
     // Mettre à jour l'image principale
-    await prisma.establishment.update({
-      where: { id: establishment.id },
-      data: { imageUrl }
-    });
+    const { error: updateError } = await supabase
+      .from('establishments')
+      .update({ image_url: imageUrl, updated_at: new Date().toISOString() })
+      .eq('id', establishment.id);
+
+    if (updateError) {
+      console.error('Erreur mise à jour image:', updateError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true });
 

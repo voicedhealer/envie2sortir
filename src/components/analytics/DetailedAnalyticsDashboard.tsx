@@ -60,6 +60,15 @@ interface DetailedAnalyticsData {
     clicks: number;
     percentage: number;
   }>;
+  
+  // Liens sociaux et sites web
+  linkStats: Array<{
+    linkType: string;
+    linkName: string;
+    linkUrl?: string;
+    clicks: number;
+    percentage: number;
+  }>;
 }
 
 interface DetailedAnalyticsDashboardProps {
@@ -271,36 +280,108 @@ export default function DetailedAnalyticsDashboard({
 
       {/* Éléments les plus populaires */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h4 className="text-lg font-semibold text-gray-900 mb-4">📊 Éléments les plus populaires</h4>
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">📊 Top 10 des éléments les plus populaires</h4>
         <div className="mb-4 text-sm text-gray-600">
-          <p>Classement précis des éléments les plus consultés par vos visiteurs.</p>
+          <p>Classement précis des éléments les plus consultés par vos visiteurs avec leurs statistiques détaillées.</p>
         </div>
-        <div className="space-y-3">
-          {data.popularElements.slice(0, 10).map((element, index) => (
-            <div key={element.elementId} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-4">
-                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
-                  {index + 1}
+        
+        {data.popularElements.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-600">Aucun élément avec des interactions pour cette période.</p>
+          </div>
+        ) : (
+          <>
+            {/* En-têtes du tableau */}
+            <div className="grid grid-cols-12 gap-4 mb-3 px-3 border-b border-gray-200 pb-2">
+              <div className="col-span-1 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rang
+              </div>
+              <div className="col-span-7 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Élément
+              </div>
+              <div className="col-span-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Interactions
+              </div>
+              <div className="col-span-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Part du total
+              </div>
+            </div>
+            
+            {/* Corps du tableau */}
+            <div className="space-y-2">
+              {data.popularElements.slice(0, 10).map((element, index) => (
+                <div key={element.elementId} className="grid grid-cols-12 gap-4 items-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="col-span-1 text-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold mx-auto ${
+                      index === 0 ? 'bg-yellow-100 text-yellow-600' :
+                      index === 1 ? 'bg-gray-100 text-gray-600' :
+                      index === 2 ? 'bg-orange-100 text-orange-600' :
+                      'bg-blue-100 text-blue-600'
+                    }`}>
+                      {index + 1}
+                    </div>
+                  </div>
+                  <div className="col-span-7">
+                    <div className="font-medium text-gray-900 mb-1">{element.elementName || element.elementId}</div>
+                    <div className="text-sm text-gray-500">
+                      {element.elementType === 'schedule' ? '🕐 Horaires' :
+                       element.elementType === 'section' ? '📋 Section' :
+                       element.elementType === 'link' ? '🔗 Lien' :
+                       element.elementType === 'gallery' ? '📸 Galerie' :
+                       element.elementType === 'contact' ? '📞 Contact' :
+                       element.elementType === 'button' ? '🔘 Bouton' :
+                       element.elementType === 'subsection' ? '📄 Sous-section' :
+                       element.elementType} • ID: {element.elementId}
+                    </div>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <div className="text-lg font-semibold text-gray-900">{element.interactions}</div>
+                    <div className="text-xs text-gray-500">interactions</div>
+                  </div>
+                  <div className="col-span-2 text-right">
+                    <div className="text-lg font-semibold text-blue-600">{element.percentage.toFixed(1)}%</div>
+                    <div className="text-xs text-gray-500">du total</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-medium text-gray-900">{element.elementName}</div>
-                  <div className="text-sm text-gray-500">
-                    {element.elementType === 'schedule' ? '🕐 Horaires' :
-                     element.elementType === 'section' ? '📋 Section' :
-                     element.elementType === 'link' ? '🔗 Lien' :
-                     element.elementType === 'gallery' ? '📸 Galerie' :
-                     element.elementType === 'contact' ? '📞 Contact' :
-                     element.elementType} • {element.percentage.toFixed(1)}% du total
+              ))}
+            </div>
+            
+            {/* Statistiques résumées */}
+            {data.popularElements.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-blue-800 mb-1">Élément #1</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {data.popularElements[0]?.interactions || 0} interactions
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {data.popularElements[0]?.percentage.toFixed(1) || 0}% du total
+                    </div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-800 mb-1">Top 3</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {data.popularElements.slice(0, 3).reduce((sum, el) => sum + el.interactions, 0)} interactions
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {data.popularElements.slice(0, 3).reduce((sum, el) => sum + el.percentage, 0).toFixed(1)}% du total
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-purple-800 mb-1">Top 10</div>
+                    <div className="text-lg font-bold text-purple-600">
+                      {data.popularElements.slice(0, 10).reduce((sum, el) => sum + el.interactions, 0)} interactions
+                    </div>
+                    <div className="text-xs text-purple-600 mt-1">
+                      {data.popularElements.slice(0, 10).reduce((sum, el) => sum + el.percentage, 0).toFixed(1)}% du total
+                    </div>
                   </div>
                 </div>
               </div>
-              <div className="text-right">
-                <div className="text-lg font-semibold text-gray-900">{element.interactions}</div>
-                <div className="text-xs text-gray-500">interactions</div>
-              </div>
-            </div>
-          ))}
-        </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Sections les plus consultées */}
@@ -424,6 +505,129 @@ export default function DetailedAnalyticsDashboard({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Liens sociaux et sites web */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h4 className="text-lg font-semibold text-gray-900 mb-4">🔗 Liens sociaux et sites web</h4>
+        <div className="mb-4 text-sm text-gray-600">
+          <p>Quels liens externes vos visiteurs consultent-ils le plus ?</p>
+        </div>
+        
+        {!data.linkStats || data.linkStats.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun lien tracké</h3>
+            <p className="text-gray-500 mb-4">
+              Les statistiques des liens apparaîtront ici une fois que vos visiteurs commenceront à cliquer sur vos liens externes (réseaux sociaux, site web).
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-blue-800 text-sm">
+                <strong>Conseil :</strong> Assurez-vous que vos liens sont bien configurés dans les paramètres de votre établissement.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {data.linkStats.map((link, index) => {
+              // Icônes et couleurs selon le type de lien
+              const getLinkIcon = (type: string) => {
+                switch (type.toLowerCase()) {
+                  case 'instagram':
+                    return { icon: '📷', color: 'bg-pink-100 text-pink-600', label: 'Instagram' };
+                  case 'facebook':
+                    return { icon: '👥', color: 'bg-blue-100 text-blue-600', label: 'Facebook' };
+                  case 'tiktok':
+                    return { icon: '🎵', color: 'bg-black text-white', label: 'TikTok' };
+                  case 'youtube':
+                    return { icon: '▶️', color: 'bg-red-100 text-red-600', label: 'YouTube' };
+                  case 'twitter':
+                    return { icon: '🐦', color: 'bg-sky-100 text-sky-600', label: 'Twitter/X' };
+                  case 'linkedin':
+                    return { icon: '💼', color: 'bg-blue-100 text-blue-700', label: 'LinkedIn' };
+                  case 'thefork':
+                    return { icon: '🍴', color: 'bg-green-100 text-green-600', label: 'TheFork' };
+                  case 'ubereats':
+                    return { icon: '🚗', color: 'bg-blue-100 text-blue-600', label: 'Uber Eats' };
+                  default:
+                    return { icon: '🌐', color: 'bg-green-100 text-green-600', label: 'Site web' };
+                }
+              };
+
+              const linkInfo = getLinkIcon(link.linkType);
+              
+              return (
+                <div key={`${link.linkType}-${index}`} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <div className="flex items-center space-x-3 flex-1 min-w-0">
+                    <div className={`w-8 h-8 ${linkInfo.color} rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0`}>
+                      {index + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <span className="text-lg">{linkInfo.icon}</span>
+                        <div className="font-medium text-gray-900 truncate">{linkInfo.label}</div>
+                      </div>
+                      <div className="text-sm text-gray-500 truncate" title={link.linkName}>
+                        {link.linkName.length > 40 ? `${link.linkName.substring(0, 40)}...` : link.linkName}
+                      </div>
+                      {link.linkUrl && (
+                        <div className="text-xs text-gray-400 truncate mt-1" title={link.linkUrl}>
+                          {link.linkUrl.length > 50 ? `${link.linkUrl.substring(0, 50)}...` : link.linkUrl}
+                        </div>
+                      )}
+                      <div className="text-xs text-blue-600 mt-1">{link.percentage.toFixed(1)}% des clics sur liens</div>
+                    </div>
+                  </div>
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <div className="text-lg font-semibold text-gray-900">{link.clicks}</div>
+                    <div className="text-xs text-gray-500">clics</div>
+                  </div>
+                </div>
+              );
+            })}
+            </div>
+            
+            {/* Statistiques résumées */}
+            {data.linkStats.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-blue-800 mb-1">Lien le plus cliqué</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {data.linkStats[0]?.clicks || 0} clics
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {data.linkStats[0]?.percentage.toFixed(1) || 0}% du total
+                    </div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-800 mb-1">Total des liens</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {data.linkStats.length} liens
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      {data.linkStats.reduce((sum, link) => sum + link.clicks, 0)} clics au total
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-purple-800 mb-1">Moyenne par lien</div>
+                    <div className="text-lg font-bold text-purple-600">
+                      {data.linkStats.length > 0 
+                        ? Math.round(data.linkStats.reduce((sum, link) => sum + link.clicks, 0) / data.linkStats.length)
+                        : 0} clics
+                    </div>
+                    <div className="text-xs text-purple-600 mt-1">par lien en moyenne</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

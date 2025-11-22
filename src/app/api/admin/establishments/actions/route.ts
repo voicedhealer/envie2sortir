@@ -1,17 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { isAdmin, getCurrentUser } from '@/lib/supabase/helpers';
 
 // Actions sur les établissements avec historique
 export async function PATCH(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || session.user.role !== 'admin') {
+  if (!(await isAdmin())) {
     return NextResponse.json({ message: 'Accès non autorisé' }, { status: 403 });
   }
 
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ message: 'Utilisateur non trouvé' }, { status: 401 });
+    }
+
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est admin
+    // La politique RLS "Only owner or admin can update establishments" garantit
+    // que seuls les admins peuvent modifier tous les établissements
+    const supabase = await createClient();
     const { establishmentId, action, reason } = await request.json();
 
     if (!establishmentId || !action) {
@@ -19,11 +25,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Récupérer l'établissement actuel
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('*')
+      .eq('id', establishmentId)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ message: 'Établissement non trouvé' }, { status: 404 });
     }
 
@@ -37,9 +45,9 @@ export async function PATCH(request: NextRequest) {
         newStatus = 'approved';
         updateData = {
           status: 'approved',
-          rejectionReason: null,
-          rejectedAt: null,
-          lastModifiedAt: new Date()
+          rejection_reason: null,
+          rejected_at: null,
+          last_modified_at: new Date().toISOString()
         };
         break;
       
@@ -50,9 +58,9 @@ export async function PATCH(request: NextRequest) {
         newStatus = 'rejected';
         updateData = {
           status: 'rejected',
-          rejectionReason: reason,
-          rejectedAt: new Date(),
-          lastModifiedAt: new Date()
+          rejection_reason: reason,
+          rejected_at: new Date().toISOString(),
+          last_modified_at: new Date().toISOString()
         };
         break;
       
@@ -60,9 +68,9 @@ export async function PATCH(request: NextRequest) {
         newStatus = 'pending';
         updateData = {
           status: 'pending',
-          rejectionReason: null,
-          rejectedAt: null,
-          lastModifiedAt: new Date()
+          rejection_reason: null,
+          rejected_at: null,
+          last_modified_at: new Date().toISOString()
         };
         break;
       
@@ -71,7 +79,7 @@ export async function PATCH(request: NextRequest) {
         newStatus = 'deleted';
         updateData = {
           status: 'deleted',
-          lastModifiedAt: new Date()
+          last_modified_at: new Date().toISOString()
         };
         break;
       
@@ -79,38 +87,57 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ message: 'Action non valide' }, { status: 400 });
     }
 
-    // Mettre à jour l'établissement et créer l'action admin en une transaction
-    const result = await prisma.$transaction(async (tx) => {
-      // Mettre à jour l'établissement
-      const updatedEstablishment = await tx.establishment.update({
-        where: { id: establishmentId },
-        data: updateData
-      });
+    // Mettre à jour l'établissement
+    const { data: updatedEstablishment, error: updateError } = await supabase
+      .from('establishments')
+      .update(updateData)
+      .eq('id', establishmentId)
+      .select()
+      .single();
 
-      // Créer l'action administrative
-      const adminAction = await tx.adminAction.create({
-        data: {
-          adminId: session.user.id,
-          establishmentId,
-          action: action.toUpperCase(),
-          reason,
-          previousStatus,
-          newStatus,
-          details: {
-            establishmentName: establishment.name,
-            adminEmail: session.user.email,
-            timestamp: new Date().toISOString()
-          }
+    if (updateError || !updatedEstablishment) {
+      console.error('Erreur mise à jour établissement:', updateError);
+      return NextResponse.json({ message: 'Erreur lors de la mise à jour' }, { status: 500 });
+    }
+
+    // Créer l'action administrative
+    const { data: adminAction, error: actionError } = await supabase
+      .from('admin_actions')
+      .insert({
+        admin_id: user.id,
+        establishment_id: establishmentId,
+        action: action.toUpperCase(),
+        reason,
+        previous_status: previousStatus,
+        new_status: newStatus,
+        details: {
+          establishmentName: establishment.name,
+          adminEmail: user.email,
+          timestamp: new Date().toISOString()
         }
-      });
+      })
+      .select()
+      .single();
 
-      return { updatedEstablishment, adminAction };
-    });
+    if (actionError) {
+      console.error('Erreur création action admin:', actionError);
+      // Ne pas échouer si l'action admin n'a pas pu être créée
+    }
+
+    // Convertir snake_case -> camelCase
+    const formattedEstablishment = {
+      ...updatedEstablishment,
+      rejectionReason: updatedEstablishment.rejection_reason,
+      rejectedAt: updatedEstablishment.rejected_at,
+      lastModifiedAt: updatedEstablishment.last_modified_at,
+      createdAt: updatedEstablishment.created_at,
+      updatedAt: updatedEstablishment.updated_at
+    };
 
     return NextResponse.json({ 
       success: true, 
-      establishment: result.updatedEstablishment,
-      action: result.adminAction,
+      establishment: formattedEstablishment,
+      action: adminAction,
       message: `Établissement ${action === 'approve' ? 'approuvé' : 
                 action === 'reject' ? 'rejeté' : 
                 action === 'pending' ? 'remis en attente' : 'supprimé'} avec succès`

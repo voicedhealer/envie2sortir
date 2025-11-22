@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { 
@@ -22,34 +22,34 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const pathname = usePathname();
   const [pendingEstablishments, setPendingEstablishments] = useState(0);
   const [pendingModifications, setPendingModifications] = useState(0);
 
   useEffect(() => {
-    if (status === 'loading') return; // En cours de chargement
+    if (loading) return; // En cours de chargement
     
-    if (!session || session.user.role !== 'admin') {
+    if (!session || session.user?.role !== 'admin') {
       router.push('/auth?error=AccessDenied');
     }
-  }, [session, status, router]);
+  }, [session, loading, router]);
 
   // Récupérer le nombre de demandes en attente
   useEffect(() => {
-    if (session?.user.role === 'admin' && status === 'authenticated') {
+    if (session?.user?.role === 'admin' && !loading) {
       fetchPendingCounts();
       
       // Rafraîchir toutes les 30 secondes
       const interval = setInterval(fetchPendingCounts, 30000);
       return () => clearInterval(interval);
     }
-  }, [session, status]);
+  }, [session, loading]);
 
   const fetchPendingCounts = async () => {
     // Vérifier que la session est toujours valide
-    if (!session || session.user.role !== 'admin' || status !== 'authenticated') {
+    if (!session || session.user?.role !== 'admin' || loading) {
       return;
     }
 
@@ -70,7 +70,7 @@ export default function AdminLayout({
   };
 
   // Afficher un loader pendant la vérification
-  if (status === 'loading') {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -82,7 +82,7 @@ export default function AdminLayout({
   }
 
   // Si pas admin, ne rien afficher (redirection en cours)
-  if (!session || session.user.role !== 'admin') {
+  if (!session || session.user?.role !== 'admin') {
     return null;
   }
 

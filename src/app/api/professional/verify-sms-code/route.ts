@@ -1,21 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-
-// Stockage temporaire des codes (en production, utiliser Redis)
-const smsCodesStore = new Map<string, { code: string; expiry: Date }>();
+import { requireEstablishment } from '@/lib/supabase/helpers';
+import { getSmsCode, deleteSmsCode, getAllStoredCodes } from '@/lib/sms-code-store';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
-    }
-
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -27,8 +18,14 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Récupérer le code stocké pour cet utilisateur
-    const storedData = smsCodesStore.get(session.user.id);
+    // Récupérer le code stocké pour cet utilisateur depuis Supabase
+    const storedData = await getSmsCode(user.id);
+    
+    // Log pour debug
+    console.log('🔍 [Verify SMS] Recherche code pour user.id:', user.id);
+    const allCodes = await getAllStoredCodes();
+    console.log('📦 [Verify SMS] Codes stockés:', allCodes);
+    console.log('📋 [Verify SMS] Code trouvé:', storedData ? 'OUI' : 'NON');
 
     if (!storedData) {
       return NextResponse.json({ 
@@ -36,9 +33,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier l'expiration
+    // Vérifier l'expiration (déjà fait dans getSmsCode, mais double vérification)
     if (new Date() > storedData.expiry) {
-      smsCodesStore.delete(session.user.id);
+      await deleteSmsCode(user.id);
       return NextResponse.json({ 
         error: 'Code expiré. Veuillez redemander un nouveau code.' 
       }, { status: 400 });
@@ -52,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Code valide - le supprimer du stockage
-    smsCodesStore.delete(session.user.id);
+    await deleteSmsCode(user.id);
 
     return NextResponse.json({ 
       success: true,
@@ -66,10 +63,5 @@ export async function POST(request: NextRequest) {
       error: 'Erreur lors de la vérification du code' 
     }, { status: 500 });
   }
-}
-
-// Fonction helper pour stocker un code (appelée par l'API send-verification-sms)
-export function storeSmsCode(userId: string, code: string, expiry: Date) {
-  smsCodesStore.set(userId, { code, expiry });
 }
 

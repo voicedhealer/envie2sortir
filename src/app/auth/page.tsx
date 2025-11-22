@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn as nextAuthSignIn, signUp as nextAuthSignUp, getSession } from 'next-auth/react';
+import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
 import Image from 'next/image';
 
@@ -24,6 +24,7 @@ function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const supabase = createClient();
 
   // Gérer les erreurs et messages depuis l'URL
   useEffect(() => {
@@ -72,56 +73,69 @@ function AuthContent() {
 
     try {
       if (isLogin) {
-        const result = await nextAuthSignIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false
+        console.log('🔐 Tentative de connexion via API route avec:', formData.email);
+        
+        // Utiliser l'API route pour créer la session côté serveur (cookies server-side)
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', // Important pour que les cookies soient envoyés et reçus
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
         });
 
-        if (result?.error) {
-          console.error('Erreur de connexion:', result.error);
-          
-          // Gérer les erreurs spécifiques
-          if (result.error === 'AccessDenied') {
-            setError('Accès refusé. Veuillez vérifier que vous avez sélectionné le bon type de compte (Utilisateur, Professionnel, ou Admin).');
-          } else if (result.error === 'CredentialsSignin') {
-            setError('Email ou mot de passe incorrect');
-          } else {
-            setError(`Erreur de connexion: ${result.error}`);
-          }
-        } else if (result?.ok) {
-          // Forcer la synchronisation de la session
-          const session = await getSession();
-          console.log('🔐 Session après connexion:', session);
-          
-          // Vérifier que le rôle de l'utilisateur correspond au rôle sélectionné
-          console.log('🔐 Rôle de l\'utilisateur:', session?.user?.role);
-          console.log('🔐 Rôle sélectionné:', selectedRole);
-          console.log('🔐 Type d\'utilisateur:', session?.user?.userType);
-          
-          if (session?.user?.role !== selectedRole) {
-            const roleNames = {
-              'user': 'utilisateur',
-              'pro': 'professionnel', 
-              'admin': 'administrateur'
-            };
-            setError(`Ce compte est un compte ${roleNames[session?.user?.role as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
-            return;
-          }
-          
-          // Rediriger selon le rôle de l'utilisateur (pas celui sélectionné)
-          let redirectUrl = callbackUrl;
-          if (session.user.role === 'pro') {
-            redirectUrl = '/dashboard';
-          } else if (session.user.role === 'admin') {
-            redirectUrl = '/admin';
-          }
-          
-          // Utiliser window.location.href pour forcer le rechargement complet de la page
-          window.location.href = decodeURIComponent(redirectUrl);
-        } else {
-          setError('Erreur de connexion inattendue');
+        let result;
+        try {
+          result = await response.json();
+        } catch (parseError) {
+          console.error('❌ Erreur de parsing de la réponse:', parseError);
+          setError('Erreur de communication avec le serveur. Veuillez réessayer.');
+          setLoading(false);
+          return;
         }
+
+        if (!response.ok || !result.success) {
+          const errorMessage = result?.message || result?.error || 'Email ou mot de passe incorrect';
+          console.error('❌ Erreur de connexion:', {
+            status: response.status,
+            message: errorMessage,
+            result: result
+          });
+          setError(errorMessage);
+          setLoading(false);
+          return;
+        }
+
+        console.log('✅ Connexion réussie via API route:', result.user);
+        
+        const userRole = result.user.role;
+
+        // Vérifier que le rôle correspond
+        if (userRole !== selectedRole) {
+          const roleNames = {
+            'user': 'utilisateur',
+            'pro': 'professionnel', 
+            'admin': 'administrateur'
+          };
+          setError(`Ce compte est un compte ${roleNames[userRole as keyof typeof roleNames] || 'inconnu'}, mais vous avez sélectionné "${roleNames[selectedRole] || 'inconnu'}". Veuillez sélectionner le bon type de compte.`);
+          return;
+        }
+
+        // Redirection selon le rôle
+        let redirectUrl = callbackUrl;
+        if (userRole === 'pro') {
+          redirectUrl = '/dashboard';
+        } else if (userRole === 'admin') {
+          redirectUrl = '/admin';
+        }
+
+        console.log('✅ Redirection vers:', redirectUrl);
+        
+        // La session Supabase est déjà créée par l'API route avec des cookies
+        // Forcer un rechargement complet de la page pour que le client Supabase puisse lire les cookies
+        window.location.href = decodeURIComponent(redirectUrl);
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');
@@ -146,75 +160,77 @@ function AuthContent() {
         const data = await response.json();
 
         if (data.success) {
-          console.log('✅ Inscription réussie, tentative de connexion automatique...');
+          console.log('✅ Inscription réussie');
           
-          // Connexion automatique après inscription
-          const signInResult = await nextAuthSignIn('credentials', {
-            email: formData.email,
-            password: formData.password,
-            redirect: false
-          });
-
-          console.log('🔐 Résultat connexion:', signInResult);
-
-          if (signInResult?.ok) {
-            console.log('✅ Connexion réussie, redirection vers:', callbackUrl);
-            // Forcer la synchronisation de la session
-            await getSession();
+          // La session est maintenant créée directement dans l'API d'inscription
+          if (data.requiresManualLogin) {
+            // Si la connexion automatique a échoué, demander à l'utilisateur de se connecter
+            console.log('⚠️ Connexion automatique échouée, redirection vers auth');
+            setError('Compte créé avec succès. Veuillez vous connecter.');
+            router.push('/auth?registered=true');
+          } else {
+            // La session a été créée avec succès, rediriger
+            console.log('✅ Session créée, redirection vers:', callbackUrl);
             // Pour les nouveaux comptes, ajouter le paramètre welcome si on va vers l'accueil
             const redirectUrl = callbackUrl === '/' ? '/?welcome=true' : decodeURIComponent(callbackUrl);
             // Utiliser window.location.href pour forcer le rechargement complet de la page et synchroniser la session
             window.location.href = redirectUrl;
-          } else {
-            console.log('❌ Échec connexion, redirection vers auth');
-            setError('Compte créé mais connexion échouée. Veuillez vous connecter manuellement.');
-            router.push('/auth?registered=true');
           }
         } else {
           setError(data.message || 'Erreur lors de la création du compte');
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      console.error('❌ Erreur dans handleSubmit:', {
+        message: err?.message,
+        name: err?.name,
+        stack: err?.stack,
+        error: err
+      });
+      const errorMessage = err?.message || err?.toString() || 'Une erreur est survenue lors de la connexion';
+      setError(errorMessage);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSocialSignIn = async (provider: 'google' | 'facebook') => {
+  const handleSocialSignIn = async () => {
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      console.log(`🔐 Tentative de connexion ${provider}...`);
+      console.log('🔐 Tentative de connexion Google...');
       
-      const result = await nextAuthSignIn(provider, {
-        redirect: false
+      // Utiliser Supabase OAuth pour Google
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?callbackUrl=${encodeURIComponent(callbackUrl)}`
+        }
       });
 
-      console.log(`🔐 Résultat connexion ${provider}:`, result);
-
-      if (result?.error) {
-        console.error(`❌ Erreur ${provider}:`, result.error);
-        if (result.error === 'Configuration') {
-          setError(`${provider} n'est pas configuré. Veuillez utiliser la connexion par email/mot de passe.`);
+      if (error) {
+        console.error('❌ Erreur Google:', error);
+        if (error.message?.includes('not configured') || error.message?.includes('Configuration')) {
+          setError('Google n\'est pas configuré. Veuillez utiliser la connexion par email/mot de passe.');
         } else {
-          setError(`Erreur lors de la connexion avec ${provider}`);
+          setError(`Erreur lors de la connexion avec Google: ${error.message}`);
         }
-      } else if (result?.ok) {
-        console.log(`✅ Connexion ${provider} réussie`);
-        // Forcer la synchronisation de la session
-        await getSession();
-        // Rediriger vers l'URL de callback ou la page d'accueil
-        router.push(decodeURIComponent(callbackUrl));
+        setLoading(false);
+      } else if (data?.url) {
+        // Rediriger vers la page OAuth
+        console.log('✅ Redirection vers Google OAuth');
+        window.location.href = data.url;
+        // Ne pas mettre setLoading(false) car on redirige
       } else {
-        setError(`Erreur inattendue lors de la connexion avec ${provider}`);
+        setError('Erreur inattendue lors de la connexion avec Google');
+        setLoading(false);
       }
     } catch (err: any) {
-      console.error(`❌ Exception ${provider}:`, err);
-      setError(`Erreur lors de la connexion avec ${provider}`);
-    } finally {
+      console.error('❌ Exception Google:', err);
+      setError(`Erreur lors de la connexion avec Google: ${err.message || 'Erreur inconnue'}`);
       setLoading(false);
     }
   };
@@ -482,12 +498,12 @@ function AuthContent() {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-6 flex justify-center">
               <button
                 type="button"
-                onClick={() => handleSocialSignIn('google')}
+                onClick={handleSocialSignIn}
                 disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full max-w-sm inline-flex justify-center items-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -495,28 +511,8 @@ function AuthContent() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                 </svg>
-                <span className="ml-2">Google</span>
+                <span className="ml-2">Continuer avec Google</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => handleSocialSignIn('facebook')}
-                disabled={loading}
-                className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                <span className="ml-2">Facebook</span>
-              </button>
-            </div>
-            
-            {/* Message d'information pour les providers sociaux */}
-            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-700 text-center">
-                <strong>Note :</strong> Les connexions Google et Facebook ne sont pas encore configurées. 
-                Utilisez la connexion par email/mot de passe pour le moment.
-              </p>
             </div>
           </div>
 

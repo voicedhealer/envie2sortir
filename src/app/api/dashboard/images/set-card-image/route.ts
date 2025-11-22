@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    console.log('🔍 Session:', { user: session?.user, hasEmail: !!session?.user?.email });
-
-    if (!session || !session.user) {
-      console.log('❌ Pas de session');
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non autorisé - Session manquante' }, { status: 401 });
     }
 
+    const supabase = await createClient();
     const { imageId, establishmentId } = await request.json();
 
     console.log('📥 Requête:', { imageId, establishmentId });
@@ -23,60 +19,82 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier que l'utilisateur est le propriétaire de l'établissement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      include: {
-        owner: true // Inclure les données du propriétaire
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, owner_id')
+      .eq('id', establishmentId)
+      .single();
 
-    console.log('🏢 Établissement:', { 
-      found: !!establishment, 
-      ownerId: establishment?.ownerId,
-      ownerEmail: establishment?.owner?.email,
-      userEmail: session.user.email 
-    });
-
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    const userEmail = session.user.email;
-    if (!userEmail) {
-      console.log('❌ Email manquant dans la session');
-      return NextResponse.json({ error: 'Email utilisateur manquant' }, { status: 400 });
-    }
-
-    // Vérifier que l'email de l'utilisateur correspond à l'email du propriétaire
-    if (establishment.owner.email !== userEmail) {
-      console.log('❌ Propriétaire différent:', { 
-        ownerEmail: establishment.owner.email, 
-        userEmail 
-      });
+    if (establishment.owner_id !== user.id) {
       return NextResponse.json({ error: 'Non autorisé - Vous n\'êtes pas le propriétaire' }, { status: 403 });
     }
 
-    // Retirer isCardImage de toutes les images de cet établissement
-    await prisma.image.updateMany({
-      where: { 
-        establishmentId,
-        isCardImage: true 
-      },
-      data: { isCardImage: false },
+    // Utiliser le client admin pour contourner RLS
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     });
+
+    // Retirer is_card_image de toutes les images de cet établissement
+    const { error: resetError } = await adminClient
+      .from('images')
+      .update({ is_card_image: false })
+      .eq('establishment_id', establishmentId)
+      .eq('is_card_image', true);
+
+    if (resetError) {
+      console.error('Erreur reset is_card_image:', resetError);
+    }
 
     // Définir la nouvelle image de card
-    const updatedImage = await prisma.image.update({
-      where: { id: imageId },
-      data: { isCardImage: true },
-    });
+    const { data: updatedImage, error: updateError } = await adminClient
+      .from('images')
+      .update({ is_card_image: true })
+      .eq('id', imageId)
+      .select()
+      .single();
+
+    if (updateError || !updatedImage) {
+      console.error('Erreur mise à jour image:', updateError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la mise à jour de l\'image',
+        details: updateError?.message || 'Erreur inconnue',
+        code: updateError?.code
+      }, { status: 500 });
+    }
 
     console.log('✅ Image de card définie:', imageId);
+
+    // Convertir snake_case -> camelCase
+    const formattedImage = {
+      ...updatedImage,
+      establishmentId: updatedImage.establishment_id,
+      isCardImage: updatedImage.is_card_image,
+      isPrimary: updatedImage.is_primary,
+      createdAt: updatedImage.created_at,
+      updatedAt: updatedImage.updated_at
+    };
 
     return NextResponse.json({
       success: true,
       message: 'Image de card définie avec succès',
-      image: updatedImage,
+      image: formattedImage,
     });
   } catch (error) {
     console.error('❌ Erreur lors de la définition de l\'image de card:', error);

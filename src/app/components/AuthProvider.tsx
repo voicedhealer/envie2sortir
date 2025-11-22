@@ -1,15 +1,17 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 
+/**
+ * AuthProvider - Fournit le contexte d'authentification Supabase
+ * 
+ * Remplace l'ancien SessionProvider de NextAuth par Supabase Auth.
+ * Utilise le contexte SupabaseAuthContext pour gérer les sessions.
+ */
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider 
-      refetchInterval={0}
-      refetchOnWindowFocus={false}
-      refetchWhenOffline={false}
-    >
+    <SupabaseAuthProvider>
       {children}
-    </SessionProvider>
+    </SupabaseAuthProvider>
   );
 }

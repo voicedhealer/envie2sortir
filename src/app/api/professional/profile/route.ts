@@ -1,30 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment } from "@/lib/supabase/helpers";
 
 export async function PUT(request: NextRequest) {
   try {
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const supabase = await createClient();
     const body = await request.json();
     const { name, description, address, city, phone, email, website, instagram, facebook } = body;
 
-    // TODO: Récupérer l'ID du professionnel depuis la session
-    const professionalId = "cmf0ygvkn00008ztdq5rc0bwx"; // ID de test
-
     // Récupérer l'établissement du professionnel
-    const professional = await prisma.professional.findUnique({
-      where: { id: professionalId },
-      include: { establishments: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('owner_id', user.id)
+      .single();
 
-    if (!professional || !professional.establishments[0]) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    const establishmentId = professional.establishments[0].id;
-
     // Mettre à jour l'établissement avec statut "pending" pour modération
-    const updatedEstablishment = await prisma.establishment.update({
-      where: { id: establishmentId },
-      data: {
+    const { data: updatedEstablishment, error: updateError } = await supabase
+      .from('establishments')
+      .update({
         name,
         description: description || "",
         address,
@@ -35,10 +38,18 @@ export async function PUT(request: NextRequest) {
         instagram: instagram || null,
         facebook: facebook || null,
         status: 'pending', // Mise en attente de validation
-        updatedAt: new Date()
-      }
-    });
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', establishment.id)
+      .select()
+      .single();
 
+    if (updateError || !updatedEstablishment) {
+      console.error('Erreur mise à jour établissement:', updateError);
+      return NextResponse.json({ error: "Erreur lors de la mise à jour du profil" }, { status: 500 });
+    }
+
+    // Convertir snake_case -> camelCase
     return NextResponse.json({
       id: updatedEstablishment.id,
       name: updatedEstablishment.name,
@@ -47,12 +58,12 @@ export async function PUT(request: NextRequest) {
       description: updatedEstablishment.description,
       address: updatedEstablishment.address,
       city: updatedEstablishment.city,
-      viewsCount: updatedEstablishment.viewsCount,
-      clicksCount: updatedEstablishment.clicksCount,
-      avgRating: updatedEstablishment.avgRating,
-      totalComments: updatedEstablishment.totalComments,
-      createdAt: updatedEstablishment.createdAt.toISOString(),
-      updatedAt: updatedEstablishment.updatedAt.toISOString()
+      viewsCount: updatedEstablishment.views_count || 0,
+      clicksCount: updatedEstablishment.clicks_count || 0,
+      avgRating: updatedEstablishment.avg_rating || 0,
+      totalComments: updatedEstablishment.total_comments || 0,
+      createdAt: updatedEstablishment.created_at,
+      updatedAt: updatedEstablishment.updated_at
     });
 
   } catch (error) {

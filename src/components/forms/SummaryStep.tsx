@@ -178,9 +178,9 @@ export default function SummaryStep({ data, onEdit, useSmartSummary = true }: Su
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8" data-testid="form-summary-step">
       {/* En-tête */}
-      <div className="text-center mb-8">
+      <div className="text-center mb-8" data-testid="summary-header">
         <h2 className="text-3xl font-bold text-gray-900 mb-3">
           Récapitulatif de votre établissement
         </h2>

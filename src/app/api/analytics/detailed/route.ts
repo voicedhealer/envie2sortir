@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 import { getPremiumRequiredError } from '@/lib/subscription-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
+
     const { searchParams } = new URL(request.url);
     const establishmentId = searchParams.get('establishmentId');
     const period = searchParams.get('period') || '30d';
@@ -18,11 +18,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'establishmentId is required' }, { status: 400 });
     }
 
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est propriétaire
+    // La politique RLS garantit que seuls les propriétaires peuvent voir leurs analytics
+    const supabase = await createClient();
+
     // Vérifier l'abonnement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { subscription: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError) {
+      console.error('❌ [Analytics Detailed] Erreur récupération établissement:', establishmentError);
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération de l\'établissement',
+          details: establishmentError.message,
+          code: establishmentError.code
+        },
+        { status: 500 }
+      );
+    }
+
     if (!establishment || establishment.subscription !== 'PREMIUM') {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
@@ -49,79 +67,69 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
+    const startDateISO = startDate.toISOString();
+
     // Récupérer toutes les données d'analytics pour l'établissement
-    const analytics = await prisma.clickAnalytics.findMany({
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        timestamp: 'desc',
-      },
-    });
+    const { data: analytics, error: analyticsError } = await supabase
+      .from('click_analytics')
+      .select('*')
+      .eq('establishment_id', establishmentId)
+      .gte('timestamp', startDateISO)
+      .order('timestamp', { ascending: false });
 
-    if (analytics.length === 0) {
-      // Données de démonstration pour tester le graphique
-      const demoHourlyStats = [
-        { hour: 2, interactions: 1, visitors: 1, timeSlot: "02h-03h" },
-        { hour: 5, interactions: 0, visitors: 0, timeSlot: "05h-06h" },
-        { hour: 8, interactions: 3, visitors: 2, timeSlot: "08h-09h" },
-        { hour: 11, interactions: 5, visitors: 3, timeSlot: "11h-12h" },
-        { hour: 14, interactions: 9, visitors: 6, timeSlot: "14h-15h" },
-        { hour: 17, interactions: 7, visitors: 4, timeSlot: "17h-18h" },
-        { hour: 20, interactions: 4, visitors: 3, timeSlot: "20h-21h" },
-        { hour: 23, interactions: 2, visitors: 1, timeSlot: "23h-00h" },
-      ];
+    if (analyticsError) {
+      console.error('Erreur récupération analytics:', analyticsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch detailed analytics' },
+        { status: 500 }
+      );
+    }
 
+    if (!analytics || analytics.length === 0) {
+      // Retourner des données vides au lieu de données mockées
       return NextResponse.json({
-        totalInteractions: 31,
-        uniqueVisitors: 8,
-        averageSessionTime: 4,
-        hourlyStats: demoHourlyStats,
-        dailyStats: [
-          { date: "2025-01-13", dayOfWeek: "lundi", interactions: 8, visitors: 3 },
-          { date: "2025-01-14", dayOfWeek: "mardi", interactions: 12, visitors: 4 },
-          { date: "2025-01-15", dayOfWeek: "mercredi", interactions: 11, visitors: 5 },
-        ],
-        popularElements: [
-          { elementType: "schedule", elementName: "Horaires d'ouverture", elementId: "schedule-Horaires d'ouverture", interactions: 15, percentage: 48.4 },
-          { elementType: "contact", elementName: "Numéro de téléphone", elementId: "contact-Numéro de téléphone", interactions: 8, percentage: 25.8 },
-          { elementType: "gallery", elementName: "Galerie photos", elementId: "gallery-Galerie photos", interactions: 5, percentage: 16.1 },
-          { elementType: "link", elementName: "Site web", elementId: "link-Site web", interactions: 3, percentage: 9.7 },
-        ],
-        popularSections: [
-          { sectionId: "informations", sectionName: "Informations", openCount: 12, uniqueVisitors: 6 },
-          { sectionId: "contact", sectionName: "Contact", openCount: 8, uniqueVisitors: 4 },
-          { sectionId: "horaires", sectionName: "Horaires", openCount: 15, uniqueVisitors: 7 },
-        ],
+        totalInteractions: 0,
+        uniqueVisitors: 0,
+        averageSessionTime: 0,
+        hourlyStats: Array.from({ length: 24 }, (_, hour) => ({
+          hour,
+          interactions: 0,
+          visitors: 0,
+          timeSlot: `${hour.toString().padStart(2, '0')}h-${(hour + 1).toString().padStart(2, '0')}h`,
+        })),
+        dailyStats: [],
+        popularElements: [],
+        popularSections: [],
         scheduleStats: {
-          totalViews: 15,
-          peakHours: [
-            { hour: 14, views: 9, timeSlot: "14h-15h" },
-            { hour: 17, views: 7, timeSlot: "17h-18h" },
-            { hour: 11, views: 5, timeSlot: "11h-12h" },
-          ],
-          mostViewedDay: "mardi",
+          totalViews: 0,
+          peakHours: [],
+          mostViewedDay: null,
         },
-        contactStats: [
-          { contactType: "phone", contactName: "Contact Téléphone", clicks: 8, percentage: 50.0 },
-          { contactType: "email", contactName: "Contact Email", clicks: 4, percentage: 25.0 },
-          { contactType: "website", contactName: "Contact Site web", clicks: 3, percentage: 18.8 },
-          { contactType: "whatsapp", contactName: "Contact WhatsApp", clicks: 1, percentage: 6.2 },
-        ],
+        contactStats: [],
+        linkStats: [],
       });
     }
 
+    // Convertir les données Supabase en format utilisable
+    const formattedAnalytics = (analytics || []).map((a: any) => ({
+      ...a,
+      elementType: a.element_type,
+      elementId: a.element_id,
+      elementName: a.element_name,
+      userAgent: a.user_agent,
+      timestamp: new Date(a.timestamp),
+      hour: new Date(a.timestamp).getHours(),
+      dayOfWeek: new Date(a.timestamp).toLocaleDateString('fr-FR', { weekday: 'long' })
+    }));
+
     // Statistiques générales
-    const totalInteractions = analytics.length;
-    const uniqueVisitors = new Set(analytics.map(a => a.userAgent)).size;
-    const averageSessionTime = Math.round(analytics.length / Math.max(uniqueVisitors, 1) * 2); // Estimation
+    const totalInteractions = formattedAnalytics.length;
+    const uniqueVisitors = new Set(formattedAnalytics.map(a => a.userAgent)).size;
+    const averageSessionTime = Math.round(formattedAnalytics.length / Math.max(uniqueVisitors, 1) * 2); // Estimation
 
     // Statistiques par heure
     const hourlyMap = new Map<number, { interactions: number; visitors: Set<string> }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const hour = analytics.hour || 0;
       if (!hourlyMap.has(hour)) {
         hourlyMap.set(hour, { interactions: 0, visitors: new Set() });
@@ -144,7 +152,7 @@ export async function GET(request: NextRequest) {
 
     // Statistiques par jour
     const dailyMap = new Map<string, { interactions: number; visitors: Set<string>; dayOfWeek: string }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const date = analytics.timestamp.toISOString().split('T')[0];
       const dayOfWeek = analytics.dayOfWeek || analytics.timestamp.toLocaleDateString('fr-FR', { weekday: 'long' });
       
@@ -169,7 +177,7 @@ export async function GET(request: NextRequest) {
 
     // Éléments populaires
     const elementMap = new Map<string, { elementType: string; elementName: string; interactions: number }>();
-    analytics.forEach(analytics => {
+    formattedAnalytics.forEach(analytics => {
       const key = `${analytics.elementType}-${analytics.elementId}`;
       if (!elementMap.has(key)) {
         elementMap.set(key, {
@@ -191,7 +199,7 @@ export async function GET(request: NextRequest) {
 
     // Sections populaires
     const sectionMap = new Map<string, { sectionName: string; openCount: number; visitors: Set<string> }>();
-    analytics
+    formattedAnalytics
       .filter(a => a.elementType === 'section' && a.action === 'open')
       .forEach(analytics => {
         const sectionName = analytics.elementName || analytics.elementId;
@@ -215,7 +223,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.openCount - a.openCount);
 
     // Statistiques des horaires
-    const scheduleAnalytics = analytics.filter(a => a.elementType === 'schedule');
+    const scheduleAnalytics = formattedAnalytics.filter(a => a.elementType === 'schedule');
     const scheduleHourlyMap = new Map<number, number>();
     const scheduleDailyMap = new Map<string, number>();
     
@@ -239,7 +247,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
     // Statistiques des contacts
-    const contactAnalytics = analytics.filter(a => a.elementType === 'contact');
+    const contactAnalytics = formattedAnalytics.filter(a => a.elementType === 'contact');
     const contactMap = new Map<string, { contactName: string; clicks: number }>();
     
     contactAnalytics.forEach(analytics => {
@@ -262,6 +270,64 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.clicks - a.clicks);
 
+    // Statistiques des liens (réseaux sociaux et sites web)
+    const linkAnalytics = formattedAnalytics.filter(a => a.elementType === 'link');
+    const linkMap = new Map<string, { linkName: string; linkUrl?: string; clicks: number }>();
+    
+    linkAnalytics.forEach(analytics => {
+      const linkId = analytics.elementId;
+      const linkName = analytics.elementName || `Lien ${linkId}`;
+      
+      // Essayer d'extraire l'URL ou le type de lien depuis elementName ou elementId
+      let linkUrl: string | undefined;
+      let linkType = 'website';
+      
+      // Détecter le type de lien depuis le nom ou l'ID
+      const lowerName = linkName.toLowerCase();
+      const lowerId = linkId.toLowerCase();
+      
+      if (lowerName.includes('instagram') || lowerId.includes('instagram')) {
+        linkType = 'instagram';
+      } else if (lowerName.includes('facebook') || lowerId.includes('facebook')) {
+        linkType = 'facebook';
+      } else if (lowerName.includes('tiktok') || lowerId.includes('tiktok')) {
+        linkType = 'tiktok';
+      } else if (lowerName.includes('youtube') || lowerId.includes('youtube')) {
+        linkType = 'youtube';
+      } else if (lowerName.includes('twitter') || lowerName.includes('x.com') || lowerId.includes('twitter')) {
+        linkType = 'twitter';
+      } else if (lowerName.includes('linkedin') || lowerId.includes('linkedin')) {
+        linkType = 'linkedin';
+      } else if (lowerName.includes('thefork') || lowerId.includes('thefork')) {
+        linkType = 'thefork';
+      } else if (lowerName.includes('ubereats') || lowerId.includes('ubereats') || lowerName.includes('uber eats')) {
+        linkType = 'ubereats';
+      } else if (lowerName.includes('http') || lowerId.includes('http')) {
+        linkType = 'website';
+        linkUrl = linkName.startsWith('http') ? linkName : linkId.startsWith('http') ? linkId : undefined;
+      }
+      
+      const linkKey = `${linkType}-${linkId}`;
+      if (!linkMap.has(linkKey)) {
+        linkMap.set(linkKey, { linkName, linkUrl, clicks: 0 });
+      }
+      linkMap.get(linkKey)!.clicks++;
+    });
+
+    const totalLinkClicks = Array.from(linkMap.values()).reduce((sum, link) => sum + link.clicks, 0);
+    const linkStats = Array.from(linkMap.entries())
+      .map(([linkKey, link]) => {
+        const linkType = linkKey.split('-')[0];
+        return {
+          linkType,
+          linkName: link.linkName,
+          linkUrl: link.linkUrl,
+          clicks: link.clicks,
+          percentage: totalLinkClicks > 0 ? (link.clicks / totalLinkClicks) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.clicks - a.clicks);
+
     return NextResponse.json({
       totalInteractions,
       uniqueVisitors,
@@ -276,6 +342,7 @@ export async function GET(request: NextRequest) {
         mostViewedDay,
       },
       contactStats,
+      linkStats,
     });
 
   } catch (error) {

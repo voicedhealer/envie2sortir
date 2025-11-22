@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 
 export default function MessageBadge() {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    if (!session?.user) return;
+    if (!user) return;
 
     // Fonction pour récupérer le nombre de messages non lus
     const fetchUnreadCount = async () => {
@@ -30,7 +30,7 @@ export default function MessageBadge() {
     const interval = setInterval(fetchUnreadCount, 30000);
 
     return () => clearInterval(interval);
-  }, [session]);
+  }, [user]);
 
   if (unreadCount === 0) {
     return null;

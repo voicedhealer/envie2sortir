@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { 
   ProfessionalData, 
   FormStep, 
@@ -33,7 +33,7 @@ interface UseEstablishmentFormProps {
 
 export function useEstablishmentForm({ establishment, isEditMode = false }: UseEstablishmentFormProps) {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   
   // États principaux
   const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 2 : 0);
@@ -417,11 +417,28 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     
     // Gestion spéciale pour le téléphone - validation en temps réel
     if (field === 'accountPhone' && typeof value === 'string') {
-      const cleanPhone = value.replace(/\s/g, '').replace(/[^\d+]/g, '');
-      const isValidFrenchPhone = /^(0[67]|\+33[67])[0-9]{8}$/.test(cleanPhone);
+      let cleanPhone = value.replace(/\s/g, '').replace(/[^\d+]/g, '');
+      
+      // Normaliser les numéros de test Twilio (corriger 015005550006 -> 01500555006)
+      if (/^01500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 11);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      } else if (/^\+1500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 12);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      } else if (/^1500555\d{4}$/.test(cleanPhone)) {
+        cleanPhone = cleanPhone.substring(0, 11);
+        console.log('🔧 Normalisation du numéro de test:', value, '->', cleanPhone);
+      }
+      
+      // Utiliser le numéro normalisé
+      setFormData(prev => ({ ...prev, [field]: cleanPhone }));
+      
+      // Utiliser la fonction importée qui accepte aussi les numéros de test
+      const isValidPhone = isValidFrenchPhone(cleanPhone);
       
       // Si le numéro change et qu'il était vérifié, reset l'état
-      if (phoneVerification.isVerified && value !== formData.accountPhone) {
+      if (phoneVerification.isVerified && cleanPhone !== formData.accountPhone) {
         setPhoneVerification(prev => ({
           ...prev,
           isVerified: false,
@@ -430,13 +447,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       }
       
       // Si le numéro n'est plus valide ou est vide, reset l'état de vérification
-      if (phoneVerification.isVerified && (!isValidFrenchPhone || !value.trim())) {
+      if (phoneVerification.isVerified && (!isValidPhone || !cleanPhone.trim())) {
         setPhoneVerification(prev => ({
           ...prev,
           isVerified: false,
           error: ''
         }));
       }
+      
+      // Ne pas continuer avec le reste du traitement pour ce champ
+      return;
     }
     
     if (field === 'siret' && typeof value === 'string') {
@@ -470,13 +490,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     }
 
     // Vérifier que le numéro est valide avant d'envoyer
-    const cleanPhone = formData.accountPhone.replace(/\s/g, '').replace(/[^\d+]/g, '');
-    const isValidFrenchPhone = /^(0[67]|\+33[67])[0-9]{8}$/.test(cleanPhone);
-    
-    if (!isValidFrenchPhone) {
+    // Utiliser la fonction importée qui accepte aussi les numéros de test Twilio
+    if (!isValidFrenchPhone(formData.accountPhone)) {
       setPhoneVerification(prev => ({ 
         ...prev, 
-        error: 'Format de téléphone mobile français invalide (doit commencer par 06 ou 07)'
+        error: 'Format de téléphone mobile français invalide (doit commencer par 06 ou 07, ou utiliser un numéro de test Twilio)'
       }));
       return;
     }
@@ -496,14 +514,26 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       const data = await response.json();
 
       if (data.success) {
-        setPhoneVerification(prev => ({ 
-          ...prev, 
-          isSending: false,
-          error: ''
-        }));
-        console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode);
-        // Ouvrir automatiquement le modal de vérification
-        setShowPhoneModal(true);
+        // Si le backend a auto-validé (numéro de test), marquer directement comme vérifié
+        if (data.autoVerified) {
+          console.log('🧪 [Hook] Numéro de test auto-validé. Aucun code à saisir.');
+          setPhoneVerification(prev => ({
+            ...prev,
+            isSending: false,
+            isVerified: true,
+            error: ''
+          }));
+          setShowPhoneModal(false);
+        } else {
+          // Sinon, ouvrir le modal pour saisir le code
+          setPhoneVerification(prev => ({ 
+            ...prev, 
+            isSending: false,
+            error: ''
+          }));
+          console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode || data.devCode);
+          setShowPhoneModal(true);
+        }
       } else {
         setPhoneVerification(prev => ({ 
           ...prev, 
@@ -562,12 +592,14 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
 
   // Fonctions pour gérer le modal de vérification téléphone
   const handlePhoneVerificationSuccess = () => {
+    console.log(`✅ [Hook] handlePhoneVerificationSuccess appelé pour le numéro: ${formData.accountPhone}`);
     setPhoneVerification(prev => ({ 
       ...prev, 
       isVerified: true,
       error: ''
     }));
     setShowPhoneModal(false);
+    console.log(`✅ [Hook] État phoneVerification.isVerified mis à jour à: true`);
   };
 
   const handleClosePhoneModal = () => {
@@ -777,8 +809,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 8:
-        // Validation de l'acceptation des conditions générales
-        if (!formData.termsAccepted) {
+        // Validation de l'acceptation des conditions générales (seulement en mode création)
+        if (!isEditMode && !formData.termsAccepted) {
           newErrors.termsAccepted = "Vous devez accepter les conditions générales d'utilisation";
         }
         break;
@@ -927,6 +959,22 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           }
         });
         
+        // Ajouter le flag de vérification SMS si le téléphone a été vérifié
+        console.log(`🔍 [Hook] État phoneVerification.isVerified avant soumission: ${phoneVerification.isVerified}`);
+        console.log(`🔍 [Hook] Numéro de téléphone dans formData: ${formData.accountPhone}`);
+        
+        if (phoneVerification.isVerified) {
+          formDataToSend.append('smsVerified', 'true');
+          console.log('✅ Vérification SMS confirmée dans FormData');
+        } else {
+          console.error('❌ Le téléphone n\'a pas été vérifié');
+          console.error('❌ État phoneVerification:', phoneVerification);
+          setSubmitError('Vérification du numéro de téléphone requise. Veuillez vérifier votre numéro de téléphone via SMS avant de continuer.');
+          setIsSubmitting(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+        
         console.log('📤 FormData construit, envoi vers API...');
         setSubmitProgress('Envoi des données au serveur...');
         console.log('📤 Données FormData:');
@@ -943,26 +991,59 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         const result = await response.json();
         
         if (!response.ok) {
-          throw new Error(result.error || 'Erreur lors de l\'inscription');
+          // Afficher les détails de l'erreur en mode développement
+          console.error('❌ Erreur API:', result);
+          if (result.details) {
+            console.error('❌ Détails:', result.details);
+          }
+          if (result.suggestion) {
+            console.warn('💡 Suggestion:', result.suggestion);
+          }
+          if (result.stack) {
+            console.error('❌ Stack:', result.stack);
+          }
+          
+          // Construire le message d'erreur avec la suggestion si disponible
+          let errorMessage = result.error || result.details || 'Erreur lors de l\'inscription';
+          if (result.suggestion) {
+            errorMessage += `\n\n💡 ${result.suggestion}`;
+          }
+          
+          throw new Error(errorMessage);
         }
         
+        // Si une URL de checkout Stripe est fournie, rediriger vers Stripe
+        if (result.checkoutUrl) {
+          console.log('💳 Redirection vers Stripe Checkout...');
+          window.location.href = result.checkoutUrl;
+          return; // Ne pas continuer avec la connexion automatique
+        }
+
         if (result.autoLogin && result.professional) {
           try {
-            console.log('🔄 Tentative de connexion automatique...');
+            console.log('🔄 Tentative de connexion automatique avec Supabase Auth...');
             setSubmitProgress('Connexion automatique...');
-            const signInResult = await signIn('credentials', {
-              email: result.professional.email,
-              password: formData.accountPassword,
-              redirect: false,
+            
+            // Utiliser l'API Supabase Auth au lieu de NextAuth
+            const loginResponse = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: result.professional.email,
+                password: formData.accountPassword
+              }),
             });
 
-            if (signInResult?.ok) {
+            const loginResult = await loginResponse.json();
+
+            if (loginResponse.ok && loginResult.success) {
               console.log('✅ Connexion automatique réussie, redirection vers dashboard');
-              // ✅ OPTIMISATION : Redirection immédiate sans attendre ni vérifier la session
-              // Next-Auth gère la session automatiquement, pas besoin de vérifier
-              router.push('/dashboard');
+              // Recharger la page pour synchroniser la session Supabase
+              window.location.href = '/dashboard';
             } else {
-              console.error('❌ Échec de la connexion automatique:', signInResult?.error);
+              console.error('❌ Échec de la connexion automatique:', loginResult);
               // En cas d'échec, rediriger vers la page de connexion avec un message
               router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
             }

@@ -42,6 +42,7 @@ export default function EstablishmentStep({
         <label className="block text-sm font-medium mb-2">Nom de l'établissement *</label>
         <input
           type="text"
+          data-testid="form-establishment-name"
           value={formData.establishmentName}
           onChange={(e) => onInputChange('establishmentName', e.target.value)}
           className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${

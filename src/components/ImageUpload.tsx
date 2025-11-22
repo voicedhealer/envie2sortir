@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Upload, X, Check } from 'lucide-react';
+import { compressImage, shouldCompressImage } from '@/lib/image-compression';
 
 interface ImageUploadProps {
   currentImageUrl?: string;
@@ -63,12 +64,6 @@ export default function ImageUpload({
       return;
     }
 
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setUploadError('Fichier trop volumineux. Taille maximum: 5MB');
-      return;
-    }
-
     setIsUploading(true);
     setUploadError(null);
 
@@ -78,8 +73,40 @@ export default function ImageUpload({
         return;
       }
 
+      // Compresser l'image si nécessaire
+      let fileToUpload = file;
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      
+      if (shouldCompressImage(file, 5)) {
+        try {
+          setUploadError('Compression de l\'image en cours...');
+          fileToUpload = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.85,
+            maxSizeMB: 5
+          });
+          
+          const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          const compressedSizeMB = (fileToUpload.size / (1024 * 1024)).toFixed(2);
+          console.log(`✅ Image compressée: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
+        } catch (compressionError) {
+          console.error('Erreur compression:', compressionError);
+          setUploadError('Erreur lors de la compression. Veuillez utiliser une image plus petite.');
+          setIsUploading(false);
+          return;
+        }
+      }
+
+      // Vérifier à nouveau la taille après compression
+      if (fileToUpload.size > maxSize) {
+        setUploadError('L\'image est trop volumineuse même après compression. Veuillez utiliser une image plus petite.');
+        setIsUploading(false);
+        return;
+      }
+
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', fileToUpload);
       
       // Pour les images d'établissement, ajouter l'ID d'établissement
       if (uploadType === 'establishment' && establishmentId) {
@@ -120,19 +147,42 @@ export default function ImageUpload({
       return;
     }
 
-    // Valider tous les fichiers
+    // Valider et compresser tous les fichiers
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    const processedFiles: File[] = [];
     
     for (const file of fileArray) {
       if (!allowedTypes.includes(file.type)) {
         setUploadError(`Type de fichier non autorisé: ${file.name}. Formats acceptés: JPG, PNG, WebP`);
         return;
       }
-      if (file.size > maxSize) {
+      
+      // Compresser si nécessaire
+      let fileToUpload = file;
+      if (shouldCompressImage(file, 5)) {
+        try {
+          setUploadProgress(`Compression de ${file.name}...`);
+          fileToUpload = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.85,
+            maxSizeMB: 5
+          });
+        } catch (compressionError) {
+          setUploadError(`Erreur lors de la compression de ${file.name}`);
+          return;
+        }
+      }
+      
+      // Vérifier la taille après compression
+      if (fileToUpload.size > maxSize) {
         setUploadError(`Fichier trop volumineux: ${file.name}. Taille maximum: 5MB`);
         return;
       }
+      
+      processedFiles.push(fileToUpload);
     }
 
     setIsUploading(true);
@@ -148,9 +198,9 @@ export default function ImageUpload({
       const uploadedUrls: string[] = [];
 
       // Uploader chaque fichier séquentiellement
-      for (let i = 0; i < fileArray.length; i++) {
-        const file = fileArray[i];
-        setUploadProgress(`Upload ${i + 1}/${fileArray.length}: ${file.name}`);
+      for (let i = 0; i < processedFiles.length; i++) {
+        const file = processedFiles[i];
+        setUploadProgress(`Upload ${i + 1}/${processedFiles.length}: ${file.name}`);
 
         const formData = new FormData();
         formData.append('image', file);

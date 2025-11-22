@@ -14,6 +14,7 @@ interface EventCardProps {
     startDate: string;
     endDate?: string | null;
     price?: number | null;
+    priceUnit?: string | null;
     maxCapacity?: number | null;
     imageUrl?: string | null;
     location?: string;
@@ -80,9 +81,9 @@ export default function EventCard({ event, establishment, isUpcoming = true }: E
   };
 
   // Formater le prix
-  const formatPrice = (price: number | null) => {
+  const formatPrice = (price: number | null, priceUnit?: string | null) => {
     if (!price) return null;
-    return `${price}€`;
+    return `${price}€${priceUnit ? ` ${priceUnit}` : ''}`;
   };
 
   // Tronquer la description si nécessaire
@@ -144,7 +145,7 @@ export default function EventCard({ event, establishment, isUpcoming = true }: E
             </div>
             {event.price && (
               <div className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full text-xs font-semibold">
-                {formatPrice(event.price)}
+                {formatPrice(event.price, event.priceUnit)}
               </div>
             )}
           </div>

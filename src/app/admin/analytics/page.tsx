@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { BarChart3, TrendingUp, Users, Eye, Building2 } from 'lucide-react';
 
@@ -16,28 +16,42 @@ interface EstablishmentAnalytics {
 }
 
 export default function AdminAnalyticsPage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [establishments, setEstablishments] = useState<EstablishmentAnalytics[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
+  // Vérification d'authentification (séparée du fetch)
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
-    if (!session) {
-      router.push('/auth/signin');
+    // Éviter les redirections multiples
+    if (!session && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push('/auth');
       return;
     }
 
     // Vérifier que l'utilisateur est admin
-    if (session.user.role !== 'admin') {
+    if (session && session.user?.role !== 'admin' && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
       router.push('/dashboard');
       return;
     }
+  }, [sessionLoading, session, router]);
+
+  // Fetch des données (une seule fois quand la session est prête)
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!session || session.user?.role !== 'admin') return;
+    if (hasFetchedRef.current) return;
 
     const fetchEstablishmentsAnalytics = async () => {
       try {
+        hasFetchedRef.current = true;
         setLoading(true);
         const response = await fetch('/api/admin/analytics/establishments');
         
@@ -47,17 +61,20 @@ export default function AdminAnalyticsPage() {
         
         const data = await response.json();
         setEstablishments(data);
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
+        hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
       } finally {
         setLoading(false);
       }
     };
 
     fetchEstablishmentsAnalytics();
-  }, [session, status, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionLoading, session?.user?.id, session?.user?.role]); // Utiliser les valeurs primitives
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

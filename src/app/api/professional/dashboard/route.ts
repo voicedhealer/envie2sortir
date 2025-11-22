@@ -1,35 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { requireEstablishment } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Récupérer l'ID du professionnel depuis la session
-    // Pour l'instant, on simule avec un ID fixe pour les tests
-    const professionalId = "cmf0ygvkn00008ztdq5rc0bwx"; // ID de test
+    const user = await requireEstablishment();
+    if (!user) {
+      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    }
+
+    const supabase = await createClient();
 
     // Récupérer le professionnel et son établissement
-    const professional = await prisma.professional.findUnique({
-      where: { id: professionalId },
-      include: {
-        establishments: {
-          include: {
-            events: {
-              orderBy: { startDate: 'asc' }
-            },
-            images: true
-          }
-        }
-      }
-    });
+    const { data: professional, error: professionalError } = await supabase
+      .from('professionals')
+      .select('id, first_name, last_name, email, siret, company_name')
+      .eq('id', user.id)
+      .single();
 
-    if (!professional) {
+    if (professionalError || !professional) {
       return NextResponse.json({ error: "Professionnel non trouvé" }, { status: 404 });
     }
 
-    const establishment = professional.establishments[0]; // Premier établissement
-    if (!establishment) {
+    // Récupérer l'établissement
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('*')
+      .eq('owner_id', user.id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: "Aucun établissement trouvé" }, { status: 404 });
     }
+
+    // Récupérer les événements
+    const { data: events, error: eventsError } = await supabase
+      .from('events')
+      .select('*')
+      .eq('establishment_id', establishment.id)
+      .order('start_date', { ascending: true });
+
+    // Récupérer les images
+    const { data: images, error: imagesError } = await supabase
+      .from('images')
+      .select('*')
+      .eq('establishment_id', establishment.id);
 
     // Récupérer les interactions utilisateurs (simulation pour l'instant)
     const interactions = [
@@ -56,14 +71,28 @@ export async function GET(request: NextRequest) {
       }
     ];
 
+    // Convertir snake_case -> camelCase
+    const formattedEvents = (events || []).map((event: any) => ({
+      id: event.id,
+      name: event.name,
+      description: event.description,
+      startDate: event.start_date,
+      endDate: event.end_date,
+      price: event.price,
+      maxCapacity: event.max_capacity,
+      isRecurring: event.is_recurring,
+      status: new Date(event.start_date) > new Date() ? 'upcoming' : 'completed',
+      createdAt: event.created_at
+    }));
+
     return NextResponse.json({
       professional: {
         id: professional.id,
-        firstName: professional.firstName,
-        lastName: professional.lastName,
+        firstName: professional.first_name,
+        lastName: professional.last_name,
         email: professional.email,
         siret: professional.siret,
-        companyName: professional.companyName
+        companyName: professional.company_name
       },
       establishment: {
         id: establishment.id,
@@ -73,25 +102,14 @@ export async function GET(request: NextRequest) {
         description: establishment.description,
         address: establishment.address,
         city: establishment.city,
-        viewsCount: establishment.viewsCount,
-        clicksCount: establishment.clicksCount,
-        avgRating: establishment.avgRating,
-        totalComments: establishment.totalComments,
-        createdAt: establishment.createdAt.toISOString(),
-        updatedAt: establishment.updatedAt.toISOString()
+        viewsCount: establishment.views_count || 0,
+        clicksCount: establishment.clicks_count || 0,
+        avgRating: establishment.avg_rating || 0,
+        totalComments: establishment.total_comments || 0,
+        createdAt: establishment.created_at,
+        updatedAt: establishment.updated_at
       },
-      events: establishment.events.map(event => ({
-        id: event.id,
-        name: event.name,
-        description: event.description,
-        startDate: event.startDate.toISOString(),
-        endDate: event.endDate?.toISOString(),
-        price: event.price,
-        maxCapacity: event.maxCapacity,
-        isRecurring: event.isRecurring,
-        status: event.startDate > new Date() ? 'upcoming' : 'completed',
-        createdAt: event.createdAt.toISOString()
-      })),
+      events: formattedEvents,
       interactions
     });
 

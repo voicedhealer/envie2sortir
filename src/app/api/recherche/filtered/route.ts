@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 // Fonction pour calculer la distance entre deux points (formule haversine)
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -311,39 +311,119 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Aucun mot-clé significatif trouvé" }, { status: 400 });
     }
 
-    // Construire la clause WHERE
-    const where: any = {
-      status: 'approved',
-      latitude: { not: null },
-      longitude: { not: null }
-    };
+    const supabase = await createClient();
+
+    // Construire la requête (sans relations pour éviter les problèmes de foreign keys)
+    let query = supabase
+      .from('establishments')
+      .select('*')
+      .eq('status', 'approved')
+      .not('latitude', 'is', null)
+      .not('longitude', 'is', null);
 
     // Filtre premium
     if (filter === 'premium') {
-      where.subscription = 'PREMIUM';
+      query = query.eq('subscription', 'PREMIUM');
     }
 
-    // Charger les établissements
-    const establishments = await prisma.establishment.findMany({
-      where,
-      include: { 
-        tags: true, 
-        images: { 
-          where: { isPrimary: true }, 
-          take: 1 
-        },
-        events: {
-          where: {
-            startDate: {
-              gte: new Date()
-            }
-          },
-          orderBy: {
-            startDate: 'asc'
-          },
-          take: 1
-        }
+    const { data: establishmentsData, error: establishmentsError } = await query;
+
+    if (establishmentsError) {
+      console.error('❌ [Recherche Filtrée] Erreur récupération établissements:', {
+        error: establishmentsError,
+        code: establishmentsError?.code,
+        message: establishmentsError?.message,
+        details: establishmentsError?.details,
+        hint: establishmentsError?.hint,
+        keywords,
+        filter
+      });
+      return NextResponse.json({ 
+        error: "Erreur lors de la recherche",
+        details: establishmentsError.message,
+        code: establishmentsError.code
+      }, { status: 500 });
+    }
+
+    // Récupérer les données supplémentaires pour tous les établissements
+    const establishmentIds = (establishmentsData || []).map((est: any) => est.id);
+    
+    // Récupérer les tags, images et événements en parallèle
+    const [tagsResult, imagesResult, eventsResult] = await Promise.all([
+      establishmentIds.length > 0 
+        ? supabase.from('etablissement_tags').select('*').in('etablissement_id', establishmentIds)
+        : Promise.resolve({ data: [], error: null }),
+      establishmentIds.length > 0
+        ? supabase.from('images').select('*').in('establishment_id', establishmentIds).eq('is_primary', true)
+        : Promise.resolve({ data: [], error: null }),
+      establishmentIds.length > 0
+        ? supabase.from('events').select('*').in('establishment_id', establishmentIds).gte('start_date', new Date().toISOString()).order('start_date', { ascending: true })
+        : Promise.resolve({ data: [], error: null })
+    ]);
+
+    const tagsMap = new Map();
+    (tagsResult.data || []).forEach((tag: any) => {
+      const establishmentId = tag.etablissement_id || tag.establishment_id;
+      if (!tagsMap.has(establishmentId)) {
+        tagsMap.set(establishmentId, []);
       }
+      tagsMap.get(establishmentId).push(tag);
+    });
+
+    const imagesMap = new Map();
+    (imagesResult.data || []).forEach((img: any) => {
+      if (!imagesMap.has(img.establishment_id)) {
+        imagesMap.set(img.establishment_id, []);
+      }
+      imagesMap.get(img.establishment_id).push(img);
+    });
+
+    const eventsMap = new Map();
+    (eventsResult.data || []).forEach((evt: any) => {
+      if (!eventsMap.has(evt.establishment_id)) {
+        eventsMap.set(evt.establishment_id, []);
+      }
+      eventsMap.get(evt.establishment_id).push(evt);
+    });
+
+    // Traiter les établissements
+    const establishments = (establishmentsData || []).map((est: any) => {
+      // Parser les champs JSONB
+      const activities = typeof est.activities === 'string' ? JSON.parse(est.activities || '[]') : (est.activities || []);
+      const horairesOuverture = typeof est.horaires_ouverture === 'string' ? JSON.parse(est.horaires_ouverture || '{}') : (est.horaires_ouverture || {});
+
+      // Récupérer les données associées
+      const tags = tagsMap.get(est.id) || [];
+      const images = imagesMap.get(est.id) || [];
+      const events = eventsMap.get(est.id) || [];
+
+      return {
+        ...est,
+        id: est.id,
+        name: est.name,
+        description: est.description,
+        activities,
+        horairesOuverture,
+        latitude: est.latitude,
+        longitude: est.longitude,
+        subscription: est.subscription,
+        createdAt: est.created_at,
+        tags: tags.map((tag: any) => ({
+          id: tag.id,
+          tag: tag.tag,
+          poids: tag.poids
+        })),
+        images: images.slice(0, 1).map((img: any) => ({
+          id: img.id,
+          url: img.url,
+          isPrimary: img.is_primary
+        })),
+        events: events.slice(0, 1).map((evt: any) => ({
+          id: evt.id,
+          name: evt.name,
+          startDate: evt.start_date
+        }))
+      };
     });
 
     console.log(`🔍 Nombre total d'établissements trouvés: ${establishments.length}`);

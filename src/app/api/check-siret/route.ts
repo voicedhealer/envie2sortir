@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * API pour vérifier si un SIRET existe déjà dans la base de données
@@ -16,24 +16,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    const supabase = await createClient();
+    
     // Nettoyer le SIRET (enlever les espaces)
     const cleanedSiret = siret.replace(/\s/g, '');
     
     // Vérifier si le SIRET existe déjà
-    const existingProfessional = await prisma.professional.findUnique({
-      where: { siret: cleanedSiret },
-      select: {
-        id: true,
-        companyName: true,
-        email: true
-      }
-    });
+    const { data: existingProfessional, error: professionalError } = await supabase
+      .from('professionals')
+      .select('id, company_name, email')
+      .eq('siret', cleanedSiret)
+      .single();
 
-    if (existingProfessional) {
+    if (existingProfessional && !professionalError) {
       return NextResponse.json({ 
         exists: true,
         message: 'Ce SIRET est déjà enregistré.',
-        companyName: existingProfessional.companyName,
+        companyName: existingProfessional.company_name,
         // Ne pas renvoyer l'email complet pour des raisons de sécurité
         emailHint: existingProfessional.email 
           ? existingProfessional.email.replace(/(.{2})(.*)(@.*)/, '$1***$3')

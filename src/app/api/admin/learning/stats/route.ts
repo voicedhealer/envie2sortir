@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { isAdmin } from '@/lib/supabase/helpers';
 import { serverLearningService } from '@/lib/server-learning-service';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'admin') {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

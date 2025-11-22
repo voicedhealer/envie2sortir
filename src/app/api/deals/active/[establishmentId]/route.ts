@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 import { isDealActive } from '@/lib/deal-utils';
 
 export async function GET(
@@ -22,68 +22,75 @@ export async function GET(
     // Date actuelle
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
     
-    // Récupérer les bons plans actifs
-    console.log('API deals/active - Recherche des deals pour:', { establishmentId, today, tomorrow });
+    // Utiliser le client admin pour bypass RLS (route publique)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     
-    const activeDeals = await prisma.dailyDeal.findMany({
-      where: {
-        establishmentId,
-        isActive: true,
-        OR: [
-          // Bons plans non récurrents avec dates spécifiques
-          {
-            isRecurring: false,
-            dateDebut: {
-              lte: tomorrow
-            },
-            dateFin: {
-              gte: today
-            }
-          },
-          // Bons plans récurrents (toujours actifs selon leur logique)
-          {
-            isRecurring: true
-          }
-        ]
-      },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        modality: true,
-        originalPrice: true,
-        discountedPrice: true,
-        imageUrl: true,
-        pdfUrl: true,
-        dateDebut: true,
-        dateFin: true,
-        heureDebut: true,
-        heureFin: true,
-        isActive: true,
-        promoUrl: true,
-        // Champs de récurrence
-        isRecurring: true,
-        recurrenceType: true,
-        recurrenceDays: true,
-        recurrenceEndDate: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
+    if (!supabaseUrl || !serviceKey) {
+      console.error('API deals/active - Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+    
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
     });
 
-    console.log('API deals/active - Deals trouvés:', activeDeals.length, activeDeals);
+    // Récupérer les bons plans actifs
+    console.log('API deals/active - Recherche des deals pour:', { establishmentId, today });
+    
+    // Récupérer tous les deals actifs de l'établissement
+    const { data: activeDeals, error: dealsError } = await supabase
+      .from('daily_deals')
+      .select('*')
+      .eq('establishment_id', establishmentId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (dealsError) {
+      console.error('Erreur récupération deals:', dealsError);
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération des bons plans',
+          details: process.env.NODE_ENV === 'production' ? undefined : dealsError.message,
+          code: process.env.NODE_ENV === 'production' ? undefined : dealsError.code
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('API deals/active - Deals trouvés:', activeDeals?.length || 0);
+
+    // Convertir snake_case -> camelCase
+    const formattedDeals = (activeDeals || []).map((deal: any) => ({
+      id: deal.id,
+      title: deal.title,
+      description: deal.description,
+      modality: deal.modality,
+      originalPrice: deal.original_price,
+      discountedPrice: deal.discounted_price,
+      imageUrl: deal.image_url,
+      pdfUrl: deal.pdf_url,
+      dateDebut: deal.date_debut,
+      dateFin: deal.date_fin,
+      heureDebut: deal.heure_debut,
+      heureFin: deal.heure_fin,
+      isActive: deal.is_active,
+      promoUrl: deal.promo_url,
+      isRecurring: deal.is_recurring,
+      recurrenceType: deal.recurrence_type,
+      recurrenceDays: deal.recurrence_days ? JSON.parse(deal.recurrence_days) : null,
+      recurrenceEndDate: deal.recurrence_end_date,
+      createdAt: deal.created_at
+    }));
 
     // Filtrer les bons plans qui sont actifs maintenant en utilisant la fonction centralisée
-    const currentActiveDeals = activeDeals.filter(deal => {
-      // Convertir les types JSON en types appropriés
-      const dealWithCorrectTypes = {
-        ...deal,
-        recurrenceDays: Array.isArray(deal.recurrenceDays) ? deal.recurrenceDays as number[] : null
-      };
-      return isDealActive(dealWithCorrectTypes);
+    const currentActiveDeals = formattedDeals.filter((deal: any) => {
+      return isDealActive(deal);
     });
 
     console.log('API deals/active - Deals actifs maintenant:', currentActiveDeals.length, currentActiveDeals);
@@ -96,7 +103,10 @@ export async function GET(
   } catch (error) {
     console.error('Erreur lors de la récupération des bons plans actifs:', error);
     return NextResponse.json(
-      { error: 'Erreur serveur' },
+      { 
+        error: 'Erreur serveur',
+        details: process.env.NODE_ENV === 'production' ? undefined : (error as Error).message
+      },
       { status: 500 }
     );
   }
