@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Route callback pour OAuth (Google, Facebook)
+ * Route callback pour OAuth (Google)
  * 
  * Cette route est appelée après une connexion OAuth réussie.
  * Elle échange le code OAuth contre une session Supabase et redirige l'utilisateur.
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
       console.warn('⚠️ [OAuth Callback] Tentative de connexion OAuth pour un professionnel');
       const errorUrl = new URL('/auth', request.url);
       errorUrl.searchParams.set('error', 'ProfessionalOAuthNotAllowed');
-      errorUrl.searchParams.set('message', 'Les professionnels ne peuvent pas se connecter via Google ou Facebook');
+      errorUrl.searchParams.set('message', 'Les professionnels ne peuvent pas se connecter via Google');
       return NextResponse.redirect(errorUrl);
     }
 

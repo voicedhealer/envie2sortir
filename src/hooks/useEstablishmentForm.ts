@@ -418,7 +418,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     // Gestion spéciale pour le téléphone - validation en temps réel
     if (field === 'accountPhone' && typeof value === 'string') {
       const cleanPhone = value.replace(/\s/g, '').replace(/[^\d+]/g, '');
-      const isValidFrenchPhone = /^(0[67]|\+33[67])[0-9]{8}$/.test(cleanPhone);
+      // Utiliser la fonction importée qui accepte aussi les numéros de test
+      const isValidPhone = isValidFrenchPhone(value);
       
       // Si le numéro change et qu'il était vérifié, reset l'état
       if (phoneVerification.isVerified && value !== formData.accountPhone) {
@@ -430,7 +431,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       }
       
       // Si le numéro n'est plus valide ou est vide, reset l'état de vérification
-      if (phoneVerification.isVerified && (!isValidFrenchPhone || !value.trim())) {
+      if (phoneVerification.isVerified && (!isValidPhone || !value.trim())) {
         setPhoneVerification(prev => ({
           ...prev,
           isVerified: false,
@@ -470,13 +471,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     }
 
     // Vérifier que le numéro est valide avant d'envoyer
-    const cleanPhone = formData.accountPhone.replace(/\s/g, '').replace(/[^\d+]/g, '');
-    const isValidFrenchPhone = /^(0[67]|\+33[67])[0-9]{8}$/.test(cleanPhone);
-    
-    if (!isValidFrenchPhone) {
+    // Utiliser la fonction importée qui accepte aussi les numéros de test Twilio
+    if (!isValidFrenchPhone(formData.accountPhone)) {
       setPhoneVerification(prev => ({ 
         ...prev, 
-        error: 'Format de téléphone mobile français invalide (doit commencer par 06 ou 07)'
+        error: 'Format de téléphone mobile français invalide (doit commencer par 06 ou 07, ou utiliser un numéro de test Twilio)'
       }));
       return;
     }
@@ -496,14 +495,27 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       const data = await response.json();
 
       if (data.success) {
-        setPhoneVerification(prev => ({ 
-          ...prev, 
-          isSending: false,
-          error: ''
-        }));
-        console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode);
-        // Ouvrir automatiquement le modal de vérification
-        setShowPhoneModal(true);
+        // Si c'est un numéro de test Twilio, marquer automatiquement comme vérifié
+        if (data.isTestMode && data.autoVerified) {
+          console.log('🧪 [Hook] Numéro de test détecté - Marquage automatique comme vérifié');
+          setPhoneVerification(prev => ({ 
+            ...prev, 
+            isSending: false,
+            isVerified: true,
+            error: ''
+          }));
+          // Ne pas ouvrir le modal pour les numéros de test
+          console.log('✅ [Hook] Vérification automatique réussie pour le numéro de test');
+        } else {
+          setPhoneVerification(prev => ({ 
+            ...prev, 
+            isSending: false,
+            error: ''
+          }));
+          console.log('📱 Code de vérification envoyé automatiquement:', data.debugCode);
+          // Ouvrir automatiquement le modal de vérification
+          setShowPhoneModal(true);
+        }
       } else {
         setPhoneVerification(prev => ({ 
           ...prev, 
@@ -926,6 +938,18 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             formDataToSend.append(key, value.toString());
           }
         });
+        
+        // Ajouter le flag de vérification SMS si le téléphone a été vérifié
+        if (phoneVerification.isVerified) {
+          formDataToSend.append('smsVerified', 'true');
+          console.log('✅ Vérification SMS confirmée dans FormData');
+        } else {
+          console.error('❌ Le téléphone n\'a pas été vérifié');
+          setSubmitError('Vérification du numéro de téléphone requise');
+          setIsSubmitting(false);
+          clearTimeout(timeoutId);
+          return;
+        }
         
         console.log('📤 FormData construit, envoi vers API...');
         setSubmitProgress('Envoi des données au serveur...');

@@ -135,17 +135,48 @@ export default function ProfessionalStep({
           <input
             type="text"
             value={formData.siret}
-            onChange={(e) => onInputChange('siret', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            onChange={(e) => {
+              // Nettoyer automatiquement les espaces lors de la saisie
+              const cleanedValue = e.target.value.replace(/\s/g, '');
+              onInputChange('siret', cleanedValue);
+            }}
+            onPaste={(e) => {
+              // Gérer le copier-coller en nettoyant les espaces
+              e.preventDefault();
+              const pastedText = e.clipboardData.getData('text');
+              const cleanedText = pastedText.replace(/\s/g, '').slice(0, 14);
+              onInputChange('siret', cleanedText);
+            }}
+            className={`w-full px-3 py-2 ${formData.siret ? 'pr-20' : 'pr-12'} border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
               errors.siret || siretExistsCheck.exists ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder="14 chiffres (ex: 12345678901234)"
+            placeholder="14 chiffres (ex: 12345678901234 ou 840 467 682 00018)"
             maxLength={14}
           />
+          {/* Bouton pour réinitialiser le SIRET */}
+          {formData.siret && (
+            <button
+              type="button"
+              onClick={() => {
+                onInputChange('siret', '');
+                // Réinitialiser aussi les données INSEE si présentes
+                onInputChange('companyName', '');
+                onInputChange('legalStatus', '');
+                onInputChange('siretAddress', '');
+                onInputChange('siretActivity', '');
+                onInputChange('siretCreationDate', '');
+                onInputChange('siretEffectifs', '');
+              }}
+              className="absolute right-12 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
+              title="Effacer le SIRET"
+            >
+              <Icons.X className="w-5 h-5" />
+            </button>
+          )}
           <div className="absolute right-3 top-3">
             {(siretVerification.status === 'loading' || siretExistsCheck.checking || inseeLoading) && <Icons.Spinner />}
-            {(siretVerification.status === 'valid' || (inseeResult?.isValid && !siretExistsCheck.exists)) && <Icons.Check />}
-            {(siretVerification.status === 'invalid' || siretExistsCheck.exists || (inseeError && !inseeLoading)) && <Icons.X />}
+            {(siretVerification.status === 'valid' || (inseeResult?.isValid && !siretExistsCheck.exists)) && <Icons.Check className="text-green-600" />}
+            {(siretVerification.status === 'invalid' || siretExistsCheck.exists || (inseeError && !inseeLoading)) && <Icons.X className="text-red-500" />}
           </div>
         </div>
         
@@ -293,12 +324,46 @@ export default function ProfessionalStep({
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Numéro SIRET *
               </label>
-              <input
-                type="text"
-                value={formData.siret}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-                readOnly
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.siret}
+                  onChange={(e) => {
+                    // Nettoyer automatiquement les espaces lors de la saisie
+                    const cleanedValue = e.target.value.replace(/\s/g, '');
+                    onInputChange('siret', cleanedValue);
+                  }}
+                  onPaste={(e) => {
+                    // Gérer le copier-coller en nettoyant les espaces
+                    e.preventDefault();
+                    const pastedText = e.clipboardData.getData('text');
+                    const cleanedText = pastedText.replace(/\s/g, '').slice(0, 14);
+                    onInputChange('siret', cleanedText);
+                  }}
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  maxLength={14}
+                  placeholder="14 chiffres (ex: 840 467 682 00018)"
+                />
+                {formData.siret && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onInputChange('siret', '');
+                      // Réinitialiser les données INSEE
+                      onInputChange('companyName', '');
+                      onInputChange('legalStatus', '');
+                      onInputChange('siretAddress', '');
+                      onInputChange('siretActivity', '');
+                      onInputChange('siretCreationDate', '');
+                      onInputChange('siretEffectifs', '');
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
+                    title="Effacer le SIRET"
+                  >
+                    <Icons.X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
               <p className="text-xs text-gray-500 mt-1">Numéro SIRET vérifié par l'INSEE</p>
             </div>
 

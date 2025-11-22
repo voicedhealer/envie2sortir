@@ -273,14 +273,28 @@ export default function AccountStep({
                 onInputChange('resetPhoneVerification', true);
               }
             }}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${phoneState.className} ${
+            className={`w-full px-3 py-2 ${phoneState.state === 'verified' ? 'pr-20' : phoneState.state === 'valid' ? 'pr-20' : 'pr-3'} border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${phoneState.className} ${
               phoneState.disabled ? 'cursor-not-allowed opacity-75' : ''
             }`}
             placeholder="06 12 34 56 78 (mobile uniquement)"
           />
+          {/* Bouton pour réinitialiser le téléphone quand validé ou vérifié */}
+          {(phoneState.state === 'verified' || phoneState.state === 'valid') && (
+            <button
+              type="button"
+              onClick={() => {
+                onInputChange('accountPhone', '');
+                onInputChange('resetPhoneVerification', true);
+              }}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
+              title="Effacer le numéro"
+            >
+              <Icons.X className="w-5 h-5" />
+            </button>
+          )}
           {phoneState.state === 'verified' && (
-            <div className="absolute right-3 top-3">
-              <Icons.Check />
+            <div className="absolute right-10 top-3">
+              <Icons.Check className="text-green-600" />
             </div>
           )}
         </div>

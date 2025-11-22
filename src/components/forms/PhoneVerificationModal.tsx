@@ -40,6 +40,17 @@ export default function PhoneVerificationModal({
       sendVerificationCode();
     }
   }, [isOpen, phoneNumber]);
+  
+  // Auto-fermer le modal pour les numéros de test Twilio
+  useEffect(() => {
+    if (success && success.includes('test') || success.includes('Test')) {
+      const timer = setTimeout(() => {
+        onVerificationSuccess();
+        onClose();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [success, onVerificationSuccess, onClose]);
 
   const sendVerificationCode = async () => {
     setIsSending(true);
@@ -61,9 +72,20 @@ export default function PhoneVerificationModal({
       const data = await response.json();
 
       if (data.success) {
-        setSuccess('Code de vérification envoyé !');
-        setTimeLeft(300); // Reset timer
-        setCanResend(false);
+        // Si c'est un numéro de test Twilio, marquer comme vérifié automatiquement
+        if (data.isTestMode && data.autoVerified) {
+          setSuccess(data.testMessage || 'Numéro de test vérifié automatiquement !');
+          console.log('🧪 [Phone Modal] Numéro de test détecté - Vérification automatique');
+          // Auto-fermer le modal après 1.5 secondes
+          setTimeout(() => {
+            onVerificationSuccess();
+            onClose();
+          }, 1500);
+        } else {
+          setSuccess('Code de vérification envoyé !');
+          setTimeLeft(300); // Reset timer
+          setCanResend(false);
+        }
       } else {
         setError(data.error || 'Erreur lors de l\'envoi du code');
       }

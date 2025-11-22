@@ -3,6 +3,7 @@ import { signUpProfessional } from '@/lib/supabase/auth-actions';
 import { geocodeAddress } from '@/lib/geocoding';
 import { createTagsData } from '@/lib/category-tags-mapping';
 import { logSubscriptionChange } from '@/lib/subscription-logger';
+import { isPhoneVerified } from '@/lib/phone-verification';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,23 @@ export async function POST(request: NextRequest) {
       lastName: formData.get('accountLastName') as string,
       phone: formData.get('accountPhone') as string,
     };
+
+    // Vérifier que le téléphone a été vérifié par SMS
+    if (!accountData.phone) {
+      return NextResponse.json({ 
+        error: 'Numéro de téléphone requis' 
+      }, { status: 400 });
+    }
+
+    const phoneIsVerified = isPhoneVerified(accountData.phone);
+    if (!phoneIsVerified) {
+      console.error('❌ [Registration] Numéro de téléphone non vérifié:', accountData.phone);
+      return NextResponse.json({ 
+        error: 'Vérification du numéro de téléphone requise. Veuillez vérifier votre numéro de téléphone via SMS avant de continuer.' 
+      }, { status: 400 });
+    }
+
+    console.log('✅ [Registration] Numéro de téléphone vérifié:', accountData.phone);
 
     const professionalData = {
       siret: formData.get('siret') as string,
