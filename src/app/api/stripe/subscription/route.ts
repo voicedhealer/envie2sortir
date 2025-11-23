@@ -17,8 +17,50 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const user = await requireEstablishment();
+    // Vérifier si on vient de Stripe avec success=true (redirection après paiement)
+    const searchParams = request.nextUrl.searchParams;
+    const fromStripeSuccess = searchParams.get('success') === 'true';
+    
+    // Si on vient de Stripe, essayer de récupérer l'utilisateur mais ne pas bloquer si la session est perdue
+    let user;
+    try {
+      user = await requireEstablishment();
+    } catch (error) {
+      // Si la session est perdue après le paiement Stripe, c'est normal
+      // On va essayer de récupérer l'abonnement via le webhook qui a dû se déclencher
+      if (fromStripeSuccess) {
+        console.log('⚠️ [Subscription API] Session perdue après paiement Stripe, tentative de récupération...');
+        // Retourner une réponse temporaire pour permettre l'affichage de la page de confirmation
+        return NextResponse.json(
+          { 
+            subscription: null,
+            plan: 'FREE',
+            message: 'Webhook en cours de traitement, veuillez patienter...',
+            fromStripeSuccess: true
+          },
+          { status: 200 }
+        );
+      }
+      // Sinon, erreur normale
+      return NextResponse.json(
+        { error: 'Non authentifié' },
+        { status: 401 }
+      );
+    }
+
     if (!user || !user.establishmentId) {
+      // Si on vient de Stripe, permettre quand même l'accès
+      if (fromStripeSuccess) {
+        return NextResponse.json(
+          { 
+            subscription: null,
+            plan: 'FREE',
+            message: 'Webhook en cours de traitement, veuillez patienter...',
+            fromStripeSuccess: true
+          },
+          { status: 200 }
+        );
+      }
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }

@@ -68,7 +68,11 @@ function SubscriptionContent() {
   const loadSubscription = async () => {
     try {
       setError(null); // Réinitialiser l'erreur avant de charger
-      const response = await fetch('/api/stripe/subscription');
+      const url = searchParams.get('success') === 'true' 
+        ? '/api/stripe/subscription?success=true'
+        : '/api/stripe/subscription';
+      const response = await fetch(url);
+      
       if (!response.ok) {
         // Si on vient de Stripe avec success, ne pas afficher d'erreur immédiatement
         if (searchParams.get('success') === 'true') {
@@ -78,6 +82,14 @@ function SubscriptionContent() {
         throw new Error('Erreur lors du chargement de l\'abonnement');
       }
       const data = await response.json();
+      
+      // Si on vient de Stripe et que le webhook est en cours, attendre un peu
+      if (data.fromStripeSuccess && !data.subscription) {
+        console.log('Webhook en cours de traitement, réessai dans quelques secondes...');
+        // Ne pas mettre à jour l'état, juste attendre
+        return;
+      }
+      
       setSubscription(data);
     } catch (err: any) {
       // Si on vient de Stripe avec success, ne pas afficher l'erreur immédiatement

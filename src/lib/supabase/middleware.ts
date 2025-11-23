@@ -62,9 +62,15 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Exception : permettre l'accès à la page de confirmation après paiement Stripe
+  // même si la session est temporairement perdue
+  const searchParams = request.nextUrl.searchParams;
+  const isStripeSuccess = pathname === '/dashboard/subscription' && searchParams.get('success') === 'true';
+  
   // Pour les pages protégées, vérifier l'authentification
   if (
     !user &&
+    !isStripeSuccess &&
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/mon-compte'))
