@@ -49,15 +49,21 @@ function SubscriptionContent() {
         loadSubscription();
       }, 5000);
       
+      // Redirection automatique vers le dashboard après 5 secondes
+      const redirectTimer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 5000);
+      
       return () => {
         clearTimeout(timer);
         clearTimeout(retryTimer);
+        clearTimeout(redirectTimer);
       };
     }
     if (searchParams.get('canceled') === 'true') {
       setError('Le paiement a été annulé. Vous pouvez réessayer à tout moment.');
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const loadSubscription = async () => {
     try {
@@ -218,15 +224,32 @@ function SubscriptionContent() {
         </div>
 
         {searchParams.get('success') === 'true' && (
-          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-green-800">
-              ✅ Paiement réussi ! Votre abonnement Premium est en cours d'activation...
-            </p>
-            {loading && (
-              <p className="text-green-700 text-sm mt-2">
-                Synchronisation en cours, veuillez patienter quelques secondes...
+          <div className="mb-6 p-8 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg">
+            <div className="text-center">
+              <div className="text-6xl mb-4 animate-bounce">✅</div>
+              <h2 className="text-3xl font-bold text-green-900 mb-3">
+                Paiement réussi !
+              </h2>
+              <div className="bg-white rounded-lg p-6 mb-4 inline-block">
+                <p className="text-green-800 text-xl font-semibold mb-2">
+                  Votre abonnement Premium est activé
+                </p>
+                {subscription?.subscription?.planType && (
+                  <p className="text-gray-700 text-lg">
+                    {subscription.subscription.planType === 'annual' 
+                      ? '305€/an (25,42€/mois)' 
+                      : '29,90€/mois'}
+                  </p>
+                )}
+              </div>
+              <p className="text-green-700 text-base mb-4">
+                Vous pouvez maintenant profiter de toutes les fonctionnalités Premium !
               </p>
-            )}
+              <div className="flex items-center justify-center gap-2 text-green-600 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                <span>Redirection automatique vers votre dashboard dans quelques secondes...</span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -237,7 +260,26 @@ function SubscriptionContent() {
         )}
 
         <div className="bg-white rounded-xl shadow-lg p-8">
-          {!isPremium ? (
+          {/* Si on vient d'un paiement réussi, ne pas afficher les options d'abonnement */}
+          {searchParams.get('success') === 'true' ? (
+            <div className="text-center py-12">
+              <div className="space-y-4">
+                <div className="text-5xl mb-4">🎉</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Bienvenue dans Premium !
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Votre abonnement est maintenant actif. Vous allez être redirigé vers votre dashboard professionnel.
+                </p>
+                <div className="flex flex-col items-center gap-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff751f]"></div>
+                  <p className="text-sm text-gray-500">
+                    Redirection en cours...
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : !isPremium ? (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">
                 Plan actuel : Basic (Gratuit)

@@ -1,1 +1,23 @@
 [2025-11-23T09:13:09.934Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":7,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:30:02.222Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:30:02.689Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:30:03.036Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:30:13.947Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:30:52.932Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:13.042Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:15.447Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:24.096Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:27.855Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:33.729Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:38.455Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:31:40.239Z] WARN  envie2sortir-api: Failed login attempt | Context: {"email":"admin@envie2sortir.fr","error":"Invalid login credentials","ipAddress":"::1","requestId":"unknown"} | Request: unknown
+[2025-11-23T09:32:05.815Z] INFO  envie2sortir-api: Successful login | Context: {"email":"envie2sortir.fr@gmail.com","responseTime":441,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:06.091Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:28.459Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:35.910Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:40.783Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:54.631Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:32:55.593Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:33:39.598Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:34:11.676Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-23T09:38:30.851Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
