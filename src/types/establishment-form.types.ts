@@ -129,6 +129,7 @@ export type ProfessionalData = {
   
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
+  subscriptionPlanType?: 'monthly' | 'annual'; // Type d'abonnement (mensuel ou annuel) pour le plan premium
   
   // Acceptation des conditions
   termsAccepted?: boolean;

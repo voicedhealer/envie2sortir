@@ -187,6 +187,7 @@ export async function generateAllImageVariants(
 
 /**
  * Upload vers Cloudinary (optionnel)
+ * Note: Nécessite l'installation de cloudinary: npm install cloudinary
  */
 export async function uploadToCloudinary(
   imagePath: string,
@@ -198,9 +199,19 @@ export async function uploadToCloudinary(
   secureUrl: string;
 }> {
   try {
-    // Cette fonction nécessite l'installation de cloudinary
-    // npm install cloudinary
-    const cloudinary = require('cloudinary').v2;
+    // Import dynamique pour éviter l'erreur si cloudinary n'est pas installé
+    let cloudinary;
+    try {
+      cloudinary = require('cloudinary').v2;
+    } catch (requireError) {
+      console.warn('Cloudinary n\'est pas installé. Installez-le avec: npm install cloudinary');
+      return {
+        success: false,
+        publicId: '',
+        url: '',
+        secureUrl: ''
+      };
+    }
     
     const result = await cloudinary.uploader.upload(imagePath, {
       folder: folder,

@@ -82,6 +82,7 @@ export async function POST(request: NextRequest) {
       companyName: formData.get('companyName') as string,
       legalStatus: formData.get('legalStatus') as string,
       subscriptionPlan: formData.get('subscriptionPlan') as string || 'free',
+      subscriptionPlanType: formData.get('subscriptionPlanType') as 'monthly' | 'annual' || 'monthly',
     };
 
     // Fonction pour extraire city et postalCode de l'adresse complète
@@ -437,10 +438,14 @@ export async function POST(request: NextRequest) {
                 .eq('id', result.professional.id);
             }
 
-            // Créer la session de checkout avec le plan mensuel par défaut
-            const priceId = STRIPE_PRICE_IDS.monthly || STRIPE_PRICE_IDS.annual;
+            // Créer la session de checkout avec le plan choisi (mensuel ou annuel)
+            const planType = professionalData.subscriptionPlanType || 'monthly';
+            const priceId = planType === 'annual' 
+              ? STRIPE_PRICE_IDS.annual 
+              : STRIPE_PRICE_IDS.monthly;
+            
             if (!priceId) {
-              throw new Error('Aucun prix Stripe configuré');
+              throw new Error(`Aucun prix Stripe configuré pour le plan ${planType}`);
             }
 
             const session = await stripe.checkout.sessions.create({
@@ -452,12 +457,12 @@ export async function POST(request: NextRequest) {
               cancel_url: `${getBaseUrl()}/dashboard/subscription?canceled=true`,
               metadata: { 
                 professional_id: result.professional.id,
-                plan_type: STRIPE_PRICE_IDS.monthly ? 'monthly' : 'annual',
+                plan_type: planType,
               },
               subscription_data: { 
                 metadata: { 
                   professional_id: result.professional.id,
-                  plan_type: STRIPE_PRICE_IDS.monthly ? 'monthly' : 'annual',
+                  plan_type: planType,
                 } 
               },
             });

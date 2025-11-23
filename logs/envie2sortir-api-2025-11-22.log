@@ -1,0 +1,5 @@
+[2025-11-22T16:22:35.984Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":2,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-22T16:22:36.583Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":0,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-22T16:22:36.954Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-22T16:22:53.178Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":12,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-22T16:28:54.513Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":14,"requestId":"unknown","ipAddress":"::1"} | Request: unknown

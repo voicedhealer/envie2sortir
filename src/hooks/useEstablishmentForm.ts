@@ -87,6 +87,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         priceMax: establishment.priceMax || undefined,
         informationsPratiques: establishment.informationsPratiques || [],
         subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free',
+        subscriptionPlanType: "monthly", // Par défaut mensuel (on ne peut pas récupérer le type depuis l'établissement existant)
         termsAccepted: false
       };
     }
@@ -128,6 +129,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       priceMax: undefined,
       informationsPratiques: [],
       subscriptionPlan: "free",
+      subscriptionPlanType: "monthly", // Par défaut mensuel
       termsAccepted: false
     };
   });
@@ -396,7 +398,21 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     if (field === 'accountFirstName' || field === 'accountLastName') {
       console.log(`Hook - ${field} changé:`, value);
     }
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      
+      // Si le plan premium est sélectionné et subscriptionPlanType n'est pas défini, initialiser à 'monthly'
+      if (field === 'subscriptionPlan' && value === 'premium' && !newData.subscriptionPlanType) {
+        newData.subscriptionPlanType = 'monthly';
+      }
+      
+      // Si le plan change pour 'free', on peut réinitialiser subscriptionPlanType
+      if (field === 'subscriptionPlan' && value === 'free') {
+        newData.subscriptionPlanType = undefined;
+      }
+      
+      return newData;
+    });
     
     // Gestion spéciale pour le reset de la vérification téléphone
     if (field === 'resetPhoneVerification') {
@@ -802,7 +818,11 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 6:
-        if (!formData.subscriptionPlan) newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
+        if (!formData.subscriptionPlan) {
+          newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
+        } else if (formData.subscriptionPlan === 'premium' && !formData.subscriptionPlanType) {
+          newErrors.subscriptionPlanType = "Veuillez choisir entre paiement mensuel ou annuel";
+        }
         break;
       
       case 7:
