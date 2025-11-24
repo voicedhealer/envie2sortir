@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
-import { stripe, STRIPE_PRICE_IDS, getBaseUrl, isStripeConfigured } from '@/lib/stripe/config';
+import { getStripe, STRIPE_PRICE_IDS, getBaseUrl, isStripeConfigured } from '@/lib/stripe/config';
+
+// Forcer le mode dynamique pour éviter les erreurs de build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * Crée une session de checkout Stripe pour l'abonnement Premium
@@ -43,6 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Vérifier si le professionnel a déjà un abonnement actif
+    const stripe = getStripe();
     if (professional.stripe_customer_id) {
       // Vérifier l'état de l'abonnement dans Stripe
       const subscriptions = await stripe.subscriptions.list({

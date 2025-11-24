@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
-import { stripe, isStripeConfigured } from '@/lib/stripe/config';
+import { getStripe, isStripeConfigured } from '@/lib/stripe/config';
+
+// Forcer le mode dynamique pour éviter les erreurs de build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * Gère les abonnements Stripe
@@ -90,6 +94,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer les détails de l'abonnement depuis Stripe
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(
       professional.stripe_subscription_id
     );
@@ -243,6 +248,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Récupérer l'abonnement pour vérifier s'il a un schedule
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(
       professional.stripe_subscription_id
     );
@@ -371,6 +377,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Récupérer l'abonnement actuel
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(
       professional.stripe_subscription_id
     );
@@ -594,6 +601,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Récupérer l'abonnement pour vérifier s'il a un schedule
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(
       professional.stripe_subscription_id
     );

@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe/config';
+import { getStripe } from '@/lib/stripe/config';
 import { createClient as createClientAdmin } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+
+// Forcer le mode dynamique pour éviter les erreurs de build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * Webhook Stripe pour gérer les événements d'abonnement
@@ -31,6 +35,7 @@ export async function POST(request: NextRequest) {
   let event: Stripe.Event;
 
   try {
+    const stripe = getStripe();
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (err: any) {
     console.error('Erreur de vérification du webhook:', err.message);
@@ -172,6 +177,7 @@ export async function POST(request: NextRequest) {
         
         // Récupérer l'abonnement associé
         if (schedule.subscription) {
+          const stripe = getStripe();
           const subscription = await stripe.subscriptions.retrieve(
             schedule.subscription as string
           );

@@ -1,16 +1,56 @@
 import Stripe from 'stripe';
 
 /**
- * Configuration Stripe
- * Utilise les clés API de test par défaut
+ * Instance Stripe (lazy initialization)
+ * Initialisé uniquement quand nécessaire pour éviter les erreurs au build
  */
-export const stripe = new Stripe(
-  process.env.STRIPE_SECRET_KEY || '',
-  {
-    apiVersion: '2024-12-18.acacia',
-    typescript: true,
+let stripeInstance: Stripe | null = null;
+
+/**
+ * Récupère l'instance Stripe (lazy initialization)
+ * Évite les erreurs de build quand STRIPE_SECRET_KEY n'est pas disponible
+ */
+export function getStripe(): Stripe {
+  if (!stripeInstance) {
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    
+    if (!apiKey) {
+      // Pendant le build, retourner un client mock pour éviter les erreurs
+      const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                          process.env.NEXT_PHASE === 'phase-development-build' ||
+                          (process.env.NODE_ENV === 'production' && !apiKey);
+      
+      if (isBuildTime) {
+        console.warn('⚠️ Stripe environment variable not set during build - using mock client');
+        // Retourner un client mock qui ne fonctionnera pas mais évitera les erreurs de build
+        stripeInstance = new Stripe('sk_test_mock_key_for_build', {
+          apiVersion: '2024-12-18.acacia',
+          typescript: true,
+        });
+        return stripeInstance;
+      }
+      
+      throw new Error('STRIPE_SECRET_KEY is not defined in environment variables');
+    }
+    
+    stripeInstance = new Stripe(apiKey, {
+      apiVersion: '2024-12-18.acacia',
+      typescript: true,
+    });
   }
-);
+  
+  return stripeInstance;
+}
+
+/**
+ * Export pour compatibilité avec l'ancien code
+ * @deprecated Utilisez getStripe() à la place
+ */
+export const stripe = new Proxy({} as Stripe, {
+  get(_target, prop) {
+    return getStripe()[prop as keyof Stripe];
+  }
+});
 
 /**
  * Prix des plans Premium

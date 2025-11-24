@@ -408,9 +408,9 @@ export async function POST(request: NextRequest) {
     let checkoutUrl = null;
     if (professionalData.subscriptionPlan === 'premium') {
       try {
-        const { isStripeConfigured } = await import('@/lib/stripe/config');
+        const { isStripeConfigured, getStripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
         if (isStripeConfigured()) {
-          const { stripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
+          const stripe = getStripe();
           const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
           
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
