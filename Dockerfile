@@ -8,11 +8,22 @@ RUN apk add --no-cache openssl libc6-compat
 
 # Arguments de build pour les variables d'environnement nécessaires au build
 # Note: NEXT_PUBLIC_* doit être au build car injecté dans le code côté client
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_WAIT_MODE
+ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+ARG NEXT_PUBLIC_INSEE_API_URL
+ARG NEXT_PUBLIC_SITE_URL
 
-# Exporter la variable d'environnement pour le build Next.js
-# GOOGLE_MAPS_API_KEY n'est pas nécessaire au build (utilisée uniquement au runtime)
+# Exporter les variables d'environnement pour le build Next.js
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_PUBLIC_WAIT_MODE=$NEXT_PUBLIC_WAIT_MODE
+ENV NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_GOOGLE_PLACES_API_KEY=$NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+ENV NEXT_PUBLIC_INSEE_API_URL=$NEXT_PUBLIC_INSEE_API_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 # Copier les fichiers de dépendances
 COPY package*.json ./
