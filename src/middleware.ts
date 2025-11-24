@@ -3,9 +3,8 @@ import { applySecurityMiddleware } from "@/lib/security";
 import { validateCSRFMiddleware } from "@/lib/csrf-middleware";
 import { updateSession } from "@/lib/supabase/middleware";
 
-// Forcer le runtime Node.js pour le middleware car Supabase utilise des APIs Node.js
-// qui ne sont pas supportées dans Edge Runtime
-export const runtime = 'nodejs';
+// Le middleware Next.js utilise Edge Runtime par défaut
+// Ne pas spécifier de runtime pour utiliser Edge Runtime
 
 // Variable pour activer/désactiver le mode "wait" (page d'attente)
 // Mettre à false pour désactiver la redirection vers la page d'attente
