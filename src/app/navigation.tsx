@@ -12,6 +12,11 @@ export default function Navigation() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Masquer la navigation sur la page /wait
+  if (pathname === '/wait') {
+    return null;
+  }
+
   // Fermer le menu mobile quand on change de page
   useEffect(() => {
     setIsMobileMenuOpen(false);
