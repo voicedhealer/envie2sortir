@@ -69,7 +69,7 @@ const WaitPage: React.FC = () => {
         </div>
 
         <p className="text-lg md:text-xl text-gray-200 max-w-3xl font-light mb-8 leading-relaxed px-4 backdrop-blur-sm bg-black/20 p-4 rounded-xl border border-white/5">
-            <strong className="text-white font-semibold block mb-2 text-2xl">Ce n'est pas un site de rencontre.</strong>
+            <strong className="text-white font-semibold block mb-2 text-2xl">Le site de vos prochaines sorties</strong>
             C'est votre futur compagnon pour trouver les meilleures activités locales : 
             loisirs, divertissements et sorties inoubliables entre amis ou en famille.
         </p>
