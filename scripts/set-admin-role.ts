@@ -9,14 +9,50 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { existsSync } from 'fs';
+
+// Charger les variables d'environnement depuis .env.local ou .env
+const envPaths = [
+  resolve(process.cwd(), '.env.local'),
+  resolve(process.cwd(), '.env'),
+];
+
+let envLoaded = false;
+for (const envPath of envPaths) {
+  if (existsSync(envPath)) {
+    const result = config({ path: envPath });
+    if (result.parsed && Object.keys(result.parsed).length > 0) {
+      envLoaded = true;
+      console.log(`✅ Variables d'environnement chargées depuis: ${envPath}`);
+      break;
+    }
+  }
+}
+
+if (!envLoaded) {
+  // Essayer de charger depuis les variables d'environnement système
+  console.log('⚠️  Aucun fichier .env trouvé, utilisation des variables d\'environnement système');
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceKey) {
-  console.error('❌ Variables d\'environnement manquantes:');
-  console.error('   - NEXT_PUBLIC_SUPABASE_URL');
-  console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  console.error('\n❌ Variables d\'environnement manquantes:');
+  if (!supabaseUrl) {
+    console.error('   - NEXT_PUBLIC_SUPABASE_URL');
+  }
+  if (!serviceKey) {
+    console.error('   - SUPABASE_SERVICE_ROLE_KEY');
+  }
+  console.error('\n💡 Solutions:');
+  console.error('   1. Vérifiez que le fichier .env.local ou .env existe à la racine du projet');
+  console.error('   2. Vérifiez que ces variables sont bien définies dans le fichier');
+  console.error('   3. Ou exportez-les dans votre shell:');
+  console.error('      export NEXT_PUBLIC_SUPABASE_URL="votre_url"');
+  console.error('      export SUPABASE_SERVICE_ROLE_KEY="votre_clé"');
   process.exit(1);
 }
 

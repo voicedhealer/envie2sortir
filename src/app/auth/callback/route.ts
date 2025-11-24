@@ -53,7 +53,25 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [OAuth Callback] Session créée avec succès pour:', data.user.email);
 
-    // Vérifier si l'utilisateur existe dans la table users ou professionals
+    // ✅ CORRECTION: Vérifier d'abord par EMAIL pour éviter les doublons entre comptes admin et OAuth
+    const userEmail = data.user.email?.toLowerCase().trim();
+    
+    if (!userEmail) {
+      console.error('❌ [OAuth Callback] Pas d\'email dans les données utilisateur');
+      const errorUrl = new URL('/auth', request.url);
+      errorUrl.searchParams.set('error', 'NoEmail');
+      errorUrl.searchParams.set('message', 'Aucun email associé au compte Google');
+      return NextResponse.redirect(errorUrl);
+    }
+
+    // Vérifier si un compte existe déjà avec le même email (peu importe l'ID)
+    const { data: existingUserByEmail, error: emailCheckError } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('email', userEmail)
+      .maybeSingle();
+
+    // Vérifier si l'utilisateur existe dans la table users ou professionals par ID
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('id, email, role')
@@ -65,6 +83,32 @@ export async function GET(request: NextRequest) {
       .select('id, email')
       .eq('id', data.user.id)
       .maybeSingle();
+
+    // ✅ NOUVEAU: Si un compte existe déjà avec le même email mais un ID différent
+    if (existingUserByEmail && existingUserByEmail.id !== data.user.id) {
+      console.warn('⚠️ [OAuth Callback] Compte existant avec le même email mais ID différent:', {
+        existingId: existingUserByEmail.id,
+        newId: data.user.id,
+        email: userEmail,
+        existingRole: existingUserByEmail.role
+      });
+      
+      // Si c'est un admin, empêcher la connexion OAuth
+      if (existingUserByEmail.role === 'admin') {
+        console.error('❌ [OAuth Callback] Tentative de connexion OAuth pour un compte admin existant');
+        const errorUrl = new URL('/auth', request.url);
+        errorUrl.searchParams.set('error', 'AdminOAuthNotAllowed');
+        errorUrl.searchParams.set('message', 'Les comptes admin ne peuvent pas se connecter via Google. Utilisez votre mot de passe.');
+        return NextResponse.redirect(errorUrl);
+      }
+      
+      // Pour les autres cas (user existant), empêcher aussi pour éviter la confusion
+      console.warn('⚠️ [OAuth Callback] Un compte utilisateur existe déjà avec cet email');
+      const errorUrl = new URL('/auth', request.url);
+      errorUrl.searchParams.set('error', 'AccountExists');
+      errorUrl.searchParams.set('message', 'Un compte existe déjà avec cet email. Veuillez vous connecter avec votre mot de passe.');
+      return NextResponse.redirect(errorUrl);
+    }
 
     // Si l'utilisateur n'existe pas, créer un compte utilisateur
     if (!userData && !professionalData) {
