@@ -8,13 +8,15 @@ export function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    // En mode build, retourner un client mock pour éviter les erreurs
-    if (process.env.NODE_ENV === 'production' && typeof window === 'undefined') {
-      console.warn('⚠️ Supabase environment variables not set during build');
-      // Retourner un client mock qui ne fonctionnera pas mais évitera les erreurs de build
-      return createBrowserClient('https://placeholder.supabase.co', 'placeholder-key');
+    // Si les variables ne sont pas définies, retourner un client mock pour éviter les erreurs
+    // Cela permet au site de se charger même si les variables ne sont pas configurées
+    console.warn('⚠️ Supabase environment variables not set - using mock client. Some features may not work.');
+    
+    if (!supabaseInstance) {
+      // Créer un client mock qui ne fonctionnera pas mais évitera les erreurs
+      supabaseInstance = createBrowserClient('https://placeholder.supabase.co', 'placeholder-key');
     }
-    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set');
+    return supabaseInstance;
   }
 
   if (!supabaseInstance) {
