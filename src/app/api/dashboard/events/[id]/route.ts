@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireEstablishment } from "@/lib/supabase/helpers";
 
+// Forcer le mode dynamique pour éviter les erreurs de build
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 /**
  * API pour gérer un événement spécifique
  * PUT: Modifier un événement

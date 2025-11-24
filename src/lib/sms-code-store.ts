@@ -2,10 +2,14 @@
 // Utilise la table sms_verification_codes pour un stockage persistant
 // qui fonctionne même avec des workers Next.js séparés
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
 async function getAdminClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set');
+  }
+
   const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
   return createClientAdmin(supabaseUrl, serviceKey, {
     auth: { persistSession: false }
