@@ -142,7 +142,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             await Promise.race([
               fetchUserData(currentSession.user),
               new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Fetch user data timeout')), 5000)
+                setTimeout(() => reject(new Error('Fetch user data timeout')), 10000) // ✅ Augmenté à 10s
               )
             ]);
           } catch (fetchError) {
@@ -154,14 +154,24 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               const appMetadata = currentSession.user.app_metadata || {};
               const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
               
-              setUser({
+              const fallbackUser = {
                 id: currentSession.user.id,
                 email: currentSession.user.email || '',
                 firstName: userMetadata.first_name || userMetadata.firstName || null,
                 lastName: userMetadata.last_name || userMetadata.lastName || null,
                 role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
                 userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+              };
+              
+              console.log('⚠️ [useSupabaseSession] Using fallback user from metadata:', {
+                userId: fallbackUser.id,
+                email: fallbackUser.email,
+                role: fallbackUser.role,
+                appMetadataRole: appMetadata.role,
+                userMetadataRole: userMetadata.role
               });
+              
+              setUser(fallbackUser);
             }
           }
           if (isMounted) {

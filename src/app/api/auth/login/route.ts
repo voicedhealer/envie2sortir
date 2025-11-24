@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ✅ PRIORITÉ AUX MÉTADONNÉES JWT (comme isAdmin())
+    // Vérifier d'abord app_metadata.role qui est la source de vérité
+    const appMetadataRole = authData.user.app_metadata?.role;
+    const userMetadataRole = authData.user.user_metadata?.role;
+    const roleFromMetadata = appMetadataRole || userMetadataRole;
+
     // Récupérer les infos utilisateur depuis la table users ou professionals
     const { data: userData } = await supabase
       .from('users')
@@ -110,12 +116,26 @@ export async function POST(request: NextRequest) {
 
     let user;
     if (userData) {
+      // ✅ Utiliser le rôle des métadonnées JWT s'il existe, sinon celui de la table users
+      const finalRole = roleFromMetadata === 'admin' 
+        ? 'admin' 
+        : (userData.role === 'admin' ? 'admin' : 'user');
+      
+      console.log('🔍 [API Login] Role determination:', {
+        appMetadataRole,
+        userMetadataRole,
+        tableRole: userData.role,
+        finalRole,
+        userId: authData.user.id,
+        email: authData.user.email
+      });
+
       user = {
         id: userData.id,
         email: userData.email,
         firstName: userData.first_name,
         lastName: userData.last_name,
-        role: userData.role,
+        role: finalRole,
         userType: 'user'
       };
     } else {
