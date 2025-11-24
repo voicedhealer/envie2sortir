@@ -87,7 +87,7 @@ const WaitPage: React.FC = () => {
             <div className="bg-[#ff1fa9]/20 p-4 rounded-full mb-4 group-hover:bg-[#ff1fa9]/40 transition-colors">
                 <Ticket className="text-[#ff1fa9]" size={32} />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Futurs Sorteurs</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 text-white drop-shadow-lg">Futurs Sorteurs</h2>
             <p className="text-gray-400 text-sm mb-6 max-w-xs">
                 Soyez les premiers informés de l'ouverture et recevez des offres exclusives pour vos premières sorties.
             </p>
@@ -104,13 +104,15 @@ const WaitPage: React.FC = () => {
                 <Store className="text-[#ff751f]" size={32} />
             </div>
             
-            <h2 className="text-2xl font-bold mb-2 relative z-10">Espace Professionnels</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2 relative z-10 text-white drop-shadow-lg">Espace Professionnels</h2>
             <p className="text-gray-400 text-sm mb-6 max-w-xs relative z-10">
                 Gérant d'établissement de loisirs ? (Karting, Laser Game, Resto...)<br/>
                 Boostez votre visibilité dès le lancement.
             </p>
             
-            <ProfessionalForm />
+            <div className="w-full relative z-10">
+              <ProfessionalForm />
+            </div>
             
             <div className="mt-4 text-xs text-[#ff751f] font-medium animate-pulse relative z-10">
                 Places limitées pour le lancement !

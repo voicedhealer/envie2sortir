@@ -68,152 +68,118 @@ const ProfessionalForm: React.FC = () => {
     });
   };
 
-  if (!isOpen) {
+  if (status === LoadingState.SUCCESS) {
     return (
-      <button
-        onClick={() => setIsOpen(true)}
-        className="relative z-10 bg-white text-black hover:bg-gray-200 font-bold py-3 px-8 rounded-full transition-all flex items-center gap-2 transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
-      >
-        <Briefcase size={18} />
-        Renseignements pour ajouter mon établissement
-      </button>
+      <div className="bg-green-500/20 border border-green-500/50 text-green-200 p-4 rounded-xl text-center">
+        <CheckCircle className="mx-auto mb-2" size={24} />
+        <p className="text-sm font-medium">
+          Merci ! Nous vous contacterons très bientôt.
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-black/95 border border-white/10 rounded-2xl p-6 md:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-2xl font-bold text-white">Demande de renseignements</h3>
-          <button
-            onClick={() => {
-              setIsOpen(false);
-              setStatus(LoadingState.IDLE);
-              setError(null);
-            }}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Prénom *
+          </label>
+          <input
+            type="text"
+            name="firstName"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all"
+            placeholder="Votre prénom"
+          />
         </div>
-
-        {status === LoadingState.SUCCESS ? (
-          <div className="text-center py-8">
-            <CheckCircle className="text-green-500 mx-auto mb-4" size={48} />
-            <p className="text-green-400 text-lg font-semibold">
-              Merci pour votre demande ! Nous vous contacterons très bientôt.
-            </p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Prénom *
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-[#ff751f] outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Nom *
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-[#ff751f] outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Nom de l'établissement *
-              </label>
-              <input
-                type="text"
-                name="establishmentName"
-                value={formData.establishmentName}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-[#ff751f] outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Ville *
-              </label>
-              <input
-                type="text"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                required
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-[#ff751f] outline-none transition-all"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Description et motif de la demande
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={4}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:ring-2 focus:ring-[#ff751f] outline-none transition-all resize-none"
-                placeholder="Décrivez votre établissement et votre demande..."
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-4 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <div className="flex gap-4 pt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOpen(false);
-                  setStatus(LoadingState.IDLE);
-                  setError(null);
-                }}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-lg px-6 py-3 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={status === LoadingState.LOADING}
-                className="flex-1 bg-[#ff751f] hover:bg-[#ff751f]/80 text-white font-semibold rounded-lg px-6 py-3 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {status === LoadingState.LOADING ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Envoi...
-                  </>
-                ) : (
-                  'Envoyer'
-                )}
-              </button>
-            </div>
-          </form>
-        )}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Nom *
+          </label>
+          <input
+            type="text"
+            name="lastName"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+            className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all"
+            placeholder="Votre nom"
+          />
+        </div>
       </div>
-    </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Nom de l'établissement *
+        </label>
+        <input
+          type="text"
+          name="establishmentName"
+          value={formData.establishmentName}
+          onChange={handleChange}
+          required
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all"
+          placeholder="Ex: Karting Dijon"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Ville *
+        </label>
+        <input
+          type="text"
+          name="city"
+          value={formData.city}
+          onChange={handleChange}
+          required
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all"
+          placeholder="Ex: Dijon"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Description et motif de la demande
+        </label>
+        <textarea
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          rows={4}
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all resize-none"
+          placeholder="Décrivez votre établissement et votre demande..."
+        />
+      </div>
+
+      {error && (
+        <div className="bg-red-500/20 border border-red-500/50 text-red-200 p-3 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={status === LoadingState.LOADING}
+        className="w-full bg-[#ff751f] hover:bg-[#ff751f]/80 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#ff751f]/20 transform hover:scale-[1.02]"
+      >
+        {status === LoadingState.LOADING ? (
+          <>
+            <Loader2 size={18} className="animate-spin" />
+            Envoi en cours...
+          </>
+        ) : (
+          <>
+            <Briefcase size={18} />
+            Envoyer ma demande
+          </>
+        )}
+      </button>
+    </form>
   );
 };
 
