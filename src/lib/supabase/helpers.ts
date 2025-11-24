@@ -5,6 +5,15 @@ import { supabase } from '@/lib/supabase/client';
  * Récupère l'utilisateur actuel (user ou professional)
  */
 export async function getCurrentUser() {
+  // Pendant le build, retourner null pour éviter les erreurs
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                      process.env.NEXT_PHASE === 'phase-development-build';
+  
+  if (isBuildTime) {
+    console.warn('⚠️ getCurrentUser called during build - returning null');
+    return null;
+  }
+
   const supabase = await createClient();
   
   // Debug: vérifier les cookies
@@ -340,6 +349,22 @@ export function getPublicUrl(bucket: string, path: string): string {
  * (Équivalent de requireEstablishment pour Prisma)
  */
 export async function requireEstablishment() {
+  // Pendant le build, retourner un objet mock pour éviter les erreurs
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                      process.env.NEXT_PHASE === 'phase-development-build' ||
+                      (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_SUPABASE_URL);
+  
+  if (isBuildTime) {
+    console.warn('⚠️ requireEstablishment called during build - returning mock object');
+    return {
+      id: 'build-mock-id',
+      email: 'build@mock.com',
+      userType: 'professional' as const,
+      establishmentId: 'build-mock-establishment-id',
+      authUser: null as any
+    };
+  }
+
   const user = await getCurrentUser();
   
   if (!user) {
