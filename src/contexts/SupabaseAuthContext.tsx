@@ -43,9 +43,22 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [session, setSession] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Vérifier si Supabase est configuré
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
+  
   const supabase = createClient();
 
   useEffect(() => {
+    // Si Supabase n'est pas configuré, passer directement en mode non chargé
+    if (!isSupabaseConfigured) {
+      console.warn('⚠️ [SupabaseAuthProvider] Supabase not configured - skipping auth initialization');
+      setLoading(false);
+      return;
+    }
+
     // Récupérer la session initiale
     const getSession = async () => {
       try {
@@ -74,24 +87,29 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
     getSession();
 
     // Écouter les changements d'auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        if (currentSession?.user) {
-          await fetchUserData(currentSession.user);
-          setSession(currentSession);
+    try {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+          if (currentSession?.user) {
+            await fetchUserData(currentSession.user);
+            setSession(currentSession);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+          setSession(null);
         }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setSession(null);
-      }
-      
-      setLoading(false);
-    });
+        
+        setLoading(false);
+      });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.error('❌ [SupabaseAuthProvider] Error setting up auth listener:', error);
+      setLoading(false);
+    }
+  }, [isSupabaseConfigured]);
 
   const fetchUserData = async (authUser: User) => {
     try {
