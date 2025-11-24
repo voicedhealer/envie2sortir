@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -31,17 +29,23 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
+    const supabase = await createClient();
+    const startDateISO = startDate.toISOString();
+
     // Récupérer toutes les recherches pour la période
-    const searches = await prisma.searchAnalytics.findMany({
-      where: {
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      orderBy: {
-        timestamp: 'desc',
-      },
-    });
+    const { data: searches, error: searchesError } = await supabase
+      .from('search_analytics')
+      .select('*')
+      .gte('timestamp', startDateISO)
+      .order('timestamp', { ascending: false });
+
+    if (searchesError) {
+      console.error('Erreur récupération search analytics:', searchesError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     // Grouper par terme de recherche
     const searchMap = new Map<string, {
@@ -51,15 +55,15 @@ export async function GET(request: NextRequest) {
       hasResults: boolean;
     }>();
 
-    searches.forEach(search => {
-      const term = search.searchTerm.toLowerCase().trim();
+    (searches || []).forEach((search: any) => {
+      const term = (search.search_term || '').toLowerCase().trim();
       
       if (!searchMap.has(term)) {
         searchMap.set(term, {
           searchCount: 0,
           clickCount: 0,
           establishments: new Map(),
-          hasResults: search.resultCount > 0,
+          hasResults: (search.result_count || 0) > 0,
         });
       }
 
@@ -67,13 +71,13 @@ export async function GET(request: NextRequest) {
       data.searchCount++;
 
       // Si l'utilisateur a cliqué sur un établissement
-      if (search.clickedEstablishmentId && search.clickedEstablishmentName) {
+      if (search.clicked_establishment_id && search.clicked_establishment_name) {
         data.clickCount++;
         
-        const estId = search.clickedEstablishmentId;
+        const estId = search.clicked_establishment_id;
         if (!data.establishments.has(estId)) {
           data.establishments.set(estId, {
-            name: search.clickedEstablishmentName,
+            name: search.clicked_establishment_name,
             clicks: 0,
           });
         }
@@ -81,7 +85,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Mettre à jour si au moins une recherche a des résultats
-      if (search.resultCount > 0) {
+      if ((search.result_count || 0) > 0) {
         data.hasResults = true;
       }
     });
@@ -115,33 +119,28 @@ export async function GET(request: NextRequest) {
         count: search.searchCount,
       }));
 
-    // Tendances temporelles
-    const searchTrends = await prisma.searchAnalytics.groupBy({
-      by: ['timestamp'],
-      where: {
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        timestamp: 'asc',
-      },
+    // Tendances temporelles - grouper par jour
+    const trendsMap = new Map<string, number>();
+    (searches || []).forEach((search: any) => {
+      const date = new Date(search.timestamp).toISOString().split('T')[0];
+      trendsMap.set(date, (trendsMap.get(date) || 0) + 1);
     });
+
+    const searchTrends = Array.from(trendsMap.entries())
+      .map(([date, count]) => ({
+        date,
+        searches: count,
+        clicks: 0 // À calculer si nécessaire
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     return NextResponse.json({
       period,
-      startDate,
-      totalSearches: searches.length,
+      startDate: startDateISO,
+      totalSearches: (searches || []).length,
       topSearches: topSearches.slice(0, 20),
       searchesWithoutResults,
-      searchTrends: searchTrends.map(trend => ({
-        date: trend.timestamp.toISOString().split('T')[0],
-        searches: trend._count.id,
-        clicks: 0, // À calculer si nécessaire
-      })),
+      searchTrends
     });
   } catch (error) {
     console.error('Search analytics error:', error);

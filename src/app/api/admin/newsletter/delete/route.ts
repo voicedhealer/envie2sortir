@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 import { z } from "zod";
 
 const deleteSchema = z.object({
@@ -8,6 +9,12 @@ const deleteSchema = z.object({
 
 export async function DELETE(request: NextRequest) {
   try {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
+    const supabase = await createClient();
     const body = await request.json();
     const validationResult = deleteSchema.safeParse(body);
 
@@ -21,12 +28,13 @@ export async function DELETE(request: NextRequest) {
     const { subscriberId } = validationResult.data;
 
     // Vérifier que l'abonné existe
-    const subscriber = await prisma.user.findUnique({
-      where: { id: subscriberId },
-      select: { id: true, email: true, role: true }
-    });
+    const { data: subscriber, error: subscriberError } = await supabase
+      .from('users')
+      .select('id, email, role')
+      .eq('id', subscriberId)
+      .single();
 
-    if (!subscriber) {
+    if (subscriberError || !subscriber) {
       return NextResponse.json(
         { success: false, error: "Abonné non trouvé" },
         { status: 404 }
@@ -42,9 +50,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Supprimer l'utilisateur
-    await prisma.user.delete({
-      where: { id: subscriberId }
-    });
+    const { error: deleteError } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', subscriberId);
+
+    if (deleteError) {
+      console.error('Erreur suppression abonné:', deleteError);
+      return NextResponse.json(
+        { success: false, error: "Erreur lors de la suppression" },
+        { status: 500 }
+      );
+    }
 
     // Log de l'action
     console.log(`🗑️ [Newsletter Admin] Abonné supprimé: ${subscriber.email}`);

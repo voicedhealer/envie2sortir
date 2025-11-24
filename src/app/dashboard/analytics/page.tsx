@@ -1,25 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import ClickAnalyticsDashboard from '@/components/analytics/ClickAnalyticsDashboard';
 import DetailedAnalyticsDashboard from '@/components/analytics/DetailedAnalyticsDashboard';
 import { BarChart3, TrendingUp, Users, Eye, Lock } from 'lucide-react';
 
 export default function AnalyticsPage() {
-  const { data: session, status } = useSession();
+  const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'overview' | 'detailed'>('overview');
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
-  const isPremium = (session?.user as any)?.subscriptionPlan === 'PREMIUM' || (session?.user as any)?.role === 'admin';
+  const isPremium = session?.user?.subscription === 'PREMIUM' || session?.user?.role === 'admin';
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (status === 'loading') return;
+    if (sessionLoading) return;
     
     if (!session) {
-      router.push('/auth/signin');
+      router.push('/auth');
       return;
     }
 
@@ -39,9 +39,9 @@ export default function AnalyticsPage() {
     };
 
     fetchEstablishmentId();
-  }, [session, status, router]);
+  }, [session, sessionLoading, router]);
 
-  if (status === 'loading' || loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>

@@ -1,28 +1,88 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import bcrypt from 'bcryptjs';
+import { signUpProfessional } from '@/lib/supabase/auth-actions';
 import { geocodeAddress } from '@/lib/geocoding';
 import { createTagsData } from '@/lib/category-tags-mapping';
 import { logSubscriptionChange } from '@/lib/subscription-logger';
+import { isPhoneVerified } from '@/lib/phone-verification';
+
+/**
+ * Normalise un numéro de test Twilio (corrige les erreurs de saisie et unifie le format)
+ * Tous les formats sont normalisés vers le format international: +15005550006
+ */
+function normalizeTwilioTestNumber(phone: string): string {
+  if (!phone) return phone;
+  
+  const cleaned = phone.replace(/\s/g, '').replace(/[^\d+]/g, '');
+  
+  // Si c'est un numéro de test Twilio, normaliser vers le format international +1500555XXX
+  // Format français: 01500555XXX (11 chiffres) - corriger si 12 chiffres (015005550006 -> 01500555006)
+  if (/^01500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 11 premiers caractères (015005550006 -> 01500555006)
+    const normalized = cleaned.substring(0, 11);
+    // Convertir en format international: 01500555006 -> +15005550006
+    return '+' + normalized.substring(1);
+  }
+  
+  // Format international: +1500555XXX (12 caractères) - corriger si 13 caractères
+  if (/^\+1500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 12 premiers caractères (+150055500006 -> +15005550006)
+    return cleaned.substring(0, 12);
+  }
+  
+  // Format sans 0 initial: 1500555XXX (11 chiffres) - corriger si 12 chiffres
+  if (/^1500555\d{3,4}$/.test(cleaned)) {
+    // Prendre les 11 premiers caractères (150055500006 -> 15005550006)
+    const normalized = cleaned.substring(0, 11);
+    // Convertir en format international: 15005550006 -> +15005550006
+    return '+' + normalized;
+  }
+  
+  return cleaned;
+}
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     
     // Récupération des données du FormData
+    let phone = formData.get('accountPhone') as string;
+    
+    // Normaliser le numéro de téléphone (corriger les erreurs de saisie)
+    phone = normalizeTwilioTestNumber(phone);
+    
     const accountData = {
       email: formData.get('accountEmail') as string,
       password: formData.get('accountPassword') as string,
       firstName: formData.get('accountFirstName') as string,
       lastName: formData.get('accountLastName') as string,
-      phone: formData.get('accountPhone') as string,
+      phone: phone,
     };
+
+    // Vérifier que le téléphone a été vérifié par SMS
+    if (!accountData.phone) {
+      return NextResponse.json({ 
+        error: 'Numéro de téléphone requis' 
+      }, { status: 400 });
+    }
+
+    // Utiliser le numéro normalisé pour vérifier
+    console.log(`🔍 [Registration] Vérification du numéro ${formData.get('accountPhone')} (normalisé: ${accountData.phone})`);
+    const phoneIsVerified = isPhoneVerified(accountData.phone);
+    if (!phoneIsVerified) {
+      console.error('❌ [Registration] Numéro de téléphone non vérifié:', accountData.phone);
+      return NextResponse.json({ 
+        error: 'Vérification du numéro de téléphone requise. Veuillez vérifier votre numéro de téléphone via SMS avant de continuer.' 
+      }, { status: 400 });
+    }
+
+    console.log('✅ [Registration] Numéro de téléphone vérifié:', accountData.phone);
 
     const professionalData = {
       siret: formData.get('siret') as string,
       companyName: formData.get('companyName') as string,
       legalStatus: formData.get('legalStatus') as string,
       subscriptionPlan: formData.get('subscriptionPlan') as string || 'free',
+      subscriptionPlanType: formData.get('subscriptionPlanType') as 'monthly' | 'annual' || 'monthly',
     };
 
     // Fonction pour extraire city et postalCode de l'adresse complète
@@ -313,144 +373,117 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Transaction pour créer professional + établissement ensemble
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Hacher le mot de passe
-      console.log('🔐 Password type:', typeof accountData.password);
-      console.log('🔐 Password value:', accountData.password);
-      const passwordHash = await bcrypt.hash(accountData.password, 12);
-
-      // 2. Créer le professionnel (contient tout : auth + données pro)
-      const professional = await tx.professional.create({
-        data: {
-          siret: professionalData.siret,
-          firstName: accountData.firstName,
-          lastName: accountData.lastName,
-          email: accountData.email,
-          passwordHash: passwordHash,
-          phone: accountData.phone,
-          companyName: professionalData.companyName,
-          legalStatus: professionalData.legalStatus,
-          subscriptionPlan: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
-          siretVerified: false, // À vérifier plus tard
-        }
-      });
-
-      // 3. Créer l'établissement lié au professionnel
-      const establishment = await tx.establishment.create({
-        data: {
-          name: establishmentData.name,
-          slug: generateSlug(establishmentData.name),
-          description: establishmentData.description,
-          address: establishmentData.address,
-          city: establishmentData.city,
-          postalCode: establishmentData.postalCode,
-          latitude: finalCoordinates?.latitude || null, // Coordonnées GPS (priorité au formulaire)
-          longitude: finalCoordinates?.longitude || null, // Coordonnées GPS (priorité au formulaire)
-          activities: establishmentData.activities, // Activités multiples (JSON)
-          services: establishmentData.services, // Services (JSON)
-          ambiance: establishmentData.ambiance, // Ambiance (JSON)
-          paymentMethods: establishmentData.paymentMethods, // Moyens de paiement (JSON)
-          horairesOuverture: establishmentData.hours, // Horaires d'ouverture (JSON)
-          phone: establishmentData.phone,
-          email: establishmentData.email,
-          website: establishmentData.website,
-          instagram: establishmentData.instagram,
-          facebook: establishmentData.facebook,
-          tiktok: establishmentData.tiktok,
-          priceMin: establishmentData.priceMin,
-          priceMax: establishmentData.priceMax,
-          informationsPratiques: establishmentData.informationsPratiques,
-          theForkLink: establishmentData.theForkLink, // Lien TheFork pour réservations
-          uberEatsLink: establishmentData.uberEatsLink, // Lien Uber Eats
-          // Données hybrides
-          accessibilityDetails: establishmentData.accessibilityDetails,
-          detailedServices: establishmentData.detailedServices,
-          clienteleInfo: establishmentData.clienteleInfo,
-          detailedPayments: establishmentData.detailedPayments,
-          childrenServices: establishmentData.childrenServices,
-          ownerId: professional.id, // Lien vers le professionnel
-          status: 'pending', // En attente de validation
-          subscription: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE', // Plan d'abonnement
-        }
-      });
-
-      // 4. Créer les tags : automatiques (basés sur activités) + manuels (sélectionnés par l'utilisateur)
-      console.log('🏷️  Création des tags pour:', establishment.name);
-      console.log('📝 Activités:', establishmentData.activities);
-      console.log('🏷️  Tags manuels:', establishmentData.tags);
-      
-      const allTagsData: Array<{etablissementId: string, tag: string, typeTag: string, poids: number}> = [];
-      
-      // Tags automatiques basés sur les activités sélectionnées
-      for (const activityKey of establishmentData.activities) {
-        const tagsData = createTagsData(establishment.id, activityKey);
-        console.log(`  🔄 Activité "${activityKey}" → ${tagsData.length} tags automatiques`);
-        allTagsData.push(...tagsData);
-      }
-      
-      // Tags manuels sélectionnés par l'utilisateur (poids élevé car choisis explicitement)
-      for (const tagId of establishmentData.tags) {
-        console.log(`  ✏️  Tag manuel ajouté: "${tagId}"`);
-        allTagsData.push({
-          etablissementId: establishment.id,
-          tag: tagId.toLowerCase(),
-          typeTag: 'manuel',
-          poids: 10 // Poids élevé pour les tags manuels
-        });
-      }
-      
-      // Tags "envie de" personnalisés (poids modéré pour éviter les scores trop élevés)
-      for (const envieTag of establishmentData.envieTags) {
-        console.log(`  💭 Tag "envie de" ajouté: "${envieTag}"`);
-        allTagsData.push({
-          etablissementId: establishment.id,
-          tag: envieTag.toLowerCase(),
-          typeTag: 'envie',
-          poids: 3 // Poids modéré pour les tags "envie de" (3 × 10 = 30 points)
-        });
-      }
-      
-      // Supprimer les doublons (même tag avec poids différents)
-      const uniqueTags = new Map<string, {etablissementId: string, tag: string, typeTag: string, poids: number}>();
-      allTagsData.forEach(tagData => {
-        const existing = uniqueTags.get(tagData.tag);
-        if (!existing || tagData.poids > existing.poids) {
-          uniqueTags.set(tagData.tag, tagData);
-        }
-      });
-      
-      // Créer les tags en base
-      console.log(`📊 Total tags uniques à créer: ${uniqueTags.size}`);
-      if (uniqueTags.size > 0) {
-        const tagsToCreate = Array.from(uniqueTags.values());
-        console.log('🏷️  Tags finaux:', tagsToCreate.map(t => `${t.tag} (${t.typeTag}, poids: ${t.poids})`));
-        
-        await tx.etablissementTag.createMany({
-          data: tagsToCreate
-        });
-        console.log('✅ Tags créés avec succès en base de données');
-      } else {
-        console.log('⚠️  Aucun tag à créer');
-      }
-
-      return { professional, establishment };
-    });
-
-    // Logger le changement de subscription
-    await logSubscriptionChange(
-      result.establishment.id,
-      result.establishment.subscription,
-      result.professional.id,
-      'Inscription professionnelle'
+    // Utiliser signUpProfessional pour créer professional + établissement + tags
+    console.log('🔐 Création du compte professionnel avec Supabase...');
+    
+    const result = await signUpProfessional(
+      accountData,
+      professionalData,
+      {
+        ...establishmentData,
+        latitude: finalCoordinates?.latitude || null,
+        longitude: finalCoordinates?.longitude || null,
+        whatsappPhone: establishmentData.whatsappPhone || '',
+        messengerUrl: establishmentData.messengerUrl || '',
+        youtube: establishmentData.youtube || ''
+      },
+      generateSlug,
+      createTagsData
     );
+
+    // Logger le changement de subscription (si la fonction existe encore)
+    try {
+      await logSubscriptionChange(
+        result.establishment.id,
+        'FREE', // Toujours créer en FREE, l'upgrade se fait via Stripe
+        result.professional.id,
+        'Inscription professionnelle'
+      );
+    } catch (logError) {
+      console.warn('Erreur lors du logging de subscription:', logError);
+      // Non bloquant
+    }
+
+    // Si premium est sélectionné, créer une session Stripe
+    let checkoutUrl = null;
+    if (professionalData.subscriptionPlan === 'premium') {
+      try {
+        const { isStripeConfigured } = await import('@/lib/stripe/config');
+        if (isStripeConfigured()) {
+          const { stripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
+          const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+          
+          const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+          const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          
+          if (supabaseUrl && supabaseServiceKey) {
+            const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+              auth: { autoRefreshToken: false, persistSession: false }
+            });
+
+            // Créer ou récupérer le customer Stripe
+            let customerId = result.professional.stripe_customer_id;
+            if (!customerId) {
+              const customer = await stripe.customers.create({
+                email: result.professional.email,
+                name: `${result.professional.firstName} ${result.professional.lastName}`,
+                metadata: { professional_id: result.professional.id },
+              });
+              customerId = customer.id;
+
+              // Sauvegarder le customer_id
+              await adminClient
+                .from('professionals')
+                .update({ stripe_customer_id: customerId })
+                .eq('id', result.professional.id);
+            }
+
+            // Créer la session de checkout avec le plan choisi (mensuel ou annuel)
+            const planType = professionalData.subscriptionPlanType || 'monthly';
+            const priceId = planType === 'annual' 
+              ? STRIPE_PRICE_IDS.annual 
+              : STRIPE_PRICE_IDS.monthly;
+            
+            if (!priceId) {
+              throw new Error(`Aucun prix Stripe configuré pour le plan ${planType}`);
+            }
+
+            const session = await stripe.checkout.sessions.create({
+              customer: customerId,
+              mode: 'subscription',
+              payment_method_types: ['card'],
+              line_items: [{ price: priceId, quantity: 1 }],
+              success_url: `${getBaseUrl()}/dashboard/subscription?success=true`,
+              cancel_url: `${getBaseUrl()}/dashboard/subscription?canceled=true`,
+              metadata: { 
+                professional_id: result.professional.id,
+                plan_type: planType,
+              },
+              subscription_data: { 
+                metadata: { 
+                  professional_id: result.professional.id,
+                  plan_type: planType,
+                } 
+              },
+            });
+
+            checkoutUrl = session.url;
+          }
+        }
+      } catch (stripeError) {
+        console.warn('Erreur lors de la création de la session Stripe:', stripeError);
+        // Ne pas bloquer l'inscription si Stripe échoue
+      }
+    }
 
     // TODO: Upload des photos (prochaine étape)
     // TODO: Envoyer email de confirmation (prochaine étape)
 
     return NextResponse.json({ 
       success: true,
-      message: 'Inscription réussie ! Votre établissement sera vérifié sous 24h.',
+      message: professionalData.subscriptionPlan === 'premium' 
+        ? 'Inscription réussie ! Vous allez être redirigé vers le paiement.'
+        : 'Inscription réussie ! Votre établissement sera vérifié sous 24h.',
       professional: {
         id: result.professional.id,
         email: result.professional.email,
@@ -463,7 +496,8 @@ export async function POST(request: NextRequest) {
         name: result.establishment.name,
         slug: result.establishment.slug
       },
-      autoLogin: true // Indique au client de faire la connexion automatique
+      autoLogin: true, // Indique au client de faire la connexion automatique
+      checkoutUrl // URL de checkout Stripe si premium
     });
 
   } catch (error) {
@@ -473,30 +507,63 @@ export async function POST(request: NextRequest) {
     // Gestion des erreurs spécifiques
     if (error instanceof Error) {
       console.error('❌ Error message:', error.message);
+      console.error('❌ Error name:', error.name);
+      
+      // Erreur de configuration Supabase
+      if (error.message.includes('Configuration Supabase manquante')) {
+        return NextResponse.json({ 
+          error: 'Configuration Supabase manquante. Veuillez configurer les variables d\'environnement NEXT_PUBLIC_SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY dans votre fichier .env.local',
+          details: error.message
+        }, { status: 500 });
+      }
+      
+      // Erreur email déjà utilisé
+      if (error.message.includes('Un compte avec cet email existe déjà')) {
+        return NextResponse.json({ 
+          error: 'Cet email est déjà utilisé. Si vous avez déjà un compte, veuillez vous connecter.',
+          suggestion: 'Si c\'était une tentative d\'inscription précédente qui a échoué, vous pouvez nettoyer les comptes de test avec: npm run cleanup:test-professionals -- --delete'
+        }, { status: 400 });
+      }
       
       // Vérifier les contraintes uniques spécifiques
-      if (error.message.includes('Unique constraint')) {
+      if (error.message.includes('Unique constraint') || error.message.includes('duplicate key')) {
         // Vérifier quel champ pose problème
-        if (error.message.includes('siret')) {
+        if (error.message.includes('siret') || error.message.includes('SIRET')) {
           return NextResponse.json({ 
             error: 'Ce SIRET est déjà utilisé par un autre établissement. Si vous êtes le propriétaire, veuillez vous connecter à votre compte existant.' 
           }, { status: 400 });
         }
-        if (error.message.includes('email')) {
+        if (error.message.includes('email') || error.message.includes('Email')) {
           return NextResponse.json({ 
             error: 'Cet email est déjà utilisé. Si vous avez déjà un compte, veuillez vous connecter.' 
           }, { status: 400 });
         }
         // Message générique si on ne peut pas déterminer le champ
         return NextResponse.json({ 
-          error: 'SIRET ou email déjà utilisé. Vérifiez vos informations ou connectez-vous si vous avez déjà un compte.' 
+          error: 'SIRET ou email déjà utilisé. Vérifiez vos informations ou connectez-vous si vous avez déjà un compte.',
+          details: error.message
+        }, { status: 400 });
+      }
+      
+      // Erreur de validation Supabase
+      if (error.message.includes('violates') || error.message.includes('constraint')) {
+        return NextResponse.json({ 
+          error: 'Erreur de validation des données. Vérifiez que tous les champs requis sont remplis correctement.',
+          details: error.message
         }, { status: 400 });
       }
     }
 
+    // En mode développement, renvoyer plus de détails
+    const isDev = process.env.NODE_ENV === 'development';
+    
     return NextResponse.json({ 
       error: 'Erreur lors de l\'inscription. Veuillez réessayer.',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      details: error instanceof Error ? error.message : 'Unknown error',
+      ...(isDev && { 
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined
+      })
     }, { status: 500 });
   }
 }

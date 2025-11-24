@@ -16,7 +16,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * CONFIGURATION COMPLÈTE DES CATÉGORIES
@@ -971,37 +971,53 @@ const CATEGORY_DATA: Record<string, { label: string; keywords: string[] }> = {
  */
 export async function GET(request: Request) {
   try {
+    const supabase = await createClient();
+    
     // Extraction des paramètres de recherche
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q")?.trim();
 
-    // Construction des filtres de recherche
-    const where: any = {};
+    // Construire la requête Supabase
+    let query = supabase
+      .from('establishments')
+      .select('activities')
+      .eq('status', 'approved');
+
+    // Ajouter les filtres de recherche si nécessaire
     if (q) {
-      where.OR = [
-        { name: { contains: q } },      // Recherche dans le nom
-        { address: { contains: q } },   // Recherche dans l'adresse
-      ];
+      query = query.or(`name.ilike.%${q}%,address.ilike.%${q}%`);
     }
 
     // Récupérer tous les établissements avec leurs activités
-    const establishments = await prisma.establishment.findMany({
-      where: Object.keys(where).length ? where : undefined,
-      select: {
-        activities: true
-      }
-    });
+    const { data: establishments, error } = await query;
+
+    if (error) {
+      console.error("categories GET error", error);
+      return NextResponse.json({ categories: [] }, { status: 200 });
+    }
 
     // Compter les occurrences de chaque activité
     const activityCounts: Record<string, number> = {};
     
-    establishments.forEach(establishment => {
-      if (establishment.activities && Array.isArray(establishment.activities)) {
-        establishment.activities.forEach(activity => {
-          if (typeof activity === 'string') {
-            activityCounts[activity] = (activityCounts[activity] || 0) + 1;
+    (establishments || []).forEach(establishment => {
+      if (establishment.activities) {
+        // Parser si c'est une string JSON
+        let activities: any = establishment.activities;
+        if (typeof activities === 'string') {
+          try {
+            activities = JSON.parse(activities);
+          } catch {
+            activities = [];
           }
-        });
+        }
+        
+        if (Array.isArray(activities)) {
+          activities.forEach(activity => {
+            if (typeof activity === 'string') {
+              activityCounts[activity] = (activityCounts[activity] || 0) + 1;
+            }
+          });
+        }
       }
     });
 

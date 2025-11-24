@@ -1,9 +1,9 @@
-import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import ActionButtons from "../action-buttons";
 import EstablishmentDetail from "./EstablishmentDetail";
 import { headers } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function EstablishmentPage({
   params,
@@ -17,107 +17,143 @@ export default async function EstablishmentPage({
   const headersList = await headers();
   const referer = headersList.get('referer') || '';
   
-  const establishment = await prisma.establishment.findUnique({
-    where: { slug },
-    select: {
-      id: true,
-      slug: true,
-      name: true,
-      description: true,
-      address: true,
-      city: true,
-      postalCode: true,
-      country: true,
-      latitude: true,
-      longitude: true,
-      phone: true,
-      whatsappPhone: true,
-      messengerUrl: true,
-      email: true,
-      website: true,
-      instagram: true,
-      facebook: true,
-      tiktok: true,
-      youtube: true,
-      theForkLink: true,
-      uberEatsLink: true,
-      activities: true,
-      services: true,
-      ambiance: true,
-      paymentMethods: true,
-      horairesOuverture: true,
-      prixMoyen: true,
-      capaciteMax: true,
-      accessibilite: true,
-      parking: true,
-      terrasse: true,
-      priceMin: true,
-      priceMax: true,
-      subscription: true,
-      status: true,
-      rejectionReason: true,
-      rejectedAt: true,
-      lastModifiedAt: true,
-      envieTags: true,
-      googlePlaceId: true,
-      googleBusinessUrl: true,
-      enriched: true,
-      enrichmentData: true,
-      priceLevel: true,
-      googleRating: true,
-      googleReviewCount: true,
-      specialties: true,
-      atmosphere: true,
-      accessibility: true,
-      accessibilityDetails: true,
-      detailedServices: true,
-      clienteleInfo: true,
-      detailedPayments: true,
-      childrenServices: true,
-      informationsPratiques: true,
-      viewsCount: true,
-      clicksCount: true,
-      avgRating: true,
-      totalComments: true,
-      createdAt: true,
-      updatedAt: true,
-      imageUrl: true,
-      images: {
-        select: {
-          id: true,
-          url: true,
-          altText: true,
-          isCardImage: true,
-          ordre: true,
-          createdAt: true
-        },
-        orderBy: { ordre: "asc" }
-      },
-      events: { 
-        orderBy: { startDate: "asc" },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          startDate: true,
-          endDate: true,
-          price: true,
-          maxCapacity: true,
-          isRecurring: true,
-          createdAt: true
-        }
-      },
-      owner: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          phone: true,
-        }
-      },
-    },
-  });
+  const supabase = await createClient();
+  
+  // Récupérer l'établissement depuis Supabase
+  const { data: establishmentData, error: establishmentError } = await supabase
+    .from('establishments')
+    .select(`
+      *,
+      images!images_establishment_id_fkey (
+        id,
+        url,
+        alt_text,
+        is_card_image,
+        ordre,
+        created_at
+      ),
+      events!events_establishment_id_fkey (
+        id,
+        title,
+        description,
+        start_date,
+        end_date,
+        price,
+        max_capacity,
+        is_recurring,
+        created_at
+      )
+    `)
+    .eq('slug', slug)
+    .single();
+
+  if (establishmentError || !establishmentData) {
+    console.error('Erreur récupération établissement:', establishmentError);
+    notFound();
+  }
+
+  // Récupérer le propriétaire séparément
+  const { data: ownerData } = await supabase
+    .from('professionals')
+    .select('id, first_name, last_name, email, phone')
+    .eq('id', establishmentData.owner_id)
+    .single();
+
+  // Transformer les données pour correspondre au format attendu
+  const establishment = {
+    id: establishmentData.id,
+    slug: establishmentData.slug,
+    name: establishmentData.name,
+    description: establishmentData.description,
+    address: establishmentData.address,
+    city: establishmentData.city,
+    postalCode: establishmentData.postal_code,
+    country: establishmentData.country,
+    latitude: establishmentData.latitude,
+    longitude: establishmentData.longitude,
+    phone: establishmentData.phone,
+    whatsappPhone: establishmentData.whatsapp_phone,
+    messengerUrl: establishmentData.messenger_url,
+    email: establishmentData.email,
+    website: establishmentData.website,
+    instagram: establishmentData.instagram,
+    facebook: establishmentData.facebook,
+    tiktok: establishmentData.tiktok,
+    youtube: establishmentData.youtube,
+    theForkLink: establishmentData.the_fork_link,
+    uberEatsLink: establishmentData.uber_eats_link,
+    activities: typeof establishmentData.activities === 'string' ? JSON.parse(establishmentData.activities) : establishmentData.activities,
+    services: typeof establishmentData.services === 'string' ? JSON.parse(establishmentData.services) : establishmentData.services,
+    ambiance: typeof establishmentData.ambiance === 'string' ? JSON.parse(establishmentData.ambiance) : establishmentData.ambiance,
+    paymentMethods: typeof establishmentData.payment_methods === 'string' ? JSON.parse(establishmentData.payment_methods) : establishmentData.payment_methods,
+    horairesOuverture: typeof establishmentData.horaires_ouverture === 'string' ? JSON.parse(establishmentData.horaires_ouverture) : establishmentData.horaires_ouverture,
+    prixMoyen: establishmentData.prix_moyen,
+    capaciteMax: establishmentData.capacite_max,
+    accessibilite: establishmentData.accessibilite,
+    parking: establishmentData.parking,
+    terrasse: establishmentData.terrasse,
+    priceMin: establishmentData.price_min,
+    priceMax: establishmentData.price_max,
+    subscription: establishmentData.subscription,
+    status: establishmentData.status,
+    rejectionReason: establishmentData.rejection_reason,
+    rejectedAt: establishmentData.rejected_at,
+    lastModifiedAt: establishmentData.last_modified_at,
+    envieTags: typeof establishmentData.envie_tags === 'string' ? JSON.parse(establishmentData.envie_tags) : establishmentData.envie_tags,
+    googlePlaceId: establishmentData.google_place_id,
+    googleBusinessUrl: establishmentData.google_business_url,
+    enriched: establishmentData.enriched,
+    enrichmentData: typeof establishmentData.enrichment_data === 'string' ? JSON.parse(establishmentData.enrichment_data) : establishmentData.enrichment_data,
+    priceLevel: establishmentData.price_level,
+    googleRating: establishmentData.google_rating,
+    googleReviewCount: establishmentData.google_review_count,
+    specialties: typeof establishmentData.specialties === 'string' ? JSON.parse(establishmentData.specialties) : establishmentData.specialties,
+    atmosphere: typeof establishmentData.atmosphere === 'string' ? JSON.parse(establishmentData.atmosphere) : establishmentData.atmosphere,
+    accessibility: typeof establishmentData.accessibility === 'string' ? JSON.parse(establishmentData.accessibility) : establishmentData.accessibility,
+    accessibilityDetails: typeof establishmentData.accessibility_details === 'string' ? JSON.parse(establishmentData.accessibility_details) : establishmentData.accessibility_details,
+    detailedServices: typeof establishmentData.detailed_services === 'string' ? JSON.parse(establishmentData.detailed_services) : establishmentData.detailed_services,
+    clienteleInfo: typeof establishmentData.clientele_info === 'string' ? JSON.parse(establishmentData.clientele_info) : establishmentData.clientele_info,
+    detailedPayments: typeof establishmentData.detailed_payments === 'string' ? JSON.parse(establishmentData.detailed_payments) : establishmentData.detailed_payments,
+    childrenServices: typeof establishmentData.children_services === 'string' ? JSON.parse(establishmentData.children_services) : establishmentData.children_services,
+    informationsPratiques: typeof establishmentData.informations_pratiques === 'string' ? JSON.parse(establishmentData.informations_pratiques) : establishmentData.informations_pratiques,
+    viewsCount: establishmentData.views_count,
+    clicksCount: establishmentData.clicks_count,
+    avgRating: establishmentData.avg_rating,
+    totalComments: establishmentData.total_comments,
+    createdAt: establishmentData.created_at,
+    updatedAt: establishmentData.updated_at,
+    imageUrl: establishmentData.image_url,
+    images: (establishmentData.images || [])
+      .sort((a: any, b: any) => (a.ordre || 0) - (b.ordre || 0))
+      .map((img: any) => ({
+        id: img.id,
+        url: img.url,
+        altText: img.alt_text,
+        isCardImage: img.is_card_image,
+        ordre: img.ordre,
+        createdAt: img.created_at
+      })),
+    events: (establishmentData.events || [])
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .map((evt: any) => ({
+        id: evt.id,
+        title: evt.title,
+        description: evt.description,
+        startDate: evt.start_date,
+        endDate: evt.end_date,
+        price: evt.price,
+        maxCapacity: evt.max_capacity,
+        isRecurring: evt.is_recurring,
+        createdAt: evt.created_at
+      })),
+    owner: ownerData ? {
+      id: ownerData.id,
+      firstName: ownerData.first_name,
+      lastName: ownerData.last_name,
+      email: ownerData.email,
+      phone: ownerData.phone
+    } : null
+  };
 
   if (!establishment) {
     notFound();

@@ -41,6 +41,20 @@ html, body {
   }
 }
 
+/* Animations pour la page d'attente */
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll {
+  animation: scroll 20s linear infinite;
+}
+
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -584,6 +598,24 @@ body {
 @keyframes blink-caret {
   from, to { border-color: transparent; }
   50% { border-color: rgba(0,0,0,0.6); }
+}
+
+/* Animation de défilement infini pour les cards d'établissements */
+@keyframes scroll-infinite {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scroll-infinite {
+  animation: scroll-infinite 10s linear infinite;
+}
+
+.animate-scroll-infinite:hover {
+  animation-play-state: paused;
 }
 
 /* Styles personnalisés pour la carte Leaflet */

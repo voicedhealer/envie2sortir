@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus } from "lucide-react";
 import ConversationList from "@/components/messaging/ConversationList";
@@ -16,35 +16,23 @@ interface Professional {
 }
 
 export default function AdminMessagingPage() {
-  const { data: session, status } = useSession();
+  const { session, loading } = useSupabaseSession();
   const router = useRouter();
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const hasRedirectedRef = useRef(false);
+  const hasFetchedRef = useRef(false);
 
-  useEffect(() => {
-    if (session?.user?.role === "admin") {
-      fetchProfessionals();
+  const fetchProfessionals = useCallback(async () => {
+    // Éviter les appels multiples
+    if (hasFetchedRef.current) {
+      return;
     }
-  }, [session]);
 
-  // Redirection si non authentifié ou pas admin
-  if (status === "loading") {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-gray-500">Chargement...</div>
-      </div>
-    );
-  }
-
-  if (!session?.user || session.user.role !== "admin") {
-    router.push("/auth");
-    return null;
-  }
-
-  const fetchProfessionals = async () => {
     try {
+      hasFetchedRef.current = true;
       const response = await fetch("/api/admin/professionals");
       if (response.ok) {
         const data = await response.json();
@@ -52,8 +40,44 @@ export default function AdminMessagingPage() {
       }
     } catch (error) {
       console.error("Erreur lors du chargement des professionnels:", error);
+      hasFetchedRef.current = false; // Permettre de réessayer en cas d'erreur
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+
+    // Éviter les redirections multiples
+    if (!session?.user && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push("/auth");
+      return;
+    }
+
+    if (session?.user && session.user?.role !== "admin" && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true;
+      router.push("/auth");
+      return;
+    }
+
+    // Charger les professionnels uniquement si admin
+    if (session?.user?.role === "admin" && !hasFetchedRef.current) {
+      fetchProfessionals();
+    }
+  }, [session, loading, fetchProfessionals]);
+
+  // Redirection si non authentifié ou pas admin
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-gray-500">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (!session?.user || session.user?.role !== "admin") {
+    return null; // Le useEffect gère la redirection
+  }
 
   const handleConversationCreated = (conversationId: string) => {
     setSelectedConversationId(conversationId);

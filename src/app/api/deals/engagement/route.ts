@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { createClientAdmin } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,13 +15,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que le bon plan existe
-    const deal = await prisma.dailyDeal.findUnique({
-      where: { id: dealId },
-      select: { id: true, establishmentId: true, title: true }
-    });
+    const supabase = await createClient();
 
-    if (!deal) {
+    // Vérifier que le bon plan existe
+    const { data: deal, error: dealError } = await supabase
+      .from('daily_deals')
+      .select('id, establishment_id, title')
+      .eq('id', dealId)
+      .single();
+
+    if (dealError || !deal) {
       return NextResponse.json(
         { error: 'Bon plan non trouvé' },
         { status: 404 }
@@ -33,33 +37,33 @@ export async function POST(request: NextRequest) {
                'anonymous';
 
     // Vérifier si l'utilisateur a déjà donné son avis sur ce bon plan
-    const existingEngagement = await prisma.dealEngagement.findFirst({
-      where: {
-        dealId: dealId,
-        userIp: ip
-      }
-    });
+    const { data: existingEngagement } = await supabase
+      .from('deal_engagements')
+      .select('*')
+      .eq('deal_id', dealId)
+      .eq('user_ip', ip)
+      .single();
 
     if (existingEngagement) {
       // Mettre à jour l'engagement existant
-      await prisma.dealEngagement.update({
-        where: { id: existingEngagement.id },
-        data: {
+      await supabase
+        .from('deal_engagements')
+        .update({
           type: type,
-          timestamp: new Date(timestamp)
-        }
-      });
+          timestamp: new Date(timestamp).toISOString()
+        })
+        .eq('id', existingEngagement.id);
     } else {
       // Créer un nouvel engagement
-      await prisma.dealEngagement.create({
-        data: {
-          dealId: dealId,
-          establishmentId: deal.establishmentId,
+      await supabase
+        .from('deal_engagements')
+        .insert({
+          deal_id: dealId,
+          establishment_id: deal.establishment_id,
           type: type,
-          userIp: ip,
-          timestamp: new Date(timestamp)
-        }
-      });
+          user_ip: ip,
+          timestamp: new Date(timestamp).toISOString()
+        });
     }
 
     console.log(`Engagement ${type} enregistré pour le deal ${dealId} (${deal.title})`);
@@ -92,25 +96,42 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let whereClause: any = {};
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('API deals/engagement - Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
+
+    // Construire la requête
+    let query = supabase.from('deal_engagements').select('type, timestamp, deal_id');
+    
     if (dealId) {
-      whereClause.dealId = dealId;
+      query = query.eq('deal_id', dealId);
     } else if (establishmentId) {
-      whereClause.establishmentId = establishmentId;
+      query = query.eq('establishment_id', establishmentId);
     }
 
     // Récupérer les statistiques d'engagement
-    const engagements = await prisma.dealEngagement.findMany({
-      where: whereClause,
-      select: {
-        type: true,
-        timestamp: true,
-        dealId: true
-      }
-    });
+    const { data: engagements, error: engagementsError } = await query;
+
+    if (engagementsError) {
+      console.error('Erreur récupération engagements:', engagementsError);
+      return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 });
+    }
 
     // Calculer les statistiques
-    const stats = engagements.reduce((acc, engagement) => {
+    const stats = (engagements || []).reduce((acc: any, engagement: any) => {
       if (engagement.type === 'liked') {
         acc.liked++;
       } else if (engagement.type === 'disliked') {
@@ -122,6 +143,13 @@ export async function GET(request: NextRequest) {
     const total = stats.liked + stats.disliked;
     const engagementRate = total > 0 ? (stats.liked / total) * 100 : 0;
 
+    // Convertir snake_case -> camelCase pour les engagements
+    const formattedEngagements = (engagements || []).slice(-10).map((e: any) => ({
+      type: e.type,
+      timestamp: e.timestamp,
+      dealId: e.deal_id
+    }));
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -129,7 +157,7 @@ export async function GET(request: NextRequest) {
         total,
         engagementRate: Math.round(engagementRate * 100) / 100
       },
-      engagements: engagements.slice(-10) // Derniers 10 engagements pour debugging
+      engagements: formattedEngagements // Derniers 10 engagements pour debugging
     });
 
   } catch (error) {

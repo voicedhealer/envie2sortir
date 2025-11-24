@@ -1,5 +1,6 @@
 // Service d'apprentissage côté serveur (API routes uniquement)
-import { prisma } from './prisma';
+import { createClient } from './supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { learningService } from './learning-service';
 
 export interface LearningPattern {
@@ -24,9 +25,25 @@ export interface TypeSuggestion {
 }
 
 export class ServerLearningService {
+  private getAdminClient() {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase admin client non configuré (variables manquantes)');
+    }
+
+    return createAdminClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+  }
   
   /**
    * Sauvegarde un pattern d'apprentissage lors de l'ajout d'un établissement
+   * Évite les doublons en vérifiant l'existence d'un pattern similaire
    */
   async saveLearningPattern(data: {
     name: string;
@@ -38,18 +55,73 @@ export class ServerLearningService {
     correctedBy?: string;
   }): Promise<void> {
     try {
-      await prisma.establishmentLearningPattern.create({
-        data: {
-          name: data.name,
-          detectedType: data.detectedType,
-          correctedType: data.correctedType,
-          googleTypes: JSON.stringify(data.googleTypes),
+      const supabase = this.getAdminClient();
+      
+      // Arrondir la confiance à 5% près pour la comparaison
+      const confidenceRounded = Math.round(data.confidence * 20) / 20;
+      
+      // Vérifier s'il existe déjà un pattern similaire
+      // Un doublon est défini comme : même nom (insensible à la casse) + même type détecté + confiance similaire
+      const { data: existingPatterns, error: findError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*')
+        .ilike('name', data.name.trim())
+        .eq('detected_type', data.detectedType)
+        .limit(10); // Limiter pour éviter trop de résultats
+      
+      if (findError) {
+        console.error('❌ Erreur recherche pattern existant:', findError);
+        // Continuer quand même avec l'insertion si la recherche échoue
+      } else if (existingPatterns && existingPatterns.length > 0) {
+        // Vérifier si un pattern a une confiance similaire (±5%)
+        const duplicate = existingPatterns.find((pattern: any) => {
+          const patternConfidenceRounded = Math.round(pattern.confidence * 20) / 20;
+          return Math.abs(patternConfidenceRounded - confidenceRounded) <= 0.05;
+        });
+        
+        if (duplicate) {
+          // Si le nouveau pattern est corrigé et l'ancien ne l'est pas, mettre à jour
+          if (data.correctedType && !duplicate.is_corrected) {
+            const { error: updateError } = await supabase
+              .from('establishment_learning_patterns')
+              .update({
+                corrected_type: data.correctedType,
+                is_corrected: true,
+                corrected_by: data.correctedBy,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', duplicate.id);
+            
+            if (updateError) {
+              console.error('❌ Erreur mise à jour pattern:', updateError);
+            } else {
+              console.log('✅ Pattern d\'apprentissage mis à jour (doublon corrigé):', data.name);
+            }
+          } else {
+            // Pattern similaire déjà existant, ignorer l'insertion
+            console.log('⚠️ Pattern d\'apprentissage déjà existant (doublon ignoré):', data.name);
+          }
+          return; // Ne pas insérer de doublon
+        }
+      }
+      
+      // Aucun doublon trouvé, procéder à l'insertion
+      const { error } = await supabase
+        .from('establishment_learning_patterns')
+        .insert({
+          name: data.name.trim(),
+          detected_type: data.detectedType,
+          corrected_type: data.correctedType,
+          google_types: JSON.stringify(data.googleTypes),
           keywords: JSON.stringify(data.keywords),
           confidence: data.confidence,
-          isCorrected: !!data.correctedType,
-          correctedBy: data.correctedBy,
-        }
-      });
+          is_corrected: !!data.correctedType,
+          corrected_by: data.correctedBy,
+        });
+      
+      if (error) {
+        throw error;
+      }
       
       console.log('📚 Pattern d\'apprentissage sauvegardé:', data.name);
     } catch (error) {
@@ -66,21 +138,34 @@ export class ServerLearningService {
     correctedBy: string
   ): Promise<void> {
     try {
+      const supabase = await createClient();
+      
       // Trouver le pattern correspondant
-      const pattern = await prisma.establishmentLearningPattern.findFirst({
-        where: { name: { contains: establishmentName } }
-      });
+      const { data: patterns, error: findError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*')
+        .ilike('name', `%${establishmentName}%`)
+        .limit(1);
 
-      if (pattern) {
-        await prisma.establishmentLearningPattern.update({
-          where: { id: pattern.id },
-          data: {
-            correctedType,
-            isCorrected: true,
-            correctedBy,
-            updatedAt: new Date()
-          }
-        });
+      if (findError) {
+        throw findError;
+      }
+
+      if (patterns && patterns.length > 0) {
+        const pattern = patterns[0];
+        const { error: updateError } = await supabase
+          .from('establishment_learning_patterns')
+          .update({
+            corrected_type: correctedType,
+            is_corrected: true,
+            corrected_by: correctedBy,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', pattern.id);
+        
+        if (updateError) {
+          throw updateError;
+        }
         
         console.log('✅ Type corrigé et pattern mis à jour');
       } else {
@@ -109,10 +194,17 @@ export class ServerLearningService {
     description?: string;
   }): Promise<TypeSuggestion[]> {
     try {
-      // Récupérer tous les patterns d'apprentissage
-      const patterns = await prisma.establishmentLearningPattern.findMany({
-        where: { isCorrected: true } // Seulement les patterns corrigés
-      });
+      const supabase = await createClient();
+      
+      // Récupérer tous les patterns d'apprentissage corrigés
+      const { data: patterns, error } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*')
+        .eq('is_corrected', true);
+
+      if (error) {
+        throw error;
+      }
 
       const suggestions: TypeSuggestion[] = [];
       const name = data.name.toLowerCase();
@@ -120,9 +212,14 @@ export class ServerLearningService {
       const fullText = `${name} ${description}`;
 
       // Analyser chaque pattern corrigé
-      for (const pattern of patterns) {
-        const patternKeywords = JSON.parse(pattern.keywords);
-        const patternGoogleTypes = JSON.parse(pattern.googleTypes);
+      for (const pattern of (patterns || [])) {
+        // Parser les champs JSON
+        const patternKeywords = typeof pattern.keywords === 'string' 
+          ? JSON.parse(pattern.keywords) 
+          : pattern.keywords || [];
+        const patternGoogleTypes = typeof pattern.google_types === 'string'
+          ? JSON.parse(pattern.google_types)
+          : pattern.google_types || [];
         
         // Calculer la similarité
         const similarity = this.calculateSimilarity(
@@ -134,7 +231,7 @@ export class ServerLearningService {
 
         if (similarity > 0.3) { // Seuil de similarité
           suggestions.push({
-            type: pattern.correctedType || pattern.detectedType,
+            type: pattern.corrected_type || pattern.detected_type,
             confidence: similarity,
             reason: `Basé sur "${pattern.name}" (${Math.round(similarity * 100)}% de similarité)`,
             keywords: patternKeywords
@@ -189,29 +286,52 @@ export class ServerLearningService {
     mostCommonTypes: Array<{ type: string; count: number }>;
   }> {
     try {
-      const totalPatterns = await prisma.establishmentLearningPattern.count();
-      const correctedPatterns = await prisma.establishmentLearningPattern.count({
-        where: { isCorrected: true }
+      const supabase = await createClient();
+      
+      // Compter tous les patterns
+      const { count: totalPatterns, error: totalError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*', { count: 'exact', head: true });
+
+      if (totalError) {
+        throw totalError;
+      }
+
+      // Compter les patterns corrigés
+      const { count: correctedPatterns, error: correctedError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_corrected', true);
+
+      if (correctedError) {
+        throw correctedError;
+      }
+
+      // Récupérer tous les patterns corrigés pour calculer les types les plus courants
+      const { data: correctedPatternsData, error: patternsError } = await supabase
+        .from('establishment_learning_patterns')
+        .select('corrected_type')
+        .eq('is_corrected', true);
+
+      if (patternsError) {
+        throw patternsError;
+      }
+
+      // Calculer les types les plus courants en mémoire
+      const typeCounts: Record<string, number> = {};
+      (correctedPatternsData || []).forEach((pattern: any) => {
+        const type = pattern.corrected_type || 'unknown';
+        typeCounts[type] = (typeCounts[type] || 0) + 1;
       });
 
-      // Types les plus courants
-      const typeStats = await prisma.establishmentLearningPattern.groupBy({
-        by: ['correctedType'],
-        _count: { correctedType: true },
-        where: { isCorrected: true }
-      });
-
-      const mostCommonTypes = typeStats
-        .map(stat => ({
-          type: stat.correctedType || 'unknown',
-          count: stat._count.correctedType
-        }))
+      const mostCommonTypes = Object.entries(typeCounts)
+        .map(([type, count]) => ({ type, count: count as number }))
         .sort((a, b) => b.count - a.count);
 
       return {
-        totalPatterns,
-        correctedPatterns,
-        accuracy: totalPatterns > 0 ? correctedPatterns / totalPatterns : 0,
+        totalPatterns: totalPatterns || 0,
+        correctedPatterns: correctedPatterns || 0,
+        accuracy: (totalPatterns || 0) > 0 ? (correctedPatterns || 0) / (totalPatterns || 0) : 0,
         mostCommonTypes
       };
     } catch (error) {

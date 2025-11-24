@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma as prismaShared } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 import { getPremiumRequiredError } from '@/lib/subscription-utils';
-
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,13 +27,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Vérifier que l'établissement existe
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { id: true }
-    });
+    const supabase = await createClient();
 
-    if (!establishment) {
+    // Vérifier que l'établissement existe
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: 'Establishment not found' },
         { status: 404 }
@@ -45,19 +44,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Enregistrer l'événement de clic
-    await prisma.clickAnalytics.create({
-      data: {
-        establishmentId,
-        elementType,
-        elementId,
-        elementName,
+    const { error: insertError } = await supabase
+      .from('click_analytics')
+      .insert({
+        establishment_id: establishmentId,
+        element_type: elementType,
+        element_id: elementId,
+        element_name: elementName,
         action,
-        sectionContext,
-        userAgent,
+        section_context: sectionContext,
+        user_agent: userAgent,
         referrer,
-        timestamp: timestamp ? new Date(timestamp) : new Date(),
-      },
-    });
+        timestamp: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString()
+      });
+
+    if (insertError) {
+      console.error('Erreur enregistrement analytics:', insertError);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
@@ -73,8 +80,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Vérifier l'abonnement: Premium requis pour consulter les analytics détaillés
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
@@ -89,11 +96,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement que l'utilisateur est propriétaire
+    const supabase = await createClient();
+
     // Vérifier le plan d'abonnement de l'établissement
-    const establishment = await prismaShared.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { subscription: true }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('subscription')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError) {
+      console.error('❌ [Analytics] Erreur récupération établissement:', establishmentError);
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération de l\'établissement',
+          details: establishmentError.message,
+          code: establishmentError.code
+        },
+        { status: 500 }
+      );
+    }
+
     if (!establishment || establishment.subscription !== 'PREMIUM') {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
@@ -120,51 +144,66 @@ export async function GET(request: NextRequest) {
         startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     }
 
-    // Récupérer les statistiques
-    const stats = await prisma.clickAnalytics.groupBy({
-      by: ['elementType', 'elementId', 'elementName'],
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
+    const startDateISO = startDate.toISOString();
+
+    // Récupérer toutes les données d'analytics pour cette période
+    const { data: allClicks, error: clicksError } = await supabase
+      .from('click_analytics')
+      .select('*')
+      .eq('establishment_id', establishmentId)
+      .gte('timestamp', startDateISO);
+
+    if (clicksError) {
+      console.error('❌ [Analytics] Erreur récupération analytics:', clicksError);
+      return NextResponse.json(
+        { 
+          error: 'Erreur lors de la récupération des analytics',
+          details: clicksError.message,
+          code: clicksError.code
         },
-      },
-      _count: {
-        id: true,
-      },
-      orderBy: {
-        _count: {
-          id: 'desc',
-        },
-      },
+        { status: 500 }
+      );
+    }
+
+    // Grouper par élément (elementType, elementId, elementName)
+    const statsMap = new Map<string, { elementType: string; elementId: string; elementName: string; count: number }>();
+    const statsByTypeMap = new Map<string, number>();
+
+    (allClicks || []).forEach((click: any) => {
+      const key = `${click.element_type}-${click.element_id}-${click.element_name}`;
+      if (!statsMap.has(key)) {
+        statsMap.set(key, {
+          elementType: click.element_type,
+          elementId: click.element_id,
+          elementName: click.element_name,
+          count: 0
+        });
+      }
+      statsMap.get(key)!.count++;
+
+      // Stats par type
+      const typeCount = statsByTypeMap.get(click.element_type) || 0;
+      statsByTypeMap.set(click.element_type, typeCount + 1);
     });
 
-    // Statistiques par type d'élément
-    const statsByType = await prisma.clickAnalytics.groupBy({
-      by: ['elementType'],
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      _count: {
-        id: true,
-      },
-    });
+    const stats = Array.from(statsMap.values())
+      .sort((a, b) => b.count - a.count)
+      .map(item => ({
+        elementType: item.elementType,
+        elementId: item.elementId,
+        elementName: item.elementName,
+        _count: { id: item.count }
+      }));
+
+    const statsByType = Array.from(statsByTypeMap.entries()).map(([elementType, count]) => ({
+      elementType,
+      _count: { id: count }
+    }));
 
     // Statistiques temporelles (clics par heure de la journée)
-    const hourlyData = await prisma.clickAnalytics.findMany({
-      where: {
-        establishmentId,
-        timestamp: {
-          gte: startDate,
-        },
-      },
-      select: {
-        timestamp: true,
-      },
-    });
+    const hourlyData = (allClicks || []).map((click: any) => ({
+      timestamp: new Date(click.timestamp)
+    }));
 
     // Grouper par heure de la journée (0-23)
     const hourlyStatsMap = new Map<number, number>();
@@ -181,6 +220,66 @@ export async function GET(request: NextRequest) {
       hourLabel: `${hour.toString().padStart(2, '0')}h`,
     }));
 
+    // Statistiques des avis
+    const { data: comments, error: commentsError } = await supabase
+      .from('user_comments')
+      .select('rating, created_at')
+      .eq('establishment_id', establishmentId)
+      .gte('created_at', startDateISO)
+      .order('created_at', { ascending: false });
+
+    let reviewsStats = {
+      totalReviews: 0,
+      averageRating: 0,
+      ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+      recentReviews: 0, // Avis des 7 derniers jours
+      trend: 'stable' as 'positive' | 'negative' | 'stable',
+      previousPeriodAverage: 0,
+    };
+
+    if (!commentsError && comments && comments.length > 0) {
+      const totalRating = comments.reduce((sum, c) => sum + (c.rating || 0), 0);
+      reviewsStats.totalReviews = comments.length;
+      reviewsStats.averageRating = totalRating / comments.length;
+
+      // Distribution des notes
+      comments.forEach((c: any) => {
+        const rating = c.rating || 0;
+        if (rating >= 1 && rating <= 5) {
+          reviewsStats.ratingDistribution[rating as keyof typeof reviewsStats.ratingDistribution]++;
+        }
+      });
+
+      // Avis récents (7 derniers jours)
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      reviewsStats.recentReviews = comments.filter((c: any) => 
+        new Date(c.created_at) >= new Date(sevenDaysAgo)
+      ).length;
+
+      // Calcul de la tendance (comparaison avec la période précédente)
+      const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime())).toISOString();
+      const { data: previousComments } = await supabase
+        .from('user_comments')
+        .select('rating')
+        .eq('establishment_id', establishmentId)
+        .gte('created_at', previousPeriodStart)
+        .lt('created_at', startDateISO);
+
+      if (previousComments && previousComments.length > 0) {
+        const previousTotalRating = previousComments.reduce((sum, c) => sum + (c.rating || 0), 0);
+        reviewsStats.previousPeriodAverage = previousTotalRating / previousComments.length;
+        
+        const diff = reviewsStats.averageRating - reviewsStats.previousPeriodAverage;
+        if (diff > 0.2) {
+          reviewsStats.trend = 'positive';
+        } else if (diff < -0.2) {
+          reviewsStats.trend = 'negative';
+        } else {
+          reviewsStats.trend = 'stable';
+        }
+      }
+    }
+
     return NextResponse.json({
       period,
       startDate,
@@ -188,6 +287,7 @@ export async function GET(request: NextRequest) {
       topElements: stats.slice(0, 10),
       statsByType,
       hourlyStats,
+      reviewsStats,
     });
   } catch (error) {
     console.error('Analytics retrieval error:', error);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 
 interface Badge {
   id: string;
@@ -20,19 +20,19 @@ interface UserBadgesProps {
 }
 
 export default function UserBadges({ compact = false, showProgress = true }: UserBadgesProps) {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [karmaPoints, setKarmaPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showTooltip, setShowTooltip] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated') {
+    if (user) {
       fetchBadges();
-    } else if (status === 'unauthenticated') {
+    } else if (!sessionLoading) {
       setLoading(false);
     }
-  }, [status]);
+  }, [user, sessionLoading]);
 
   const fetchBadges = async () => {
     try {
@@ -49,7 +49,7 @@ export default function UserBadges({ compact = false, showProgress = true }: Use
     }
   };
 
-  if (status === 'unauthenticated') {
+  if (!user && !sessionLoading) {
     return null;
   }
 

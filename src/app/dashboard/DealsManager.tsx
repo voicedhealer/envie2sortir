@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw, X as CloseIcon } from 'lucide-react';
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
 import DealEngagementStats from '@/components/DealEngagementStats';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface DailyDeal {
   id: string;
@@ -42,6 +43,10 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
   const [editingDeal, setEditingDeal] = useState<DailyDeal | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingPdf, setUploadingPdf] = useState(false);
+
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const isUploadingMedia = uploadingImage || uploadingPdf;
 
   const [formData, setFormData] = useState({
     title: '',
@@ -127,7 +132,11 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       
       if (data.success) {
         // Utiliser la variante 'main' pour l'affichage principal
-        const mainImageUrl = data.variants.main || data.variants.hero;
+        const mainImageUrl = data.variants.main || data.variants.hero || Object.values(data.variants)[0];
+        
+        if (!mainImageUrl) {
+          throw new Error("Impossible de récupérer l'URL de l'image optimisée");
+        }
         
         setFormData(prev => ({ 
           ...prev, 
@@ -190,6 +199,11 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isUploadingMedia) {
+      alert('Veuillez patienter, un upload est en cours...');
+      return;
+    }
     
     // Validation : exactement un média (image OU PDF) doit être fourni
     if (!formData.imageUrl && !formData.pdfUrl) {
@@ -582,8 +596,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
 
               {/* Horaires */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Heure de début (optionnel)
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Plage horaire actif - De
+                  <HelpTooltip content="Définissez l'heure de début de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
                 </label>
                 <input
                   type="time"
@@ -595,8 +610,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Heure de fin (optionnel)
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                  Plage horaire actif - À
+                  <HelpTooltip content="Définissez l'heure de fin de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
                 </label>
                 <input
                   type="time"
@@ -719,17 +735,33 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                     accept="image/*"
                     onChange={handleImageUpload}
                     disabled={uploadingImage}
+                    ref={imageInputRef}
                     className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                   />
                   {formData.imageUrl && (
-                    <a
-                      href={formData.imageUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-500 hover:text-orange-600"
-                    >
-                      <Eye className="w-5 h-5" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={formData.imageUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-500 hover:text-orange-600"
+                      >
+                        <Eye className="w-5 h-5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, imageUrl: '' }));
+                          if (imageInputRef.current) {
+                            imageInputRef.current.value = '';
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Supprimer l'image"
+                      >
+                        <CloseIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {uploadingImage && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
@@ -749,17 +781,33 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                     accept=".pdf"
                     onChange={handlePdfUpload}
                     disabled={uploadingPdf}
+                    ref={pdfInputRef}
                     className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                   />
                   {formData.pdfUrl && (
-                    <a
-                      href={formData.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-orange-500 hover:text-orange-600"
-                    >
-                      <FileText className="w-5 h-5" />
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={formData.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-orange-500 hover:text-orange-600"
+                      >
+                        <FileText className="w-5 h-5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, pdfUrl: '' }));
+                          if (pdfInputRef.current) {
+                            pdfInputRef.current.value = '';
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        title="Supprimer le PDF"
+                      >
+                        <CloseIcon className="w-4 h-4" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 {uploadingPdf && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
@@ -787,7 +835,10 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+                disabled={isUploadingMedia}
+                className={`bg-orange-500 text-white px-6 py-2 rounded-lg transition-colors ${
+                  isUploadingMedia ? 'opacity-50 cursor-not-allowed' : 'hover:bg-orange-600'
+                }`}
               >
                 {editingDeal ? 'Mettre à jour' : 'Créer le bon plan'}
               </button>
@@ -817,7 +868,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {activeDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans actifs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                 {activeDeals.map(deal => (
                   <DealCard
                     key={deal.id}
@@ -835,7 +886,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {upcomingDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans à venir</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                 {upcomingDeals.map(deal => (
                   <DealCard
                     key={deal.id}
@@ -853,7 +904,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {pastDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans passés</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
                 {pastDeals.map(deal => (
                   <DealCard
                     key={deal.id}
@@ -906,54 +957,54 @@ function DealCard({
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
 
   return (
-    <div className={`bg-white border-2 rounded-lg p-4 ${isActive ? 'border-orange-500 shadow-lg shadow-orange-500/20' : 'border-gray-200'}`}>
-      <div className="flex gap-4">
+    <div className={`bg-white border rounded-lg p-2 ${isActive ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-gray-200'}`}>
+      <div className="flex gap-2">
         {/* Image */}
         {deal.imageUrl && (
           <div className="flex-shrink-0">
             <img 
               src={deal.imageUrl} 
               alt={deal.title}
-              className="w-24 h-24 object-cover rounded-lg"
+              className="w-12 h-12 object-cover rounded"
             />
           </div>
         )}
 
         {/* Contenu principal */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-gray-900 truncate">{deal.title}</h4>
+          <div className="flex items-start justify-between mb-1">
+            <div className="flex items-center gap-1 flex-1 min-w-0">
+              <h4 className="font-semibold text-xs text-gray-900 truncate">{deal.title}</h4>
               {deal.isRecurring && (
                 <div title="Bon plan récurrent" className="flex-shrink-0">
-                  <RotateCcw className="text-orange-500 w-4 h-4" />
+                  <RotateCcw className="text-orange-500 w-3 h-3" />
                 </div>
               )}
             </div>
             {!deal.isActive && (
-              <span className="flex-shrink-0 ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+              <span className="flex-shrink-0 ml-1 px-1 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded">
                 Inactif
               </span>
             )}
           </div>
           
-          <p className="text-sm text-gray-600 mb-2 line-clamp-2">{deal.description}</p>
+          <p className="text-[10px] text-gray-600 mb-1 line-clamp-1">{deal.description}</p>
 
           {/* Prix */}
           {(deal.originalPrice || deal.discountedPrice) && (
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-1 mb-1">
               {deal.originalPrice && (
-                <span className="text-sm text-gray-400 line-through">
+                <span className="text-[10px] text-gray-400 line-through">
                   {formatPrice(deal.originalPrice)}
                 </span>
               )}
               {deal.discountedPrice && (
-                <span className="text-lg font-bold text-orange-600">
+                <span className="text-sm font-bold text-orange-600">
                   {formatPrice(deal.discountedPrice)}
                 </span>
               )}
               {discount > 0 && (
-                <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                <span className="text-[10px] bg-orange-100 text-orange-800 px-1 py-0.5 rounded">
                   -{discount}%
                 </span>
               )}
@@ -961,40 +1012,40 @@ function DealCard({
           )}
 
           {/* Dates */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
-            <Calendar className="w-4 h-4" />
-            <span>{formatDealTime(deal)}</span>
+          <div className="flex items-center gap-1 text-[10px] text-gray-500 mb-1">
+            <Calendar className="w-3 h-3 flex-shrink-0" />
+            <span className="line-clamp-1 truncate">{formatDealTime(deal)}</span>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <button
               onClick={() => onEdit(deal)}
-              className="text-blue-600 hover:text-blue-800 p-1"
+              className="text-blue-600 hover:text-blue-800 p-0.5"
               title="Modifier"
             >
-              <Edit className="w-4 h-4" />
+              <Edit className="w-3 h-3" />
             </button>
             <button
               onClick={() => onDuplicate(deal)}
-              className="text-green-600 hover:text-green-800 p-1"
+              className="text-green-600 hover:text-green-800 p-0.5"
               title="Dupliquer"
             >
-              <Copy className="w-4 h-4" />
+              <Copy className="w-3 h-3" />
             </button>
             <button
               onClick={() => onDelete(deal.id)}
-              className="text-red-600 hover:text-red-800 p-1"
+              className="text-red-600 hover:text-red-800 p-0.5"
               title="Supprimer"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-3 h-3" />
             </button>
           </div>
         </div>
       </div>
       
       {/* Statistiques d'engagement */}
-      <div className="mt-4">
+      <div className="mt-2 pt-2 border-t border-gray-100">
         <DealEngagementStats 
           dealId={deal.id}
           establishmentId={deal.establishmentId}

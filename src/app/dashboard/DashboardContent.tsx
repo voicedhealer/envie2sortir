@@ -141,13 +141,21 @@ export default function DashboardContent({ user, establishment, professional }: 
               >
                 🧪 Tester le modal de bienvenue
               </button> */}
-              <p className={`text-sm mt-1 ${
-                professional.subscriptionPlan === 'PREMIUM' 
-                  ? 'text-orange-600 font-medium' 
-                  : 'text-gray-500'
-              }`}>
-                Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Basic'}
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className={`text-sm ${
+                  professional.subscriptionPlan === 'PREMIUM' 
+                    ? 'text-orange-600 font-medium' 
+                    : 'text-gray-500'
+                }`}>
+                  Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Basic'}
+                </p>
+                <Link
+                  href="/dashboard/subscription"
+                  className="text-xs text-[#ff751f] hover:text-[#ff8a3d] underline"
+                >
+                  Gérer l'abonnement
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -248,7 +256,7 @@ export default function DashboardContent({ user, establishment, professional }: 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Paramètres
+              Profil
             </button>
           </nav>
         </div>

@@ -94,12 +94,6 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
     return `Le ${day} ${month} ${year}`;
   };
 
-  // Fonction pour tronquer intelligemment le texte
-  const truncateText = (text: string, maxLength: number = 80) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength).trim() + '...';
-  };
-
   const handleEngagement = async (type: 'liked' | 'disliked', e: React.MouseEvent) => {
     e.stopPropagation(); // Empêcher le clic sur la carte
     
@@ -258,8 +252,8 @@ export default function DailyDealCard({ deal, onClick, redirectToEstablishment =
             )}
 
             {/* Description */}
-            <p className="text-sm text-gray-600 mb-3 flex-1">
-              {truncateText(deal.description, 80)}
+            <p className="text-sm text-gray-600 mb-3 flex-1 line-clamp-2">
+              {deal.description}
             </p>
 
             {/* Date et horaires */}

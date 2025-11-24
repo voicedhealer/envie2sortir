@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Clock, TrendingUp, Maximize2, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from './Toast';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 
 interface EventCardNewProps {
@@ -15,6 +15,7 @@ interface EventCardNewProps {
     startDate: string;
     endDate?: string | null;
     price?: number | null;
+    priceUnit?: string | null;
     maxCapacity?: number | null;
     imageUrl?: string | null;
     location?: string;
@@ -62,7 +63,7 @@ interface EngagementData {
 }
 
 export default function EventCardNew({ event, establishment }: EventCardNewProps) {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const { showToast, ToastContainer } = useToast();
   
@@ -134,17 +135,21 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
   };
 
   const handleVote = async (levelId: string) => {
-    if (status === 'unauthenticated') {
-      router.push('/auth');
+    // Attendre que le chargement de la session soit terminé
+    if (sessionLoading) {
       return;
     }
 
-    if (status === 'loading') {
+    if (!user) {
+      showToast('Vous devez être connecté pour voter', 'error');
+      setTimeout(() => {
+        router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+      }, 1500);
       return;
     }
 
     // Vérifier si l'utilisateur est le propriétaire de l'établissement
-    if (session?.user?.id && session.user.id === establishment?.userId) {
+    if (user?.id && user.id === establishment?.userId) {
       showToast('Vous êtes le propriétaire de cet établissement, vous ne pouvez donc pas voter', 'info');
       return;
     }
@@ -170,7 +175,16 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de l\'engagement');
+        const errorData = await response.json().catch(() => ({}));
+        // Si erreur 401, rediriger vers la page de connexion
+        if (response.status === 401) {
+          showToast(errorData.error || 'Session expirée. Veuillez vous reconnecter.', 'error');
+          setTimeout(() => {
+            router.push('/auth?callbackUrl=' + encodeURIComponent(window.location.href));
+          }, 1500);
+          return;
+        }
+        throw new Error(errorData.error || 'Erreur lors de l\'engagement');
       }
 
       const data = await response.json();
@@ -349,34 +363,39 @@ export default function EventCardNew({ event, establishment }: EventCardNewProps
                 </p>
               )}
               
-              <div className="flex flex-wrap justify-center md:justify-start gap-2">
+              <div className="flex flex-nowrap items-center justify-center md:justify-start gap-1.5 sm:gap-2 overflow-x-auto">
                 {/* Badge de statut */}
-                <div className={`flex items-center gap-1 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm ${
+                <div className={`flex items-center gap-1 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0 ${
                   eventStatus.status === 'in-progress' 
                     ? 'bg-emerald-600 text-white border border-white' 
                     : eventStatus.status === 'upcoming'
                     ? 'bg-yellow-400 text-black'
                     : 'bg-gray-500/30 text-gray-100'
                 }`}>
-                  <span className="text-xs font-medium">{eventStatus.label}</span>
+                  <span className="font-medium">{eventStatus.label}</span>
                 </div>
                 
-                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                  <Calendar className={`w-3 h-3 ${
+                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                  <Calendar className={`w-3 h-3 flex-shrink-0 ${
                     eventStatus.status === 'in-progress' 
                       ? 'text-green-600' 
                       : 'text-yellow-600'
                   }`} />
                   <span>{formatEventDate(event.startDate)}</span>
                 </div>
-                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                  <Clock className="w-3 h-3" />
+                <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                  <Clock className="w-3 h-3 flex-shrink-0" />
                   <span>{formatEventTime(event.startDate)}</span>
                 </div>
                 {event.endDate && (
-                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm">
-                    <Clock className="w-3 h-3" />
+                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                    <Clock className="w-3 h-3 flex-shrink-0" />
                     <span>Fin: {formatEventTime(event.endDate)}</span>
+                  </div>
+                )}
+                {event.price !== null && event.price !== undefined && event.price > 0 && (
+                  <div className="flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-xs whitespace-nowrap flex-shrink-0">
+                    <span>{event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}</span>
                   </div>
                 )}
               </div>

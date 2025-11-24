@@ -4,6 +4,7 @@ import { Icons } from '@/components/Icons';
 interface SubscriptionStepProps {
   formData: {
     subscriptionPlan: 'free' | 'premium';
+    subscriptionPlanType?: 'monthly' | 'annual';
   };
   errors: Record<string, string>;
   onInputChange: (field: string | number | symbol, value: any) => void;
@@ -102,6 +103,59 @@ export default function SubscriptionStep({
         })}
       </div>
       
+      {/* Sélection mensuel/annuel pour le plan Premium */}
+      {formData.subscriptionPlan === 'premium' && (
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
+            Choisissez votre mode de paiement
+          </h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div
+              onClick={() => onInputChange('subscriptionPlanType', 'monthly')}
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                formData.subscriptionPlanType === 'monthly'
+                  ? 'border-[#ff751f] bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900">Paiement Mensuel</h4>
+                {formData.subscriptionPlanType === 'monthly' && (
+                  <span className="text-[#ff751f]">✓</span>
+                )}
+              </div>
+              <p className="text-2xl font-bold text-gray-900">29,90€</p>
+              <p className="text-sm text-gray-600">par mois</p>
+              <p className="text-xs text-gray-500 mt-2">Renouvelable automatiquement</p>
+            </div>
+            
+            <div
+              onClick={() => onInputChange('subscriptionPlanType', 'annual')}
+              className={`p-4 border-2 rounded-lg cursor-pointer transition-all relative ${
+                formData.subscriptionPlanType === 'annual'
+                  ? 'border-[#ff751f] bg-orange-50'
+                  : 'border-gray-200 hover:border-gray-300'
+              }`}
+            >
+              <div className="absolute -top-3 right-4">
+                <span className="bg-[#ff751f] text-white text-xs px-2 py-1 rounded-full font-semibold">
+                  -15%
+                </span>
+              </div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-gray-900">Paiement Annuel</h4>
+                {formData.subscriptionPlanType === 'annual' && (
+                  <span className="text-[#ff751f]">✓</span>
+                )}
+              </div>
+              <p className="text-2xl font-bold text-gray-900">305€</p>
+              <p className="text-sm text-gray-600">par an (25,42€/mois)</p>
+              <p className="text-xs text-gray-500 mt-2">Renouvelable automatiquement</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Note informative avec icône */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5">
         <div className="flex items-start gap-3">
@@ -147,6 +201,12 @@ export default function SubscriptionStep({
         <p className="text-red-500 text-sm mt-1 flex items-center gap-2">
           <span>⚠️</span>
           {errors.subscriptionPlan}
+        </p>
+      )}
+      {errors.subscriptionPlanType && (
+        <p className="text-red-500 text-sm mt-1 flex items-center gap-2">
+          <span>⚠️</span>
+          {errors.subscriptionPlanType}
         </p>
       )}
     </div>

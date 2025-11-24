@@ -125,10 +125,37 @@ export default function PrivacyPolicyPage() {
                   <h3 className="text-xl font-semibold text-yellow-900 mb-4">Cas d'exception</h3>
                   <ul className="space-y-2 text-yellow-800">
                     <li>• <strong>Avec votre consentement explicite</strong></li>
-                    <li>• <strong>Prestataires de services</strong> (hébergement, analytics) sous contrat de confidentialité</li>
+                    <li>• <strong>Prestataires de services</strong> (hébergement, analytics, traitement des paiements) sous contrat de confidentialité</li>
                     <li>• <strong>Obligations légales</strong> (réquisition judiciaire, protection des droits)</li>
                     <li>• <strong>Protection de nos droits</strong> (prévention de la fraude, sécurité)</li>
                   </ul>
+                </div>
+
+                <div className="bg-blue-50 rounded-xl p-6 mt-6">
+                  <h3 className="text-xl font-semibold text-blue-900 mb-4">💳 Prestataire de paiement : Stripe</h3>
+                  <div className="space-y-3 text-blue-800">
+                    <p>
+                      Pour le traitement des paiements des abonnements Premium, nous utilisons <strong>Stripe</strong>, un prestataire de paiement certifié et conforme aux normes PCI-DSS.
+                    </p>
+                    <p>
+                      <strong>Données partagées avec Stripe :</strong>
+                    </p>
+                    <ul className="space-y-1 ml-4 text-sm">
+                      <li>• Informations de paiement (numéro de carte, date d'expiration, CVV) - uniquement pour le traitement de la transaction</li>
+                      <li>• Nom et adresse email associés au compte</li>
+                      <li>• Montant et date de la transaction</li>
+                    </ul>
+                    <p className="text-sm mt-4">
+                      <strong>Important :</strong> Stripe ne partage pas vos informations de paiement avec nous. Nous ne stockons aucune donnée bancaire sur nos serveurs. 
+                      Toutes les données de paiement sont gérées exclusivement par Stripe selon leurs normes de sécurité strictes.
+                    </p>
+                    <p className="text-sm">
+                      Pour plus d'informations sur la manière dont Stripe traite vos données, consultez leur 
+                      <a href="https://stripe.com/fr/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 underline ml-1">
+                        politique de confidentialité
+                      </a>.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -215,9 +242,13 @@ export default function PrivacyPolicyPage() {
                       <li>• Préférences de langue</li>
                       <li>• Panier d'achat (si applicable)</li>
                       <li>• Géolocalisation de base</li>
+                      <li>• Traitement des paiements (Stripe) - cookies nécessaires pour sécuriser les transactions</li>
                     </ul>
                     <p className="text-red-600 text-xs mt-4">
                       <strong>Durée :</strong> Session ou 30 jours maximum
+                    </p>
+                    <p className="text-red-600 text-xs mt-2">
+                      <strong>Note :</strong> Les cookies de paiement Stripe sont essentiels et ne peuvent pas être désactivés car ils sont nécessaires au traitement sécurisé des transactions.
                     </p>
                   </div>
 

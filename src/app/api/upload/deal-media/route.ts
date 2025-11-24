@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 
 const PDF_VALIDATION = {
   maxSize: 10 * 1024 * 1024, // 10MB
@@ -15,9 +12,9 @@ const PDF_VALIDATION = {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user) {
+    // Vérifier l'authentification et que l'utilisateur est un professionnel
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
     }
 
@@ -34,20 +31,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ID de l\'établissement requis' }, { status: 400 });
     }
 
-    // Vérifier que l'utilisateur est propriétaire de l'établissement
-    const establishment = await prisma.establishment.findFirst({
-      where: { 
-        id: establishmentId,
-        ownerId: session.user.id 
-      },
-      select: { 
-        id: true, 
-        subscription: true,
-        name: true
-      }
-    });
+    const supabase = await createClient();
 
-    if (!establishment) {
+    // Vérifier que l'utilisateur est propriétaire de l'établissement
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription, name')
+      .eq('id', establishmentId)
+      .eq('owner_id', user.id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement introuvable ou accès refusé' }, { status: 404 });
     }
 
@@ -72,28 +66,41 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Créer le dossier deals s'il n'existe pas
-    const dealsDir = join(process.cwd(), 'public', 'uploads', 'deals');
-    if (!existsSync(dealsDir)) {
-      await mkdir(dealsDir, { recursive: true });
-    }
-
     // Générer un nom de fichier unique
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
     const extension = file.name.split('.').pop();
     const fileName = `${timestamp}_${randomString}.${extension}`;
     
-    // Chemin complet du fichier
-    const filePath = join(dealsDir, fileName);
+    // Chemin dans Supabase Storage : deals/{establishmentId}/{fileName}
+    const storagePath = `deals/${establishmentId}/${fileName}`;
     
-    // Convertir le fichier en buffer et l'écrire
+    // Convertir le fichier en Blob
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const fileBlob = new Blob([bytes], { type: file.type });
+    
+    // Uploader vers Supabase Storage (bucket 'menus' pour les PDF, 'images' pour les images)
+    const bucket = fileType === 'pdf' ? 'menus' : 'images';
+    
+    const uploadResult = await uploadFileAdmin(
+      bucket,
+      storagePath,
+      fileBlob,
+      {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false
+      }
+    );
 
-    // Retourner l'URL publique
-    const fileUrl = `/uploads/deals/${fileName}`;
+    if (uploadResult.error || !uploadResult.data) {
+      console.error('Erreur upload Supabase:', uploadResult.error);
+      return NextResponse.json({ 
+        error: 'Erreur lors de l\'upload vers Supabase Storage' 
+      }, { status: 500 });
+    }
+
+    const fileUrl = uploadResult.data.url;
     
     return NextResponse.json({ 
       success: true, 

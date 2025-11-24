@@ -1,22 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
+    const user = await requireEstablishment();
+    if (!user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = await createClient();
     const body = await request.json();
     const { currentPassword, newPassword } = body;
 
@@ -46,42 +39,29 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Récupérer le professionnel
-    const professional = await prisma.professional.findUnique({
-      where: { id: session.user.id }
+    // Vérifier le mot de passe actuel avec Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword
     });
 
-    if (!professional || !professional.passwordHash) {
-      return NextResponse.json({ 
-        error: 'Utilisateur non trouvé' 
-      }, { status: 404 });
-    }
-
-    // Vérifier le mot de passe actuel
-    const isValidPassword = await bcrypt.compare(currentPassword, professional.passwordHash);
-    
-    if (!isValidPassword) {
+    if (authError || !authData.user) {
       return NextResponse.json({ 
         error: 'Mot de passe actuel incorrect' 
       }, { status: 401 });
     }
 
-    // Vérifier que le nouveau mot de passe est différent de l'ancien
-    const isSamePassword = await bcrypt.compare(newPassword, professional.passwordHash);
-    if (isSamePassword) {
-      return NextResponse.json({ 
-        error: 'Le nouveau mot de passe doit être différent de l\'ancien' 
-      }, { status: 400 });
-    }
-
-    // Hasher le nouveau mot de passe
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    // Mettre à jour le mot de passe
-    await prisma.professional.update({
-      where: { id: session.user.id },
-      data: { passwordHash: hashedPassword }
+    // Mettre à jour le mot de passe via Supabase Auth
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword
     });
+
+    if (updateError) {
+      console.error('Erreur mise à jour mot de passe:', updateError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la mise à jour du mot de passe' 
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true,

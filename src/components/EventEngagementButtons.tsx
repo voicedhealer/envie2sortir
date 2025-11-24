@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 
 interface EventEngagementButtonsProps {
@@ -26,19 +26,19 @@ export default function EventEngagementButtons({
   isCompact = false,
   isInline = false
 }: EventEngagementButtonsProps) {
-  const { data: session, status } = useSession();
+  const { user, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [currentStats, setCurrentStats] = useState(stats);
   const [currentUserEngagement, setCurrentUserEngagement] = useState(userEngagement);
 
   const handleEngagement = async (type: string) => {
-    if (status === 'unauthenticated') {
+    if (!user) {
       router.push('/auth');
       return;
     }
 
-    if (status === 'loading' || loading) {
+    if (sessionLoading || loading) {
       return;
     }
 
@@ -132,7 +132,7 @@ export default function EventEngagementButtons({
         ))}
       </div>
 
-      {status === 'unauthenticated' && (
+      {!user && (
         <p className="auth-hint">
           <span className="auth-icon">ℹ️</span>
           Connectez-vous pour participer !

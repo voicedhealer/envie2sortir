@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import { isAdmin, getCurrentUser } from '@/lib/supabase/helpers';
 import { cleanupOrphanedFiles, cleanupOldFiles } from '@/lib/image-cleanup';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
     // Vérifier que l'utilisateur est admin
-    if (!session?.user || session.user.role !== 'admin') {
+    if (!user || !(await isAdmin(user.id))) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 

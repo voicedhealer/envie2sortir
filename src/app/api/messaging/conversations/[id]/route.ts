@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/messaging/conversations/[id] - Détails d'une conversation
 export async function GET(
@@ -9,44 +8,38 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
+
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
+    const supabase = await createClient();
 
     const { id } = await params;
 
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      include: {
-        professional: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            companyName: true,
-          },
-        },
-        admin: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        messages: {
-          orderBy: { createdAt: "asc" },
-        },
-      },
-    });
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        professional:professionals!conversations_professional_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          company_name
+        ),
+        admin:users!conversations_admin_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('id', id)
+      .single();
 
-    if (!conversation) {
+    if (conversationError || !conversation) {
       return NextResponse.json(
         { error: "Conversation non trouvée" },
         { status: 404 }
@@ -54,19 +47,64 @@ export async function GET(
     }
 
     // Vérifier les droits d'accès
-    const isAdmin = session.user.role === "admin";
+    const isUserAdmin = await isAdmin();
     const isProfessionalOwner = 
-      session.user.userType === "professional" && 
-      conversation.professionalId === session.user.id;
+      user.userType === "professional" && 
+      conversation.professional_id === user.id;
 
-    if (!isAdmin && !isProfessionalOwner) {
+    if (!isUserAdmin && !isProfessionalOwner) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
       );
     }
 
-    return NextResponse.json({ conversation });
+    // Récupérer les messages
+    const { data: messages, error: messagesError } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('conversation_id', id)
+      .order('created_at', { ascending: true });
+
+    if (messagesError) {
+      console.error('Erreur récupération messages:', messagesError);
+    }
+
+    // Convertir snake_case -> camelCase
+    const professional = Array.isArray(conversation.professional) ? conversation.professional[0] : conversation.professional;
+    const admin = Array.isArray(conversation.admin) ? conversation.admin[0] : conversation.admin;
+
+    const formattedConversation = {
+      ...conversation,
+      professionalId: conversation.professional_id,
+      adminId: conversation.admin_id,
+      lastMessageAt: conversation.last_message_at,
+      createdAt: conversation.created_at,
+      updatedAt: conversation.updated_at,
+      professional: professional ? {
+        id: professional.id,
+        firstName: professional.first_name,
+        lastName: professional.last_name,
+        email: professional.email,
+        companyName: professional.company_name
+      } : null,
+      admin: admin ? {
+        id: admin.id,
+        firstName: admin.first_name,
+        lastName: admin.last_name,
+        email: admin.email
+      } : null,
+      messages: (messages || []).map((msg: any) => ({
+        ...msg,
+        conversationId: msg.conversation_id,
+        senderId: msg.sender_id,
+        senderType: msg.sender_type,
+        isRead: msg.is_read,
+        createdAt: msg.created_at
+      }))
+    };
+
+    return NextResponse.json({ conversation: formattedConversation });
   } catch (error) {
     console.error("Erreur lors de la récupération de la conversation:", error);
     return NextResponse.json(

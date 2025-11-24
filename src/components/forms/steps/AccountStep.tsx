@@ -143,7 +143,7 @@ export default function AccountStep({
   
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-8" data-testid="account-step-header">
         <h2 className="text-2xl font-bold text-gray-900">
           Création de votre compte PRO
         </h2>
@@ -160,6 +160,7 @@ export default function AccountStep({
           </label>
           <input
             type="text"
+            data-testid="form-account-firstname"
             value={formData.accountFirstName}
             onChange={(e) => onInputChange('accountFirstName', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -175,6 +176,7 @@ export default function AccountStep({
           </label>
           <input
             type="text"
+            data-testid="form-account-lastname"
             value={formData.accountLastName}
             onChange={(e) => onInputChange('accountLastName', e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
@@ -194,6 +196,7 @@ export default function AccountStep({
         <div className="relative">
           <input
             type="email"
+            data-testid="form-account-email"
             value={formData.accountEmail}
             onChange={(e) => onInputChange('accountEmail', e.target.value)}
             className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
@@ -261,6 +264,7 @@ export default function AccountStep({
         <div className="relative">
           <input
             type="tel"
+            data-testid="form-account-phone"
             value={formData.accountPhone || ''}
             disabled={phoneState.disabled}
             onChange={(e) => {
@@ -273,14 +277,28 @@ export default function AccountStep({
                 onInputChange('resetPhoneVerification', true);
               }
             }}
-            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${phoneState.className} ${
+            className={`w-full px-3 py-2 ${phoneState.state === 'verified' ? 'pr-20' : phoneState.state === 'valid' ? 'pr-20' : 'pr-3'} border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${phoneState.className} ${
               phoneState.disabled ? 'cursor-not-allowed opacity-75' : ''
             }`}
             placeholder="06 12 34 56 78 (mobile uniquement)"
           />
+          {/* Bouton pour réinitialiser le téléphone quand validé ou vérifié */}
+          {(phoneState.state === 'verified' || phoneState.state === 'valid') && (
+            <button
+              type="button"
+              onClick={() => {
+                onInputChange('accountPhone', '');
+                onInputChange('resetPhoneVerification', true);
+              }}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-red-500 focus:outline-none transition-colors"
+              title="Effacer le numéro"
+            >
+              <Icons.X className="w-5 h-5" />
+            </button>
+          )}
           {phoneState.state === 'verified' && (
-            <div className="absolute right-3 top-3">
-              <Icons.Check />
+            <div className="absolute right-10 top-3">
+              <Icons.Check className="text-green-600" />
             </div>
           )}
         </div>
@@ -336,6 +354,7 @@ export default function AccountStep({
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
+            data-testid="form-account-password"
             value={formData.accountPassword}
             onChange={(e) => onInputChange('accountPassword', e.target.value)}
             className={`w-full px-3 py-2 pr-10 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
@@ -394,6 +413,7 @@ export default function AccountStep({
         <div className="relative">
           <input
             type={showPasswordConfirm ? "text" : "password"}
+            data-testid="form-account-password-confirm"
             value={formData.accountPasswordConfirm}
             onChange={(e) => onInputChange('accountPasswordConfirm', e.target.value)}
             className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"

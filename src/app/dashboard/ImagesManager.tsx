@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
 import { getMinImages, getMaxImages } from "@/lib/subscription-utils";
@@ -168,13 +167,15 @@ function SortableImage({
   );
 }
 
+const SESSION_EXPIRED_MESSAGE = 'Session expirée. Veuillez vous reconnecter.';
+
 export default function ImagesManager({ establishmentId, establishmentSlug, currentImageUrl, subscription = 'FREE' }: ImagesManagerProps) {
-  const { data: session, status } = useSession();
   const [images, setImages] = useState<string[]>([]);
   const [primaryImage, setPrimaryImage] = useState<string | null>(currentImageUrl || null);
   const [cardImageUrl, setCardImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [establishmentData, setEstablishmentData] = useState<any>(null);
 
   // ✅ NOUVEAU : Sensors pour le drag & drop
@@ -195,38 +196,19 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   // Log pour debug
   console.log('🔍 État des images:', { images: images.length, minImages, maxImages, canUploadMore, hasMinimumImages, subscription });
 
-  // Charger les images quand la session est prête
-  useEffect(() => {
-    console.log('🔍 État de la session:', { status, hasSession: !!session, hasUser: !!session?.user });
-    
-    if (status === 'authenticated' && session?.user) {
-      console.log('✅ Session authentifiée, chargement des images...');
-      loadImages();
-    } else if (status === 'unauthenticated') {
-      console.log('❌ Session non authentifiée');
-      setError('Session expirée. Veuillez vous reconnecter.');
-    } else if (status === 'loading') {
-      console.log('⏳ Session en cours de chargement...');
-    } else {
-      console.log('⚠️ État de session inattendu:', { status, session });
+  const markSessionExpired = useCallback((notify = false) => {
+    setSessionExpired(true);
+    setError(SESSION_EXPIRED_MESSAGE);
+    if (notify) {
+      toast.error(SESSION_EXPIRED_MESSAGE);
     }
-  }, [status, session]);
+  }, []);
 
   // Fonction pour charger les images avec retry et backoff
-  const loadImages = async (retryCount = 0) => {
+  const loadImages = useCallback(async (retryCount = 0) => {
     try {
-      // Vérifier l'authentification
-      if (status === 'loading' || status === 'unauthenticated') {
-        console.log('⏳ Session en cours de chargement...');
-        return;
-      }
-      
-      if (!session?.user) {
-        console.error('❌ Utilisateur non authentifié');
-        setError('Session expirée. Veuillez vous reconnecter.');
-        return;
-      }
-      
+      setIsLoading(true);
+      setSessionExpired(false);
       console.log('🔄 Chargement des images pour l\'établissement:', establishmentId);
       console.log('🔍 Appel API /api/etablissements/images (sans establishmentId - recherche par session)');
       
@@ -291,15 +273,26 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           loadImages(retryCount + 1);
         }, delay);
         return;
+      } else if (response.status === 401 || response.status === 403) {
+        console.warn('❌ Session Supabase expirée');
+        markSessionExpired(false);
+        return;
       } else {
         console.error('❌ Erreur lors du chargement des images:', response.status);
+        setError('Impossible de charger les images pour le moment.');
       }
     } catch (error) {
       console.error('❌ Erreur lors du chargement des images:', error);
+      setError('Erreur lors du chargement des images.');
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [establishmentId, markSessionExpired]);
 
-  // Note: Le chargement des images est maintenant géré par l'effet de session ci-dessus
+  // Charger les images une fois le composant monté
+  useEffect(() => {
+    loadImages();
+  }, [loadImages]);
 
   // Effet pour recharger les images quand establishmentData change
   useEffect(() => {
@@ -349,8 +342,8 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   }, [establishmentData, currentImageUrl]);
 
   // ✅ IMPORTANT : Les returns anticipés doivent être APRÈS tous les hooks
-  // Afficher un message si l'utilisateur n'est pas connecté
-  if (status === 'unauthenticated') {
+  // Afficher un message si la session Supabase a expiré
+  if (sessionExpired) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
         <div className="text-red-600 mb-4">
@@ -370,12 +363,12 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
     );
   }
 
-  // Afficher un loader pendant le chargement de la session
-  if (status === 'loading') {
+  // Afficher un loader pendant le chargement initial
+  if (isLoading && images.length === 0 && !error) {
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
-        <p className="text-gray-600">Chargement de votre session...</p>
+        <p className="text-gray-600">Chargement de vos images...</p>
       </div>
     );
   }
@@ -432,6 +425,30 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       setError(null);
       console.log('📤 Remplacement d\'image:', file.name);
 
+      // Compresser l'image si nécessaire
+      let fileToUpload = file;
+      const { compressImage, shouldCompressImage } = await import('@/lib/image-compression');
+      
+      if (shouldCompressImage(file, 5)) {
+        try {
+          console.log('🔄 Compression de l\'image...');
+          fileToUpload = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1920,
+            quality: 0.85,
+            maxSizeMB: 5
+          });
+          const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+          const compressedSizeMB = (fileToUpload.size / (1024 * 1024)).toFixed(2);
+          console.log(`✅ Image compressée: ${originalSizeMB}MB → ${compressedSizeMB}MB`);
+        } catch (compressionError) {
+          console.error('❌ Erreur compression:', compressionError);
+          setError('Erreur lors de la compression. Veuillez utiliser une image plus petite.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Si on a déjà une image, on la supprime d'abord
       if (images.length > 0) {
         console.log('🗑️ Suppression de l\'ancienne image avant remplacement');
@@ -440,7 +457,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
 
       // Maintenant on peut uploader la nouvelle image
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', fileToUpload);
       formData.append('establishmentId', establishmentId);
 
       const response = await fetch('/api/upload/image', {
@@ -470,13 +487,6 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
   const handleImageUpload = async (imageUrl: string) => {
     try {
       // Vérifier l'authentification
-      if (!session?.user) {
-        console.error('❌ Utilisateur non authentifié');
-        setError('Session expirée. Veuillez vous reconnecter.');
-        toast.error('Session expirée. Veuillez vous reconnecter.');
-        return;
-      }
-      
       setIsLoading(true);
       console.log('📸 handleImageUpload appelé avec:', imageUrl);
       
@@ -495,12 +505,16 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       toast.success('Image ajoutée avec succès !');
       
       // Forcer la synchronisation immédiate
-      const loadImages = async () => {
+      const refreshImages = async () => {
         try {
           console.log('🔄 Rechargement immédiat des images depuis l\'API...');
           const response = await fetch(`/api/etablissements/images`, {
             credentials: 'include'
           });
+          if (response.status === 401 || response.status === 403) {
+            markSessionExpired(true);
+            return;
+          }
           if (response.ok) {
             const data = await response.json();
             const establishmentImages = data.establishment.images || [];
@@ -516,7 +530,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
       };
       
       // Recharger immédiatement
-      await loadImages();
+      await refreshImages();
       
     } catch (error) {
       console.error('Erreur lors de l\'ajout de l\'image:', error);
@@ -667,7 +681,14 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
           }
           console.log('📁 Fichier sélectionné:', file.name, file.size, 'bytes');
           
-          // Appeler la fonction d'upload existante
+          // Vérifier la taille avant upload
+          const maxSize = 5 * 1024 * 1024; // 5MB
+          if (file.size > maxSize * 2) {
+            // Si le fichier est vraiment trop gros (plus de 10MB), avertir mais tenter quand même la compression
+            console.warn('⚠️ Fichier très volumineux, compression en cours...');
+          }
+          
+          // Appeler la fonction d'upload existante (qui compresse automatiquement)
           await handleFileUpload(file);
         }}
         className="hidden"

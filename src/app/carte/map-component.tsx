@@ -91,6 +91,9 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
           window.mapFavoriteHandlers.favorites.delete(establishmentId);
         }
         
+        // Recharger les favoris depuis l'API pour synchroniser l'état
+        window.mapFavoriteHandlers.checkFavorites();
+        
         // Forcer la mise à jour visuelle de tous les popups (ouverts ou fermés)
         if (window.mapInstance) {
           window.mapInstance.eachLayer((layer: any) => {
@@ -100,11 +103,13 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
               
               const content = popup.getContent();
               
-              if (content && content.includes(establishmentId)) {
+              // Chercher l'établissement dans le contenu HTML par data-establishment-id
+              if (content && content.includes(`data-establishment-id="${establishmentId}"`)) {
+                // Mettre à jour le DOM si le popup est ouvert
                 const popupElement = popup.getElement();
                 
                 if (popupElement) {
-                  const heartContainer = popupElement.querySelector('.popup-heart-icon');
+                  const heartContainer = popupElement.querySelector(`.popup-heart-icon[data-establishment-id="${establishmentId}"]`);
                   
                   if (heartContainer) {
                     const heartElement = heartContainer.querySelector('svg');
@@ -124,6 +129,26 @@ export default function MapComponent({ establishments, searchCenter, searchRadiu
                     }
                   }
                 }
+                
+                // Mettre à jour le contenu HTML du popup pour les futurs affichages
+                // Remplacer la classe et les attributs du SVG dans le HTML
+                let updatedContent = content;
+                
+                // Mettre à jour la classe du conteneur
+                updatedContent = updatedContent.replace(
+                  new RegExp(`(class="popup-heart-icon)([^"]*)"\\s+data-establishment-id="${establishmentId}"`, 'g'),
+                  `$1${isFavorite ? ' is-favorite' : ''}" data-establishment-id="${establishmentId}"`
+                );
+                
+                // Mettre à jour les attributs fill et stroke du SVG
+                const fillPattern = isFavorite ? 'fill="#ef4444" stroke="#ef4444"' : 'fill="none" stroke="currentColor"';
+                updatedContent = updatedContent.replace(
+                  new RegExp(`(data-establishment-id="${establishmentId}"[^>]*>\\s*<svg[^>]*?)(?:\\s+fill="[^"]*"\\s+stroke="[^"]*"|\\s+stroke="[^"]*"\\s+fill="[^"]*")`, 'g'),
+                  `$1 ${fillPattern}`
+                );
+                
+                // Mettre à jour le contenu du popup
+                popup.setContent(updatedContent);
               }
             }
           });

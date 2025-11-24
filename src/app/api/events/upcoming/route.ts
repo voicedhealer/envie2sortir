@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,73 +17,96 @@ export async function GET(request: NextRequest) {
     const city = searchParams.get('city');
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    const now = new Date();
+    const supabase = await createClient();
+    const now = new Date().toISOString();
     
-    // Récupérer les événements à venir ET en cours
-    const events = await prisma.event.findMany({
-      where: {
-        OR: [
-          {
-            // Événements futurs
-            startDate: {
-              gte: now
-            }
-          },
-          {
-            // Événements en cours (ont commencé mais pas encore terminés)
-            AND: [
-              { startDate: { lte: now } },
-              {
-                OR: [
-                  { endDate: { gte: now } },
-                  { endDate: null } // Événements sans date de fin
-                ]
-              }
-            ]
-          }
-        ],
-        establishment: {
-          status: 'approved', // Seulement les établissements approuvés
-          ...(city ? { city } : {})
-        }
-      },
-      include: {
-        establishment: {
-          select: {
-            id: true,
-            name: true,
-            slug: true,
-            city: true,
-            address: true,
-            latitude: true,
-            longitude: true
-          }
+    // Construire la requête Supabase pour les événements à venir ou en cours
+    // On récupère tous les événements récents (7 derniers jours) et on filtre ensuite
+    // pour gérer le cas où start_date = end_date
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    let query = supabase
+      .from('events')
+      .select(`
+        *,
+        establishment:establishments!events_establishment_id_fkey!inner (
+          id,
+          name,
+          slug,
+          city,
+          address,
+          latitude,
+          longitude
+        ),
+        engagements:event_engagements!event_engagements_event_id_fkey (
+          type
+        )
+      `)
+      .eq('establishments.status', 'approved')
+      .gte('start_date', sevenDaysAgo.toISOString())
+      .order('start_date', { ascending: true })
+      .limit(limit * 2); // Récupérer plus pour compenser le filtrage
+
+    // Filtrer par ville si spécifiée
+    if (city) {
+      query = query.eq('establishments.city', city);
+    }
+
+    const { data: events, error: eventsError } = await query;
+
+    if (eventsError) {
+      console.error('Erreur chargement événements:', eventsError);
+      return NextResponse.json(
+        { 
+          success: false,
+          error: "Erreur lors du chargement des événements",
+          details: process.env.NODE_ENV === 'production' ? undefined : eventsError.message,
+          code: process.env.NODE_ENV === 'production' ? undefined : eventsError.code,
+          events: []
         },
-        engagements: {
-          select: {
-            type: true
-          }
-        }
-      },
-      orderBy: {
-        startDate: 'asc'
-      },
-      take: limit
-    });
+        { status: 500 }
+      );
+    }
+
+    console.log(`📊 API /api/events/upcoming - ${events?.length || 0} événements trouvés avant filtrage horaires`);
 
     // 🔍 FILTRAGE PAR HORAIRES QUOTIDIENS pour les événements récurrents
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
+    const nowDate = new Date();
+    const currentHour = nowDate.getHours();
+    const currentMinute = nowDate.getMinutes();
     const currentTime = currentHour * 60 + currentMinute; // Convertir en minutes depuis minuit
     
-    const filteredEvents = events.filter(event => {
+    const filteredEvents = (events || []).filter((event: any) => {
       console.log(`🕐 [API Upcoming] Filtrage événement: "${event.title}"`);
       console.log(`🕐 [API Upcoming] Heure actuelle: ${currentHour}:${currentMinute} (${currentTime} minutes)`);
-      console.log(`🕐 [API Upcoming] Événement récurrent (DB): ${event.isRecurring}`);
+      console.log(`🕐 [API Upcoming] Événement récurrent (DB): ${event.is_recurring}`);
       
       // 🔍 DÉTECTION AUTOMATIQUE : Est-ce un événement récurrent ?
-      const startDate = new Date(event.startDate);
-      const endDate = event.endDate ? new Date(event.endDate) : null;
+      const startDate = new Date(event.start_date);
+      const endDate = event.end_date ? new Date(event.end_date) : null;
+      
+      // Si startDate et endDate sont identiques, considérer l'événement comme actif toute la journée
+      const isSameDayEvent = endDate && startDate.getTime() === endDate.getTime();
+      
+      if (isSameDayEvent) {
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+        const nowDay = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate());
+        
+        if (startDay.getTime() === nowDay.getTime()) {
+          // C'est aujourd'hui, l'événement est actif toute la journée
+          console.log(`✅ [API Upcoming] Événement "${event.title}" - Actif aujourd'hui (dates identiques)`);
+          return true;
+        } else if (startDay > nowDay) {
+          // C'est dans le futur
+          console.log(`✅ [API Upcoming] Événement "${event.title}" - À venir (dates identiques)`);
+          return true;
+        } else {
+          // C'est dans le passé
+          console.log(`❌ [API Upcoming] Événement "${event.title}" - Rejeté (déjà passé, dates identiques)`);
+          return false;
+        }
+      }
       
       // Calculer la durée en jours
       const durationInDays = endDate ? 
@@ -97,7 +120,7 @@ export async function GET(request: NextRequest) {
       
       // 🎯 LOGIQUE SIMPLIFIÉE : Tout événement multi-jours est récurrent pour le filtrage
       // Si un événement dure plus d'1 jour, il doit respecter ses horaires quotidiens
-      const isActuallyRecurring = event.isRecurring || durationInDays > 1;
+      const isActuallyRecurring = event.is_recurring || durationInDays > 1;
       
       console.log(`🕐 [API Upcoming] Durée: ${durationInDays} jours`);
       console.log(`🕐 [API Upcoming] Horaires: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
@@ -120,7 +143,7 @@ export async function GET(request: NextRequest) {
       const isWithinDailyHours = currentTime >= eventStartTime && currentTime <= eventEndTime;
       
       // Vérifier si l'événement est encore valide (pas expiré)
-      const isStillValid = !endDate || endDate >= now;
+      const isStillValid = !endDate || endDate >= nowDate;
       
       console.log(`🕐 [API Upcoming] Dans les horaires: ${isWithinDailyHours}`);
       console.log(`🕐 [API Upcoming] Encore valide: ${isStillValid}`);
@@ -131,8 +154,13 @@ export async function GET(request: NextRequest) {
       return isStillValid;
     });
 
+    console.log(`📊 API /api/events/upcoming - ${filteredEvents.length} événements après filtrage horaires`);
+
+    // Limiter le nombre d'événements retournés
+    const limitedEvents = filteredEvents.slice(0, limit);
+
     // Calculer le score d'engagement et le statut pour chaque événement
-    const eventsWithScore = filteredEvents.map(event => {
+    const eventsWithScore = limitedEvents.map((event: any) => {
       const SCORES = {
         'envie': 1,
         'grande-envie': 3,
@@ -140,7 +168,7 @@ export async function GET(request: NextRequest) {
         'pas-envie': -1
       };
 
-      const score = event.engagements.reduce((total, eng) => {
+      const score = (event.engagements || []).reduce((total: number, eng: any) => {
         return total + (SCORES[eng.type as keyof typeof SCORES] || 0);
       }, 0);
 
@@ -165,17 +193,45 @@ export async function GET(request: NextRequest) {
       let eventStatus = 'upcoming'; // Par défaut "à venir"
       
       // Si c'est un événement récurrent, vérifier les horaires quotidiens
-      const isRecurring = event.isRecurring || (event.endDate && 
-        Math.ceil((new Date(event.endDate).getTime() - new Date(event.startDate).getTime()) / (1000 * 60 * 60 * 24)) > 1);
+      // Conversion snake_case -> camelCase pour compatibilité
+      const eventDataFormatted = {
+        ...eventData,
+        id: eventData.id,
+        title: eventData.title,
+        description: eventData.description,
+        imageUrl: eventData.image_url,
+        establishmentId: eventData.establishment_id,
+        startDate: eventData.start_date,
+        endDate: eventData.end_date,
+        price: eventData.price,
+        priceUnit: eventData.price_unit,
+        maxCapacity: eventData.max_capacity,
+        isRecurring: eventData.is_recurring,
+        modality: eventData.modality,
+        createdAt: eventData.created_at,
+        updatedAt: eventData.updated_at,
+        establishment: eventData.establishment ? {
+          id: eventData.establishment.id,
+          name: eventData.establishment.name,
+          slug: eventData.establishment.slug,
+          city: eventData.establishment.city,
+          address: eventData.establishment.address,
+          latitude: eventData.establishment.latitude,
+          longitude: eventData.establishment.longitude
+        } : null
+      };
+
+      const isRecurring = eventDataFormatted.isRecurring || (eventDataFormatted.endDate && 
+        Math.ceil((new Date(eventDataFormatted.endDate).getTime() - new Date(eventDataFormatted.startDate).getTime()) / (1000 * 60 * 60 * 24)) > 1);
       
       if (isRecurring) {
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : null;
+        const startDate = new Date(eventDataFormatted.startDate);
+        const endDate = eventDataFormatted.endDate ? new Date(eventDataFormatted.endDate) : null;
         
         // D'abord vérifier si l'événement a déjà commencé selon sa date de début
-        if (now < startDate) {
+        if (nowDate < startDate) {
           eventStatus = 'upcoming'; // Pas encore commencé
-        } else if (endDate && now > endDate) {
+        } else if (endDate && nowDate > endDate) {
           eventStatus = 'past'; // Terminé
         } else {
           // L'événement est dans sa période de validité, vérifier les horaires quotidiens
@@ -186,7 +242,7 @@ export async function GET(request: NextRequest) {
           
           const eventStartTime = eventStartHour * 60 + eventStartMinute;
           const eventEndTime = eventEndHour * 60 + eventEndMinute;
-          const currentTime = now.getHours() * 60 + now.getMinutes();
+          const currentTime = nowDate.getHours() * 60 + nowDate.getMinutes();
           
           // Si on est dans les horaires quotidiens, l'événement est "en cours"
           if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
@@ -195,18 +251,18 @@ export async function GET(request: NextRequest) {
         }
       } else {
         // Pour les événements ponctuels, vérifier si on est dans la période
-        const startDate = new Date(event.startDate);
-        const endDate = event.endDate ? new Date(event.endDate) : null;
+        const startDate = new Date(eventDataFormatted.startDate);
+        const endDate = eventDataFormatted.endDate ? new Date(eventDataFormatted.endDate) : null;
         
-        if (now >= startDate && (!endDate || now <= endDate)) {
+        if (nowDate >= startDate && (!endDate || nowDate <= endDate)) {
           eventStatus = 'ongoing';
         }
       }
 
       return {
-        ...eventData,
+        ...eventDataFormatted,
         engagementScore: score,
-        engagementCount: engagements.length,
+        engagementCount: (engagements || []).length,
         gaugePercentage,
         eventBadge,
         status: eventStatus

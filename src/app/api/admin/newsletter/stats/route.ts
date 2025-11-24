@@ -1,57 +1,65 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
+import { isAdmin } from "@/lib/supabase/helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const userIsAdmin = await isAdmin();
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Accès non autorisé' }, { status: 403 });
+    }
+
+    const supabase = await createClient();
     const now = new Date();
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     // Statistiques générales
     const [
-      totalSubscribers,
-      activeSubscribers,
-      verifiedSubscribers,
-      newThisWeek,
-      unsubscribedThisWeek
+      totalSubscribersResult,
+      activeSubscribersResult,
+      verifiedSubscribersResult,
+      newThisWeekResult,
+      unsubscribedThisWeekResult
     ] = await Promise.all([
-      // Total des abonnés (tous ceux qui ont newsletterOptIn = true)
-      prisma.user.count({
-        where: { newsletterOptIn: true }
-      }),
+      // Total des abonnés (tous ceux qui ont newsletter_opt_in = true)
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('newsletter_opt_in', true),
       
-      // Abonnés actifs (newsletterOptIn = true ET isVerified = true)
-      prisma.user.count({
-        where: { 
-          newsletterOptIn: true,
-          isVerified: true
-        }
-      }),
+      // Abonnés actifs (newsletter_opt_in = true ET is_verified = true)
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('newsletter_opt_in', true)
+        .eq('is_verified', true),
       
       // Abonnés vérifiés
-      prisma.user.count({
-        where: { isVerified: true }
-      }),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_verified', true),
       
       // Nouveaux abonnés cette semaine
-      prisma.user.count({
-        where: {
-          newsletterOptIn: true,
-          createdAt: {
-            gte: oneWeekAgo
-          }
-        }
-      }),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('newsletter_opt_in', true)
+        .gte('created_at', oneWeekAgo),
       
       // Désabonnements cette semaine (approximatif)
-      prisma.user.count({
-        where: {
-          newsletterOptIn: false,
-          updatedAt: {
-            gte: oneWeekAgo
-          }
-        }
-      })
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('newsletter_opt_in', false)
+        .gte('updated_at', oneWeekAgo)
     ]);
+
+    const totalSubscribers = totalSubscribersResult.count || 0;
+    const activeSubscribers = activeSubscribersResult.count || 0;
+    const verifiedSubscribers = verifiedSubscribersResult.count || 0;
+    const newThisWeek = newThisWeekResult.count || 0;
+    const unsubscribedThisWeek = unsubscribedThisWeekResult.count || 0;
 
     const stats = {
       totalSubscribers,

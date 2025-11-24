@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/supabase/helpers";
 
 /**
  * API pour incrémenter les statistiques d'un établissement
@@ -27,13 +26,16 @@ export async function POST(
       );
     }
 
-    // Vérifier que l'établissement existe
-    const establishment = await prisma.establishment.findUnique({
-      where: { id },
-      select: { id: true, name: true, status: true, ownerId: true }
-    });
+    const supabase = await createClient();
 
-    if (!establishment) {
+    // Vérifier que l'établissement existe
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name, status, owner_id, views_count, clicks_count')
+      .eq('id', id)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: "Établissement non trouvé" },
         { status: 404 }
@@ -41,8 +43,8 @@ export async function POST(
     }
 
     // ✅ CORRECTION : Vérifier si c'est le propriétaire qui consulte
-    const session = await getServerSession(authOptions);
-    if (session?.user?.id === establishment.ownerId) {
+    const user = await getCurrentUser();
+    if (user && user.id === establishment.owner_id) {
       console.log('🔒 Vue/click du propriétaire ignorée pour:', establishment.name);
       return NextResponse.json({
         success: true,
@@ -68,30 +70,48 @@ export async function POST(
     }
 
     // Incrémenter la statistique appropriée
-    const updateData = action === 'view' 
-      ? { viewsCount: { increment: 1 } }
-      : { clicksCount: { increment: 1 } };
+    const currentViews = establishment.views_count || 0;
+    const currentClicks = establishment.clicks_count || 0;
+    
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    
+    if (action === 'view') {
+      updateData.views_count = currentViews + 1;
+    } else {
+      updateData.clicks_count = currentClicks + 1;
+    }
 
-    const updatedEstablishment = await prisma.establishment.update({
-      where: { id },
-      data: updateData,
-      select: {
-        id: true,
-        name: true,
-        viewsCount: true,
-        clicksCount: true
-      }
-    });
+    const { data: updatedEstablishment, error: updateError } = await supabase
+      .from('establishments')
+      .update(updateData)
+      .eq('id', id)
+      .select('id, name, views_count, clicks_count')
+      .single();
+
+    if (updateError || !updatedEstablishment) {
+      console.error('Erreur incrémentation statistique:', updateError);
+      return NextResponse.json(
+        { error: "Erreur lors de l'incrémentation des statistiques" },
+        { status: 500 }
+      );
+    }
 
     console.log(`📊 Statistique ${action} incrémentée pour ${establishment.name}:`, {
-      viewsCount: updatedEstablishment.viewsCount,
-      clicksCount: updatedEstablishment.clicksCount
+      viewsCount: updatedEstablishment.views_count,
+      clicksCount: updatedEstablishment.clicks_count
     });
 
     return NextResponse.json({
       success: true,
       action,
-      establishment: updatedEstablishment
+      establishment: {
+        id: updatedEstablishment.id,
+        name: updatedEstablishment.name,
+        viewsCount: updatedEstablishment.views_count,
+        clicksCount: updatedEstablishment.clicks_count
+      }
     });
 
   } catch (error) {

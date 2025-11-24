@@ -1,42 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
+import { getCurrentUser } from '@/lib/supabase/helpers';
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
     
-    if (!session || !session.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    if (!user || user.userType !== 'user') {
+      return NextResponse.json({ error: 'Non authentifié ou accès refusé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (session.user.userType !== 'user' && session.user.role !== 'user') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
+    const supabase = await createClient();
     const { id: favoriteId } = await params;
 
     // Vérifier que le favori appartient à l'utilisateur
-    const favorite = await prisma.userFavorite.findFirst({
-      where: {
-        id: favoriteId,
-        userId: session.user.id
-      }
-    });
+    const { data: favorite, error: favoriteError } = await supabase
+      .from('user_favorites')
+      .select('*')
+      .eq('id', favoriteId)
+      .eq('user_id', user.id)
+      .single();
 
-    if (!favorite) {
+    if (favoriteError || !favorite) {
       return NextResponse.json({ error: 'Favori introuvable' }, { status: 404 });
     }
 
     // Supprimer le favori
-    await prisma.userFavorite.delete({
-      where: { id: favoriteId }
-    });
+    const { error: deleteError } = await supabase
+      .from('user_favorites')
+      .delete()
+      .eq('id', favoriteId);
+
+    if (deleteError) {
+      console.error('Erreur suppression favori:', deleteError);
+      return NextResponse.json({ error: 'Erreur lors de la suppression du favori' }, { status: 500 });
+    }
 
     return NextResponse.json({ 
       success: true,

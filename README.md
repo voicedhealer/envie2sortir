@@ -42,13 +42,13 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 - **Données hybrides** : automatiques + manuelles
 
 ### 🔐 Système d'Authentification
-- **NextAuth.js** avec support multi-providers
+- **Supabase Auth** avec support multi-providers
 - **Connexion par email/mot de passe**
-- **Connexion sociale** (Google, Facebook) - optionnelle
+- **Connexion sociale** (Google, Facebook) via OAuth
 - **Rôles utilisateurs** : Admin, Professionnel, Utilisateur
 - **Architecture cohérente** : User (utilisateurs finaux) ↔ Professional (propriétaires) ↔ Establishment
-- **Protection des routes** avec middleware
-- **Gestion des sessions** avec hydratation optimisée
+- **Protection des routes** avec middleware Supabase
+- **Gestion des sessions** avec Supabase Auth (cookies sécurisés)
 
 ### 👥 Espaces Utilisateurs
 - **Espace Professionnel** : Dashboard complet pour gérer son établissement
@@ -79,9 +79,11 @@ Une plateforme moderne et intuitive pour découvrir tous les établissements de 
 
 - **Frontend** : Next.js 15, React 19, TypeScript
 - **Styling** : Tailwind CSS 4 avec thème personnalisé
-- **Base de données** : SQLite avec Prisma ORM
+- **Base de données** : PostgreSQL avec Supabase
+- **ORM/Client** : Supabase Client (remplace Prisma)
 - **Cartographie** : Leaflet.js
-- **Authentification** : NextAuth.js
+- **Authentification** : Supabase Auth (remplace NextAuth.js)
+- **Storage** : Supabase Storage pour les fichiers et images
 - **Géolocalisation** : API Web Geolocation + Nominatim
 - **Enrichissement** : Google Places API
 - **Déploiement** : Prêt pour Vercel/Netlify
@@ -584,9 +586,9 @@ graph TB
 
     class UI,Pages,Components,Auth,Maps frontend
     class API,AuthAPI,SearchAPI,EstabAPI,UploadAPI,AdminAPI backend
-    class DB,Prisma,Models database
+    class DB,Supabase,PostgreSQL database
     class GooglePlaces,GoogleMaps,SIRET,TheFork,UberEats external
-    class LocalStorage,Uploads storage
+    class SupabaseStorage,Storage storage
 ```
 
 ### Description de l'Architecture
@@ -595,7 +597,7 @@ graph TB
 - **Interface Utilisateur** : Interface moderne avec Tailwind CSS utilisant la palette de couleurs orange-pink-rouge
 - **Pages Next.js** : Pages statiques et dynamiques pour la navigation
 - **Composants React** : Composants réutilisables (cartes d'établissements, formulaires, etc.)
-- **NextAuth.js** : Authentification avec support Google/Facebook et credentials
+- **Supabase Auth** : Authentification avec support Google/Facebook OAuth et email/password
 - **React Leaflet** : Cartes interactives pour la géolocalisation
 
 #### ⚙️ **Backend (Next.js API Routes)**
@@ -606,10 +608,11 @@ graph TB
 - **Upload API** : Gestion des images et fichiers
 - **Admin API** : Administration et modération
 
-#### 🗄️ **Base de Données (SQLite + Prisma)**
-- **SQLite** : Base de données relationnelle pour le développement
-- **Prisma ORM** : Gestion des modèles et migrations
-- **Modèles** : 15+ modèles (User, Establishment, Event, Comment, etc.)
+#### 🗄️ **Base de Données (PostgreSQL + Supabase)**
+- **PostgreSQL** : Base de données relationnelle via Supabase
+- **Supabase Client** : Client JavaScript pour les requêtes et l'authentification
+- **RLS (Row Level Security)** : Sécurité au niveau des lignes pour toutes les tables
+- **Modèles** : 19+ tables (users, professionals, establishments, events, comments, etc.)
 
 #### 🌐 **Services Externes**
 - **Google Places API** : Enrichissement automatique des établissements
@@ -620,15 +623,16 @@ graph TB
 - **Uber Eats** : Liens de livraison
 
 #### 📁 **Stockage Fichiers**
-- **Stockage Local** : Images et fichiers uploadés
-- **Uploads Directory** : Dossier public pour les médias
+- **Supabase Storage** : Stockage cloud pour images et fichiers
+- **Buckets** : 5 buckets configurés (establishments, events, deals, menus, avatars)
+- **CDN** : URLs publiques via CDN Supabase pour les médias
 
 ### Flux de Données Principaux
 
-1. **Recherche d'Établissements** : `Utilisateur → Interface → API Recherche → Prisma → SQLite + Google Places`
-2. **Authentification** : `Utilisateur → NextAuth → Auth API → Prisma → SQLite + OAuth`
-3. **Création d'Établissement** : `Professionnel → Formulaire → API Établissements → Prisma → SQLite + Google Places`
-4. **Upload d'Images** : `Utilisateur → Upload API → Stockage Local → Dossier Public`
+1. **Recherche d'Établissements** : `Utilisateur → Interface → API Recherche → Supabase → PostgreSQL + Google Places`
+2. **Authentification** : `Utilisateur → Supabase Auth → Auth API → Supabase → PostgreSQL + OAuth`
+3. **Création d'Établissement** : `Professionnel → Formulaire → API Établissements → Supabase → PostgreSQL + Google Places`
+4. **Upload d'Images** : `Utilisateur → Upload API → Supabase Storage → CDN Public`
 
 ## 🎨 Design System
 

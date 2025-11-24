@@ -22,8 +22,8 @@
 
 
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { requireEstablishment } from "@/lib/auth-utils";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser, requireEstablishment } from "@/lib/supabase/helpers";
 
 /**
  * Types pour la validation des données
@@ -143,10 +143,18 @@ export async function PUT(
         id: 'dev-user',
         email: 'dev@example.com',
         role: 'pro',
+        userType: 'professional' as const,
         establishmentId: 'dev-establishment'
       };
     } else {
-      user = await requireEstablishment(request);
+      try {
+        user = await requireEstablishment();
+      } catch (error: any) {
+        return NextResponse.json(
+          { error: error.message || "Authentification requise" },
+          { status: 401 }
+        );
+      }
     }
     
     console.log('🔍 Debug permissions:', {
@@ -185,25 +193,41 @@ export async function PUT(
       );
     }
 
+    // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels authentifiés)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.error('❌ [PUT Establishment] Clés Supabase manquantes');
+      return NextResponse.json(
+        { error: 'Configuration Supabase manquante' },
+        { status: 500 }
+      );
+    }
+
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabase = createClientAdmin(supabaseUrl, serviceKey, {
+      auth: { persistSession: false }
+    });
+
     // Vérifier si l'établissement existe
     console.log('🔍 Recherche d\'établissement avec slug:', slug);
-    const existing = await prisma.establishment.findUnique({
-      where: { slug },
-      include: {
-        owner: true // Inclure les infos du propriétaire
-      }
-    });
-    console.log('🔍 Établissement trouvé:', existing ? 'OUI' : 'NON');
-    if (existing) {
-      console.log('🔍 Détails:', {
-        id: existing.id,
-        name: existing.name,
-        status: existing.status,
-        ownerId: existing.ownerId
-      });
-    }
+    const { data: existing, error: existingError } = await supabase
+      .from('establishments')
+      .select(`
+        *,
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .eq('slug', slug)
+      .single();
     
-    if (!existing) {
+    console.log('🔍 Établissement trouvé:', existing ? 'OUI' : 'NON');
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: "Établissement non trouvé" },
         { status: 404 }
@@ -213,22 +237,22 @@ export async function PUT(
     console.log('🔍 Debug establishment:', {
       establishmentId: existing.id,
       establishmentName: existing.name,
-      establishmentOwnerId: existing.ownerId,
+      establishmentOwnerId: existing.owner_id,
       ownerEmail: existing.owner?.email,
-      ownerName: existing.owner?.firstName + ' ' + existing.owner?.lastName
+      ownerName: existing.owner ? `${existing.owner.first_name} ${existing.owner.last_name}` : null
     });
 
     // Vérifier que l'utilisateur est le propriétaire de l'établissement
     console.log('🔍 Debug permissions:', {
-      establishmentOwnerId: existing.ownerId,
+      establishmentOwnerId: existing.owner_id,
       currentUserId: user.id,
       userEmail: user.email,
       userRole: user.role
     });
     
-    if (!isDevelopment && existing.ownerId !== user.id) {
+    if (!isDevelopment && existing.owner_id !== user.id) {
       console.error('❌ Accès refusé:', {
-        establishmentOwnerId: existing.ownerId,
+        establishmentOwnerId: existing.owner_id,
         currentUserId: user.id,
         establishmentName: existing.name
       });
@@ -248,9 +272,11 @@ export async function PUT(
 
     // Vérifier si le nouveau slug existe déjà (sauf pour l'établissement actuel)
     if (newSlug !== slug) {
-      const slugExists = await prisma.establishment.findUnique({
-        where: { slug: newSlug },
-      });
+      const { data: slugExists } = await supabase
+        .from('establishments')
+        .select('id')
+        .eq('slug', newSlug)
+        .single();
       
       if (slugExists) {
         return NextResponse.json(
@@ -265,6 +291,7 @@ export async function PUT(
     }
 
     // Préparer les données de mise à jour (seulement les champs fournis)
+    // Convertir camelCase vers snake_case pour Supabase
     const updateData: any = {};
     
     // Mettre à jour le slug si nécessaire
@@ -272,12 +299,12 @@ export async function PUT(
       updateData.slug = newSlug;
     }
     
-    // Mettre à jour seulement les champs fournis
+    // Mettre à jour seulement les champs fournis (conversion camelCase -> snake_case)
     if (body.name !== undefined) updateData.name = body.name;
     if (body.description !== undefined) updateData.description = body.description;
     if (body.address !== undefined) updateData.address = body.address;
     if (body.city !== undefined) updateData.city = body.city;
-    if (body.postalCode !== undefined) updateData.postalCode = body.postalCode;
+    if (body.postalCode !== undefined) updateData.postal_code = body.postalCode;
     if (body.phone !== undefined) updateData.phone = body.phone;
     if (body.email !== undefined) updateData.email = body.email;
     if (body.website !== undefined) updateData.website = body.website;
@@ -285,13 +312,13 @@ export async function PUT(
     if (body.facebook !== undefined) updateData.facebook = body.facebook;
     if (body.tiktok !== undefined) updateData.tiktok = body.tiktok;
     if (body.youtube !== undefined) updateData.youtube = body.youtube;
-    if (body.whatsappPhone !== undefined) updateData.whatsappPhone = body.whatsappPhone;
-    if (body.messengerUrl !== undefined) updateData.messengerUrl = body.messengerUrl;
-    if (body.imageUrl !== undefined) updateData.imageUrl = body.imageUrl;
+    if (body.whatsappPhone !== undefined) updateData.whatsapp_phone = body.whatsappPhone;
+    if (body.messengerUrl !== undefined) updateData.messenger_url = body.messengerUrl;
+    if (body.imageUrl !== undefined) updateData.image_url = body.imageUrl;
     if (body.status !== undefined) updateData.status = body.status;
-    if (body.priceMin !== undefined) updateData.priceMin = body.priceMin;
-    if (body.priceMax !== undefined) updateData.priceMax = body.priceMax;
-    if (body.informationsPratiques !== undefined) updateData.informationsPratiques = body.informationsPratiques;
+    if (body.priceMin !== undefined) updateData.price_min = body.priceMin;
+    if (body.priceMax !== undefined) updateData.price_max = body.priceMax;
+    if (body.informationsPratiques !== undefined) updateData.informations_pratiques = typeof body.informationsPratiques === 'string' ? body.informationsPratiques : JSON.stringify(body.informationsPratiques);
     if (body.subscription !== undefined) updateData.subscription = body.subscription;
 
     // Ajouter les coordonnées GPS si fournies
@@ -319,90 +346,98 @@ export async function PUT(
 
     // Gérer les moyens de paiement (array ou JSON string)
     if (body.paymentMethods) {
-      updateData.paymentMethods = Array.isArray(body.paymentMethods) 
+      updateData.payment_methods = Array.isArray(body.paymentMethods) 
         ? JSON.stringify(body.paymentMethods)
         : body.paymentMethods;
     }
 
     // Gérer les horaires d'ouverture
     if (body.horairesOuverture) {
-      updateData.horairesOuverture = JSON.stringify(body.horairesOuverture);
+      updateData.horaires_ouverture = typeof body.horairesOuverture === 'string' ? body.horairesOuverture : JSON.stringify(body.horairesOuverture);
     } else if (body.hours) {
-      updateData.horairesOuverture = JSON.stringify(body.hours);
+      updateData.horaires_ouverture = JSON.stringify(body.hours);
     }
-    
     
     // Gérer les envie tags (stockés dans le champ envieTags)
     if (body.envieTags) {
-      updateData.envieTags = Array.isArray(body.envieTags) 
+      updateData.envie_tags = Array.isArray(body.envieTags) 
         ? JSON.stringify(body.envieTags)
         : body.envieTags;
     }
 
-    // Mettre à jour l'établissement dans une transaction
-    const establishment = await prisma.$transaction(async (tx) => {
-      const establishment = await tx.establishment.update({
-        where: { slug },
-        data: updateData,
-        include: {
-          images: true,
-          events: {
-            orderBy: { startDate: "asc" },
-            take: 5 // Limiter à 5 événements récents
-          },
-          owner: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          _count: {
-            select: {
-              favorites: true,
-              likes: true,
-              comments: true
-            }
-          }
-        },
+    // Mettre à jour l'établissement (sans relations pour éviter les problèmes)
+    const { data: establishment, error: updateError } = await supabase
+      .from('establishments')
+      .update(updateData)
+      .eq('slug', slug)
+      .select('*')
+      .single();
+
+    if (updateError) {
+      console.error('❌ [PUT Establishment] Erreur mise à jour établissement:', {
+        error: updateError,
+        code: updateError?.code,
+        message: updateError?.message,
+        details: updateError?.details,
+        hint: updateError?.hint,
+        slug,
+        updateDataKeys: Object.keys(updateData)
       });
+      return NextResponse.json(
+        { 
+          error: "Erreur lors de la mise à jour",
+          details: updateError.message,
+          code: updateError.code
+        },
+        { status: 500 }
+      );
+    }
 
-      // Gérer les tags après la mise à jour de l'établissement
-      if (body.tags && Array.isArray(body.tags)) {
-        // Supprimer les anciens tags
-        await tx.etablissementTag.deleteMany({
-          where: { etablissementId: establishment.id }
-        });
+    // Gérer les tags après la mise à jour de l'établissement
+    if (body.tags && Array.isArray(body.tags)) {
+      // Supprimer les anciens tags
+      await supabase
+        .from('etablissement_tags')
+        .delete()
+        .eq('etablissement_id', establishment.id);
 
-        // Créer les nouveaux tags
+      // Créer les nouveaux tags
+      if (body.tags.length > 0) {
         const tagsToCreate = body.tags.map(tag => ({
-          etablissementId: establishment.id,
+          etablissement_id: establishment.id,
           tag: tag.toLowerCase(),
-          typeTag: 'manuel',
+          type_tag: 'manuel',
           poids: 10
         }));
         
-        if (tagsToCreate.length > 0) {
-          await tx.etablissementTag.createMany({
-            data: tagsToCreate
-          });
-        }
+        await supabase
+          .from('etablissement_tags')
+          .insert(tagsToCreate);
       }
+    }
 
-    });
+    // Récupérer les données supplémentaires séparément
+    const [favoritesCountResult, likesCountResult, commentsCountResult, imagesResult, eventsResult, ownerResult] = await Promise.all([
+      supabase.from('user_favorites').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('user_likes').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('images').select('id, url, alt_text, is_primary, is_card_image, ordre').eq('establishment_id', establishment.id).order('ordre', { ascending: true }),
+      supabase.from('events').select('id, title, start_date, end_date').eq('establishment_id', establishment.id).gte('start_date', new Date().toISOString()).order('start_date', { ascending: true }).limit(5),
+      supabase.from('professionals').select('id, first_name, last_name, email').eq('id', establishment.owner_id).single()
+    ]);
 
-    // Parser tous les champs JSON pour la réponse
-    console.log('🔍 Debug establishment object:', {
-      hasEstablishment: !!establishment,
-      activities: establishment?.activities,
-      services: establishment?.services,
-      ambiance: establishment?.ambiance
-    });
-    
+    const favoritesCount = favoritesCountResult.count || 0;
+    const likesCount = likesCountResult.count || 0;
+    const commentsCount = commentsCountResult.count || 0;
+    const images = imagesResult.data || [];
+    const sortedEvents = eventsResult.data || [];
+    const owner = ownerResult.data;
+
     // Parser les JSON fields avec gestion des erreurs
     const parseJsonField = (field: any) => {
-      if (!field || typeof field !== 'string') return field;
+      if (!field) return null;
+      if (typeof field === 'object') return field;
+      if (typeof field !== 'string') return field;
       try {
         return JSON.parse(field);
       } catch (error) {
@@ -413,13 +448,26 @@ export async function PUT(
 
     const response = {
       ...establishment,
+      images: images,
+      events: sortedEvents,
+      owner: owner ? {
+        id: owner.id,
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+        email: owner.email
+      } : null,
+      _count: {
+        favorites: favoritesCount,
+        likes: likesCount,
+        comments: commentsCount
+      },
       activities: parseJsonField(establishment.activities) || [],
       services: parseJsonField(establishment.services) || [],
       ambiance: parseJsonField(establishment.ambiance) || [],
-      paymentMethods: parseJsonField(establishment.paymentMethods) || [],
-      horairesOuverture: parseJsonField(establishment.horairesOuverture) || {},
-      envieTags: parseJsonField(establishment.envieTags) || [],
-      informationsPratiques: parseJsonField(establishment.informationsPratiques) || [],
+      paymentMethods: parseJsonField(establishment.payment_methods) || [],
+      horairesOuverture: parseJsonField(establishment.horaires_ouverture) || {},
+      envieTags: parseJsonField(establishment.envie_tags) || [],
+      informationsPratiques: parseJsonField(establishment.informations_pratiques) || [],
     };
 
     return NextResponse.json({
@@ -475,17 +523,34 @@ export async function DELETE(
   try {
     // ✅ Await params pour Next.js 15
     const { slug } = await params;
+    const supabase = await createClient();
 
     // Vérifier l'authentification et les permissions
-    const user = await requireEstablishment();
+    let user;
+    try {
+      user = await requireEstablishment();
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || "Authentification requise" },
+        { status: 401 }
+      );
+    }
     
     // Vérifier si l'établissement existe et récupérer les infos
-    const existing = await prisma.establishment.findUnique({
-      where: { slug },
-      include: { owner: true }
-    });
+    const { data: existing, error: existingError } = await supabase
+      .from('establishments')
+      .select(`
+        *,
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          first_name,
+          last_name
+        )
+      `)
+      .eq('slug', slug)
+      .single();
 
-    if (!existing) {
+    if (existingError || !existing) {
       return NextResponse.json(
         { error: "Établissement non trouvé" },
         { status: 404 }
@@ -493,42 +558,54 @@ export async function DELETE(
     }
 
     // Vérifier que l'utilisateur est le propriétaire de l'établissement
-    if (existing.ownerId !== user.id) {
+    if (existing.owner_id !== user.id) {
       return NextResponse.json(
         { error: "Accès refusé - Seul le propriétaire peut supprimer cet établissement" },
         { status: 403 }
       );
     }
 
+    // Récupérer les statistiques avant suppression
+    const [favoritesCount, likesCount, commentsCount, imagesCount, eventsCount] = await Promise.all([
+      supabase.from('user_favorites').select('id', { count: 'exact', head: true }).eq('establishment_id', existing.id),
+      supabase.from('user_likes').select('id', { count: 'exact', head: true }).eq('establishment_id', existing.id),
+      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', existing.id),
+      supabase.from('images').select('id', { count: 'exact', head: true }).eq('establishment_id', existing.id),
+      supabase.from('events').select('id', { count: 'exact', head: true }).eq('establishment_id', existing.id)
+    ]);
 
-
-    // Statistiques avant suppression pour le log
     const deletionStats = {
       name: existing.name,
-      owner: existing.owner.firstName + ' ' + existing.owner.lastName,
-      favoriteCount: existing._count.favorites,
-      likeCount: existing._count.likes,
-      commentCount: existing._count.comments,
-      imageCount: existing._count.images,
-      eventCount: existing._count.events
+      owner: existing.owner ? `${existing.owner.first_name} ${existing.owner.last_name}` : 'Inconnu',
+      favoriteCount: favoritesCount.count || 0,
+      likeCount: likesCount.count || 0,
+      commentCount: commentsCount.count || 0,
+      imageCount: imagesCount.count || 0,
+      eventCount: eventsCount.count || 0
     };
 
-    // Supprimer l'établissement dans une transaction
-    // La suppression en cascade est automatiquement gérée par Prisma
-    await prisma.$transaction(async (tx) => {
-      await tx.establishment.delete({
-        where: { slug },
-      });
+    // Supprimer l'établissement (la suppression en cascade est gérée par les foreign keys)
+    const { error: deleteError } = await supabase
+      .from('establishments')
+      .delete()
+      .eq('slug', slug);
 
-      // Log détaillé de la suppression pour audit
-      console.log(`🗑️ Établissement supprimé: ${deletionStats.name}`);
-      console.log(`   Propriétaire: ${deletionStats.owner}`);
-      console.log(`   Données supprimées: ${deletionStats.favoriteCount} favoris, ${deletionStats.likeCount} likes, ${deletionStats.commentCount} commentaires`);
-      console.log(`   Médias supprimés: ${deletionStats.imageCount} images, ${deletionStats.eventCount} événements`);
-    });
+    if (deleteError) {
+      console.error('Erreur suppression établissement:', deleteError);
+      return NextResponse.json(
+        { error: "Erreur lors de la suppression" },
+        { status: 500 }
+      );
+    }
 
-    // TODO: Supprimer les fichiers images du stockage (Cloudinary, S3, etc.)
-    // if (existing.images.length > 0) {
+    // Log détaillé de la suppression pour audit
+    console.log(`🗑️ Établissement supprimé: ${deletionStats.name}`);
+    console.log(`   Propriétaire: ${deletionStats.owner}`);
+    console.log(`   Données supprimées: ${deletionStats.favoriteCount} favoris, ${deletionStats.likeCount} likes, ${deletionStats.commentCount} commentaires`);
+    console.log(`   Médias supprimés: ${deletionStats.imageCount} images, ${deletionStats.eventCount} événements`);
+
+    // TODO: Supprimer les fichiers images du stockage Supabase
+    // if (deletionStats.imageCount > 0) {
     //   await deleteImagesFromStorage(existing.images.map(img => img.url));
     // }
 
@@ -561,44 +638,56 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
+    const supabase = await createClient();
     
-    const establishment = await prisma.establishment.findUnique({
-      where: { slug },
-      include: {
-        images: true,
-        events: {
-          where: { startDate: { gte: new Date() } },
-          orderBy: { startDate: "asc" },
-          take: 10
-        },
-        owner: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true
-          }
-        },
-        _count: {
-          select: {
-            favorites: true,
-            likes: true,
-            comments: true
-          }
-        }
-      }
-    });
+    // Récupérer l'établissement avec relations
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select(`
+        *,
+        images (*),
+        events (*),
+        owner:professionals!establishments_owner_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone
+        )
+      `)
+      .eq('slug', slug)
+      .eq('status', 'approved')
+      .single();
     
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json(
         { error: "Établissement non trouvé" },
         { status: 404 }
       );
     }
 
+    // Récupérer les compteurs (favorites, likes, comments)
+    const [favoritesCount, likesCount, commentsCount] = await Promise.all([
+      supabase.from('user_favorites').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('user_likes').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
+      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id)
+    ]);
+
+    // Filtrer les événements à venir et trier
+    const now = new Date().toISOString();
+    const upcomingEvents = (establishment.events || [])
+      .filter((event: any) => event.start_date >= now)
+      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+      .slice(0, 10);
+
+    // Trier les images par ordre
+    const sortedImages = (establishment.images || []).sort((a: any, b: any) => a.ordre - b.ordre);
+
     // Parser les JSON fields avec gestion des erreurs
     const parseJsonField = (field: any) => {
-      if (!field || typeof field !== 'string') return field;
+      if (!field) return null;
+      if (typeof field === 'object') return field;
+      if (typeof field !== 'string') return field;
       try {
         return JSON.parse(field);
       } catch (error) {
@@ -609,13 +698,26 @@ export async function GET(
 
     const response = {
       ...establishment,
+      images: sortedImages,
+      events: upcomingEvents,
+      owner: establishment.owner ? {
+        firstName: establishment.owner.first_name,
+        lastName: establishment.owner.last_name,
+        email: establishment.owner.email,
+        phone: establishment.owner.phone
+      } : null,
+      _count: {
+        favorites: favoritesCount.count || 0,
+        likes: likesCount.count || 0,
+        comments: commentsCount.count || 0
+      },
       activities: parseJsonField(establishment.activities) || [],
       services: parseJsonField(establishment.services) || [],
       ambiance: parseJsonField(establishment.ambiance) || [],
-      paymentMethods: parseJsonField(establishment.paymentMethods) || [],
-      horairesOuverture: parseJsonField(establishment.horairesOuverture) || {},
-      envieTags: parseJsonField(establishment.envieTags) || [],
-      informationsPratiques: parseJsonField(establishment.informationsPratiques) || [],
+      paymentMethods: parseJsonField(establishment.payment_methods) || [],
+      horairesOuverture: parseJsonField(establishment.horaires_ouverture) || {},
+      envieTags: parseJsonField(establishment.envie_tags) || [],
+      informationsPratiques: parseJsonField(establishment.informations_pratiques) || [],
     };
 
     return NextResponse.json({

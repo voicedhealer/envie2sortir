@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import MessageForm from "./MessageForm";
@@ -51,7 +51,7 @@ export default function ConversationDetail({
   isAdmin,
   onMessageSent,
 }: ConversationDetailProps) {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,7 +70,13 @@ export default function ConversationDetail({
       const response = await fetch(`/api/messaging/conversations/${conversationId}`);
       if (response.ok) {
         const data = await response.json();
-        setConversation(data.conversation);
+        // S'assurer que messages est toujours un tableau
+        if (data.conversation) {
+          setConversation({
+            ...data.conversation,
+            messages: data.conversation.messages || []
+          });
+        }
       }
     } catch (error) {
       console.error("Erreur lors du chargement de la conversation:", error);
@@ -120,7 +126,7 @@ export default function ConversationDetail({
     if (isAdmin) {
       return message.senderType === "ADMIN";
     }
-    return message.senderId === session?.user?.id;
+    return message.senderId === user?.id;
   };
 
   if (isLoading) {
@@ -148,7 +154,9 @@ export default function ConversationDetail({
             <h2 className="text-xl font-bold text-gray-900">{conversation.subject}</h2>
             <p className="text-sm text-gray-600 mt-1">
               {isAdmin
-                ? `${conversation.professional.companyName} - ${conversation.professional.firstName} ${conversation.professional.lastName}`
+                ? conversation.professional
+                  ? `${conversation.professional.companyName} - ${conversation.professional.firstName} ${conversation.professional.lastName}`
+                  : "Professionnel inconnu"
                 : conversation.admin
                 ? `Admin: ${conversation.admin.firstName || ""} ${conversation.admin.lastName || ""}`
                 : "En attente d'admin"}
@@ -188,7 +196,7 @@ export default function ConversationDetail({
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
         <div className="space-y-4">
-          {conversation.messages.map((message) => (
+          {(conversation.messages || []).map((message) => (
             <div
               key={message.id}
               className={`flex ${isOwnMessage(message) ? "justify-end" : "justify-start"}`}

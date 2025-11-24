@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, unlink } from 'fs/promises';
 import { join } from 'path';
 import { existsSync } from 'fs';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
 import { getMaxImages } from '@/lib/subscription-utils';
+import { uploadFileAdmin } from '@/lib/supabase/helpers';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -60,38 +61,43 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Vérifier que l'établissement existe et récupérer son plan d'abonnement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: establishmentId },
-      select: { 
-        id: true, 
-        subscription: true,
-        name: true
-      }
-    });
+    const supabase = await createClient();
 
-    if (!establishment) {
+    // Vérifier que l'établissement existe et récupérer son plan d'abonnement
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription, name')
+      .eq('id', establishmentId)
+      .single();
+
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 });
     }
 
     // Vérifier les restrictions d'abonnement pour l'upload d'images
-    const existingImagesCount = await prisma.image.count({
-      where: { establishmentId: establishmentId }
-    });
+    const { count: existingImagesCount, error: countError } = await supabase
+      .from('images')
+      .select('*', { count: 'exact', head: true })
+      .eq('establishment_id', establishmentId);
 
-    const maxImages = getMaxImages(establishment.subscription);
+    if (countError) {
+      console.error('Erreur comptage images:', countError);
+      return NextResponse.json({ error: 'Erreur lors de la vérification des images' }, { status: 500 });
+    }
+
+    const maxImages = getMaxImages(establishment.subscription as 'FREE' | 'PREMIUM');
     
-    if (existingImagesCount >= maxImages) {
+    if ((existingImagesCount || 0) >= maxImages) {
       const planName = establishment.subscription === 'PREMIUM' ? 'Premium' : 'Basic';
       return NextResponse.json({ 
         error: `Limite d'images atteinte pour le plan ${planName}. Maximum: ${maxImages} image${maxImages > 1 ? 's' : ''}.`,
         subscription: establishment.subscription,
-        currentCount: existingImagesCount,
+        currentCount: existingImagesCount || 0,
         maxAllowed: maxImages
       }, { status: 403 });
     }
 
-    console.log(`📸 Upload autorisé pour ${establishment.name} (${establishment.subscription}): ${existingImagesCount + 1}/${maxImages} images`);
+    console.log(`📸 Upload autorisé pour ${establishment.name} (${establishment.subscription}): ${(existingImagesCount || 0) + 1}/${maxImages} images`);
 
     // Le fichier a déjà été validé avec validateFile() plus haut
 
@@ -118,7 +124,7 @@ export async function POST(request: NextRequest) {
       await mkdir(uploadsDir, { recursive: true });
     }
 
-    // Optimiser l'image pour les établissements
+    // Optimiser l'image pour les établissements (temporairement en local)
     const { generateAllImageVariants } = await import('@/lib/image-management');
     const result = await generateAllImageVariants(
       tempFilePath, 
@@ -126,11 +132,8 @@ export async function POST(request: NextRequest) {
       'establishment'
     );
 
-    // Nettoyer le fichier temporaire
-    const { unlink } = await import('fs/promises');
-    await unlink(tempFilePath);
-
     if (!result.success) {
+      await unlink(tempFilePath).catch(() => {});
       return NextResponse.json({ 
         error: 'Erreur lors de l\'optimisation de l\'image' 
       }, { status: 500 });
@@ -139,26 +142,102 @@ export async function POST(request: NextRequest) {
     // Utiliser la variante 'hero' pour l'image principale
     const heroImagePath = result.variants.hero;
     const fileName = heroImagePath.split('/').pop() || '';
-    const imageUrl = `/uploads/${fileName}`;
-
-    console.log(`🏢 Image d'établissement optimisée: ${result.totalSavingsPercentage.toFixed(1)}% d'économie`);
     
-    // Créer l'entrée en base de données
-    const imageRecord = await prisma.image.create({
-      data: {
-        url: imageUrl,
-        altText: file.name,
-        establishmentId: establishmentId,
-        isPrimary: true, // Marquer comme image principale
-        ordre: 0
+    console.log(`🏢 Image d'établissement optimisée: ${result.totalSavingsPercentage.toFixed(1)}% d'économie`);
+
+    // Lire le fichier optimisé et l'uploader vers Supabase Storage
+    const optimizedFile = await import('fs/promises').then(fs => fs.readFile(heroImagePath));
+    const fileBlob = new Blob([optimizedFile], { type: file.type });
+    
+    // Chemin dans Supabase Storage : establishments/{establishmentId}/{fileName}
+    const storagePath = `establishments/${establishmentId}/${fileName}`;
+    
+    // Utiliser le client admin pour contourner RLS lors de l'upload
+    const uploadResult = await uploadFileAdmin(
+      'establishments',
+      storagePath,
+      fileBlob,
+      {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false
+      }
+    );
+
+    // Nettoyer les fichiers temporaires
+    await unlink(tempFilePath).catch(() => {});
+    await unlink(heroImagePath).catch(() => {});
+
+    if (uploadResult.error || !uploadResult.data) {
+      console.error('Erreur upload Supabase:', uploadResult.error);
+      return NextResponse.json({ 
+        error: 'Erreur lors de l\'upload vers Supabase Storage',
+        details: uploadResult.error instanceof Error ? uploadResult.error.message : String(uploadResult.error),
+        code: (uploadResult.error as any)?.statusCode || (uploadResult.error as any)?.code
+      }, { status: 500 });
+    }
+
+    const imageUrl = uploadResult.data.url;
+    
+    // Créer le client admin pour l'insertion en base de données (contourne RLS)
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: 'Configuration Supabase manquante' 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
       }
     });
+    
+    // Compter le nombre d'images existantes pour définir l'ordre
+    const { count: totalImagesCount } = await adminClient
+      .from('images')
+      .select('*', { count: 'exact', head: true })
+      .eq('establishment_id', establishmentId);
+    
+    const nextOrdre = totalImagesCount || 0;
+    const isFirstImage = nextOrdre === 0;
+    
+    console.log('📊 Images existantes:', totalImagesCount, '→ Prochain ordre:', nextOrdre);
+    
+    // Créer l'entrée en base de données avec le client admin
+    const { data: imageRecord, error: imageError } = await adminClient
+      .from('images')
+      .insert({
+        url: imageUrl,
+        alt_text: file.name,
+        establishment_id: establishmentId,
+        is_primary: isFirstImage, // Seulement la première image est "primary"
+        ordre: nextOrdre
+      })
+      .select()
+      .single();
 
-    // Mettre à jour l'imageUrl de l'établissement
-    await prisma.establishment.update({
-      where: { id: establishmentId },
-      data: { imageUrl: imageUrl }
-    });
+    if (imageError || !imageRecord) {
+      // Rollback: supprimer le fichier uploadé
+      await adminClient.storage.from('establishments').remove([storagePath]);
+      
+      console.error('Erreur création entrée image:', imageError);
+      return NextResponse.json({ 
+        error: 'Erreur lors de la création de l\'entrée en base de données',
+        details: imageError?.message || 'Erreur inconnue',
+        code: imageError?.code
+      }, { status: 500 });
+    }
+
+    // Mettre à jour l'imageUrl de l'établissement avec le client admin
+    await adminClient
+      .from('establishments')
+      .update({ image_url: imageUrl })
+      .eq('id', establishmentId);
 
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/upload/image', 'POST', 200, responseTime, {

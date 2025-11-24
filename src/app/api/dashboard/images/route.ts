@@ -1,53 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
-import { prisma } from '@/lib/prisma';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@/lib/supabase/server';
+import { requireEstablishment } from '@/lib/supabase/helpers';
+import { uploadFile } from '@/lib/supabase/helpers';
 import { getMaxImages } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: 'Non authentifié ou aucun établissement associé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
-
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: 'Aucun établissement associé' }, { status: 400 });
-    }
+    const supabase = await createClient();
 
     // Récupérer l'établissement pour vérifier l'abonnement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: { 
-        id: true, 
-        subscription: true,
-        images: {
-          select: { id: true }
-        }
-      }
-    });
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, subscription')
+      .eq('id', user.establishmentId)
+      .single();
 
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Vérifier les restrictions selon l'abonnement
-    const maxImages = getMaxImages(establishment.subscription);
-    const currentImageCount = establishment.images.length;
+    // Compter les images existantes
+    const { count: currentImageCount, error: countError } = await supabase
+      .from('images')
+      .select('*', { count: 'exact', head: true })
+      .eq('establishment_id', user.establishmentId);
 
-    if (currentImageCount >= maxImages) {
+    if (countError) {
+      console.error('Erreur comptage images:', countError);
+      return NextResponse.json({ error: 'Erreur lors de la vérification des images' }, { status: 500 });
+    }
+
+    // Vérifier les restrictions selon l'abonnement
+    const maxImages = getMaxImages(establishment.subscription as 'FREE' | 'PREMIUM');
+    const imageCount = currentImageCount || 0;
+
+    if (imageCount >= maxImages) {
       return NextResponse.json({ 
         error: `Limite d'images atteinte. Maximum ${maxImages} image(s) pour un abonnement ${establishment.subscription}`,
-        currentCount: currentImageCount,
+        currentCount: imageCount,
         maxAllowed: maxImages
       }, { status: 403 });
     }
@@ -76,40 +71,59 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Créer le dossier uploads s'il n'existe pas
-    const uploadsDir = join(process.cwd(), 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
-
     // Générer un nom de fichier unique
     const fileExtension = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${uuidv4()}.${fileExtension}`;
-    const filePath = join(uploadsDir, fileName);
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExtension}`;
+    const storagePath = `establishments/${user.establishmentId}/${fileName}`;
 
-    // Sauvegarder le fichier
+    // Uploader vers Supabase Storage
     const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
+    const fileBlob = new Blob([bytes], { type: file.type });
+    
+    const uploadResult = await uploadFile(
+      'images',
+      storagePath,
+      fileBlob,
+      {
+        cacheControl: '3600',
+        contentType: file.type,
+        upsert: false
+      }
+    );
 
-    const imageUrl = `/uploads/${fileName}`;
+    if (uploadResult.error || !uploadResult.data) {
+      console.error('Erreur upload Supabase:', uploadResult.error);
+      return NextResponse.json({ error: 'Erreur lors de l\'upload vers Supabase Storage' }, { status: 500 });
+    }
+
+    const imageUrl = uploadResult.data.url;
+    const isFirstImage = imageCount === 0;
 
     // Sauvegarder en base de données
-    const isFirstImage = currentImageCount === 0;
-    
-    const image = await prisma.image.create({
-      data: {
+    const { data: image, error: imageError } = await supabase
+      .from('images')
+      .insert({
         url: imageUrl,
-        altText: file.name,
-        isPrimary: isFirstImage,
-        establishmentId: establishment.id
-      }
-    });
+        alt_text: file.name,
+        is_primary: isFirstImage,
+        establishment_id: user.establishmentId,
+        ordre: imageCount
+      })
+      .select()
+      .single();
+
+    if (imageError || !image) {
+      // Rollback: supprimer le fichier uploadé
+      await supabase.storage.from('images').remove([storagePath]);
+      return NextResponse.json({ error: 'Erreur lors de la création de l\'entrée en base de données' }, { status: 500 });
+    }
 
     // Si c'est la première image, la définir comme image principale de l'établissement
     if (isFirstImage) {
-      await prisma.establishment.update({
-        where: { id: establishment.id },
-        data: { imageUrl: imageUrl }
-      });
+      await supabase
+        .from('establishments')
+        .update({ image_url: imageUrl })
+        .eq('id', user.establishmentId);
     }
 
     return NextResponse.json({
@@ -117,10 +131,10 @@ export async function POST(request: NextRequest) {
       image: {
         id: image.id,
         url: image.url,
-        altText: image.altText,
-        isPrimary: image.isPrimary
+        altText: image.alt_text,
+        isPrimary: image.is_primary
       },
-      message: `Image ajoutée avec succès. ${currentImageCount + 1}/${maxImages} images utilisées.`
+      message: `Image ajoutée avec succès. ${imageCount + 1}/${maxImages} images utilisées.`
     });
 
   } catch (error) {
@@ -133,54 +147,59 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
+    const user = await requireEstablishment();
+    if (!user || !user.establishmentId) {
+      return NextResponse.json({ error: 'Non authentifié ou aucun établissement associé' }, { status: 401 });
     }
 
-    // Vérifier que l'utilisateur est un professionnel
-    if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
-      return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-    }
+    const supabase = await createClient();
 
-    if (!session.user.establishmentId) {
-      return NextResponse.json({ error: 'Aucun établissement associé' }, { status: 400 });
-    }
+    // Récupérer l'établissement avec ses images
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select(`
+        id,
+        name,
+        subscription,
+        image_url,
+        images (
+          id,
+          url,
+          alt_text,
+          is_primary,
+          created_at,
+          ordre
+        )
+      `)
+      .eq('id', user.establishmentId)
+      .single();
 
-    // Récupérer les images de l'établissement
-    const establishment = await prisma.establishment.findUnique({
-      where: { id: session.user.establishmentId },
-      select: {
-        id: true,
-        name: true,
-        subscription: true,
-        imageUrl: true,
-        images: {
-          select: {
-            id: true,
-            url: true,
-            altText: true,
-            isPrimary: true,
-            createdAt: true,
-            ordre: true
-          },
-          orderBy: { ordre: 'asc' } // ✅ CORRECTION : Trier par ordre, pas par date
-        }
-      }
-    });
-
-    if (!establishment) {
+    if (establishmentError || !establishment) {
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
+
+    // Trier les images par ordre
+    const sortedImages = (establishment.images || []).sort((a: any, b: any) => 
+      (a.ordre || 0) - (b.ordre || 0)
+    );
+
+    // Convertir snake_case -> camelCase
+    const formattedImages = sortedImages.map((img: any) => ({
+      id: img.id,
+      url: img.url,
+      altText: img.alt_text,
+      isPrimary: img.is_primary,
+      createdAt: img.created_at,
+      ordre: img.ordre
+    }));
 
     return NextResponse.json({
       establishment: {
         id: establishment.id,
         name: establishment.name,
         subscription: establishment.subscription,
-        imageUrl: establishment.imageUrl,
-        images: establishment.images
+        imageUrl: establishment.image_url,
+        images: formattedImages
       }
     });
 

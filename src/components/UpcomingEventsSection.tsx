@@ -16,6 +16,7 @@ interface Event {
   endDate?: string;
   imageUrl?: string;
   price?: number;
+  priceUnit?: string;
   maxCapacity?: number;
   isRecurring?: boolean;
   modality?: string;
@@ -186,6 +187,7 @@ export default function UpcomingEventsSection({ establishmentSlug }: UpcomingEve
                 startDate: event.startDate,
                 endDate: event.endDate || event.startDate,
                 price: event.price || 0,
+                priceUnit: event.priceUnit || '',
                 imageUrl: event.imageUrl || '',
                 modality: event.modality || '',
                 establishmentId: establishmentSlug, // Utiliser le slug comme ID temporaire

@@ -1,13 +1,13 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef } from "react";
 import { User, LogOut, Settings, Heart, BarChart3, Building2, History, FileText, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 
 export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
-  const { data: session, status } = useSession();
+  const { session, loading, signOut } = useSupabaseSession();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAdminSubmenu, setShowAdminSubmenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -27,10 +27,8 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
     };
   }, []);
 
-  const isLoading = status === 'loading';
-
   // Afficher un skeleton cliquable pendant le chargement
-  if (isLoading) {
+  if (loading) {
     return (
       <div className={`flex items-center space-x-2 ${isMobile ? 'py-2' : ''}`}>
         <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
@@ -39,7 +37,7 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
     );
   }
 
-  if (!session) {
+  if (!session || !session.user) {
     return (
       <div className={`flex items-center gap-2 ${isMobile ? 'flex-col items-start space-y-2' : ''}`}>
         <Link 
@@ -68,16 +66,33 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
       >
         <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
           <span className="text-white font-bold text-sm">
-            {session.user.firstName?.charAt(0) || session.user.email?.charAt(0)}
+            {session.user?.firstName?.charAt(0)?.toUpperCase() || 
+             (session.user?.role === 'admin' ? 'A' : 
+              session.user?.role === 'professional' ? 'P' : 
+              session.user?.email?.charAt(0)?.toUpperCase() || 'U')}
           </span>
         </div>
-        {!isMobile && <span className="hidden md:block">{session.user.firstName || 'Utilisateur'}</span>}
-        {isMobile && <span>{session.user.firstName || 'Utilisateur'}</span>}
+        {!isMobile && (
+          <span className="hidden md:block">
+            {session.user?.firstName || 
+             (session.user?.role === 'admin' ? 'Admin' : 
+              session.user?.role === 'professional' ? 'Professionnel' : 
+              'Utilisateur')}
+          </span>
+        )}
+        {isMobile && (
+          <span>
+            {session.user?.firstName || 
+             (session.user?.role === 'admin' ? 'Admin' : 
+              session.user?.role === 'professional' ? 'Professionnel' : 
+              'Utilisateur')}
+          </span>
+        )}
       </button>
 
       {showUserMenu && (
         <div className={`absolute ${isMobile ? 'left-0' : 'right-0'} mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50`}>
-          {(session.user.userType === 'user' || session.user.role === 'user') && (
+          {(session.user?.userType === 'user' || session.user?.role === 'user') && (
             <>
               <Link href="/mon-compte" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
                 <User className="w-4 h-4 mr-3" />
@@ -85,13 +100,13 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
               </Link>
             </>
           )}
-          {(session.user.userType === 'professional' || session.user.role === 'pro') && (
+          {(session.user?.userType === 'professional' || session.user?.role === 'professional') && (
             <Link href="/dashboard" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" onClick={() => setShowUserMenu(false)}>
               <Settings className="w-4 h-4 mr-3" />
               Dashboard Pro
             </Link>
           )}
-          {session.user.role === 'admin' && (
+          {session.user?.role === 'admin' && (
             <div className="relative">
               <button
                 onClick={() => setShowAdminSubmenu(!showAdminSubmenu)}
@@ -134,38 +149,42 @@ export default function UserMenu({ isMobile = false }: { isMobile?: boolean }) {
             onClick={async () => {
               setShowUserMenu(false);
               
+              console.log('🚪 Déconnexion en cours...');
+              
+              // Nettoyer le localStorage immédiatement
+              if (typeof window !== 'undefined') {
+                const keysToRemove = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key && key.startsWith('sb-')) {
+                    keysToRemove.push(key);
+                  }
+                }
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+                console.log('🧹 LocalStorage nettoyé');
+              }
+              
               try {
-                console.log('🚪 Déconnexion en cours...');
-                
-                // Méthode 1: signOut avec redirection manuelle
-                await signOut({ 
-                  callbackUrl: '/',
-                  redirect: false // Désactiver la redirection automatique
+                // Appeler l'API de déconnexion pour supprimer les cookies serveur
+                await fetch('/api/auth/signout', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json'
+                  }
                 });
                 
-                console.log('✅ SignOut réussi, redirection manuelle...');
+                // Tenter aussi la déconnexion côté client
+                await signOut().catch(e => console.warn('Client signOut error:', e));
                 
-                // Attendre un peu pour que la session soit bien nettoyée
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Redirection manuelle après signOut
-                window.location.href = '/';
+                console.log('✅ Déconnexion réussie');
                 
               } catch (error) {
                 console.error('❌ Erreur lors de la déconnexion:', error);
-                
-                // Fallback: appel direct à l'API de déconnexion
-                try {
-                  console.log('🔄 Tentative de fallback avec API directe...');
-                  await fetch('/api/auth/signout', { method: 'POST' });
-                  console.log('✅ API signout appelée avec succès');
-                } catch (apiError) {
-                  console.error('❌ API signout échoué:', apiError);
-                }
-                
-                // Redirection forcée dans tous les cas
-                window.location.href = '/';
               }
+              
+              // Redirection forcée
+              console.log('🔄 Redirection...');
+              window.location.replace('/');
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
           >

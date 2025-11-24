@@ -1,16 +1,15 @@
 import EstablishmentForm from "../establishment-form";
 import Image from 'next/image';
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/supabase/helpers";
 import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function NewEstablishmentPage() {
   // Vérifier si l'utilisateur est connecté
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
   
   // Si l'utilisateur n'est pas connecté, afficher le formulaire d'inscription professionnelle
-  if (!session?.user) {
+  if (!user) {
     return (
       <main className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50">
         {/* Header avec navigation */}
@@ -39,7 +38,7 @@ export default async function NewEstablishmentPage() {
   }
   
   // Vérifier que l'utilisateur est un professionnel
-  if (session.user.userType !== 'professional' && session.user.role !== 'pro') {
+  if (user.userType !== 'professional' && user.role !== 'professional') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-pink-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
@@ -72,24 +71,30 @@ export default async function NewEstablishmentPage() {
     );
   }
   
-  if (session?.user?.id) {
-    console.log('🔍 Debug - Session user:', {
-      id: session.user.id,
-      role: session.user.role
+  if (user?.id) {
+    console.log('🔍 Debug - User:', {
+      id: user.id,
+      role: user.role
     });
     
     // Vérifier si l'utilisateur a déjà un établissement
-    // Recherche directe par ownerId (nouvelle architecture)
+    // Recherche directe par owner_id (Supabase)
     let existingEstablishment = null;
     
-    console.log('🔍 Debug - Recherche par ownerId:', session.user.id);
-    existingEstablishment = await prisma.establishment.findFirst({
-      where: {
-        ownerId: session.user.id
-      }
-    });
-    console.log('🔍 Debug - Résultat recherche par ownerId:', existingEstablishment);
+    const supabase = await createClient();
+    console.log('🔍 Debug - Recherche par owner_id:', user.id);
     
+    const { data: establishmentData, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('id, name, slug')
+      .eq('owner_id', user.id)
+      .maybeSingle();
+    
+    if (!establishmentError && establishmentData) {
+      existingEstablishment = establishmentData;
+    }
+    
+    console.log('🔍 Debug - Résultat recherche par owner_id:', existingEstablishment);
     console.log('🔍 Debug - Établissement trouvé:', existingEstablishment);
 
     if (existingEstablishment) {

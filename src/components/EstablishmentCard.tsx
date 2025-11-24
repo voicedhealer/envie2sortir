@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { MapPin, Star, Heart, Share2, Flame, Calendar, Clock, Euro, TrendingUp, Sparkles, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { toast } from '@/lib/fake-toast';
 import styles from './EstablishmentCard.module.css';
 import { isEventInProgress, isEventUpcoming } from '../lib/date-utils';
@@ -246,7 +246,7 @@ export default function EstablishmentCard({
   searchParams,
   isCompact = false
 }: EstablishmentCardProps) {
-  const { data: session } = useSession();
+  const { user } = useSupabaseSession();
   const [isLiked, setIsLiked] = useState(false);
   const [isShared, setIsShared] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -264,10 +264,10 @@ export default function EstablishmentCard({
 
   // Vérifier si l'établissement est en favori
   useEffect(() => {
-    if (session?.user?.role === 'user') {
+    if (user?.role === 'user' || user?.userType === 'user') {
       checkFavoriteStatus();
     }
-  }, [session, establishment.id]);
+  }, [user, establishment.id]);
 
   const checkFavoriteStatus = async () => {
     try {
@@ -372,9 +372,13 @@ export default function EstablishmentCard({
         console.log('🔍 Données d\'engagement récupérées:', data);
         setEventEngagementData(data);
       } else {
-        console.error('❌ Erreur API engagement:', response.status, response.statusText);
+        // Ne logger que les erreurs serveur (500), pas les erreurs client (404, etc.)
+        if (response.status >= 500) {
+          console.error('❌ Erreur API engagement:', response.status, response.statusText);
+        }
       }
     } catch (error) {
+      // Ne logger que les erreurs réseau réelles
       console.error('Erreur lors du chargement de l\'engagement:', error);
     }
   };
@@ -520,7 +524,7 @@ export default function EstablishmentCard({
     e.stopPropagation();
     
     // Vérifier que l'utilisateur est un utilisateur simple (pas professionnel)
-    if (!session || (session.user.userType !== 'user' && session.user.role !== 'user')) {
+    if (!user || (user.userType !== 'user' && user.role !== 'user')) {
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }
@@ -543,6 +547,10 @@ export default function EstablishmentCard({
             if (deleteResponse.ok) {
               setIsLiked(false);
               toast.success('Retiré des favoris');
+              // Notifier le MapComponent du changement
+              window.dispatchEvent(new CustomEvent('favorite-changed', {
+                detail: { establishmentId: establishment.id, isFavorite: false }
+              }));
             }
           }
         }
@@ -559,6 +567,10 @@ export default function EstablishmentCard({
         if (response.ok) {
           setIsLiked(true);
           toast.success('Ajouté aux favoris');
+          // Notifier le MapComponent du changement
+          window.dispatchEvent(new CustomEvent('favorite-changed', {
+            detail: { establishmentId: establishment.id, isFavorite: true }
+          }));
         } else {
           const error = await response.json();
           toast.error(error.error || 'Erreur lors de l\'ajout aux favoris');

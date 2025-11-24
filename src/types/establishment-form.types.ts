@@ -129,6 +129,7 @@ export type ProfessionalData = {
   
   // Abonnement
   subscriptionPlan: 'free' | 'premium';
+  subscriptionPlanType?: 'monthly' | 'annual'; // Type d'abonnement (mensuel ou annuel) pour le plan premium
   
   // Acceptation des conditions
   termsAccepted?: boolean;
@@ -290,7 +291,7 @@ export const SUBSCRIPTION_PLANS = {
       "💬 Support client prioritaire et dédié",
       "✨ Description enrichie avec intelligence artificielle"
     ],
-    price: "29€/mois",
+    price: "29,90€/mois",
     badge: "Recommandé",
     color: "orange",
     savings: undefined

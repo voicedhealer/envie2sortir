@@ -14,6 +14,7 @@ interface Event {
   startDate: string;
   endDate?: string;
   price?: number;
+  priceUnit?: string;
   imageUrl?: string;
   location?: string;
   status?: 'ongoing' | 'upcoming';
@@ -156,7 +157,7 @@ export default function EstablishmentEvents({ establishmentId, establishmentSlug
               {event.price && (
                 <p className="event-price">
                   <Euro className="w-4 h-4 inline mr-1" />
-                  {event.price}€
+                  {event.price}€{event.priceUnit ? ` ${event.priceUnit}` : ''}
                 </p>
               )}
             </div>

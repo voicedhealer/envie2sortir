@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth-config";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser, isAdmin } from "@/lib/supabase/helpers";
+import { createClient } from "@/lib/supabase/server";
 
 // PATCH /api/messaging/conversations/[id]/status - Changer le statut
 export async function PATCH(
@@ -9,15 +8,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: "Non authentifié" },
-        { status: 401 }
-      );
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
+    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
+    const supabase = await createClient();
     const { id } = await params;
 
     const body = await request.json();
@@ -31,15 +28,13 @@ export async function PATCH(
     }
 
     // Vérifier que la conversation existe
-    const conversation = await prisma.conversation.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        professionalId: true,
-      },
-    });
+    const { data: conversation, error: conversationError } = await supabase
+      .from('conversations')
+      .select('id, professional_id')
+      .eq('id', id)
+      .single();
 
-    if (!conversation) {
+    if (conversationError || !conversation) {
       return NextResponse.json(
         { error: "Conversation non trouvée" },
         { status: 404 }
@@ -47,12 +42,12 @@ export async function PATCH(
     }
 
     // Vérifier les droits d'accès
-    const isAdmin = session.user.role === "admin";
+    const isUserAdmin = await isAdmin();
     const isProfessionalOwner = 
-      session.user.userType === "professional" && 
-      conversation.professionalId === session.user.id;
+      user.userType === "professional" && 
+      conversation.professional_id === user.id;
 
-    if (!isAdmin && !isProfessionalOwner) {
+    if (!isUserAdmin && !isProfessionalOwner) {
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
@@ -60,36 +55,69 @@ export async function PATCH(
     }
 
     // Mettre à jour le statut
-    const updatedConversation = await prisma.conversation.update({
-      where: { id },
-      data: { status },
-      include: {
-        professional: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            companyName: true,
-          },
-        },
-        admin: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        _count: {
-          select: {
-            messages: true,
-          },
-        },
-      },
-    });
+    const { data: updatedConversation, error: updateError } = await supabase
+      .from('conversations')
+      .update({ status })
+      .eq('id', id)
+      .select(`
+        *,
+        professional:professionals!conversations_professional_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          company_name
+        ),
+        admin:users!conversations_admin_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email
+        )
+      `)
+      .single();
 
-    return NextResponse.json({ conversation: updatedConversation });
+    if (updateError || !updatedConversation) {
+      console.error('Erreur mise à jour statut:', updateError);
+      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+    }
+
+    // Compter les messages
+    const { count: messagesCount } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('conversation_id', id);
+
+    // Convertir snake_case -> camelCase
+    const professional = Array.isArray(updatedConversation.professional) ? updatedConversation.professional[0] : updatedConversation.professional;
+    const admin = Array.isArray(updatedConversation.admin) ? updatedConversation.admin[0] : updatedConversation.admin;
+
+    const formattedConversation = {
+      ...updatedConversation,
+      professionalId: updatedConversation.professional_id,
+      adminId: updatedConversation.admin_id,
+      lastMessageAt: updatedConversation.last_message_at,
+      createdAt: updatedConversation.created_at,
+      updatedAt: updatedConversation.updated_at,
+      professional: professional ? {
+        id: professional.id,
+        firstName: professional.first_name,
+        lastName: professional.last_name,
+        email: professional.email,
+        companyName: professional.company_name
+      } : null,
+      admin: admin ? {
+        id: admin.id,
+        firstName: admin.first_name,
+        lastName: admin.last_name,
+        email: admin.email
+      } : null,
+      _count: {
+        messages: messagesCount || 0
+      }
+    };
+
+    return NextResponse.json({ conversation: formattedConversation });
   } catch (error) {
     console.error("Erreur lors du changement de statut:", error);
     return NextResponse.json(

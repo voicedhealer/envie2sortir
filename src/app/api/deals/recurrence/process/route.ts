@@ -1,32 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Traitement de la récurrence des bons plans...');
     
+    const supabase = await createClient();
+    
     // Récupérer tous les bons plans récurrents actifs
-    const recurringDeals = await prisma.dailyDeal.findMany({
-      where: {
-        isRecurring: true,
-        isActive: true
-      },
-      include: {
-        establishment: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
+    const { data: recurringDeals, error: dealsError } = await supabase
+      .from('daily_deals')
+      .select('*, establishment:establishments(id, name)')
+      .eq('is_recurring', true)
+      .eq('is_active', true);
+    
+    if (dealsError) {
+      console.error('❌ Erreur récupération deals:', dealsError);
+      return NextResponse.json(
+        { error: 'Erreur lors de la récupération des deals' },
+        { status: 500 }
+      );
+    }
+    
+    const deals = recurringDeals || [];
 
-    console.log(`📊 ${recurringDeals.length} bons plans récurrents trouvés`);
+    console.log(`📊 ${deals.length} bons plans récurrents trouvés`);
 
     let processedCount = 0;
     let createdCount = 0;
 
-    for (const deal of recurringDeals) {
+    for (const deal of deals) {
       try {
         processedCount++;
         
@@ -63,90 +66,110 @@ export async function POST(request: NextRequest) {
 
 // Fonction pour générer les bons plans récurrents
 async function generateRecurringDeals(deal: any) {
+  const supabase = await createClient();
   const now = new Date();
   const createdDeals = [];
 
+  // Convertir les noms de champs de snake_case à camelCase pour la logique
+  const recurrenceType = deal.recurrence_type;
+  const recurrenceDays = deal.recurrence_days ? JSON.parse(deal.recurrence_days) : null;
+  const recurrenceEndDate = deal.recurrence_end_date ? new Date(deal.recurrence_end_date) : null;
+  const establishmentId = deal.establishment_id;
+  const dateDebut = deal.date_debut ? new Date(deal.date_debut) : null;
+
   // Calculer les prochaines dates selon le type de récurrence
-  if (deal.recurrenceType === 'weekly' && deal.recurrenceDays) {
-    const nextDates = calculateNextWeeklyDates(deal.recurrenceDays, deal.recurrenceEndDate);
+  if (recurrenceType === 'weekly' && recurrenceDays) {
+    const nextDates = calculateNextWeeklyDates(recurrenceDays, recurrenceEndDate);
     
     for (const date of nextDates) {
+      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+      
       // Vérifier si un bon plan existe déjà pour cette date
-      const existingDeal = await prisma.dailyDeal.findFirst({
-        where: {
-          establishmentId: deal.establishmentId,
-          title: deal.title,
-          dateDebut: {
-            gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
-            lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
-          }
-        }
-      });
+      const { data: existingDeal } = await supabase
+        .from('daily_deals')
+        .select('id')
+        .eq('establishment_id', establishmentId)
+        .eq('title', deal.title)
+        .gte('date_debut', dateStart.toISOString())
+        .lt('date_debut', dateEnd.toISOString())
+        .single();
 
       if (!existingDeal) {
-        const newDeal = await prisma.dailyDeal.create({
-          data: {
-            establishmentId: deal.establishmentId,
+        const { data: newDeal, error } = await supabase
+          .from('daily_deals')
+          .insert({
+            establishment_id: establishmentId,
             title: deal.title,
             description: deal.description,
             modality: deal.modality,
-            originalPrice: deal.originalPrice,
-            discountedPrice: deal.discountedPrice,
-            imageUrl: deal.imageUrl,
-            pdfUrl: deal.pdfUrl,
-            dateDebut: date,
-            dateFin: new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1), // Fin de journée
-            heureDebut: deal.heureDebut,
-            heureFin: deal.heureFin,
-            isActive: true,
-            isRecurring: false, // Les nouveaux deals ne sont pas récurrents
-            recurrenceType: null,
-            recurrenceDays: null,
-            recurrenceEndDate: null
-          }
-        });
-        createdDeals.push(newDeal);
+            original_price: deal.original_price,
+            discounted_price: deal.discounted_price,
+            image_url: deal.image_url,
+            pdf_url: deal.pdf_url,
+            date_debut: date.toISOString(),
+            date_fin: new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1).toISOString(), // Fin de journée
+            heure_debut: deal.heure_debut,
+            heure_fin: deal.heure_fin,
+            is_active: true,
+            is_recurring: false, // Les nouveaux deals ne sont pas récurrents
+            recurrence_type: null,
+            recurrence_days: null,
+            recurrence_end_date: null
+          })
+          .select()
+          .single();
+        
+        if (!error && newDeal) {
+          createdDeals.push(newDeal);
+        }
       }
     }
-  } else if (deal.recurrenceType === 'monthly') {
-    const nextDates = calculateNextMonthlyDates(deal.dateDebut, deal.recurrenceEndDate);
+  } else if (recurrenceType === 'monthly' && dateDebut) {
+    const nextDates = calculateNextMonthlyDates(dateDebut, recurrenceEndDate);
     
     for (const date of nextDates) {
+      const dateStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dateEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+      
       // Vérifier si un bon plan existe déjà pour cette date
-      const existingDeal = await prisma.dailyDeal.findFirst({
-        where: {
-          establishmentId: deal.establishmentId,
-          title: deal.title,
-          dateDebut: {
-            gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
-            lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1)
-          }
-        }
-      });
+      const { data: existingDeal } = await supabase
+        .from('daily_deals')
+        .select('id')
+        .eq('establishment_id', establishmentId)
+        .eq('title', deal.title)
+        .gte('date_debut', dateStart.toISOString())
+        .lt('date_debut', dateEnd.toISOString())
+        .single();
 
       if (!existingDeal) {
-        const newDeal = await prisma.dailyDeal.create({
-          data: {
-            establishmentId: deal.establishmentId,
+        const { data: newDeal, error } = await supabase
+          .from('daily_deals')
+          .insert({
+            establishment_id: establishmentId,
             title: deal.title,
             description: deal.description,
             modality: deal.modality,
-            originalPrice: deal.originalPrice,
-            discountedPrice: deal.discountedPrice,
-            imageUrl: deal.imageUrl,
-            pdfUrl: deal.pdfUrl,
-            dateDebut: date,
-            dateFin: new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1), // Fin de journée
-            heureDebut: deal.heureDebut,
-            heureFin: deal.heureFin,
-            isActive: true,
-            isRecurring: false, // Les nouveaux deals ne sont pas récurrents
-            recurrenceType: null,
-            recurrenceDays: null,
-            recurrenceEndDate: null
-          }
-        });
-        createdDeals.push(newDeal);
+            original_price: deal.original_price,
+            discounted_price: deal.discounted_price,
+            image_url: deal.image_url,
+            pdf_url: deal.pdf_url,
+            date_debut: date.toISOString(),
+            date_fin: new Date(date.getTime() + (24 * 60 * 60 * 1000) - 1).toISOString(), // Fin de journée
+            heure_debut: deal.heure_debut,
+            heure_fin: deal.heure_fin,
+            is_active: true,
+            is_recurring: false, // Les nouveaux deals ne sont pas récurrents
+            recurrence_type: null,
+            recurrence_days: null,
+            recurrence_end_date: null
+          })
+          .select()
+          .single();
+        
+        if (!error && newDeal) {
+          createdDeals.push(newDeal);
+        }
       }
     }
   }
