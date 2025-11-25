@@ -53,6 +53,14 @@ const WaitPage: React.FC = () => {
           <div className="h-1 w-24 mx-auto bg-[#ff751f] mt-2 rounded-full shadow-[0_0_10px_#ff751f]"></div>
         </div>
 
+        {/* Courant 2026 */}
+        <div className="my-4 relative">
+          <div className="absolute inset-0 bg-[#ff751f]/10 blur-xl rounded-full"></div>
+          <div className="relative text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff751f] via-[#ff1fa9] to-[#ff3a3a] tracking-wide drop-shadow-[0_2px_8px_rgba(255,117,31,0.4)]">
+            Courant 2026
+          </div>
+        </div>
+
         {/* Activity Marquee */}
         <div className="w-screen max-w-full overflow-hidden my-6 relative">
             <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-black to-transparent z-20"></div>
@@ -78,13 +86,6 @@ const WaitPage: React.FC = () => {
         {/* <div className="w-full mb-12 transform hover:scale-105 transition-transform duration-500">
           <Countdown />
         </div> */}
-        
-        {/* Remplacement temporaire - Courant 2026 */}
-        <div className="w-full mb-12">
-          <div className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg">
-            Courant 2026
-          </div>
-        </div>
 
         {/* Dual Section: Pros vs Public */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl items-stretch">
