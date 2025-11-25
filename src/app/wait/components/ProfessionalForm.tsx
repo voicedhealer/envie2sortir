@@ -17,6 +17,7 @@ const ProfessionalForm: React.FC = () => {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
+    email: '',
     establishmentName: '',
     city: '',
     description: '',
@@ -46,6 +47,7 @@ const ProfessionalForm: React.FC = () => {
           setFormData({
             firstName: '',
             lastName: '',
+            email: '',
             establishmentName: '',
             city: '',
             description: '',
@@ -110,6 +112,21 @@ const ProfessionalForm: React.FC = () => {
             placeholder="Votre nom"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-300 mb-2">
+          Email *
+        </label>
+        <input
+          type="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          required
+          className="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:ring-2 focus:ring-[#ff751f] focus:border-[#ff751f] outline-none transition-all"
+          placeholder="votre.email@exemple.com"
+        />
       </div>
 
       <div>

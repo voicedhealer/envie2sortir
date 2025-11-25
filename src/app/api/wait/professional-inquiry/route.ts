@@ -6,6 +6,7 @@ import { z } from "zod";
 const professionalInquirySchema = z.object({
   firstName: z.string().min(1, "Le prénom est requis").max(100),
   lastName: z.string().min(1, "Le nom est requis").max(100),
+  email: z.string().email("Adresse email invalide").min(5, "Email trop court").max(255, "Email trop long").toLowerCase().trim(),
   establishmentName: z.string().min(1, "Le nom de l'établissement est requis").max(200),
   city: z.string().min(1, "La ville est requise").max(100),
   description: z.string().max(1000).optional(),
@@ -83,6 +84,7 @@ export async function POST(request: NextRequest) {
       .insert({
         first_name: data.firstName,
         last_name: data.lastName,
+        email: data.email,
         establishment_name: data.establishmentName,
         city: data.city,
         description: data.description || null,
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
       console.log(`📋 [Professional Inquiry] Nouvelle demande (non sauvegardée):`, {
         firstName: data.firstName,
         lastName: data.lastName,
+        email: data.email,
         establishmentName: data.establishmentName,
         city: data.city,
         description: data.description,
@@ -113,6 +116,7 @@ export async function POST(request: NextRequest) {
     console.log(`📋 [Professional Inquiry] Nouvelle demande enregistrée:`, {
       firstName: data.firstName,
       lastName: data.lastName,
+      email: data.email,
       establishmentName: data.establishmentName,
       city: data.city,
       ip,
