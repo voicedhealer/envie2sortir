@@ -75,8 +75,15 @@ const WaitPage: React.FC = () => {
         </p>
 
         {/* Countdown */}
-        <div className="w-full mb-12 transform hover:scale-105 transition-transform duration-500">
+        {/* <div className="w-full mb-12 transform hover:scale-105 transition-transform duration-500">
           <Countdown />
+        </div> */}
+        
+        {/* Remplacement temporaire - Courant 2026 */}
+        <div className="w-full mb-12">
+          <div className="text-4xl md:text-6xl font-bold text-white drop-shadow-lg">
+            Courant 2026
+          </div>
         </div>
 
         {/* Dual Section: Pros vs Public */}
