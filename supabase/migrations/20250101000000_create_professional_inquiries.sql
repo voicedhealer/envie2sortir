@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS professional_inquiries (
   establishment_name VARCHAR(200) NOT NULL,
   city VARCHAR(100) NOT NULL,
   description TEXT,
-  ip_address VARCHAR(45),
+  ip_address VARCHAR(128),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
