@@ -34,28 +34,30 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
   const loadingRef = useRef(loading);
   const sessionRef = useRef(session);
   const userRef = useRef(user);
+  const sessionDetectedRef = useRef(false); // ✅ Flag pour savoir si une session a été détectée
   
   // Mettre à jour les refs quand les valeurs changent
   useEffect(() => {
     loadingRef.current = loading;
     sessionRef.current = session;
     userRef.current = user;
+    if (session) sessionDetectedRef.current = true;
   }, [loading, session, user]);
 
   // Timeout de sécurité pour éviter que loading reste bloqué
   useEffect(() => {
-    // Timeout court pour forcer l'arrêt du chargement si rien ne se passe
+    // Timeout de sécurité finale (15s)
     const safetyTimeout = setTimeout(() => {
       if (loading) {
-        console.warn('⚠️ [useSupabaseSession] Safety timeout: forcing loading to false after 3s');
+        console.warn('⚠️ [useSupabaseSession] Safety timeout: forcing loading to false after 15s');
         setLoading(false);
-        // Si on n'a pas de session après le timeout, c'est qu'il n'y en a pas
-        if (!session && !user) {
+        // Si on n'a pas de session après le timeout ET qu'aucune n'a été détectée
+        if (!session && !user && !sessionDetectedRef.current) {
           setUser(null);
           setSession(null);
         }
       }
-    }, 3000); // 3 secondes max - plus agressif
+    }, 15000); // 15 secondes max - timeout de sécurité finale
 
     return () => clearTimeout(safetyTimeout);
   }, [loading, session, user]);
@@ -63,60 +65,29 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
   useEffect(() => {
     let isMounted = true;
     
-    // Fallback immédiat : si après 1 seconde on n'a toujours pas de session, arrêter le chargement
+    // Fallback : si après 10 secondes on n'a toujours pas de session ET qu'aucune session n'a été détectée
     const immediateFallback = setTimeout(() => {
-      if (isMounted && loadingRef.current && !sessionRef.current && !userRef.current) {
-        console.warn('⚠️ [useSupabaseSession] Immediate fallback: no session found after 1s, stopping load');
+      // ✅ Ne pas annuler si une session a été détectée (même si pas encore dans l'état)
+      if (isMounted && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current) {
+        console.warn('⚠️ [useSupabaseSession] Fallback: no session found after 10s, stopping load');
         setLoading(false);
         setUser(null);
         setSession(null);
       }
-    }, 1000);
+    }, 10000);
     
     // Récupérer la session initiale
+    // ✅ SIMPLIFIÉ : On fait confiance à onAuthStateChange qui est plus fiable
     const getSession = async () => {
       try {
         console.log('🔄 [useSupabaseSession] Getting initial session...');
         
-        // Timeout court pour éviter que le chargement reste bloqué
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 2000)
-        );
-        
-        // Lire la session (créée côté client via signInWithPassword)
-        let currentSession: any = null;
-        let error: any = null;
-        
-        try {
-          const sessionResult = await Promise.race([
-            supabase.auth.getSession(),
-            timeoutPromise
-          ]) as any;
-          
-          // Gérer différents formats de réponse
-          if (sessionResult?.data?.session !== undefined) {
-            currentSession = sessionResult.data.session;
-            error = sessionResult.data.error || sessionResult.error;
-          } else if (sessionResult?.session !== undefined) {
-            // Format alternatif
-            currentSession = sessionResult.session;
-            error = sessionResult.error;
-          } else if (sessionResult?.data) {
-            // Format avec data direct
-            currentSession = sessionResult.data;
-            error = sessionResult.error;
-          } else {
-            // Si c'est le timeout, on a pas de session
-            throw new Error('Session timeout');
-          }
-        } catch (timeoutError: any) {
-          console.warn('⚠️ [useSupabaseSession] Session timeout or error:', timeoutError.message);
-          error = timeoutError;
-          // En cas de timeout, considérer qu'il n'y a pas de session
-          currentSession = null;
-        }
+        // ✅ Appel simple sans race condition agressive
+        const { data, error } = await supabase.auth.getSession();
         
         if (!isMounted) return;
+        
+        const currentSession = data?.session;
         
         console.log('📋 [useSupabaseSession] Session result:', { 
           hasSession: !!currentSession, 
@@ -125,59 +96,46 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           error: error?.message 
         });
         
-        if (error && !currentSession) {
-          console.error('❌ [useSupabaseSession] Error getting session:', error);
-          if (isMounted) {
-            setLoading(false);
-            setUser(null);
-            setSession(null);
-          }
+        // ✅ Si onAuthStateChange a déjà traité la session, ne rien faire
+        if (sessionDetectedRef.current && sessionRef.current) {
+          console.log('✅ [useSupabaseSession] Session already handled by onAuthStateChange');
           return;
         }
 
         if (currentSession?.user) {
-          console.log('✅ [useSupabaseSession] Session found, fetching user data...');
-          // Appeler fetchUserData avec timeout
-          try {
-            await Promise.race([
-              fetchUserData(currentSession.user),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Fetch user data timeout')), 10000) // ✅ Augmenté à 10s
-              )
-            ]);
-          } catch (fetchError) {
-            console.error('❌ [useSupabaseSession] Error or timeout fetching user data:', fetchError);
-            // Utiliser les données auth en fallback avec métadonnées
-            // ✅ PRIORITÉ À app_metadata.role (comme isAdmin())
-            if (isMounted) {
-              const userMetadata = currentSession.user.user_metadata || {};
-              const appMetadata = currentSession.user.app_metadata || {};
-              const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
-              
-              const fallbackUser = {
-                id: currentSession.user.id,
-                email: currentSession.user.email || '',
-                firstName: userMetadata.first_name || userMetadata.firstName || null,
-                lastName: userMetadata.last_name || userMetadata.lastName || null,
-                role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-                userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
-              };
-              
-              console.log('⚠️ [useSupabaseSession] Using fallback user from metadata:', {
-                userId: fallbackUser.id,
-                email: fallbackUser.email,
-                role: fallbackUser.role,
-                appMetadataRole: appMetadata.role,
-                userMetadataRole: userMetadata.role
-              });
-              
-              setUser(fallbackUser);
-            }
-          }
+          sessionDetectedRef.current = true;
+          console.log('✅ [useSupabaseSession] Session found via getSession');
+          
+          // ✅ OPTIMISATION: Afficher IMMÉDIATEMENT avec les métadonnées JWT
+          const userMetadata = currentSession.user.user_metadata || {};
+          const appMetadata = currentSession.user.app_metadata || {};
+          const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+          
+          const immediateUser: SessionUser = {
+            id: currentSession.user.id,
+            email: currentSession.user.email || '',
+            firstName: userMetadata.first_name || userMetadata.firstName || null,
+            lastName: userMetadata.last_name || userMetadata.lastName || null,
+            role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+            userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+          };
+          
           if (isMounted) {
+            console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT (getSession):', {
+              firstName: immediateUser.firstName,
+              role: immediateUser.role
+            });
+            setUser(immediateUser);
             setSession(currentSession);
+            setLoading(false);
           }
-        } else {
+          
+          // ✅ En arrière-plan, essayer de récupérer les données complètes
+          fetchUserData(currentSession.user).catch((err) => {
+            console.log('ℹ️ [useSupabaseSession] Background fetch from getSession completed or failed:', err?.message || 'success');
+          });
+        } else if (!sessionDetectedRef.current) {
+          // Pas de session et aucune détectée par onAuthStateChange
           console.log('⚠️ [useSupabaseSession] No session found');
           if (isMounted) {
             setUser(null);
@@ -186,14 +144,14 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         }
       } catch (error) {
         console.error('❌ [useSupabaseSession] Error in getSession:', error);
-        // En cas d'erreur, s'assurer que loading est false
-        if (isMounted) {
+        // En cas d'erreur, ne pas écraser si onAuthStateChange a déjà une session
+        if (isMounted && !sessionDetectedRef.current) {
           setUser(null);
           setSession(null);
-          setLoading(false);
         }
       } finally {
-        if (isMounted) {
+        // ✅ Ne pas forcer loading=false si onAuthStateChange est en train de traiter
+        if (isMounted && !sessionDetectedRef.current) {
           setLoading(false);
         }
       }
@@ -209,6 +167,11 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         userId: currentSession?.user?.id,
         userEmail: currentSession?.user?.email
       });
+      
+      // ✅ Marquer qu'une session a été détectée pour éviter le fallback
+      if (currentSession) {
+        sessionDetectedRef.current = true;
+      }
       
       // ✅ PROTECTION: Vérifier que l'utilisateur n'a pas changé lors d'un TOKEN_REFRESHED
       if (event === 'TOKEN_REFRESHED' && userRef.current && currentSession?.user) {
@@ -232,51 +195,52 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               email: currentSession.user.email,
               appMetadataRole: currentSession.user.app_metadata?.role
             });
-            // Appeler fetchUserData avec timeout
-            try {
-              await Promise.race([
-                fetchUserData(currentSession.user),
-                new Promise((_, reject) => 
-                  setTimeout(() => reject(new Error('Fetch user data timeout')), 3000)
-                )
-              ]);
-            } catch (fetchError) {
-              console.error('❌ [useSupabaseSession] Error or timeout fetching user data:', fetchError);
-              // Utiliser les données auth en fallback
-              // ✅ PRIORITÉ À app_metadata.role (comme isAdmin())
-              if (isMounted) {
-                const userMetadata = currentSession.user.user_metadata || {};
-                const appMetadata = currentSession.user.app_metadata || {};
-                const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
-                
-                setUser({
-                  id: currentSession.user.id,
-                  email: currentSession.user.email || '',
-                  firstName: userMetadata.first_name || userMetadata.firstName || null,
-                  lastName: userMetadata.last_name || userMetadata.lastName || null,
-                  role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-                  userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
-                });
-              }
-            }
+            
+            // ✅ OPTIMISATION: Afficher IMMÉDIATEMENT l'utilisateur avec les métadonnées JWT
+            const userMetadata = currentSession.user.user_metadata || {};
+            const appMetadata = currentSession.user.app_metadata || {};
+            const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+            
+            const immediateUser: SessionUser = {
+              id: currentSession.user.id,
+              email: currentSession.user.email || '',
+              firstName: userMetadata.first_name || userMetadata.firstName || null,
+              lastName: userMetadata.last_name || userMetadata.lastName || null,
+              role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+              userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+            };
+            
+            // ✅ Afficher immédiatement avec les données JWT
             if (isMounted) {
+              console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT metadata:', {
+                firstName: immediateUser.firstName,
+                role: immediateUser.role
+              });
+              setUser(immediateUser);
               setSession(currentSession);
+              setLoading(false); // ✅ Arrêter le loading immédiatement
             }
+            
+            // ✅ En arrière-plan, essayer de récupérer les données complètes (sans bloquer)
+            fetchUserData(currentSession.user).catch((err) => {
+              console.log('ℹ️ [useSupabaseSession] Background fetch completed or failed:', err?.message || 'success');
+            });
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 [useSupabaseSession] User signed out');
           if (isMounted) {
             setUser(null);
             setSession(null);
+            setLoading(false);
           }
         }
       } catch (error) {
         console.error('❌ [useSupabaseSession] Error in auth state change:', error);
-      } finally {
         if (isMounted) {
           setLoading(false);
         }
       }
+      // ✅ Pas de finally avec setLoading - déjà géré dans chaque cas
     });
 
     return () => {
@@ -316,9 +280,9 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
       // Créer la promesse de requête
       const requestPromise = (async (): Promise<SessionUser | null> => {
         try {
-          // Timeout pour les requêtes Supabase (augmenté à 10s)
+          // Timeout pour les requêtes Supabase (15s pour laisser le temps aux requêtes lentes)
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Database query timeout')), 10000)
+            setTimeout(() => reject(new Error('Database query timeout')), 15000)
           );
 
           // Vérifier d'abord dans la table users avec timeout

@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,10 +18,20 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      // Simuler l'envoi d'email (à implémenter plus tard)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Envoyer l'email de réinitialisation via Supabase
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (resetError) {
+        // Ne pas révéler si l'email existe ou non pour des raisons de sécurité
+        console.error('Erreur réinitialisation:', resetError);
+        // On affiche toujours le message de succès pour éviter les attaques par énumération
+      }
+      
       setIsSubmitted(true);
-    } catch (error) {
+    } catch (err) {
+      console.error('Exception:', err);
       setError("Une erreur est survenue. Veuillez réessayer.");
     } finally {
       setIsLoading(false);
@@ -80,7 +92,7 @@ export default function ForgotPasswordPage() {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email professionnel
+                Email
               </label>
               <div className="mt-1">
                 <input

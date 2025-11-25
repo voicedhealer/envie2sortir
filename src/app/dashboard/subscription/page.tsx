@@ -219,7 +219,7 @@ function SubscriptionContent() {
   }
 
   const isPremium = subscription?.plan === 'PREMIUM';
-  const hasActiveSubscription = subscription?.subscription?.status === 'active';
+  const hasActiveSubscription = subscription?.subscription?.status === 'active' || subscription?.subscription?.status === 'trialing';
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -492,7 +492,10 @@ function SubscriptionContent() {
               </div>
 
               {/* Bouton d'annulation en bas de page */}
-              {subscription?.subscription && !subscription.subscription.cancelAtPeriodEnd && (
+              {isPremium && 
+               hasActiveSubscription && 
+               subscription?.subscription &&
+               !subscription.subscription.cancelAtPeriodEnd && (
                 <div className="mt-8 flex justify-center">
                   <button
                     onClick={handleCancel}

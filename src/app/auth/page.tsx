@@ -396,9 +396,20 @@ function AuthContent() {
 
             {/* Mot de passe */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Mot de passe
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                  Mot de passe
+                </label>
+                {/* Lien Mot de passe oublié - uniquement en mode connexion et pour user/pro */}
+                {isLogin && selectedRole !== 'admin' && (
+                  <a
+                    href="/forgot-password"
+                    className="text-sm text-orange-600 hover:text-orange-500 hover:underline"
+                  >
+                    Mot de passe oublié ?
+                  </a>
+                )}
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
