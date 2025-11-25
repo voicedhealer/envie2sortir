@@ -39,17 +39,7 @@ export async function updateSession(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it so that users
   // need to sign in again every time they visit a page.
 
-  const {
-    data: { user },
-    error: getUserError
-  } = await supabase.auth.getUser();
-  
-  console.log('🔧 [Middleware] getUser result:', {
-    hasUser: !!user,
-    userId: user?.id,
-    error: getUserError?.message,
-    path: request.nextUrl.pathname
-  });
+  const { pathname } = request.nextUrl;
 
   // Pages publiques qui ne nécessitent pas d'authentification
   const publicPaths = [
@@ -61,13 +51,29 @@ export async function updateSession(request: NextRequest) {
     '/etablissements/nouveau',
     '/auth',
     '/auth/error',
+    '/wait',
+    '/robots.txt',
+    '/sitemap',
+    '/api/newsletter',
+    '/api/wait',
   ];
 
-  const { pathname } = request.nextUrl;
-
-  // Si c'est une page publique, autoriser l'accès
-  if (publicPaths.some(path => pathname.startsWith(path))) {
+  // Pour les pages publiques, pas besoin de vérifier l'utilisateur - évite les logs inutiles
+  if (publicPaths.some(path => pathname.startsWith(path)) || pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/)) {
     return supabaseResponse;
+  }
+
+  const {
+    data: { user },
+    error: getUserError
+  } = await supabase.auth.getUser();
+  
+  // Ne logger que pour les pages protégées quand l'utilisateur n'est pas connecté
+  if (!user && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin') || pathname.startsWith('/mon-compte'))) {
+    console.log('🔐 [Middleware] Auth required:', {
+      path: pathname,
+      error: getUserError?.message
+    });
   }
 
   // Exception : permettre l'accès à la page de confirmation après paiement Stripe
