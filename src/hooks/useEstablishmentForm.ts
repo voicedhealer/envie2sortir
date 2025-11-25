@@ -787,7 +787,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       
       case 3:
         // Validation des activités proposées - champ obligatoire
-        if (formData.activities.length === 0) {
+        if (!formData.activities || formData.activities.length === 0) {
           newErrors.activities = "Veuillez sélectionner au moins une activité";
         }
         if (!formData.establishmentName) newErrors.establishmentName = "Nom requis";

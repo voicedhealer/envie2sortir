@@ -190,10 +190,18 @@ export const ModernActivitiesSelector = ({
     setIsHydrated(true);
   }, []);
 
-  // Initialiser les options sélectionnées
+  // Initialiser les options sélectionnées ET nettoyer les valeurs invalides
   useEffect(() => {
     if (value && value.length > 0) {
-      setSelectedOptions(findOptionsByValues(value));
+      const validOptions = findOptionsByValues(value);
+      setSelectedOptions(validOptions);
+      
+      // Si certaines valeurs ne sont pas reconnues, nettoyer formData
+      const validValues = validOptions.map(opt => opt.value);
+      if (validValues.length !== value.length) {
+        console.log('🧹 Nettoyage des activités invalides:', value, '→', validValues);
+        onChange(validValues);
+      }
     }
   }, [value]);
 

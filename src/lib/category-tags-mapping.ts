@@ -2220,7 +2220,7 @@ export function getGroupedActivities() {
       "escape_game_sf", "escape_game_fantasy", "escape_game_familial"
     ],
     "🎵 Blind Test & Quiz": [
-      "blind_test", "quiz_room", "salle_jeux_amis", "centre_multiactivites"
+      "blind_test", "quiz_room", "salle_jeux_amis", "complexe_multiactivites"
     ],
     "👶 Enfants & Famille": [
       "trampoline_parc", "parc_loisirs_enfants", "centre_aquatique", "parc_aventure_enfants",

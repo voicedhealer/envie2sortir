@@ -1204,11 +1204,18 @@ export class EstablishmentEnrichment {
     });
     
     // Populaire pour basé sur les services Google Places
+    // ✅ CORRECTION : Ne pas ajouter deux fois Déjeuner/Dîner
     if (result.serves_lunch === true) {
+      populairePour.push('Déjeuner');
+    } else if (types.includes('restaurant')) {
+      // Si serves_lunch n'est pas défini mais c'est un restaurant, ajouter Déjeuner
       populairePour.push('Déjeuner');
     }
     
     if (result.serves_dinner === true) {
+      populairePour.push('Dîner');
+    } else if (types.includes('restaurant') && !populairePour.includes('Dîner')) {
+      // Si serves_dinner n'est pas défini mais c'est un restaurant, ajouter Dîner
       populairePour.push('Dîner');
     }
     
@@ -1222,12 +1229,6 @@ export class EstablishmentEnrichment {
     
     if (result.delivery === true) {
       populairePour.push('Livraison');
-    }
-    
-    // Populaire pour basé sur le type d'établissement
-    if (types.includes('restaurant')) {
-      if (!populairePour.includes('Déjeuner')) populairePour.push('Déjeuner');
-      if (!populairePour.includes('Dîner')) populairePour.push('Dîner');
     }
     
     if (types.includes('cafe')) {
@@ -1326,6 +1327,8 @@ export class EstablishmentEnrichment {
       services.push('Traiteur');
     }
     
+    // ✅ CORRECTION : Desserts n'est ajouté QUE si mentionné dans les avis
+    // Ne plus l'ajouter automatiquement pour tous les restaurants
     if (reviewText.includes('dessert') || reviewText.includes('pâtisserie')) {
       services.push('Desserts');
     }
@@ -1338,7 +1341,7 @@ export class EstablishmentEnrichment {
     if (types.includes('restaurant')) {
       if (!services.includes('Déjeuner')) services.push('Déjeuner');
       if (!services.includes('Dîner')) services.push('Dîner');
-      if (!services.includes('Desserts')) services.push('Desserts');
+      // ❌ RETIRÉ : Ne plus ajouter Desserts automatiquement
     }
     
     if (types.includes('cafe')) {
