@@ -1,15 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { sanitizeInput, sanitizeEmail } from "@/lib/security/sanitization";
 
-// Schema de validation
+// Schema de validation avec protection contre les caractères dangereux
 const professionalInquirySchema = z.object({
-  firstName: z.string().min(1, "Le prénom est requis").max(100),
-  lastName: z.string().min(1, "Le nom est requis").max(100),
-  email: z.string().email("Adresse email invalide").min(5, "Email trop court").max(255, "Email trop long").toLowerCase().trim(),
-  establishmentName: z.string().min(1, "Le nom de l'établissement est requis").max(200),
-  city: z.string().min(1, "La ville est requise").max(100),
-  description: z.string().max(1000).optional(),
+  firstName: z.string()
+    .min(1, "Le prénom est requis")
+    .max(100)
+    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "Le prénom ne peut contenir que des lettres, espaces, tirets et apostrophes"),
+  lastName: z.string()
+    .min(1, "Le nom est requis")
+    .max(100)
+    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "Le nom ne peut contenir que des lettres, espaces, tirets et apostrophes"),
+  email: z.string()
+    .email("Adresse email invalide")
+    .min(5, "Email trop court")
+    .max(255, "Email trop long")
+    .toLowerCase()
+    .trim(),
+  establishmentName: z.string()
+    .min(1, "Le nom de l'établissement est requis")
+    .max(200)
+    .refine((val) => !/[<>{}[\]\\]/.test(val), "Le nom de l'établissement contient des caractères interdits"),
+  city: z.string()
+    .min(1, "La ville est requise")
+    .max(100)
+    .regex(/^[a-zA-ZÀ-ÿ\s'-]+$/, "La ville ne peut contenir que des lettres, espaces, tirets et apostrophes"),
+  description: z.string()
+    .max(1000, "La description ne peut pas dépasser 1000 caractères")
+    .refine((val) => !val || !/<script|javascript:|on\w+=/i.test(val), "La description contient du contenu dangereux")
+    .optional(),
 });
 
 // Rate limiting simple (en mémoire)
@@ -50,9 +71,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🔒 Validation des données
+    // 🔒 Sanitization des données avant validation
     const body = await request.json();
-    const validationResult = professionalInquirySchema.safeParse(body);
+    const sanitizedBody = {
+      firstName: sanitizeInput(body.firstName || ''),
+      lastName: sanitizeInput(body.lastName || ''),
+      email: sanitizeEmail(body.email || ''),
+      establishmentName: sanitizeInput(body.establishmentName || ''),
+      city: sanitizeInput(body.city || ''),
+      description: body.description ? sanitizeInput(body.description) : undefined,
+    };
+
+    // 🔒 Validation des données
+    const validationResult = professionalInquirySchema.safeParse(sanitizedBody);
 
     if (!validationResult.success) {
       return NextResponse.json(

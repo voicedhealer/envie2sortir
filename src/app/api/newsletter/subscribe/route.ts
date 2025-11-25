@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { sanitizeEmail } from "@/lib/security/sanitization";
 
 // Schema de validation
 const newsletterSchema = z.object({
@@ -50,9 +51,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 🔒 Validation des données
+    // 🔒 Sanitization des données avant validation
     const body = await request.json();
-    const validationResult = newsletterSchema.safeParse(body);
+    const sanitizedBody = {
+      email: sanitizeEmail(body.email || ''),
+      consent: body.consent === true, // Forcer boolean
+    };
+
+    // 🔒 Validation des données
+    const validationResult = newsletterSchema.safeParse(sanitizedBody);
 
     if (!validationResult.success) {
       return NextResponse.json(
