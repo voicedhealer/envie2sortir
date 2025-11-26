@@ -111,14 +111,15 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           const appMetadata = currentSession.user.app_metadata || {};
           const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
           
-          const immediateUser: SessionUser = {
-            id: currentSession.user.id,
-            email: currentSession.user.email || '',
-            firstName: userMetadata.first_name || userMetadata.firstName || null,
-            lastName: userMetadata.last_name || userMetadata.lastName || null,
-            role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-            userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
-          };
+            const immediateUser: SessionUser = {
+              id: currentSession.user.id,
+              email: currentSession.user.email || '',
+              firstName: userMetadata.first_name || userMetadata.firstName || null,
+              lastName: userMetadata.last_name || userMetadata.lastName || null,
+              role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+              // ✅ CORRECTION : Les admins n'ont pas de userType
+              userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+            };
           
           if (isMounted) {
             console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT (getSession):', {
@@ -207,7 +208,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               firstName: userMetadata.first_name || userMetadata.firstName || null,
               lastName: userMetadata.last_name || userMetadata.lastName || null,
               role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-              userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+              // ✅ CORRECTION : Les admins n'ont pas de userType
+              userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
             };
             
             // ✅ Afficher immédiatement avec les données JWT
@@ -294,7 +296,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               firstName: userMetadata.first_name || userMetadata.firstName || null,
               lastName: userMetadata.last_name || userMetadata.lastName || null,
               role: 'admin' as const,
-              userType: 'user' as const
+              // ✅ CORRECTION : Les admins n'ont pas de userType (ils ne sont ni user ni professional)
+              userType: undefined
             };
             userDataCache.set(authUser.id, { data: adminUser, timestamp: Date.now() });
             return adminUser;
@@ -387,7 +390,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               firstName: userData.first_name,
               lastName: userData.last_name,
               role: finalRole as 'user' | 'admin',
-              userType: 'user' as const
+              // ✅ CORRECTION : Les admins n'ont pas de userType
+              userType: (finalRole === 'admin' ? undefined : 'user') as 'user' | undefined
             };
             console.log('✅ [useSupabaseSession] Setting user from users table:', newUser, {
               roleFromMetadata,
@@ -459,7 +463,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             firstName: userMetadata.first_name || userMetadata.firstName || null,
             lastName: userMetadata.last_name || userMetadata.lastName || null,
             role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-            userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+            // ✅ CORRECTION : Les admins n'ont pas de userType
+            userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
           };
           console.log('⚠️ [useSupabaseSession] Using fallback user:', fallbackUser);
           
@@ -478,7 +483,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             firstName: userMetadata.first_name || userMetadata.firstName || null,
             lastName: userMetadata.last_name || userMetadata.lastName || null,
             role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-            userType: (roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional'
+            // ✅ CORRECTION : Les admins n'ont pas de userType
+            userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
           };
           
           // ✅ Mettre en cache même en cas d'erreur

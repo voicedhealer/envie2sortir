@@ -6,6 +6,11 @@ let supabaseInstance: ReturnType<typeof createBrowserClient> | null = null;
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  // Si on est côté serveur, retourner null (sera géré par le composant appelant)
+  if (typeof window === 'undefined') {
+    return null as any;
+  }
 
   if (!supabaseUrl || !supabaseAnonKey) {
     // Si les variables ne sont pas définies, retourner un client mock pour éviter les erreurs
@@ -20,7 +25,20 @@ export function createClient() {
   }
 
   if (!supabaseInstance) {
-    supabaseInstance = createBrowserClient(supabaseUrl, supabaseAnonKey);
+    // ✅ CORRECTION : Configurer les options de cookies pour localhost
+    const isProduction = typeof process !== 'undefined' && process.env.NODE_ENV === 'production';
+    supabaseInstance = createBrowserClient(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookieOptions: {
+          // IMPORTANT : Désactiver Secure en dev pour que les cookies soient acceptés sur http://localhost
+          secure: isProduction,
+          sameSite: 'lax',
+          path: '/',
+        },
+      }
+    );
   }
   return supabaseInstance;
 }

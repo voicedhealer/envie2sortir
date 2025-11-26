@@ -1,5 +1,25 @@
 import { createClient } from '@/lib/supabase/server';
 import { supabase } from '@/lib/supabase/client';
+import { User } from '@supabase/supabase-js';
+
+/**
+ * ✅ CORRECTION : Fonction unifiée pour détecter le rôle utilisateur
+ * Priorise TOUJOURS app_metadata.role sur user_metadata.role
+ * (app_metadata ne peut être modifié que par Supabase Admin)
+ */
+export function getUserRole(user: User | null | undefined): 'admin' | 'pro' | 'user' {
+  if (!user) return 'user';
+  
+  // ✅ TOUJOURS prioriser app_metadata (seul Supabase Admin peut le modifier)
+  const appRole = user.app_metadata?.role;
+  const userRole = user.user_metadata?.role;
+  
+  // Admin via app_metadata a priorité absolue
+  if (appRole === 'admin') return 'admin';
+  if (appRole === 'pro' || userRole === 'pro') return 'pro';
+  
+  return 'user';
+}
 
 /**
  * Récupère l'utilisateur actuel (user ou professional)
@@ -134,8 +154,8 @@ export async function isAdmin(): Promise<boolean> {
     return false;
   }
   
-  // Vérifier le rôle dans les métadonnées JWT
-  return user.app_metadata?.role === 'admin';
+  // ✅ CORRECTION : Utiliser la fonction unifiée getUserRole
+  return getUserRole(user) === 'admin';
 }
 
 /**

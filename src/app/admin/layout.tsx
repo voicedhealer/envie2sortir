@@ -29,12 +29,35 @@ export default function AdminLayout({
   const [pendingModifications, setPendingModifications] = useState(0);
 
   useEffect(() => {
+    // ✅ CORRECTION : Attendre que le chargement soit terminé avant de vérifier
     if (loading) return; // En cours de chargement
     
-    if (!session || session.user?.role !== 'admin') {
-      router.push('/auth?error=AccessDenied');
-    }
-  }, [session, loading, router]);
+    // ✅ CORRECTION : Vérifier la session avec un petit délai pour laisser le temps
+    // à la session de se synchroniser après la redirection depuis /auth
+    const checkAuth = setTimeout(() => {
+      // ✅ CORRECTION : Vérifier que la session existe ET que le rôle est admin
+      // Éviter les redirections en boucle en vérifiant que nous ne sommes pas déjà sur /auth
+      if (!session || session.user?.role !== 'admin') {
+        // Vérifier que nous ne sommes pas déjà en train de rediriger
+        if (pathname !== '/auth') {
+          console.log('🚫 [AdminLayout] Accès refusé, redirection vers /auth', {
+            hasSession: !!session,
+            role: session?.user?.role,
+            pathname,
+            loading
+          });
+          router.push('/auth?error=AccessDenied');
+        }
+      } else {
+        console.log('✅ [AdminLayout] Session admin valide', {
+          userId: session.user.id,
+          role: session.user.role
+        });
+      }
+    }, 200); // Délai pour laisser la session se synchroniser après redirection
+    
+    return () => clearTimeout(checkAuth);
+  }, [session, loading, router, pathname]);
 
   // Récupérer le nombre de demandes en attente
   useEffect(() => {

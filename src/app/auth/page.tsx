@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Eye, EyeOff, Mail, Lock, User, Heart, MapPin, Star, X } from 'lucide-react';
@@ -24,7 +24,14 @@ function AuthContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
-  const supabase = createClient();
+  const supabase = useMemo(() => {
+    try {
+      return createClient();
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du client Supabase:', error);
+      return null;
+    }
+  }, []);
 
   // Gérer les erreurs et messages depuis l'URL
   useEffect(() => {
@@ -88,7 +95,9 @@ function AuthContent() {
 
         let result;
         try {
-          result = await response.json();
+          const text = await response.text();
+          console.log('📋 [Auth] Réponse brute:', text.substring(0, 200));
+          result = JSON.parse(text);
         } catch (parseError) {
           console.error('❌ Erreur de parsing de la réponse:', parseError);
           setError('Erreur de communication avec le serveur. Veuillez réessayer.');
@@ -97,13 +106,30 @@ function AuthContent() {
         }
 
         if (!response.ok || !result.success) {
-          const errorMessage = result?.message || result?.error || 'Email ou mot de passe incorrect';
+          // ✅ CORRECTION : Améliorer la gestion des erreurs
+          const errorMessage = result?.message || result?.error || result?.errorCode || 
+                              (response.status === 401 ? 'Email ou mot de passe incorrect' : 
+                               response.status === 500 ? 'Erreur serveur. Veuillez réessayer.' :
+                               `Erreur ${response.status}: ${response.statusText}`);
+          
           console.error('❌ Erreur de connexion:', {
             status: response.status,
+            statusText: response.statusText,
             message: errorMessage,
-            result: result
+            result: result,
+            hasResult: !!result,
+            resultKeys: result ? Object.keys(result) : []
           });
+          
           setError(errorMessage);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ CORRECTION : Vérifier que result.user existe
+        if (!result.user) {
+          console.error('❌ Erreur: result.user est undefined', { result });
+          setError('Erreur lors de la connexion: données utilisateur manquantes');
           setLoading(false);
           return;
         }
@@ -112,8 +138,13 @@ function AuthContent() {
         
         const userRole = result.user.role;
 
+        // ✅ CORRECTION : Normaliser les rôles pour la comparaison
+        // L'API peut retourner 'admin' mais selectedRole peut être 'admin' aussi
+        const normalizedUserRole = userRole === 'pro' ? 'pro' : userRole === 'admin' ? 'admin' : 'user';
+        const normalizedSelectedRole = selectedRole === 'pro' ? 'pro' : selectedRole === 'admin' ? 'admin' : 'user';
+
         // Vérifier que le rôle correspond
-        if (userRole !== selectedRole) {
+        if (normalizedUserRole !== normalizedSelectedRole) {
           const roleNames = {
             'user': 'utilisateur',
             'pro': 'professionnel', 
@@ -131,11 +162,27 @@ function AuthContent() {
           redirectUrl = '/admin';
         }
 
-        console.log('✅ Redirection vers:', redirectUrl);
+        console.log('✅ [Auth] Redirection vers:', redirectUrl);
         
-        // La session Supabase est déjà créée par l'API route avec des cookies
-        // Forcer un rechargement complet de la page pour que le client Supabase puisse lire les cookies
-        window.location.href = decodeURIComponent(redirectUrl);
+        // ✅ CORRECTION : Redirection immédiate sans attendre le refresh de session
+        // Le middleware gérera la synchronisation de la session
+        setLoading(false); // Arrêter le loading avant la redirection
+        
+        // ✅ CORRECTION : Utiliser window.location.replace() pour éviter que l'utilisateur
+        // puisse revenir en arrière vers la page d'authentification
+        const finalRedirectUrl = decodeURIComponent(redirectUrl);
+        console.log('🚀 [Auth] Exécution de la redirection vers:', finalRedirectUrl);
+        
+        // Utiliser replace() au lieu de href pour éviter l'historique
+        window.location.replace(finalRedirectUrl);
+        
+        // ✅ SÉCURITÉ : Redirection de secours si replace() ne fonctionne pas
+        setTimeout(() => {
+          if (window.location.pathname === '/auth') {
+            console.warn('⚠️ [Auth] Redirection de secours activée (href)');
+            window.location.href = finalRedirectUrl;
+          }
+        }, 500);
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');
@@ -185,9 +232,21 @@ function AuthContent() {
         message: err?.message,
         name: err?.name,
         stack: err?.stack,
-        error: err
+        error: err,
+        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err))
       });
-      const errorMessage = err?.message || err?.toString() || 'Une erreur est survenue lors de la connexion';
+      
+      // ✅ CORRECTION : Améliorer le message d'erreur
+      let errorMessage = 'Une erreur inattendue s\'est produite. Veuillez réessayer.';
+      
+      if (err?.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err?.toString && err.toString() !== '[object Object]') {
+        errorMessage = err.toString();
+      }
+      
       setError(errorMessage);
       setLoading(false);
     } finally {
@@ -199,6 +258,12 @@ function AuthContent() {
     setLoading(true);
     setError('');
     setSuccess('');
+
+    if (!supabase) {
+      setError('Erreur de configuration Supabase. Veuillez rafraîchir la page.');
+      setLoading(false);
+      return;
+    }
 
     try {
       console.log('🔐 Tentative de connexion Google...');

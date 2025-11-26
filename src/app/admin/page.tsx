@@ -270,25 +270,43 @@ export default function AdminDashboard() {
 
   // Vérifier l'authentification admin
   useEffect(() => {
+    // ✅ CORRECTION : Attendre que le chargement soit terminé
     if (loading) return; // En cours de chargement
     
-    if (!session || session.user?.role !== 'admin') {
-      router.push('/auth?error=AccessDenied');
-      return;
+    // ✅ CORRECTION : Vérifier la session avec un petit délai pour laisser le temps
+    // à la session de se synchroniser après la redirection
+    const checkAuth = setTimeout(() => {
+      if (!session || session.user?.role !== 'admin') {
+        console.log('🚫 [AdminPage] Accès refusé, redirection vers /auth', {
+          hasSession: !!session,
+          role: session?.user?.role,
+          loading
+        });
+        router.push('/auth?error=AccessDenied');
+        return;
+      }
+      
+      // Ne faire le fetch initial qu'une seule fois
+      if (!hasInitializedRef.current) {
+        hasInitializedRef.current = true;
+        fetchAllData();
+      }
+    }, 200); // Petit délai pour laisser la session se synchroniser
+    
+    // Actualiser toutes les 30 secondes (seulement si admin)
+    let interval: NodeJS.Timeout | null = null;
+    if (session && session.user?.role === 'admin' && !loading) {
+      interval = setInterval(() => {
+        if (session && session.user?.role === 'admin') {
+          fetchAllData();
+        }
+      }, 30000);
     }
     
-    // Ne faire le fetch initial qu'une seule fois
-    if (!hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      fetchAllData();
-    }
-    
-    // Actualiser toutes les 30 secondes
-    const interval = setInterval(() => {
-      fetchAllData();
-    }, 30000);
-    
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(checkAuth);
+      if (interval) clearInterval(interval);
+    };
   }, [session, loading, router, fetchAllData]);
 
   // Afficher un loader pendant la vérification de l'authentification

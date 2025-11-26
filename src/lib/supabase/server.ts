@@ -46,6 +46,11 @@ export async function createClient() {
 
   const cookieStore = await cookies();
 
+  // ✅ CORRECTION : Options de cookies pour localhost (secure: false en dev)
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isHttps = supabaseUrl?.startsWith('https://');
+  const shouldBeSecure = isProduction && isHttps;
+
   return createServerClient(
     supabaseUrl,
     supabaseAnonKey,
@@ -56,9 +61,22 @@ export async function createClient() {
         },
         setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // ✅ CORRECTION : Appliquer les bonnes options de cookies
+              // En développement (localhost), secure doit être false
+              const cookieOptions = {
+                ...options,
+                path: options?.path || '/',
+                sameSite: (options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
+                // ✅ CORRECTION : secure doit être false en localhost, true seulement en HTTPS prod
+                secure: options?.secure ?? shouldBeSecure,
+                // ✅ CRITIQUE : httpOnly doit être false pour que le client JavaScript puisse lire les cookies Supabase
+                httpOnly: false,
+                ...(options?.maxAge && { maxAge: options.maxAge }),
+                ...(options?.expires && { expires: options.expires }),
+              };
+              cookieStore.set(name, value, cookieOptions);
+            });
           } catch {
             // The `setAll` method was called from a Server Component.
             // This can be ignored if you have middleware refreshing

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { sanitizeInput, sanitizeEmail } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
+import { getUserRole } from '@/lib/supabase/helpers';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -101,11 +102,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ PRIORITÉ AUX MÉTADONNÉES JWT (comme isAdmin())
-    // Vérifier d'abord app_metadata.role qui est la source de vérité
-    const appMetadataRole = authData.user.app_metadata?.role;
-    const userMetadataRole = authData.user.user_metadata?.role;
-    const roleFromMetadata = appMetadataRole || userMetadataRole;
+    // ✅ CORRECTION : Utiliser la fonction unifiée getUserRole qui priorise app_metadata.role
+    const roleFromMetadata = getUserRole(authData.user);
 
     // Récupérer les infos utilisateur depuis la table users ou professionals
     const { data: userData } = await supabase
@@ -116,14 +114,12 @@ export async function POST(request: NextRequest) {
 
     let user;
     if (userData) {
-      // ✅ Utiliser le rôle des métadonnées JWT s'il existe, sinon celui de la table users
-      const finalRole = roleFromMetadata === 'admin' 
-        ? 'admin' 
-        : (userData.role === 'admin' ? 'admin' : 'user');
+      // ✅ CORRECTION : Utiliser getUserRole qui priorise app_metadata.role
+      // Le rôle de la table users est ignoré si app_metadata.role est défini
+      const finalRole = roleFromMetadata;
       
       console.log('🔍 [API Login] Role determination:', {
-        appMetadataRole,
-        userMetadataRole,
+        roleFromMetadata,
         tableRole: userData.role,
         finalRole,
         userId: authData.user.id,
@@ -193,25 +189,44 @@ export async function POST(request: NextRequest) {
       user: user
     });
 
-    // Ajouter tous les cookies Supabase à la réponse
+    // ✅ CORRECTION : Ajouter tous les cookies Supabase à la réponse avec les bonnes options
     console.log('🍪 [API Login] Setting cookies:', cookiesToReturn.length, 'cookies');
     cookiesToReturn.forEach(({ name, value, options }) => {
-      console.log('🍪 [API Login] Setting cookie:', name, 'with options:', options);
-      // Utiliser les options par défaut de Supabase SSR, mais s'assurer que httpOnly est correct
-      // Les cookies Supabase doivent être httpOnly pour la sécurité, sauf pour les cookies de session access_token
+      console.log('🍪 [API Login] Setting cookie:', name);
+      
+      // ✅ CORRECTION : Options de cookie optimisées pour la persistance
+      // ⚠️ CRITIQUE : Les cookies Supabase doivent être httpOnly: false pour que le client JS puisse les lire !
       const cookieOptions = {
-        ...options,
-        // Garder httpOnly tel que défini par Supabase (généralement true pour la sécurité)
-        httpOnly: options?.httpOnly !== false, // Respecter la valeur de Supabase, mais par défaut true
-        sameSite: (options?.sameSite as 'lax' | 'strict' | 'none') || 'lax',
-        secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
-        path: options?.path || '/',
-        // S'assurer que maxAge est défini si fourni
-        ...(options?.maxAge && { maxAge: options.maxAge }),
-        ...(options?.expires && { expires: options.expires })
+        path: '/',
+        sameSite: 'lax' as const,
+        // ✅ CRITIQUE : httpOnly doit être false pour que le client JavaScript puisse lire les cookies
+        httpOnly: false,
+        maxAge: options?.maxAge || 60 * 60 * 24 * 7, // 1 semaine par défaut
+        // ✅ CRITIQUE : secure doit être false en dev, true seulement en production
+        secure: process.env.NODE_ENV === 'production',
+        ...(options?.expires && { expires: options.expires }),
       };
+      
       response.cookies.set(name, value, cookieOptions);
     });
+    
+    // ✅ CORRECTION : Logs de debug pour vérifier les cookies setés
+    console.log('🍪 [Login] Cookies setés dans response:', response.cookies.getAll().map(c => c.name).filter(n => n.startsWith('sb-')));
+    
+    // ✅ CORRECTION : Forcer la mise à jour de la session en appelant getUser()
+    // Cela garantit que les cookies sont bien synchronisés
+    try {
+      const { data: { user: sessionUser } } = await supabase.auth.getUser();
+      if (sessionUser) {
+        console.log('✅ [API Login] Session user verified:', {
+          userId: sessionUser.id,
+          email: sessionUser.email,
+          role: sessionUser.app_metadata?.role || sessionUser.user_metadata?.role
+        });
+      }
+    } catch (sessionError) {
+      console.warn('⚠️ [API Login] Session verification warning:', sessionError);
+    }
 
     return response;
 

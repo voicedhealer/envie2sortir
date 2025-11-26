@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -49,12 +49,25 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
   
-  const supabase = createClient();
+  // Créer le client Supabase uniquement côté client
+  const supabase = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    try {
+      return createClient();
+    } catch (error) {
+      console.error('❌ Erreur lors de la création du client Supabase:', error);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
-    // Si Supabase n'est pas configuré, passer directement en mode non chargé
-    if (!isSupabaseConfigured) {
-      console.warn('⚠️ [SupabaseAuthProvider] Supabase not configured - skipping auth initialization');
+    // Si Supabase n'est pas configuré ou le client n'est pas disponible, passer directement en mode non chargé
+    if (!isSupabaseConfigured || !supabase) {
+      if (!isSupabaseConfigured) {
+        console.warn('⚠️ [SupabaseAuthProvider] Supabase not configured - skipping auth initialization');
+      }
       setLoading(false);
       return;
     }
@@ -109,9 +122,14 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
       console.error('❌ [SupabaseAuthProvider] Error setting up auth listener:', error);
       setLoading(false);
     }
-  }, [isSupabaseConfigured]);
+  }, [isSupabaseConfigured, supabase]);
 
   const fetchUserData = async (authUser: User) => {
+    if (!supabase) {
+      console.warn('⚠️ [SupabaseAuthProvider] Cannot fetch user data - Supabase client not available');
+      return;
+    }
+    
     try {
       // Vérifier d'abord dans la table users
       const { data: userData, error: userError } = await supabase
@@ -195,6 +213,11 @@ export function SupabaseAuthProvider({ children }: SupabaseAuthProviderProps) {
       }
       
       // Tenter la déconnexion Supabase avec timeout et scope global
+      if (!supabase) {
+        console.warn('⚠️ [SupabaseAuthContext] Cannot sign out - Supabase client not available');
+        return;
+      }
+      
       const signOutPromise = supabase.auth.signOut({ scope: 'global' });
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('SignOut timeout')), 1000)
