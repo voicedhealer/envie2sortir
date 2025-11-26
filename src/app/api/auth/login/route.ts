@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
     // ✅ CORRECTION : Ajouter tous les cookies Supabase à la réponse avec les bonnes options
     console.log('🍪 [API Login] Setting cookies:', cookiesToReturn.length, 'cookies');
     cookiesToReturn.forEach(({ name, value, options }) => {
-      console.log('🍪 [API Login] Setting cookie:', name);
+      console.log('🍪 [API Login] Setting cookie:', name, 'value length:', value?.length || 0);
       
       // ✅ CORRECTION : Options de cookie optimisées pour la persistance
       // ⚠️ CRITIQUE : Les cookies Supabase doivent être httpOnly: false pour que le client JS puisse les lire !
@@ -204,8 +204,15 @@ export async function POST(request: NextRequest) {
         maxAge: options?.maxAge || 60 * 60 * 24 * 7, // 1 semaine par défaut
         // ✅ CRITIQUE : secure doit être false en dev, true seulement en production
         secure: process.env.NODE_ENV === 'production',
+        // ✅ CRITIQUE : Ne pas définir de domaine en dev (localhost) pour que les cookies fonctionnent
+        // Le domaine par défaut (non défini) fonctionne pour localhost
         ...(options?.expires && { expires: options.expires }),
       };
+      
+      // ✅ CORRECTION : Vérifier que la valeur n'est pas vide
+      if (!value || value.trim() === '') {
+        console.warn('⚠️ [API Login] Cookie vide détecté:', name);
+      }
       
       response.cookies.set(name, value, cookieOptions);
     });

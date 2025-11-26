@@ -353,8 +353,10 @@ export async function GET(request: NextRequest) {
       establishmentIds.length > 0 
         ? supabase.from('etablissement_tags').select('*').in('etablissement_id', establishmentIds)
         : Promise.resolve({ data: [], error: null }),
+      // ✅ CORRECTION : Récupérer TOUTES les images (pas seulement is_primary)
+      // On va prioriser is_card_image dans le mapping
       establishmentIds.length > 0
-        ? supabase.from('images').select('*').in('establishment_id', establishmentIds).eq('is_primary', true)
+        ? supabase.from('images').select('*').in('establishment_id', establishmentIds).order('ordre', { ascending: true })
         : Promise.resolve({ data: [], error: null }),
       establishmentIds.length > 0
         ? supabase.from('events').select('*').in('establishment_id', establishmentIds).gte('start_date', new Date().toISOString()).order('start_date', { ascending: true })
@@ -376,6 +378,20 @@ export async function GET(request: NextRequest) {
         imagesMap.set(img.establishment_id, []);
       }
       imagesMap.get(img.establishment_id).push(img);
+    });
+    
+    // ✅ CORRECTION : Trier les images pour chaque établissement : is_card_image en premier, puis is_primary, puis ordre
+    imagesMap.forEach((images, establishmentId) => {
+      images.sort((a: any, b: any) => {
+        // Priorité 1: is_card_image
+        if (a.is_card_image && !b.is_card_image) return -1;
+        if (!a.is_card_image && b.is_card_image) return 1;
+        // Priorité 2: is_primary
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        // Priorité 3: ordre
+        return (a.ordre || 0) - (b.ordre || 0);
+      });
     });
 
     const eventsMap = new Map();
@@ -416,7 +432,8 @@ export async function GET(request: NextRequest) {
         images: images.slice(0, 1).map((img: any) => ({
           id: img.id,
           url: img.url,
-          isPrimary: img.is_primary
+          isPrimary: img.is_primary,
+          isCardImage: img.is_card_image
         })),
         events: events.slice(0, 1).map((evt: any) => ({
           id: evt.id,

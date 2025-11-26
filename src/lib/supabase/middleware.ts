@@ -72,14 +72,14 @@ export async function updateSession(request: NextRequest) {
   );
 
   // ✅ CORRECTION : Logs de debug pour les cookies
-  console.log('🍪 [Middleware] Cookies entrants:', request.cookies.getAll().map(c => c.name).filter(n => n.startsWith('sb-')));
-
-  // IMPORTANT: Avoid writing any logic between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it so that users
-  // need to sign in again every time they visit a page.
-
-  // ✅ CORRECTION : Forcer le refresh de la session pour la propager dans les cookies
-  await supabase.auth.getUser();
+  const allCookies = request.cookies.getAll();
+  const supabaseCookies = allCookies.filter(c => c.name.startsWith('sb-'));
+  console.log('🍪 [Middleware] Cookies entrants:', supabaseCookies.map(c => c.name));
+  console.log('🍪 Cookies Supabase trouvés:', supabaseCookies.length, supabaseCookies.map(c => c.name));
+  
+  if (supabaseCookies.length === 0) {
+    console.log('⚠️ Aucun cookie Supabase trouvé. Tous les cookies:', allCookies.map(c => c.name));
+  }
 
   const { pathname } = request.nextUrl;
 
@@ -105,12 +105,21 @@ export async function updateSession(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // ✅ CORRECTION : Appeler getUser() pour forcer la mise à jour de la session
-  // Cela garantit que les cookies sont bien synchronisés
-  const {
-    data: { user },
-    error: getUserError
-  } = await supabase.auth.getUser();
+  // ✅ CORRECTION : getUser() a déjà été appelé plus haut, réutiliser le résultat
+  // Pour éviter les appels multiples, on va appeler getUser() ici et stocker le résultat
+  const getUserResult = await supabase.auth.getUser();
+  const user = getUserResult.data?.user;
+  const getUserError = getUserResult.error;
+  
+  // ✅ CORRECTION : Logs améliorés pour le débogage
+  if (getUserError) {
+    console.log('👤 getUser result:', {
+      hasUser: !!user,
+      userId: user?.id,
+      error: getUserError.message,
+      errorCode: getUserError.status
+    });
+  }
   
   // ✅ CORRECTION : Utiliser la fonction unifiée getUserRole qui priorise app_metadata.role
   const userRole = getUserRole(user);
@@ -133,22 +142,32 @@ export async function updateSession(request: NextRequest) {
   
   // ✅ CORRECTION : Vérifier d'abord si on a des cookies Supabase même si getUser() a échoué
   // Cela permet de gérer les cas où la session est en cours de synchronisation
-  const hasSupabaseCookies = request.cookies.getAll().some(c => c.name.startsWith('sb-'));
+  // Réutiliser supabaseCookies déjà déclaré plus haut (ligne 76)
+  const hasSupabaseCookies = supabaseCookies.length > 0;
+  
+  // ✅ CORRECTION : Vérifier si les cookies Supabase sont valides (non vides)
+  // Après déconnexion, les cookies peuvent être présents mais vides
+  const hasValidSupabaseCookies = supabaseCookies.some(c => {
+    const value = c.value;
+    return value && value.trim() !== '' && value !== 'deleted' && value !== 'null';
+  });
   
   // ✅ CORRECTION : Pour les pages protégées, vérifier l'authentification
-  // Mais éviter les boucles de redirection si on vient déjà de /auth ou si on a des cookies
+  // Mais éviter les boucles de redirection si on vient déjà de /auth ou si on a des cookies valides
   const isFromAuth = request.headers.get('referer')?.includes('/auth') || 
                      request.nextUrl.searchParams.get('from') === 'auth';
   
-  // ✅ CORRECTION : Si on a des cookies Supabase mais pas de user, attendre un peu
+  // ✅ CORRECTION : Si on a des cookies Supabase VALIDES mais pas de user, attendre un peu
   // (la session pourrait être en cours de synchronisation)
-  const shouldWaitForSession = hasSupabaseCookies && !user && pathname.startsWith('/admin');
+  // Mais si les cookies sont vides (après déconnexion), on doit rediriger
+  const shouldWaitForSession = hasValidSupabaseCookies && !user && pathname.startsWith('/admin');
   
+  // ✅ CORRECTION : Si pas de user ET pas de cookies valides → rediriger vers /auth
   if (
     !user &&
     !isStripeSuccess &&
     !isFromAuth && // ✅ Éviter les boucles si on vient de /auth
-    !shouldWaitForSession && // ✅ Ne pas rediriger si on a des cookies (session en cours)
+    !shouldWaitForSession && // ✅ Ne pas rediriger si on a des cookies VALIDES (session en cours)
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/mon-compte'))
@@ -157,9 +176,11 @@ export async function updateSession(request: NextRequest) {
       path: pathname,
       hasUser: !!user,
       hasSupabaseCookies,
+      hasValidSupabaseCookies,
       isFromAuth,
       cookiesCount: request.cookies.getAll().length,
-      supabaseCookies: request.cookies.getAll().filter(c => c.name.startsWith('sb-')).length
+      supabaseCookiesCount: supabaseCookies.length,
+      getUserError: getUserError?.message
     });
     const url = request.nextUrl.clone();
     url.pathname = '/auth';
@@ -176,10 +197,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
   
-  // ✅ CORRECTION : Si on a des cookies Supabase sur /auth mais pas encore de user détecté,
+  // ✅ CORRECTION : Si on a des cookies Supabase VALIDES sur /auth mais pas encore de user détecté,
   // laisser passer (la session se synchronisera au prochain refresh)
-  if (hasSupabaseCookies && pathname === '/auth' && !user) {
-    console.log('⏳ [Middleware] Cookies Supabase détectés sur /auth, session en cours de synchronisation');
+  if (hasValidSupabaseCookies && pathname === '/auth' && !user) {
+    console.log('⏳ [Middleware] Cookies Supabase valides détectés sur /auth, session en cours de synchronisation');
   }
 
   // ✅ CORRECTION : Logs de debug pour les cookies sortants

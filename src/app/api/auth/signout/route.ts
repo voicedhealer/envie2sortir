@@ -28,11 +28,26 @@ export async function POST(request: NextRequest) {
     // Créer une réponse avec suppression des cookies
     const response = NextResponse.json({ success: true });
     
-    // Supprimer tous les cookies qui commencent par 'sb-'
+    // ✅ CORRECTION : Supprimer tous les cookies qui commencent par 'sb-'
+    // Utiliser set avec valeur vide et maxAge 0 pour forcer la suppression
     allCookies.forEach(cookie => {
       if (cookie.name.startsWith('sb-')) {
         console.log('🗑️ [API signout] Suppression cookie:', cookie.name);
+        
+        // ✅ CORRECTION : Supprimer avec delete ET set avec valeur vide pour garantir la suppression
         response.cookies.delete(cookie.name);
+        
+        // ✅ CORRECTION : Forcer la suppression en définissant le cookie avec une valeur vide
+        // et une date d'expiration passée
+        const isProduction = process.env.NODE_ENV === 'production';
+        response.cookies.set(cookie.name, '', {
+          path: '/',
+          sameSite: 'lax',
+          httpOnly: false,
+          secure: isProduction,
+          maxAge: 0, // Expire immédiatement
+          expires: new Date(0) // Date passée
+        });
       }
     });
 

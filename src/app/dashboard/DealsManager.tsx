@@ -957,15 +957,15 @@ function DealCard({
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
 
   return (
-    <div className={`bg-white border rounded-lg p-2 ${isActive ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-gray-200'}`}>
-      <div className="flex gap-2">
+    <div className={`bg-white border rounded-lg p-3 ${isActive ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-gray-200'}`}>
+      <div className="flex gap-3">
         {/* Image */}
         {deal.imageUrl && (
           <div className="flex-shrink-0">
             <img 
               src={deal.imageUrl} 
               alt={deal.title}
-              className="w-12 h-12 object-cover rounded"
+              className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg"
             />
           </div>
         )}

@@ -44,35 +44,24 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     if (session) sessionDetectedRef.current = true;
   }, [loading, session, user]);
 
-  // Timeout de sécurité pour éviter que loading reste bloqué
-  useEffect(() => {
-    // Timeout de sécurité finale (15s)
-    const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.warn('⚠️ [useSupabaseSession] Safety timeout: forcing loading to false after 15s');
-        setLoading(false);
-        // Si on n'a pas de session après le timeout ET qu'aucune n'a été détectée
-        if (!session && !user && !sessionDetectedRef.current) {
-          setUser(null);
-          setSession(null);
-        }
-      }
-    }, 15000); // 15 secondes max - timeout de sécurité finale
-
-    return () => clearTimeout(safetyTimeout);
-  }, [loading, session, user]);
-
   useEffect(() => {
     let isMounted = true;
     
     // Fallback : si après 10 secondes on n'a toujours pas de session ET qu'aucune session n'a été détectée
     const immediateFallback = setTimeout(() => {
-      // ✅ Ne pas annuler si une session a été détectée (même si pas encore dans l'état)
-      if (isMounted && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current) {
+      // ✅ CORRECTION : Ne pas annuler si une session a été détectée OU si on a déjà une session/user
+      // Vérifier aussi les cookies pour éviter de perdre une session valide
+      const hasCookies = typeof document !== 'undefined' && 
+        document.cookie.split(';').some(c => c.trim().startsWith('sb-'));
+      
+      if (isMounted && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current && !hasCookies) {
         console.warn('⚠️ [useSupabaseSession] Fallback: no session found after 10s, stopping load');
         setLoading(false);
         setUser(null);
         setSession(null);
+      } else if (isMounted && loadingRef.current && (sessionDetectedRef.current || hasCookies)) {
+        // ✅ Si on a des cookies ou une session détectée, continuer à attendre
+        console.log('⏳ [useSupabaseSession] Session en cours de synchronisation, continuation du chargement...');
       }
     }, 10000);
     

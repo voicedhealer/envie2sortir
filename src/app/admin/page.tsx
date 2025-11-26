@@ -132,13 +132,14 @@ export default function AdminDashboard() {
       if (response.ok) {
         const data = await response.json();
         setMetrics(data.system);
-        console.log("Métriques système chargées:", data);
+        // ✅ CORRECTION : Log seulement si les données ont changé pour éviter le spam
+        // console.log("Métriques système chargées:", data);
       } else if (response.status === 401 || response.status === 403) {
-        console.log('Session expirée, arrêt des requêtes métriques');
+        console.log('⚠️ [AdminPage] Session expirée, arrêt des requêtes métriques');
         return;
       }
     } catch (error) {
-      console.error("Erreur lors du chargement des métriques:", error);
+      console.error("❌ [AdminPage] Erreur lors du chargement des métriques:", error);
     }
   }, [session, loading]);
 
@@ -235,38 +236,72 @@ export default function AdminDashboard() {
     }
   }, [session, loading]);
 
+  // ✅ CORRECTION : Utiliser useRef pour stocker les callbacks et éviter les re-créations
+  const fetchDashboardStatsRef = useRef(fetchDashboardStats);
+  const fetchSystemMetricsRef = useRef(fetchSystemMetrics);
+  const fetchHealthStatusRef = useRef(fetchHealthStatus);
+  const fetchRealtimeMetricsRef = useRef(fetchRealtimeMetrics);
+  const fetchSecurityEventsRef = useRef(fetchSecurityEvents);
+  const fetchConfigStatusRef = useRef(fetchConfigStatus);
+  const sessionRef = useRef(session);
+  const loadingRef = useRef(loading);
+
+  // Mettre à jour les refs quand les valeurs changent
+  useEffect(() => {
+    fetchDashboardStatsRef.current = fetchDashboardStats;
+    fetchSystemMetricsRef.current = fetchSystemMetrics;
+    fetchHealthStatusRef.current = fetchHealthStatus;
+    fetchRealtimeMetricsRef.current = fetchRealtimeMetrics;
+    fetchSecurityEventsRef.current = fetchSecurityEvents;
+    fetchConfigStatusRef.current = fetchConfigStatus;
+    sessionRef.current = session;
+    loadingRef.current = loading;
+  }, [session, loading, fetchDashboardStats, fetchSystemMetrics, fetchHealthStatus, fetchRealtimeMetrics, fetchSecurityEvents, fetchConfigStatus]);
+
   const fetchAllData = useCallback(async () => {
-    // Éviter les appels multiples simultanés
+    // ✅ CORRECTION : Éviter les appels multiples simultanés
     if (isFetchingRef.current) {
+      console.log('⏸️ [AdminPage] fetchAllData déjà en cours, skip');
       return;
     }
 
     // Vérifier que la session est toujours valide avant de faire les requêtes
-    if (!session || session.user?.role !== 'admin' || loading) {
+    const currentSession = sessionRef.current;
+    const currentLoading = loadingRef.current;
+    
+    if (!currentSession || currentSession.user?.role !== 'admin' || currentLoading) {
+      console.log('⏸️ [AdminPage] Session invalide, skip fetchAllData', {
+        hasSession: !!currentSession,
+        role: currentSession?.user?.role,
+        loading: currentLoading
+      });
       setIsLoading(false);
       return;
     }
 
     isFetchingRef.current = true;
     setIsLoading(true);
+    
+    console.log('🔄 [AdminPage] Début du chargement des données admin...');
 
     try {
       await Promise.all([
-        fetchDashboardStats(),
-        fetchSystemMetrics(),
-        fetchHealthStatus(),
-        fetchRealtimeMetrics(),
-        fetchSecurityEvents(),
-        fetchConfigStatus()
+        fetchDashboardStatsRef.current(),
+        fetchSystemMetricsRef.current(),
+        fetchHealthStatusRef.current(),
+        fetchRealtimeMetricsRef.current(),
+        fetchSecurityEventsRef.current(),
+        fetchConfigStatusRef.current()
       ]);
       setLastUpdate(new Date());
+      console.log('✅ [AdminPage] Toutes les données chargées');
     } catch (error) {
-      console.error("Erreur lors du chargement des données:", error);
+      console.error("❌ [AdminPage] Erreur lors du chargement des données:", error);
     } finally {
       setIsLoading(false);
       isFetchingRef.current = false;
     }
-  }, [session, loading, fetchDashboardStats, fetchSystemMetrics, fetchHealthStatus, fetchRealtimeMetrics, fetchSecurityEvents, fetchConfigStatus]);
+  }, []); // ✅ CORRECTION : Pas de dépendances pour éviter les re-créations
 
   // Vérifier l'authentification admin
   useEffect(() => {
@@ -297,7 +332,9 @@ export default function AdminDashboard() {
     let interval: NodeJS.Timeout | null = null;
     if (session && session.user?.role === 'admin' && !loading) {
       interval = setInterval(() => {
-        if (session && session.user?.role === 'admin') {
+        // Utiliser la ref pour éviter les dépendances
+        const currentSession = sessionRef.current;
+        if (currentSession && currentSession.user?.role === 'admin') {
           fetchAllData();
         }
       }, 30000);
@@ -307,7 +344,7 @@ export default function AdminDashboard() {
       clearTimeout(checkAuth);
       if (interval) clearInterval(interval);
     };
-  }, [session, loading, router, fetchAllData]);
+  }, [session, loading, router]); // ✅ CORRECTION : fetchAllData retiré des dépendances
 
   // Afficher un loader pendant la vérification de l'authentification
   if (loading || isLoading) {

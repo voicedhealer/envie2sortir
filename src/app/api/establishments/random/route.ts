@@ -79,16 +79,19 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    // Récupérer les images pour tous les établissements
+    // ✅ CORRECTION : Récupérer les images pour tous les établissements
+    // Prioriser is_card_image, puis is_primary, puis toutes les autres images
     const establishmentIds = (allEstablishments || []).map((est: any) => est.id);
     const imagesMap = new Map();
     
     if (establishmentIds.length > 0) {
+      // ✅ CORRECTION : Récupérer TOUTES les images (pas seulement is_primary)
+      // On va ensuite prioriser is_card_image dans le mapping
       const { data: imagesData } = await supabase
         .from('images')
         .select('*')
         .in('establishment_id', establishmentIds)
-        .eq('is_primary', true);
+        .order('ordre', { ascending: true });
       
       (imagesData || []).forEach((img: any) => {
         if (!imagesMap.has(img.establishment_id)) {
@@ -131,7 +134,21 @@ export async function GET(request: NextRequest) {
     
     // Formater la réponse (conversion snake_case -> camelCase)
     const formattedEstablishments = establishments.map((est: any) => {
-      const images = imagesMap.get(est.id) || [];
+      const allImages = imagesMap.get(est.id) || [];
+      
+      // ✅ CORRECTION : Prioriser l'image de card, puis l'image principale, puis les autres
+      // Trier les images : is_card_image en premier, puis is_primary, puis par ordre
+      const sortedImages = [...allImages].sort((a: any, b: any) => {
+        // Priorité 1: is_card_image
+        if (a.is_card_image && !b.is_card_image) return -1;
+        if (!a.is_card_image && b.is_card_image) return 1;
+        // Priorité 2: is_primary
+        if (a.is_primary && !b.is_primary) return -1;
+        if (!a.is_primary && b.is_primary) return 1;
+        // Priorité 3: ordre
+        return (a.ordre || 0) - (b.ordre || 0);
+      });
+      
       return {
         id: est.id,
         name: est.name,
@@ -146,7 +163,7 @@ export async function GET(request: NextRequest) {
         status: est.status,
         subscription: est.subscription,
         imageUrl: est.image_url,
-        images: images.slice(0, 5).map((img: any) => ({
+        images: sortedImages.slice(0, 5).map((img: any) => ({
           id: img.id,
           url: img.url,
           altText: img.alt_text,

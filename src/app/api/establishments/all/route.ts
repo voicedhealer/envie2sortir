@@ -86,8 +86,10 @@ export async function GET(request: NextRequest) {
         }
       };
 
-      // Filtrer les images primaires
+      // ✅ CORRECTION : Prioriser l'image de card, puis l'image primaire
+      const cardImage = (est.images || []).find((img: any) => img.is_card_image) || null;
       const primaryImage = (est.images || []).find((img: any) => img.is_primary) || null;
+      const selectedImage = cardImage || primaryImage;
       
       // Filtrer les événements à venir
       const now = new Date().toISOString();
@@ -98,7 +100,7 @@ export async function GET(request: NextRequest) {
       return {
         ...est,
         tags: est.tags || [],
-        images: primaryImage ? [primaryImage] : [],
+        images: selectedImage ? [selectedImage] : [],
         events: upcomingEvent ? [upcomingEvent] : [],
         activities: parseJsonField(est.activities) || [],
         services: parseJsonField(est.services) || [],

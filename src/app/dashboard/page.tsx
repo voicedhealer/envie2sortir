@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       // Récupérer les événements
       const { data: events } = await adminClient
         .from('events')
-        .select('id, title, description, start_date, end_date, price, max_capacity, created_at')
+        .select('id, title, description, start_date, end_date, image_url, price, max_capacity, created_at')
         .eq('establishment_id', establishment.id)
         .order('start_date', { ascending: true });
 
@@ -146,6 +146,7 @@ export default async function DashboardPage() {
         description: ev.description,
         startDate: ev.start_date,
         endDate: ev.end_date,
+        imageUrl: ev.image_url,
         price: ev.price,
         maxCapacity: ev.max_capacity,
         createdAt: ev.created_at,
