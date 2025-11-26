@@ -768,6 +768,9 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                 <p className="text-xs text-gray-500 mt-1">
                   Choisissez soit une image, soit un PDF (pas les deux)
                 </p>
+                <p className="text-xs text-orange-600 font-medium mt-1">
+                  📐 Taille recommandée : 1200 × 800 pixels (ratio 3:2) pour un affichage optimal
+                </p>
               </div>
 
               {/* PDF */}
@@ -868,7 +871,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {activeDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans actifs</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {activeDeals.map(deal => (
                   <DealCard
                     key={deal.id}
@@ -957,54 +960,54 @@ function DealCard({
   const discount = calculateDiscount(deal.originalPrice, deal.discountedPrice);
 
   return (
-    <div className={`bg-white border rounded-lg p-3 ${isActive ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-gray-200'}`}>
-      <div className="flex gap-3">
+    <div className={`bg-white border rounded-lg p-7 ${isActive ? 'border-orange-500 shadow-md shadow-orange-500/10' : 'border-gray-200'}`}>
+      <div className="flex gap-4">
         {/* Image */}
         {deal.imageUrl && (
           <div className="flex-shrink-0">
             <img 
               src={deal.imageUrl} 
               alt={deal.title}
-              className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg"
+              className="w-28 h-28 md:w-32 md:h-32 object-cover rounded-lg"
             />
           </div>
         )}
 
         {/* Contenu principal */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between mb-1">
-            <div className="flex items-center gap-1 flex-1 min-w-0">
-              <h4 className="font-semibold text-xs text-gray-900 truncate">{deal.title}</h4>
+          <div className="flex items-start justify-between mb-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h4 className="font-semibold text-sm md:text-base text-gray-900 truncate">{deal.title}</h4>
               {deal.isRecurring && (
                 <div title="Bon plan récurrent" className="flex-shrink-0">
-                  <RotateCcw className="text-orange-500 w-3 h-3" />
+                  <RotateCcw className="text-orange-500 w-4 h-4" />
                 </div>
               )}
             </div>
             {!deal.isActive && (
-              <span className="flex-shrink-0 ml-1 px-1 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded">
+              <span className="flex-shrink-0 ml-1 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
                 Inactif
               </span>
             )}
           </div>
           
-          <p className="text-[10px] text-gray-600 mb-1 line-clamp-1">{deal.description}</p>
+          <p className="text-xs md:text-sm text-gray-600 mb-2 line-clamp-2">{deal.description}</p>
 
           {/* Prix */}
           {(deal.originalPrice || deal.discountedPrice) && (
-            <div className="flex items-center gap-1 mb-1">
+            <div className="flex items-center gap-2 mb-2">
               {deal.originalPrice && (
-                <span className="text-[10px] text-gray-400 line-through">
+                <span className="text-xs text-gray-400 line-through">
                   {formatPrice(deal.originalPrice)}
                 </span>
               )}
               {deal.discountedPrice && (
-                <span className="text-sm font-bold text-orange-600">
+                <span className="text-lg md:text-xl font-bold text-orange-600">
                   {formatPrice(deal.discountedPrice)}
                 </span>
               )}
               {discount > 0 && (
-                <span className="text-[10px] bg-orange-100 text-orange-800 px-1 py-0.5 rounded">
+                <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
                   -{discount}%
                 </span>
               )}
@@ -1012,40 +1015,40 @@ function DealCard({
           )}
 
           {/* Dates */}
-          <div className="flex items-center gap-1 text-[10px] text-gray-500 mb-1">
-            <Calendar className="w-3 h-3 flex-shrink-0" />
+          <div className="flex items-center gap-2 text-xs md:text-sm text-gray-500 mb-2">
+            <Calendar className="w-4 h-4 flex-shrink-0" />
             <span className="line-clamp-1 truncate">{formatDealTime(deal)}</span>
           </div>
 
           {/* Actions */}
-          <div className="flex gap-1">
+          <div className="flex gap-2">
             <button
               onClick={() => onEdit(deal)}
-              className="text-blue-600 hover:text-blue-800 p-0.5"
+              className="text-blue-600 hover:text-blue-800 p-1"
               title="Modifier"
             >
-              <Edit className="w-3 h-3" />
+              <Edit className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDuplicate(deal)}
-              className="text-green-600 hover:text-green-800 p-0.5"
+              className="text-green-600 hover:text-green-800 p-1"
               title="Dupliquer"
             >
-              <Copy className="w-3 h-3" />
+              <Copy className="w-4 h-4" />
             </button>
             <button
               onClick={() => onDelete(deal.id)}
-              className="text-red-600 hover:text-red-800 p-0.5"
+              className="text-red-600 hover:text-red-800 p-1"
               title="Supprimer"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
       
       {/* Statistiques d'engagement */}
-      <div className="mt-2 pt-2 border-t border-gray-100">
+      <div className="mt-4 pt-4 border-t border-gray-100">
         <DealEngagementStats 
           dealId={deal.id}
           establishmentId={deal.establishmentId}

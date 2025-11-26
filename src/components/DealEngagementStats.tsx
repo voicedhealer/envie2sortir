@@ -57,8 +57,8 @@ export default function DealEngagementStats({ dealId, establishmentId }: DealEng
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-1">
-        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-orange-500"></div>
+      <div className="flex items-center justify-center py-2">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
       </div>
     );
   }
@@ -68,13 +68,13 @@ export default function DealEngagementStats({ dealId, establishmentId }: DealEng
   }
 
   return (
-    <div className="bg-orange-50 rounded p-1.5">
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1">
-          <TrendingUp className="w-3 h-3 text-orange-600" />
-          <span className="text-[10px] font-semibold text-orange-800">Engagement</span>
+    <div className="bg-orange-50 rounded-lg p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-orange-600" />
+          <span className="text-xs md:text-sm font-semibold text-orange-800">Engagement</span>
         </div>
-        <span className={`font-bold text-[10px] ${
+        <span className={`font-bold text-sm md:text-base ${
           stats.engagementRate >= 70 ? 'text-green-600' :
           stats.engagementRate >= 50 ? 'text-yellow-600' :
           'text-red-600'
@@ -83,26 +83,26 @@ export default function DealEngagementStats({ dealId, establishmentId }: DealEng
         </span>
       </div>
       
-      <div className="grid grid-cols-2 gap-1.5 mb-1">
+      <div className="grid grid-cols-2 gap-3 mb-2">
         {/* Intéressés */}
-        <div className="flex items-center gap-0.5">
-          <ThumbsUp className="w-2.5 h-2.5 text-green-600" />
-          <span className="text-[10px] font-semibold text-green-700">{stats.liked}</span>
-          <span className="text-[9px] text-gray-600">Int.</span>
+        <div className="flex items-center gap-1.5">
+          <ThumbsUp className="w-4 h-4 text-green-600" />
+          <span className="text-xs md:text-sm font-semibold text-green-700">{stats.liked}</span>
+          <span className="text-xs text-gray-600">Int.</span>
         </div>
         
         {/* Pas intéressés */}
-        <div className="flex items-center gap-0.5">
-          <ThumbsDown className="w-2.5 h-2.5 text-red-600" />
-          <span className="text-[10px] font-semibold text-red-700">{stats.disliked}</span>
-          <span className="text-[9px] text-gray-600">Pas int.</span>
+        <div className="flex items-center gap-1.5">
+          <ThumbsDown className="w-4 h-4 text-red-600" />
+          <span className="text-xs md:text-sm font-semibold text-red-700">{stats.disliked}</span>
+          <span className="text-xs text-gray-600">Pas int.</span>
         </div>
       </div>
       
       {/* Barre de progression */}
-      <div className="w-full bg-gray-200 rounded-full h-1 mb-0.5">
+      <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
         <div 
-          className={`h-1 rounded-full transition-all duration-300 ${
+          className={`h-2 rounded-full transition-all duration-300 ${
             stats.engagementRate >= 70 ? 'bg-green-500' :
             stats.engagementRate >= 50 ? 'bg-yellow-500' :
             'bg-red-500'
@@ -113,7 +113,7 @@ export default function DealEngagementStats({ dealId, establishmentId }: DealEng
       
       {/* Total */}
       <div className="text-center">
-        <span className="text-[9px] text-gray-500">
+        <span className="text-xs text-gray-500">
           {stats.total} interaction{stats.total > 1 ? 's' : ''}
         </span>
       </div>

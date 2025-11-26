@@ -408,6 +408,9 @@ export default function EventsManager({ establishmentId, isPremium, subscription
                   uploadType="event"
                   className="w-full"
                 />
+                <p className="text-xs text-orange-600 font-medium mt-2">
+                  📐 Taille recommandée : 1200 × 800 pixels (ratio 3:2) pour un affichage optimal sur toutes les cards
+                </p>
               </div>
 
               <div className="flex gap-3">
