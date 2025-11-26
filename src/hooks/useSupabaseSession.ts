@@ -280,9 +280,29 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
       // Créer la promesse de requête
       const requestPromise = (async (): Promise<SessionUser | null> => {
         try {
-          // Timeout pour les requêtes Supabase (15s pour laisser le temps aux requêtes lentes)
+          // ✅ CORRECTION : Pour les admins, utiliser directement les métadonnées JWT
+          // Les admins n'ont pas besoin d'être dans la table users
+          const userMetadata = authUser.user_metadata || {};
+          const appMetadata = authUser.app_metadata || {};
+          const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+          
+          if (roleFromMetadata === 'admin') {
+            console.log('👑 [useSupabaseSession] Admin détecté, utilisation des métadonnées JWT uniquement');
+            const adminUser: SessionUser = {
+              id: authUser.id,
+              email: authUser.email || '',
+              firstName: userMetadata.first_name || userMetadata.firstName || null,
+              lastName: userMetadata.last_name || userMetadata.lastName || null,
+              role: 'admin' as const,
+              userType: 'user' as const
+            };
+            userDataCache.set(authUser.id, { data: adminUser, timestamp: Date.now() });
+            return adminUser;
+          }
+          
+          // Timeout réduit pour les requêtes Supabase (5s au lieu de 15s)
           const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Database query timeout')), 15000)
+            setTimeout(() => reject(new Error('Database query timeout')), 5000)
           );
 
           // Vérifier d'abord dans la table users avec timeout
@@ -314,6 +334,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           } catch (queryError: any) {
             console.warn('⚠️ [useSupabaseSession] Users query error or timeout:', queryError.message);
             userError = queryError;
+            // ✅ Ne pas bloquer - utiliser le fallback immédiatement
           }
 
           console.log('🔍 [useSupabaseSession] Users table result:', { 
@@ -353,9 +374,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             
             // ✅ PRIORITÉ AUX MÉTADONNÉES JWT (comme isAdmin())
             // Vérifier d'abord app_metadata.role qui est la source de vérité
-            const userMetadata = authUser.user_metadata || {};
-            const appMetadata = authUser.app_metadata || {};
-            const roleFromMetadata = appMetadata.role || userMetadata.role;
+            // Réutiliser les variables déjà déclarées au début de la fonction
             
             // Utiliser le rôle des métadonnées JWT s'il existe, sinon celui de la table users
             const finalRole = roleFromMetadata === 'admin' 
@@ -383,17 +402,34 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             return newUser;
           }
 
-          // Sinon vérifier dans professionals avec timeout
-          const profQueryPromise = supabase
-            .from('professionals')
-            .select('id, email, first_name, last_name')
-            .eq('id', authUser.id)
-            .maybeSingle();
+          // Sinon vérifier dans professionals avec timeout (seulement si pas admin)
+          let professionalData: any = null;
+          let profError: any = null;
+          
+          if (roleFromMetadata !== 'admin') {
+            try {
+              const profQueryPromise = supabase
+                .from('professionals')
+                .select('id, email, first_name, last_name')
+                .eq('id', authUser.id)
+                .maybeSingle();
 
-          const { data: professionalData, error: profError } = await Promise.race([
-            profQueryPromise,
-            timeoutPromise
-          ]) as any;
+              const profResult = await Promise.race([
+                profQueryPromise,
+                timeoutPromise
+              ]) as any;
+              
+              if (profResult?.data !== undefined) {
+                professionalData = profResult.data;
+                profError = profResult.error;
+              } else if (profResult?.error) {
+                profError = profResult.error;
+              }
+            } catch (profQueryError: any) {
+              console.warn('⚠️ [useSupabaseSession] Professionals query error or timeout:', profQueryError.message);
+              profError = profQueryError;
+            }
+          }
 
           console.log('🔍 [useSupabaseSession] Professionals table result:', { professionalData, error: profError });
 
@@ -415,9 +451,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
 
           // Fallback sur les données auth
           // ✅ PRIORITÉ À app_metadata.role (comme isAdmin())
-          const userMetadata = authUser.user_metadata || {};
-          const appMetadata = authUser.app_metadata || {};
-          const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+          // Réutiliser les variables déjà déclarées au début de la fonction
           
           const fallbackUser: SessionUser = {
             id: authUser.id,
@@ -436,9 +470,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           console.error('❌ [useSupabaseSession] Error fetching user data:', error);
           // Toujours définir un utilisateur en fallback pour éviter le blocage
           // ✅ PRIORITÉ À app_metadata.role (comme isAdmin())
-          const userMetadata = authUser.user_metadata || {};
-          const appMetadata = authUser.app_metadata || {};
-          const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+          // Réutiliser les variables déjà déclarées au début du try
           
           const fallbackUser: SessionUser = {
             id: authUser.id,

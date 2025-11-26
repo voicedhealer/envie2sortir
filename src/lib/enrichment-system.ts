@@ -1948,7 +1948,9 @@ export class EstablishmentEnrichment {
       console.log('💳 payment_options trouvé:', result.payment_options);
       if (result.payment_options.credit_card) paymentMethods.push('Cartes de crédit');
       if (result.payment_options.debit_card) paymentMethods.push('Cartes de débit');
-      if (result.payment_options.cash_only) paymentMethods.push('Espèces uniquement');
+      // ✅ CORRECTION : Ne plus ajouter "Espèces uniquement" automatiquement
+      // Aucun établissement n'accepte uniquement les espèces en pratique
+      // if (result.payment_options.cash_only) paymentMethods.push('Espèces uniquement');
       if (result.payment_options.cash) paymentMethods.push('Espèces');
     }
     

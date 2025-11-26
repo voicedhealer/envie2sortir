@@ -1032,13 +1032,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           throw new Error(errorMessage);
         }
         
-        // Si une URL de checkout Stripe est fournie, rediriger vers Stripe
-        if (result.checkoutUrl) {
-          console.log('💳 Redirection vers Stripe Checkout...');
-          window.location.href = result.checkoutUrl;
-          return; // Ne pas continuer avec la connexion automatique
-        }
-
+        // ✅ CORRECTION : Authentifier l'utilisateur AVANT de rediriger vers Stripe
+        // Cela garantit qu'il sera connecté après le paiement
         if (result.autoLogin && result.professional) {
           try {
             console.log('🔄 Tentative de connexion automatique avec Supabase Auth...');
@@ -1059,8 +1054,21 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             const loginResult = await loginResponse.json();
 
             if (loginResponse.ok && loginResult.success) {
-              console.log('✅ Connexion automatique réussie, redirection vers dashboard');
-              // Recharger la page pour synchroniser la session Supabase
+              console.log('✅ Connexion automatique réussie');
+              
+              // Si une URL de checkout Stripe est fournie, rediriger vers Stripe APRÈS authentification
+              if (result.checkoutUrl) {
+                console.log('💳 Redirection vers Stripe Checkout (utilisateur authentifié)...');
+                // ✅ CORRECTION : Stocker l'email et le mot de passe pour reconnexion après Stripe
+                // (en cas de perte de session lors de la redirection externe)
+                localStorage.setItem('pending_stripe_email', result.professional.email);
+                sessionStorage.setItem('pending_stripe_password', formData.accountPassword);
+                window.location.href = result.checkoutUrl;
+                return;
+              }
+              
+              // Sinon, rediriger vers le dashboard
+              console.log('✅ Redirection vers dashboard');
               window.location.href = '/dashboard';
             } else {
               console.error('❌ Échec de la connexion automatique:', loginResult);
@@ -1073,6 +1081,14 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
           }
         } else {
+          // Si pas d'autoLogin mais qu'il y a un checkoutUrl, rediriger quand même vers Stripe
+          // (cas où l'authentification a déjà été faite ailleurs)
+          if (result.checkoutUrl) {
+            console.log('💳 Redirection vers Stripe Checkout...');
+            window.location.href = result.checkoutUrl;
+            return;
+          }
+          
           console.log('⚠️ Pas de connexion automatique, redirection vers page de connexion');
           router.push('/auth?message=account-created&email=' + encodeURIComponent(result.professional.email));
         }

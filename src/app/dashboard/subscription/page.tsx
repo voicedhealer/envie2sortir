@@ -35,6 +35,44 @@ function SubscriptionContent() {
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
+    // ✅ CORRECTION : Vérifier l'authentification après le retour de Stripe
+    const checkAuthAfterStripe = async () => {
+      if (searchParams.get('success') === 'true') {
+        // Vérifier si l'utilisateur est authentifié
+        try {
+          const authCheck = await fetch('/api/professional/establishment');
+          if (!authCheck.ok) {
+            // Si non authentifié, essayer de récupérer l'email depuis le localStorage
+            const storedEmail = localStorage.getItem('pending_stripe_email');
+            const storedPassword = sessionStorage.getItem('pending_stripe_password');
+            
+            if (storedEmail && storedPassword) {
+              console.log('🔄 Tentative de reconnexion automatique après paiement Stripe...');
+              const loginResponse = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  email: storedEmail,
+                  password: storedPassword
+                }),
+              });
+              
+              if (loginResponse.ok) {
+                console.log('✅ Reconnexion automatique réussie après paiement Stripe');
+                // Nettoyer les données stockées
+                localStorage.removeItem('pending_stripe_email');
+                sessionStorage.removeItem('pending_stripe_password');
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Erreur vérification auth après Stripe:', err);
+        }
+      }
+    };
+    
+    checkAuthAfterStripe();
     loadSubscription();
     
     // Si on vient de Stripe avec success=true, attendre un peu et recharger

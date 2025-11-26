@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { requireEstablishment } from "@/lib/supabase/helpers";
 import DashboardContent from "@/app/dashboard/DashboardContent";
 
+// Indispensable pour éviter l'erreur "Dynamic server usage" au build
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   try {
     // Vérifier que l'utilisateur est authentifié et est un professionnel

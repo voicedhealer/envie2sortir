@@ -67,6 +67,17 @@ export async function POST(request: NextRequest) {
 
     // Utiliser le numéro normalisé pour vérifier
     console.log(`🔍 [Registration] Vérification du numéro ${formData.get('accountPhone')} (normalisé: ${accountData.phone})`);
+    
+    // ✅ Utiliser TWILIO_AUTO_VERIFY_TEST_NUMBERS pour bypasser la vérification des numéros de test
+    const ALLOW_TEST_AUTO_VERIFY = process.env.TWILIO_AUTO_VERIFY_TEST_NUMBERS !== 'false';
+    const isTestNumber = /^\+?1500555\d{4}$/.test(accountData.phone.replace(/\s/g, '').replace(/[^\d+]/g, ''));
+    
+    if (isTestNumber && ALLOW_TEST_AUTO_VERIFY) {
+      console.log('🧪 [Registration] Numéro de test Twilio détecté - vérification automatique (TWILIO_AUTO_VERIFY_TEST_NUMBERS=true)');
+      // Marquer automatiquement comme vérifié si c'est un numéro de test
+      const { markPhoneAsVerified } = await import('@/lib/phone-verification');
+      markPhoneAsVerified(accountData.phone, 60 * 60 * 1000); // 1 heure
+    } else {
     const phoneIsVerified = isPhoneVerified(accountData.phone);
     if (!phoneIsVerified) {
       console.error('❌ [Registration] Numéro de téléphone non vérifié:', accountData.phone);
@@ -74,8 +85,8 @@ export async function POST(request: NextRequest) {
         error: 'Vérification du numéro de téléphone requise. Veuillez vérifier votre numéro de téléphone via SMS avant de continuer.' 
       }, { status: 400 });
     }
-
     console.log('✅ [Registration] Numéro de téléphone vérifié:', accountData.phone);
+    }
 
     const professionalData = {
       siret: formData.get('siret') as string,
