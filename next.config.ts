@@ -54,7 +54,19 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   
   // Optimiser les chunks webpack
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    // Optimiser le cache webpack pour réduire les warnings de sérialisation
+    if (dev) {
+      config.cache = {
+        ...config.cache,
+        // Utiliser filesystem cache au lieu de memory pour les grandes chaînes
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+      };
+    }
+
     if (!isServer) {
       config.optimization = {
         ...config.optimization,

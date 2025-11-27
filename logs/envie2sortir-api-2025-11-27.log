@@ -1,0 +1,4 @@
+[2025-11-27T09:28:44.176Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-27T09:28:48.975Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":1,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-27T09:30:53.708Z] INFO  envie2sortir-api: Successful login | Context: {"email":"lapieceuniquedijon21@exemple.com","responseTime":2002,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
+[2025-11-27T09:30:55.961Z] INFO  envie2sortir-api: CSRF token generated | Context: {"sessionId":"dev-sess...","responseTime":2,"requestId":"unknown","ipAddress":"::1"} | Request: unknown
