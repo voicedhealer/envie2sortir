@@ -170,3 +170,4 @@ Le seul point d'attention concerne la vérification après déconnexion, mais ce
 **Environnement** : Développement (localhost:3001)
 **Version** : Actuelle
 
+

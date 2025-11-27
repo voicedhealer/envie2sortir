@@ -162,3 +162,4 @@
 
 Tous les fichiers sont en place et les corrections ont été appliquées. Il ne reste plus qu'à tester manuellement dans le navigateur pour confirmer que tout fonctionne parfaitement.
 
+

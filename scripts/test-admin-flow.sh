@@ -136,3 +136,4 @@ echo "   4. Vérifier que la page admin s'affiche correctement"
 echo ""
 echo -e "${BLUE}💡 Pour plus de détails, voir : scripts/test-auth-browser.md${NC}"
 
+

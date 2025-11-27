@@ -211,3 +211,4 @@ Les cookies Supabase sont un indicateur fiable qu'une session existe, même si e
 - [ ] Tests manuels effectués
 - [ ] Vérification de la persistance après rechargement
 
+

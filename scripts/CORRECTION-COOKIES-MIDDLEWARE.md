@@ -228,3 +228,4 @@ En développement sur `localhost`, ne pas définir de domaine permet aux cookies
 - [ ] Cookies détectés dans le middleware
 - [ ] Session correctement récupérée
 
+

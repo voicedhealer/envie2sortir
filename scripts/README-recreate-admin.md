@@ -104,3 +104,4 @@ DELETE FROM auth.users WHERE email = 'envie2sortir.fr@gmail.com';
 - Le mot de passe par défaut est temporaire et doit être changé après la première connexion
 - Les métadonnées sont configurées pour que le rôle soit `admin` à la fois dans `app_metadata` et `user_metadata`
 
+
