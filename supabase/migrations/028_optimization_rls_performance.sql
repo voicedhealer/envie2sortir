@@ -299,11 +299,28 @@ CREATE INDEX IF NOT EXISTS idx_establishments_slug_lower ON establishments(LOWER
 CREATE INDEX IF NOT EXISTS idx_establishments_owner_id_status ON establishments(owner_id, status);
 
 -- Index pour les requêtes de recherche textuelle (si full-text search est utilisé)
-CREATE INDEX IF NOT EXISTS idx_establishments_name_trgm ON establishments USING gin(name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_establishments_description_trgm ON establishments USING gin(description gin_trgm_ops);
-
 -- Note: Les index trigram nécessitent l'extension pg_trgm
--- CREATE EXTENSION IF NOT EXISTS pg_trgm;
+-- Créer l'extension si elle n'existe pas (peut échouer si pas de permissions, dans ce cas créer manuellement)
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Extension pg_trgm non disponible. Les index trigram ne seront pas créés.';
+END $$;
+
+-- Créer les index trigram seulement si l'extension est disponible
+-- Ces index peuvent échouer si pg_trgm n'est pas installé, c'est normal
+DO $$
+BEGIN
+    CREATE INDEX IF NOT EXISTS idx_establishments_name_trgm ON establishments USING gin(name gin_trgm_ops);
+    CREATE INDEX IF NOT EXISTS idx_establishments_description_trgm ON establishments USING gin(description gin_trgm_ops);
+EXCEPTION
+    WHEN undefined_function THEN
+        RAISE NOTICE 'Index trigram non créés (extension pg_trgm non disponible).';
+    WHEN OTHERS THEN
+        RAISE NOTICE 'Erreur lors de la création des index trigram: %', SQLERRM;
+END $$;
 
 -- Index pour les requêtes avec subscription
 CREATE INDEX IF NOT EXISTS idx_establishments_subscription_status ON establishments(subscription, status);
@@ -334,7 +351,9 @@ CREATE INDEX IF NOT EXISTS idx_images_establishment_order ON images(establishmen
 
 -- Events
 CREATE INDEX IF NOT EXISTS idx_events_establishment_date ON events(establishment_id, start_date DESC);
-CREATE INDEX IF NOT EXISTS idx_events_start_date_active ON events(start_date) WHERE start_date >= NOW();
+-- Note: Index partiel avec NOW() retiré car NOW() n'est pas IMMUTABLE
+-- Pour filtrer les événements futurs, utiliser une requête avec WHERE start_date >= CURRENT_TIMESTAMP dans l'application
+CREATE INDEX IF NOT EXISTS idx_events_start_date ON events(start_date DESC);
 
 -- Daily Deals
 CREATE INDEX IF NOT EXISTS idx_daily_deals_establishment_dates ON daily_deals(establishment_id, date_debut, date_fin, is_active);
