@@ -35,7 +35,7 @@ interface Event {
   status?: 'ongoing' | 'upcoming' | 'past';
 }
 
-type FilterType = 'all' | 'today' | 'week' | 'trending';
+type FilterType = 'all' | 'today' | 'week' | 'weekend' | 'trending';
 
 export default function EventsPage() {
   const [allEvents, setAllEvents] = useState<Event[]>([]);
@@ -78,10 +78,15 @@ export default function EventsPage() {
     let filtered = [...allEvents];
     const now = new Date();
 
+    // Exclure les événements passés (statut 'past')
+    filtered = filtered.filter(event => event.status !== 'past');
+
     // Filtre temporel
     if (filter === 'today') {
-      const todayStart = new Date(now.setHours(0, 0, 0, 0));
-      const todayEnd = new Date(now.setHours(23, 59, 59, 999));
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const todayEnd = new Date(now);
+      todayEnd.setHours(23, 59, 59, 999);
       filtered = filtered.filter(event => {
         const eventDate = new Date(event.startDate);
         return eventDate >= todayStart && eventDate <= todayEnd;
@@ -92,8 +97,53 @@ export default function EventsPage() {
         const eventDate = new Date(event.startDate);
         return eventDate <= weekEnd;
       });
+    } else if (filter === 'weekend') {
+      // Calculer le samedi et dimanche de cette semaine
+      const currentDay = now.getDay(); // 0 = dimanche, 6 = samedi
+      
+      // Trouver le samedi de cette semaine (ou le prochain si on est après samedi)
+      let daysUntilSaturday;
+      if (currentDay === 0) {
+        // Si on est dimanche, le samedi est dans 6 jours (samedi prochain)
+        daysUntilSaturday = 6;
+      } else if (currentDay === 6) {
+        // Si on est samedi, c'est aujourd'hui
+        daysUntilSaturday = 0;
+      } else {
+        // Sinon, calculer les jours jusqu'au samedi
+        daysUntilSaturday = 6 - currentDay;
+      }
+      
+      // Trouver le dimanche de cette semaine (ou le prochain si on est après dimanche)
+      let daysUntilSunday;
+      if (currentDay === 0) {
+        // Si on est dimanche, c'est aujourd'hui
+        daysUntilSunday = 0;
+      } else {
+        // Sinon, calculer les jours jusqu'au dimanche
+        daysUntilSunday = 7 - currentDay;
+      }
+      
+      const saturday = new Date(now);
+      saturday.setDate(now.getDate() + daysUntilSaturday);
+      saturday.setHours(0, 0, 0, 0);
+      
+      const sunday = new Date(now);
+      sunday.setDate(now.getDate() + daysUntilSunday);
+      sunday.setHours(23, 59, 59, 999);
+      
+      filtered = filtered.filter(event => {
+        const eventDate = new Date(event.startDate);
+        // Si l'événement a une date de fin, vérifier qu'il chevauche le week-end
+        if (event.endDate) {
+          const eventEndDate = new Date(event.endDate);
+          return (eventDate <= sunday && eventEndDate >= saturday);
+        }
+        // Sinon, vérifier que la date de début est dans le week-end
+        return eventDate >= saturday && eventDate <= sunday;
+      });
     } else if (filter === 'trending') {
-      filtered = trendingEvents;
+      filtered = trendingEvents.filter(event => event.status !== 'past');
     }
 
     // Filtre de recherche
@@ -244,6 +294,16 @@ export default function EventsPage() {
                 }`}
               >
                 Cette semaine
+              </button>
+              <button
+                onClick={() => setFilter('weekend')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  filter === 'weekend'
+                    ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Week-end
               </button>
               <button
                 onClick={() => setFilter('trending')}

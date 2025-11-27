@@ -126,8 +126,18 @@ export async function GET(request: NextRequest) {
       console.log(`🕐 [API Upcoming] Horaires: ${eventStartHour}:${eventStartMinute} - ${eventEndHour}:${eventEndMinute}`);
       console.log(`🕐 [API Upcoming] Finalement récurrent: ${isActuallyRecurring}`);
       
-      // Si l'événement n'est pas récurrent (ni en DB ni auto-détecté), utiliser la logique normale
+      // Si l'événement n'est pas récurrent (ni en DB ni auto-détecté), vérifier s'il est passé
       if (!isActuallyRecurring) {
+        // Pour les événements ponctuels, vérifier si la date de fin est passée
+        if (endDate && endDate < nowDate) {
+          console.log(`❌ [API Upcoming] Événement "${event.title}" - Rejeté (date de fin passée)`);
+          return false;
+        }
+        // Si pas de date de fin, vérifier la date de début
+        if (!endDate && startDate < nowDate) {
+          console.log(`❌ [API Upcoming] Événement "${event.title}" - Rejeté (date de début passée)`);
+          return false;
+        }
         console.log(`✅ [API Upcoming] Événement non-récurrent - Affiché`);
         return true;
       }
