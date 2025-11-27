@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ThumbsUp, ThumbsDown, TrendingUp, Users } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, TrendingUp, Users, MousePointerClick } from 'lucide-react';
 
 interface EngagementStats {
   liked: number;
   disliked: number;
+  clicked: number;
   total: number;
   engagementRate: number;
 }
@@ -83,19 +84,26 @@ export default function DealEngagementStats({ dealId, establishmentId }: DealEng
         </span>
       </div>
       
-      <div className="grid grid-cols-2 gap-3 mb-2">
+      <div className="grid grid-cols-3 gap-2 mb-2">
         {/* Intéressés */}
         <div className="flex items-center gap-1.5">
           <ThumbsUp className="w-4 h-4 text-green-600" />
           <span className="text-xs md:text-sm font-semibold text-green-700">{stats.liked}</span>
-          <span className="text-xs text-gray-600">Int.</span>
+          <span className="text-xs text-gray-600 hidden sm:inline">Int.</span>
         </div>
         
         {/* Pas intéressés */}
         <div className="flex items-center gap-1.5">
           <ThumbsDown className="w-4 h-4 text-red-600" />
           <span className="text-xs md:text-sm font-semibold text-red-700">{stats.disliked}</span>
-          <span className="text-xs text-gray-600">Pas int.</span>
+          <span className="text-xs text-gray-600 hidden sm:inline">Pas int.</span>
+        </div>
+        
+        {/* Clics */}
+        <div className="flex items-center gap-1.5">
+          <MousePointerClick className="w-4 h-4 text-orange-600" />
+          <span className="text-xs md:text-sm font-semibold text-orange-700">{stats.clicked || 0}</span>
+          <span className="text-xs text-gray-600 hidden sm:inline">Clics</span>
         </div>
       </div>
       

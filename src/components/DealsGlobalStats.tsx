@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { ThumbsUp, ThumbsDown, TrendingUp, Users, BarChart3 } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, TrendingUp, Users, BarChart3, MousePointerClick } from 'lucide-react';
 
 interface GlobalEngagementStats {
   totalLiked: number;
   totalDisliked: number;
+  totalClicked: number;
   totalInteractions: number;
   averageEngagementRate: number;
   dealsCount: number;
@@ -39,6 +40,7 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
           const globalStats: GlobalEngagementStats = {
             totalLiked: data.stats.liked || 0,
             totalDisliked: data.stats.disliked || 0,
+            totalClicked: data.stats.clicked || 0,
             totalInteractions: data.stats.total || 0,
             averageEngagementRate: data.stats.engagementRate || 0,
             dealsCount: data.engagements ? new Set(data.engagements.map((e: any) => e.dealId)).size : 0
@@ -94,7 +96,7 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
       </div>
       
       {/* Métriques principales */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         {/* Total intéressés */}
         <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -113,6 +115,15 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
           <div className="text-2xl font-bold text-red-800">{stats.totalDisliked}</div>
         </div>
         
+        {/* Total clics */}
+        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <MousePointerClick className="w-5 h-5 text-orange-600" />
+            <span className="text-sm font-medium text-orange-700">Clics</span>
+          </div>
+          <div className="text-2xl font-bold text-orange-800">{stats.totalClicked}</div>
+        </div>
+        
         {/* Total interactions */}
         <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -123,10 +134,10 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
         </div>
         
         {/* Taux d'engagement moyen */}
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-lg p-4">
+        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-5 h-5 text-orange-600" />
-            <span className="text-sm font-medium text-orange-700">Taux Moyen</span>
+            <TrendingUp className="w-5 h-5 text-purple-600" />
+            <span className="text-sm font-medium text-purple-700">Taux Moyen</span>
           </div>
           <div className={`text-2xl font-bold ${
             stats.averageEngagementRate >= 70 ? 'text-green-600' :

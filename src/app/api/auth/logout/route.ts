@@ -28,7 +28,20 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Déconnexion réussie, redirection vers:', callbackUrl);
 
-    // Rediriger vers l'URL de callback
+    // Vérifier si c'est une requête API (header Accept: application/json)
+    const acceptHeader = request.headers.get('accept');
+    const isAPIRequest = acceptHeader?.includes('application/json') || 
+                         request.headers.get('content-type')?.includes('application/json');
+
+    if (isAPIRequest) {
+      // Retourner un JSON pour les requêtes API
+      return NextResponse.json(
+        { success: true, message: 'Déconnexion réussie' },
+        { status: 200 }
+      );
+    }
+
+    // Rediriger vers l'URL de callback pour les requêtes navigateur
     return NextResponse.redirect(new URL(callbackUrl, request.url));
   } catch (error: any) {
     console.error('❌ Exception lors de la déconnexion:', error);

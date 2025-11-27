@@ -35,6 +35,11 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
   const sessionRef = useRef(session);
   const userRef = useRef(user);
   const sessionDetectedRef = useRef(false); // ✅ Flag pour savoir si une session a été détectée
+  const isMountedRef = useRef(true); // ✅ Flag pour vérifier si le composant est monté
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null); // ✅ Timeout de sécurité pour la synchronisation
+  const initDoneRef = useRef(false); // ✅ Flag pour éviter les initialisations multiples
+  const subscriptionRef = useRef<any>(null); // ✅ Référence à l'abonnement pour le nettoyer
+  const immediateFallbackRef = useRef<NodeJS.Timeout | null>(null); // ✅ Référence au timeout de fallback
   
   // Mettre à jour les refs quand les valeurs changent
   useEffect(() => {
@@ -43,24 +48,65 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     userRef.current = user;
     if (session) sessionDetectedRef.current = true;
   }, [loading, session, user]);
+  
+  // ✅ Nettoyer le flag de montage au démontage
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
-    let isMounted = true;
+    // ✅ Protection contre les initialisations multiples
+    if (initDoneRef.current) {
+      console.log('⏭️ [useSupabaseSession] Initialisation déjà effectuée, skip');
+      return;
+    }
+    initDoneRef.current = true;
+    
+    // ✅ Timeout de sécurité : forcer la fin de synchronisation après 15 secondes maximum
+    syncTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current && loadingRef.current) {
+        // ✅ Vérifier si une session a été détectée avant de forcer la fin
+        if (sessionDetectedRef.current && (sessionRef.current || userRef.current)) {
+          console.log('✅ [useSupabaseSession] Session détectée, arrêt du chargement');
+          setLoading(false);
+        } else {
+          console.warn('⚠️ [useSupabaseSession] Timeout de sécurité: forcer la fin de synchronisation après 15s (pas de session détectée)');
+          setLoading(false);
+        }
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+        }
+      }
+    }, 15000);
     
     // Fallback : si après 10 secondes on n'a toujours pas de session ET qu'aucune session n'a été détectée
-    const immediateFallback = setTimeout(() => {
+    immediateFallbackRef.current = setTimeout(() => {
       // ✅ CORRECTION : Ne pas annuler si une session a été détectée OU si on a déjà une session/user
       // Vérifier aussi les cookies pour éviter de perdre une session valide
       const hasCookies = typeof document !== 'undefined' && 
         document.cookie.split(';').some(c => c.trim().startsWith('sb-'));
       
-      if (isMounted && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current && !hasCookies) {
+      if (isMountedRef.current && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current && !hasCookies) {
         console.warn('⚠️ [useSupabaseSession] Fallback: no session found after 10s, stopping load');
         setLoading(false);
         setUser(null);
         setSession(null);
-      } else if (isMounted && loadingRef.current && (sessionDetectedRef.current || hasCookies)) {
-        // ✅ Si on a des cookies ou une session détectée, continuer à attendre
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+          syncTimeoutRef.current = null;
+        }
+        if (immediateFallbackRef.current) {
+          clearTimeout(immediateFallbackRef.current);
+          immediateFallbackRef.current = null;
+        }
+      } else if (isMountedRef.current && loadingRef.current && (sessionDetectedRef.current || hasCookies)) {
+        // ✅ Si on a des cookies ou une session détectée, continuer à attendre (mais avec timeout de sécurité)
         console.log('⏳ [useSupabaseSession] Session en cours de synchronisation, continuation du chargement...');
       }
     }, 10000);
@@ -68,13 +114,26 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     // Récupérer la session initiale
     // ✅ SIMPLIFIÉ : On fait confiance à onAuthStateChange qui est plus fiable
     const getSession = async () => {
+      // ✅ Protection : ne pas appeler si une session est déjà en cours de traitement
+      if (sessionDetectedRef.current && (sessionRef.current || userRef.current)) {
+        console.log('⏭️ [useSupabaseSession] Session déjà détectée, skip getSession');
+        if (isMountedRef.current && loadingRef.current) {
+          setLoading(false);
+        }
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+          syncTimeoutRef.current = null;
+        }
+        return;
+      }
+      
       try {
         console.log('🔄 [useSupabaseSession] Getting initial session...');
         
         // ✅ Appel simple sans race condition agressive
         const { data, error } = await supabase.auth.getSession();
         
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
         
         const currentSession = data?.session;
         
@@ -85,9 +144,16 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           error: error?.message 
         });
         
-        // ✅ Si onAuthStateChange a déjà traité la session, ne rien faire
-        if (sessionDetectedRef.current && sessionRef.current) {
+        // ✅ Double vérification : si onAuthStateChange a traité la session entre-temps
+        if (sessionDetectedRef.current && (sessionRef.current || userRef.current)) {
           console.log('✅ [useSupabaseSession] Session already handled by onAuthStateChange');
+          if (isMountedRef.current && loadingRef.current) {
+            setLoading(false);
+          }
+          if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
+            syncTimeoutRef.current = null;
+          }
           return;
         }
 
@@ -110,14 +176,29 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
             };
           
-          if (isMounted) {
+          if (isMountedRef.current) {
             console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT (getSession):', {
               firstName: immediateUser.firstName,
-              role: immediateUser.role
+              role: immediateUser.role,
+              userId: immediateUser.id
             });
             setUser(immediateUser);
             setSession(currentSession);
+            // ✅ Mettre à jour les refs immédiatement pour éviter les race conditions
+            sessionRef.current = currentSession;
+            userRef.current = immediateUser;
+            sessionDetectedRef.current = true;
             setLoading(false);
+            // ✅ Nettoyer le timeout de sécurité
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
+            console.log('✅ [useSupabaseSession] Session synchronisée avec succès (getSession)');
           }
           
           // ✅ En arrière-plan, essayer de récupérer les données complètes
@@ -127,22 +208,37 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         } else if (!sessionDetectedRef.current) {
           // Pas de session et aucune détectée par onAuthStateChange
           console.log('⚠️ [useSupabaseSession] No session found');
-          if (isMounted) {
+          if (isMountedRef.current) {
             setUser(null);
             setSession(null);
+            setLoading(false);
+            // ✅ Nettoyer le timeout de sécurité
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
           }
         }
       } catch (error) {
         console.error('❌ [useSupabaseSession] Error in getSession:', error);
         // En cas d'erreur, ne pas écraser si onAuthStateChange a déjà une session
-        if (isMounted && !sessionDetectedRef.current) {
+        if (isMountedRef.current && !sessionDetectedRef.current) {
           setUser(null);
           setSession(null);
-        }
-      } finally {
-        // ✅ Ne pas forcer loading=false si onAuthStateChange est en train de traiter
-        if (isMounted && !sessionDetectedRef.current) {
           setLoading(false);
+          // ✅ Nettoyer le timeout de sécurité
+          if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
+            syncTimeoutRef.current = null;
+          }
+          if (immediateFallbackRef.current) {
+            clearTimeout(immediateFallbackRef.current);
+            immediateFallbackRef.current = null;
+          }
         }
       }
     };
@@ -151,7 +247,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
 
     // Écouter les changements d'auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      if (!isMounted) return;
+      if (!isMountedRef.current) return;
       
       console.log('🔐 [useSupabaseSession] Auth state changed:', event, 'hasSession:', !!currentSession, {
         userId: currentSession?.user?.id,
@@ -161,6 +257,20 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
       // ✅ Marquer qu'une session a été détectée pour éviter le fallback
       if (currentSession) {
         sessionDetectedRef.current = true;
+        // ✅ Nettoyer les timeouts dès qu'une session est détectée
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+          syncTimeoutRef.current = null;
+        }
+        if (immediateFallbackRef.current) {
+          clearTimeout(immediateFallbackRef.current);
+          immediateFallbackRef.current = null;
+        }
+        // ✅ Arrêter immédiatement le chargement si on a déjà une session
+        if (isMountedRef.current && loadingRef.current && (sessionRef.current || userRef.current)) {
+          console.log('✅ [useSupabaseSession] Session déjà présente, arrêt immédiat du chargement');
+          setLoading(false);
+        }
       }
       
       // ✅ PROTECTION: Vérifier que l'utilisateur n'a pas changé lors d'un TOKEN_REFRESHED
@@ -202,14 +312,30 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             };
             
             // ✅ Afficher immédiatement avec les données JWT
-            if (isMounted) {
+            if (isMountedRef.current) {
               console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT metadata:', {
                 firstName: immediateUser.firstName,
-                role: immediateUser.role
+                role: immediateUser.role,
+                userId: immediateUser.id
               });
               setUser(immediateUser);
               setSession(currentSession);
+              // ✅ Mettre à jour les refs immédiatement pour éviter les race conditions
+              sessionRef.current = currentSession;
+              userRef.current = immediateUser;
+              sessionDetectedRef.current = true;
               setLoading(false); // ✅ Arrêter le loading immédiatement
+              // ✅ Nettoyer le timeout de sécurité
+              if (syncTimeoutRef.current) {
+                clearTimeout(syncTimeoutRef.current);
+                syncTimeoutRef.current = null;
+              }
+              // ✅ Nettoyer aussi le fallback
+              if (immediateFallbackRef.current) {
+                clearTimeout(immediateFallbackRef.current);
+                immediateFallbackRef.current = null;
+              }
+              console.log('✅ [useSupabaseSession] Session synchronisée avec succès');
             }
             
             // ✅ En arrière-plan, essayer de récupérer les données complètes (sans bloquer)
@@ -219,25 +345,56 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 [useSupabaseSession] User signed out');
-          if (isMounted) {
+          if (isMountedRef.current) {
             setUser(null);
             setSession(null);
             setLoading(false);
+            // ✅ Nettoyer le timeout de sécurité
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
           }
         }
       } catch (error) {
         console.error('❌ [useSupabaseSession] Error in auth state change:', error);
-        if (isMounted) {
+        if (isMountedRef.current) {
           setLoading(false);
+          // ✅ Nettoyer le timeout de sécurité
+          if (syncTimeoutRef.current) {
+            clearTimeout(syncTimeoutRef.current);
+            syncTimeoutRef.current = null;
+          }
+          if (immediateFallbackRef.current) {
+            clearTimeout(immediateFallbackRef.current);
+            immediateFallbackRef.current = null;
+          }
         }
       }
-      // ✅ Pas de finally avec setLoading - déjà géré dans chaque cas
     });
 
+    // ✅ Stocker la référence à l'abonnement
+    subscriptionRef.current = subscription;
+    
     return () => {
-      isMounted = false;
-      clearTimeout(immediateFallback);
-      subscription.unsubscribe();
+      isMountedRef.current = false;
+      initDoneRef.current = false; // ✅ Réinitialiser pour permettre une nouvelle initialisation si nécessaire
+      if (immediateFallbackRef.current) {
+        clearTimeout(immediateFallbackRef.current);
+        immediateFallbackRef.current = null;
+      }
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe();
+        subscriptionRef.current = null;
+      }
     };
   }, []);
 

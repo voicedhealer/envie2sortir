@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw, X as CloseIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye, EyeOff, Copy, RotateCcw, X as CloseIcon, Info, Euro, RotateCw } from 'lucide-react';
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
 import DealEngagementStats from '@/components/DealEngagementStats';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -440,16 +440,28 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       {/* Formulaire */}
       {showForm && (
         <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 mb-6">
             {editingDeal ? 'Modifier le bon plan' : 'Nouveau bon plan'}
           </h3>
           
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Section 1: Informations générales */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Info className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Informations générales</h4>
+                  <p className="text-sm text-gray-600">Les détails principaux qui accrochent l'utilisateur.</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-200 pt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Titre */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Titre du bon plan *
+                      Titre du bon plan <span className="text-red-500">*</span> <span className="text-gray-500 font-normal">Obligatoire</span>
                 </label>
                 <input
                   type="text"
@@ -457,7 +469,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   value={formData.title}
                   onChange={handleInputChange}
                   required
-                  placeholder="Ex: Tacos à 3€"
+                      placeholder="ex: -50% sur le menu Best Of"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -465,7 +477,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
               {/* Description */}
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description *
+                      Description <span className="text-red-500">*</span> <span className="text-gray-500 font-normal">Obligatoire</span>
                 </label>
                 <textarea
                   name="description"
@@ -473,7 +485,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   onChange={handleInputChange}
                   required
                   rows={3}
-                  placeholder="Ex: Profitez de nos tacos à prix réduit jusqu'à épuisement des stocks"
+                      placeholder="Décrivez votre offre en détail..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -488,33 +500,27 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   name="modality"
                   value={formData.modality}
                   onChange={handleInputChange}
-                  placeholder="Ex: jusqu'à épuisement des stocks, dans la limite des places disponibles"
+                      placeholder="Jusqu'à épuisement des stocks"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
-                <p className="text-xs text-gray-500 mt-1">
-                  Cette information apparaîtra sur l'overlay "Bon plan du jour" des cartes de recherche
-                </p>
+              </div>
+                </div>
+              </div>
               </div>
 
-              {/* Lien promotion */}
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Lien vers la promotion (optionnel)
-                </label>
-                <input
-                  type="url"
-                  name="promoUrl"
-                  value={formData.promoUrl}
-                  onChange={handleInputChange}
-                  placeholder="https://example.com/promotion"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  URL complète vers votre promotion sur internet
-                </p>
+            {/* Section 2: Prix & Lien */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Euro className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Prix & Lien</h4>
+                </div>
               </div>
-
-              {/* Prix */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Prix initial */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Prix initial (€)
@@ -526,11 +532,12 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   onChange={handleInputChange}
                   step="0.01"
                   min="0"
-                  placeholder="Ex: 5.00"
+                      placeholder="0.00"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
+                  {/* Prix réduit */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Prix réduit (€)
@@ -542,17 +549,55 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                   onChange={handleInputChange}
                   step="0.01"
                   min="0"
-                  placeholder="Ex: 3.00"
+                      placeholder="0.00"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
 
+                  {/* Lien promotion */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Lien vers la promotion (optionnel)
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                      </div>
+                      <input
+                        type="url"
+                        name="promoUrl"
+                        value={formData.promoUrl}
+                        onChange={handleInputChange}
+                        placeholder="https://example.com/promotion"
+                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: Calendrier */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Calendrier</h4>
+                  <p className="text-sm text-gray-600">Définissez la durée de validité.</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-200 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Dates - conditionnelles selon la récurrence */}
               {!formData.isRecurring && (
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date de début *
+                          Date de début <span className="text-red-500">*</span> <span className="text-gray-500 font-normal">Obligatoire</span>
                     </label>
                     <input
                       type="date"
@@ -560,13 +605,14 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                       value={formData.dateDebut}
                       onChange={handleInputChange}
                       required
+                          placeholder="jj/mm/aaaa"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date de fin *
+                          Date de fin <span className="text-red-500">*</span> <span className="text-gray-500 font-normal">Obligatoire</span>
                     </label>
                     <input
                       type="date"
@@ -574,6 +620,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                       value={formData.dateFin}
                       onChange={handleInputChange}
                       required
+                          placeholder="jj/mm/aaaa"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
                   </div>
@@ -597,36 +644,211 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
               {/* Horaires */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                  Plage horaire actif - De
+                      Plage horaire active
                   <HelpTooltip content="Définissez l'heure de début de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
                 </label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Clock className="w-5 h-5 text-gray-400" />
+                        </div>
                 <input
                   type="time"
                   name="heureDebut"
                   value={formData.heureDebut}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="--:--"
+                          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-                  Plage horaire actif - À
-                  <HelpTooltip content="Définissez l'heure de fin de la plage horaire journalière où votre bon plan est actif. Si vous laissez vide ou si les deux heures sont identiques, le bon plan sera actif toute la journée." />
-                </label>
+                      <span className="text-gray-500">à</span>
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <Clock className="w-5 h-5 text-gray-400" />
+                        </div>
                 <input
                   type="time"
                   name="heureFin"
                   value={formData.heureFin}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                          placeholder="--:--"
+                          className="w-full pr-10 pl-3 py-2 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               </div>
 
-              {/* Récurrence */}
-              <div className="md:col-span-2">
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                  <div className="flex items-center mb-3">
+            {/* Section 4: Médias */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <ImageIcon className="w-5 h-5 text-orange-600" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-1">Médias</h4>
+                  <p className="text-sm text-gray-600">Ajoutez des visuels pour rendre votre bon plan plus attractif.</p>
+                </div>
+              </div>
+              <div className="border-t border-gray-200 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Image principale */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image principale
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-1">Cliquez ou glissez le fichier ici</p>
+                        <p className="text-xs text-gray-500">Taille recommandée : 1200 x 800 pixels (ratio 3:2)</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                          ref={imageInputRef}
+                          className="hidden"
+                          id="image-upload"
+                        />
+                        <label
+                          htmlFor="image-upload"
+                          className="mt-3 inline-block px-4 py-2 bg-orange-50 text-orange-700 rounded-md hover:bg-orange-100 cursor-pointer text-sm font-medium transition-colors"
+                        >
+                          {uploadingImage ? 'Upload en cours...' : 'Choisir une image'}
+                        </label>
+                        {formData.imageUrl && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <a
+                              href={formData.imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-orange-500 hover:text-orange-600"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, imageUrl: '' }));
+                                if (imageInputRef.current) {
+                                  imageInputRef.current.value = '';
+                                }
+                              }}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              title="Supprimer l'image"
+                            >
+                              <CloseIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* PDF optionnel */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Document PDF (optionnel)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-1">Cliquez ou glissez le fichier ici</p>
+                        <p className="text-xs text-gray-500">Pour les menus détaillés ou les conditions longues</p>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfUpload}
+                          disabled={uploadingPdf}
+                          ref={pdfInputRef}
+                          className="hidden"
+                          id="pdf-upload"
+                        />
+                        <label
+                          htmlFor="pdf-upload"
+                          className="mt-3 inline-block px-4 py-2 bg-orange-50 text-orange-700 rounded-md hover:bg-orange-100 cursor-pointer text-sm font-medium transition-colors"
+                        >
+                          {uploadingPdf ? 'Upload en cours...' : 'Choisir un PDF'}
+                        </label>
+                        {formData.pdfUrl && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <a
+                              href={formData.pdfUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-orange-500 hover:text-orange-600"
+                            >
+                              <FileText className="w-5 h-5" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, pdfUrl: '' }));
+                                if (pdfInputRef.current) {
+                                  pdfInputRef.current.value = '';
+                                }
+                              }}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              title="Supprimer le PDF"
+                            >
+                              <CloseIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 5: Bon plan actif */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Eye className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Bon plan actif</h4>
+                    <p className="text-sm text-gray-600">Rendre visible immédiatement</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isActive"
+                    checked={formData.isActive}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Section 6: Récurrence - seulement si activée */}
+            {formData.isRecurring && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <RotateCw className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="text-lg font-semibold text-gray-900">Récurrence</h4>
+                      <label className="relative inline-flex items-center cursor-pointer">
                     <input
                       type="checkbox"
                       name="isRecurring"
@@ -638,14 +860,15 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                         recurrenceDays: e.target.checked ? prev.recurrenceDays : [],
                         recurrenceEndDate: e.target.checked ? prev.recurrenceEndDate : ''
                       }))}
-                      className="mr-2"
+                          className="sr-only peer"
                     />
-                    <label className="text-sm font-medium text-gray-700">
-                      🔄 Bon plan récurrent
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                     </label>
                   </div>
-                  
-                  {formData.isRecurring && (
+                    <p className="text-sm text-gray-600">Configurer ce bon plan pour qu'il se répète automatiquement.</p>
+                  </div>
+                </div>
+                <div className="border-t border-orange-200 pt-4">
                     <div className="space-y-4">
                       {/* Type de récurrence */}
                       <div>
@@ -713,6 +936,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                           name="recurrenceEndDate"
                           value={formData.recurrenceEndDate}
                           onChange={handleInputChange}
+                        placeholder="jj/mm/aaaa"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                         />
                         <p className="text-xs text-gray-500 mt-1">
@@ -720,119 +944,42 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
                         </p>
                       </div>
                     </div>
-                  )}
                 </div>
-              </div>
-
-              {/* Image */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image (optionnel)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    disabled={uploadingImage}
-                    ref={imageInputRef}
-                    className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                  />
-                  {formData.imageUrl && (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={formData.imageUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-orange-500 hover:text-orange-600"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, imageUrl: '' }));
-                          if (imageInputRef.current) {
-                            imageInputRef.current.value = '';
-                          }
-                        }}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Supprimer l'image"
-                      >
-                        <CloseIcon className="w-4 h-4" />
-                      </button>
                     </div>
                   )}
-                </div>
-                {uploadingImage && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
-                <p className="text-xs text-gray-500 mt-1">
-                  Choisissez soit une image, soit un PDF (pas les deux)
-                </p>
-                <p className="text-xs text-orange-600 font-medium mt-1">
-                  📐 Taille recommandée : 1200 × 800 pixels (ratio 3:2) pour un affichage optimal
-                </p>
-              </div>
 
-              {/* PDF */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  PDF (optionnel)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handlePdfUpload}
-                    disabled={uploadingPdf}
-                    ref={pdfInputRef}
-                    className="flex-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
-                  />
-                  {formData.pdfUrl && (
-                    <div className="flex items-center gap-2">
-                      <a
-                        href={formData.pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-orange-500 hover:text-orange-600"
-                      >
-                        <FileText className="w-5 h-5" />
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFormData(prev => ({ ...prev, pdfUrl: '' }));
-                          if (pdfInputRef.current) {
-                            pdfInputRef.current.value = '';
-                          }
-                        }}
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                        title="Supprimer le PDF"
-                      >
-                        <CloseIcon className="w-4 h-4" />
-                      </button>
+            {/* Toggle récurrence - seulement si pas activée */}
+            {!formData.isRecurring && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <RotateCw className="w-5 h-5 text-orange-600" />
                     </div>
-                  )}
+              <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-1">Récurrence</h4>
+                      <p className="text-sm text-gray-600">Configurer ce bon plan pour qu'il se répète automatiquement.</p>
+                    </div>
                 </div>
-                {uploadingPdf && <p className="text-sm text-gray-500 mt-1">Upload en cours...</p>}
-                <p className="text-xs text-gray-500 mt-1">
-                  Alternative à l'image pour les menus détaillés
-                </p>
-              </div>
-
-              {/* Actif */}
-              <div className="md:col-span-2">
-                <label className="flex items-center">
+                  <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    name="isActive"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium text-gray-700">Bon plan actif</span>
+                      name="isRecurring"
+                      checked={formData.isRecurring}
+                      onChange={(e) => setFormData(prev => ({ 
+                        ...prev, 
+                        isRecurring: e.target.checked,
+                        recurrenceType: e.target.checked ? prev.recurrenceType : '',
+                        recurrenceDays: e.target.checked ? prev.recurrenceDays : [],
+                        recurrenceEndDate: e.target.checked ? prev.recurrenceEndDate : ''
+                      }))}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
                 </label>
               </div>
             </div>
+            )}
 
             {/* Boutons */}
             <div className="flex gap-3">

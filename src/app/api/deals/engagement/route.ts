@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     const { dealId, type, timestamp } = body;
 
     // Validation des données
-    if (!dealId || !type || !['liked', 'disliked'].includes(type)) {
+    if (!dealId || !type || !['liked', 'disliked', 'clicked'].includes(type)) {
       return NextResponse.json(
         { error: 'Données invalides' },
         { status: 400 }
@@ -36,25 +36,10 @@ export async function POST(request: NextRequest) {
                request.headers.get('x-real-ip') || 
                'anonymous';
 
-    // Vérifier si l'utilisateur a déjà donné son avis sur ce bon plan
-    const { data: existingEngagement } = await supabase
-      .from('deal_engagements')
-      .select('*')
-      .eq('deal_id', dealId)
-      .eq('user_ip', ip)
-      .single();
-
-    if (existingEngagement) {
-      // Mettre à jour l'engagement existant
-      await supabase
-        .from('deal_engagements')
-        .update({
-          type: type,
-          timestamp: new Date(timestamp).toISOString()
-        })
-        .eq('id', existingEngagement.id);
-    } else {
-      // Créer un nouvel engagement
+    // Pour les clics, on permet plusieurs enregistrements (pas de vérification d'existence)
+    // Pour liked/disliked, on vérifie l'existence pour éviter les doublons
+    if (type === 'clicked') {
+      // Créer un nouvel engagement pour chaque clic
       await supabase
         .from('deal_engagements')
         .insert({
@@ -62,8 +47,38 @@ export async function POST(request: NextRequest) {
           establishment_id: deal.establishment_id,
           type: type,
           user_ip: ip,
-          timestamp: new Date(timestamp).toISOString()
+          timestamp: new Date(timestamp || new Date()).toISOString()
         });
+    } else {
+      // Pour liked/disliked, vérifier si l'utilisateur a déjà donné son avis
+      const { data: existingEngagement } = await supabase
+        .from('deal_engagements')
+        .select('*')
+        .eq('deal_id', dealId)
+        .eq('user_ip', ip)
+        .eq('type', type)
+        .single();
+
+      if (existingEngagement) {
+        // Mettre à jour l'engagement existant
+        await supabase
+          .from('deal_engagements')
+          .update({
+            timestamp: new Date(timestamp || new Date()).toISOString()
+          })
+          .eq('id', existingEngagement.id);
+      } else {
+        // Créer un nouvel engagement
+        await supabase
+          .from('deal_engagements')
+          .insert({
+            deal_id: dealId,
+            establishment_id: deal.establishment_id,
+            type: type,
+            user_ip: ip,
+            timestamp: new Date(timestamp || new Date()).toISOString()
+          });
+      }
     }
 
     console.log(`Engagement ${type} enregistré pour le deal ${dealId} (${deal.title})`);
@@ -136,12 +151,14 @@ export async function GET(request: NextRequest) {
         acc.liked++;
       } else if (engagement.type === 'disliked') {
         acc.disliked++;
+      } else if (engagement.type === 'clicked') {
+        acc.clicked++;
       }
       return acc;
-    }, { liked: 0, disliked: 0 });
+    }, { liked: 0, disliked: 0, clicked: 0 });
 
-    const total = stats.liked + stats.disliked;
-    const engagementRate = total > 0 ? (stats.liked / total) * 100 : 0;
+    const total = stats.liked + stats.disliked + stats.clicked;
+    const engagementRate = total > 0 ? ((stats.liked + stats.clicked) / total) * 100 : 0;
 
     // Convertir snake_case -> camelCase pour les engagements
     const formattedEngagements = (engagements || []).slice(-10).map((e: any) => ({

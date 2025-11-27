@@ -164,16 +164,62 @@ function AuthContent() {
 
         console.log('✅ [Auth] Redirection vers:', redirectUrl);
         
-        // ✅ CORRECTION : Redirection immédiate sans attendre le refresh de session
-        // Le middleware gérera la synchronisation de la session
+        // ✅ CORRECTION : Forcer la synchronisation de la session avant la redirection
+        // Les cookies viennent d'être définis, il faut laisser le temps au client Supabase de les lire
+        try {
+          const { createClient } = await import('@/lib/supabase/client');
+          const supabase = createClient();
+          
+          // Forcer un refresh de la session pour lire les nouveaux cookies
+          console.log('🔄 [Auth] Synchronisation de la session...');
+          
+          // Essayer plusieurs fois car les cookies peuvent prendre un peu de temps à être disponibles
+          let session = null;
+          for (let i = 0; i < 3; i++) {
+            const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
+            
+            if (sessionError) {
+              console.warn(`⚠️ [Auth] Tentative ${i + 1}/3 - Erreur:`, sessionError);
+            } else if (currentSession) {
+              session = currentSession;
+              console.log('✅ [Auth] Session synchronisée:', {
+                userId: session.user?.id,
+                email: session.user?.email,
+                attempt: i + 1
+              });
+              break;
+            } else {
+              console.log(`⏳ [Auth] Tentative ${i + 1}/3 - Aucune session encore...`);
+            }
+            
+            // Attendre un peu entre les tentatives
+            if (i < 2) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
+          
+          if (!session) {
+            console.warn('⚠️ [Auth] Aucune session détectée après 3 tentatives, redirection quand même');
+          }
+        } catch (syncError) {
+          console.warn('⚠️ [Auth] Erreur lors de la synchronisation de session:', syncError);
+          // Continuer quand même avec la redirection
+        }
+        
+        // ✅ CORRECTION : Redirection après synchronisation
         setLoading(false); // Arrêter le loading avant la redirection
         
         // ✅ CORRECTION : Utiliser window.location.replace() pour éviter que l'utilisateur
         // puisse revenir en arrière vers la page d'authentification
+        // ⚠️ IMPORTANT : Toujours forcer un rechargement complet pour que les cookies soient lus
+        // Les cookies définis par l'API route doivent être traités par le navigateur
+        // avant que le client Supabase puisse les lire
         const finalRedirectUrl = decodeURIComponent(redirectUrl);
         console.log('🚀 [Auth] Exécution de la redirection vers:', finalRedirectUrl);
         
-        // Utiliser replace() au lieu de href pour éviter l'historique
+        // ✅ CORRECTION : Toujours forcer un rechargement complet avec replace()
+        // Cela garantit que les cookies définis par l'API sont bien lus par le navigateur
+        // et que le client Supabase peut les utiliser
         window.location.replace(finalRedirectUrl);
         
         // ✅ SÉCURITÉ : Redirection de secours si replace() ne fonctionne pas
@@ -182,7 +228,7 @@ function AuthContent() {
             console.warn('⚠️ [Auth] Redirection de secours activée (href)');
             window.location.href = finalRedirectUrl;
           }
-        }, 500);
+        }, 1000);
       } else {
         if (!formData.acceptTerms) {
           setError('Veuillez accepter les conditions d\'utilisation');

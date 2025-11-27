@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "@/lib/fake-toast";
 import { getSubscriptionDisplayInfo, getPremiumRequiredMessage } from "@/lib/subscription-utils";
 import ImageUpload from "@/components/ImageUpload";
+import { FileText, Calendar, Euro, Image as ImageIcon } from 'lucide-react';
 
 interface Event {
   id: string;
@@ -275,155 +276,214 @@ export default function EventsManager({ establishmentId, isPremium, subscription
 
       <div className="px-6 py-4">
         {showForm && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <h4 className="text-md font-medium text-gray-900 mb-4">
+          <div className="mb-6 space-y-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-6">
               {editingEvent ? 'Modifier l\'événement' : 'Nouvel événement'}
             </h4>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Titre *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="Titre de l'événement"
-                    required
-                  />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Section 1: Informations générales */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Informations générales</h4>
+                    <p className="text-sm text-gray-600">Définissez les informations principales de votre événement.</p>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de début *
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    required
-                  />
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Titre <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Titre de l'événement"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        rows={3}
+                        placeholder="Description de l'événement"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Modalité <span className="text-gray-500 text-sm font-normal">(optionnel)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.modality}
+                        onChange={(e) => setFormData({...formData, modality: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="Spécifiez les modalités de l'événement, ex: Lot à gagner, tenue à portée, boisson gratuite. etc..."
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Information complémentaire qui s'affichera en plus petit sous la description
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="Description de l'événement"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Modalité <span className="text-gray-500 text-sm">(optionnel)</span>
-                </label>
-                <input
-                  type="text"
-                  value={formData.modality}
-                  onChange={(e) => setFormData({...formData, modality: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="Spécifiez les modalités de l'événement, ex: Lot à gagner, tenue à portée, boisson gratuite. etc..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Information complémentaire qui s'affichera en plus petit sous la description
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Date de fin
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
+              {/* Section 2: Dates & Horaires */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Dates & Horaires</h4>
+                    <p className="text-sm text-gray-600">Définissez la durée de votre événement.</p>
+                  </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prix (€)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={formData.price}
-                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Unité <span className="text-gray-500 text-sm">(optionnel)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.priceUnit}
-                    onChange={(e) => setFormData({...formData, priceUnit: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="par personne, par session, par room..."
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Précisez l'unité du prix (ex: par personne, par session, par room)
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Capacité max
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.maxCapacity}
-                    onChange={(e) => setFormData({...formData, maxCapacity: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                    placeholder="50"
-                  />
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de début <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date de fin
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Image de l'événement
-                </label>
-                <ImageUpload
-                  currentImageUrl={formData.imageUrl}
-                  onImageUpload={(imageUrl) => setFormData({...formData, imageUrl})}
-                  onImageRemove={() => setFormData({...formData, imageUrl: ''})}
-                  establishmentId={establishmentId}
-                  uploadType="event"
-                  className="w-full"
-                />
-                <p className="text-xs text-orange-600 font-medium mt-2">
-                  📐 Taille recommandée : 1200 × 800 pixels (ratio 3:2) pour un affichage optimal sur toutes les cards
-                </p>
+              {/* Section 3: Prix & Capacité */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Euro className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Prix & Capacité</h4>
+                    <p className="text-sm text-gray-600">Configurez le tarif et la capacité d'accueil.</p>
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Prix (€)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData({...formData, price: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="0.00"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Unité <span className="text-gray-500 text-sm font-normal">(optionnel)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.priceUnit}
+                        onChange={(e) => setFormData({...formData, priceUnit: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="par personne, par session, par room..."
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Précisez l'unité du prix (ex: par personne, par session, par room)
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Capacité max
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.maxCapacity}
+                        onChange={(e) => setFormData({...formData, maxCapacity: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        placeholder="50"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-3">
+              {/* Section 4: Médias */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <ImageIcon className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-lg font-semibold text-gray-900 mb-1">Médias</h4>
+                    <p className="text-sm text-gray-600">Ajoutez une image pour rendre votre événement plus attractif.</p>
+                  </div>
+                </div>
+                <div className="border-t border-gray-200 pt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Image de l'événement
+                    </label>
+                    <ImageUpload
+                      currentImageUrl={formData.imageUrl}
+                      onImageUpload={(imageUrl) => setFormData({...formData, imageUrl})}
+                      onImageRemove={() => setFormData({...formData, imageUrl: ''})}
+                      establishmentId={establishmentId}
+                      uploadType="event"
+                      className="w-full"
+                    />
+                    <p className="text-xs text-orange-600 font-medium mt-2">
+                      📐 Taille recommandée : 1200 × 800 pixels (ratio 3:2) pour un affichage optimal sur toutes les cards
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Boutons d'action */}
+              <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2.5 rounded-lg transition-colors font-semibold"
                 >
                   💾 {editingEvent ? 'Modifier' : 'Créer'}
                 </button>
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2.5 rounded-lg transition-colors font-semibold"
                 >
                   Annuler
                 </button>

@@ -68,6 +68,7 @@ export async function GET(
     // Convertir snake_case -> camelCase
     const formattedDeals = (activeDeals || []).map((deal: any) => ({
       id: deal.id,
+      establishmentId: deal.establishment_id,
       title: deal.title,
       description: deal.description,
       modality: deal.modality,
