@@ -2,6 +2,7 @@ import { isAdmin } from '@/lib/supabase/helpers';
 import { redirect } from 'next/navigation';
 import ModificationsManager from './ModificationsManager';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createClientAdmin } from '@supabase/supabase-js';
 
 export default async function AdminModificationsPage() {
   // Vérifier que l'utilisateur est un admin
@@ -11,6 +12,27 @@ export default async function AdminModificationsPage() {
   }
 
   const supabase = await createClient();
+  
+  // Essayer d'utiliser le client admin pour contourner les RLS si disponible
+  let adminSupabase: any = null;
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      adminSupabase = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+      console.log('✅ Client admin créé pour contourner RLS');
+    } else {
+      console.warn('⚠️ SUPABASE_SERVICE_ROLE_KEY non défini, utilisation du client normal');
+    }
+  } catch (error) {
+    console.warn('⚠️ Erreur création client admin, utilisation du client normal:', error);
+  }
 
   // Récupérer toutes les demandes en attente
   const { data: pendingRequestsData, error: pendingError } = await supabase
@@ -55,6 +77,43 @@ export default async function AdminModificationsPage() {
     console.error('Erreur récupération historique:', historyError);
   }
 
+  // Récupérer les demandes professionnelles depuis la page wait
+  // Utiliser le client admin si disponible pour contourner les RLS
+  const clientToUse = adminSupabase || supabase;
+  
+  const { data: professionalInquiriesData, error: inquiriesError } = await clientToUse
+    .from('professional_inquiries')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (inquiriesError) {
+    console.error('❌ Erreur récupération demandes professionnelles:', inquiriesError);
+    console.error('Détails:', {
+      message: inquiriesError.message,
+      code: inquiriesError.code,
+      details: inquiriesError.details,
+      hint: inquiriesError.hint
+    });
+  } else {
+    console.log(`✅ Demandes professionnelles récupérées: ${professionalInquiriesData?.length || 0}`);
+    if (professionalInquiriesData && professionalInquiriesData.length > 0) {
+      console.log('📋 Première demande:', professionalInquiriesData[0]);
+    }
+  }
+
+  // Transformer les demandes professionnelles
+  const professionalInquiries = (professionalInquiriesData || []).map((inquiry: any) => ({
+    id: inquiry.id,
+    firstName: inquiry.first_name,
+    lastName: inquiry.last_name,
+    establishmentName: inquiry.establishment_name,
+    city: inquiry.city,
+    description: inquiry.description,
+    ipAddress: inquiry.ip_address,
+    createdAt: inquiry.created_at,
+    updatedAt: inquiry.updated_at
+  }));
+
   // Transformer les données pour correspondre au format attendu
   const pendingRequests = (pendingRequestsData || []).map((req: any) => ({
     ...req,
@@ -90,6 +149,7 @@ export default async function AdminModificationsPage() {
         <ModificationsManager 
           pendingRequests={pendingRequests as any} 
           recentHistory={recentHistory as any}
+          professionalInquiries={professionalInquiries as any}
         />
       </div>
     </div>

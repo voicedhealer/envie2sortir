@@ -68,7 +68,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     }
     initDoneRef.current = true;
     
-    // ✅ Timeout de sécurité : forcer la fin de synchronisation après 15 secondes maximum
+    // ✅ Timeout de sécurité : forcer la fin de synchronisation après 20 secondes maximum
+    // Augmenté pour laisser plus de temps aux requêtes DB qui peuvent être lentes
     syncTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current && loadingRef.current) {
         // ✅ Vérifier si une session a été détectée avant de forcer la fin
@@ -76,14 +77,14 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           console.log('✅ [useSupabaseSession] Session détectée, arrêt du chargement');
           setLoading(false);
         } else {
-          console.warn('⚠️ [useSupabaseSession] Timeout de sécurité: forcer la fin de synchronisation après 15s (pas de session détectée)');
+          console.warn('⚠️ [useSupabaseSession] Timeout de sécurité: forcer la fin de synchronisation après 20s (pas de session détectée)');
           setLoading(false);
         }
         if (syncTimeoutRef.current) {
           clearTimeout(syncTimeoutRef.current);
         }
       }
-    }, 15000);
+    }, 20000);
     
     // Fallback : si après 10 secondes on n'a toujours pas de session ET qu'aucune session n'a été détectée
     immediateFallbackRef.current = setTimeout(() => {
@@ -109,7 +110,7 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         // ✅ Si on a des cookies ou une session détectée, continuer à attendre (mais avec timeout de sécurité)
         console.log('⏳ [useSupabaseSession] Session en cours de synchronisation, continuation du chargement...');
       }
-    }, 10000);
+    }, 20000); // ✅ Timeout de sécurité global (20s) - différent du timeout de requête DB (5s)
     
     // Récupérer la session initiale
     // ✅ SIMPLIFIÉ : On fait confiance à onAuthStateChange qui est plus fiable
@@ -449,7 +450,8 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             return adminUser;
           }
           
-          // Timeout réduit pour les requêtes Supabase (5s au lieu de 15s)
+          // ✅ OPTIMISATION : Timeout réduit à 5s et gestion d'erreur améliorée
+          // Si la requête prend trop de temps, on utilise directement le fallback
           const timeoutPromise = new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Database query timeout')), 5000)
           );
@@ -477,11 +479,16 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             } else if (result?.error) {
               userError = result.error;
             } else {
-              // Timeout ou format inattendu
-              throw new Error('Query timeout or unexpected format');
+              // Timeout ou format inattendu - utiliser fallback
+              userError = new Error('Query timeout or unexpected format');
             }
           } catch (queryError: any) {
-            console.warn('⚠️ [useSupabaseSession] Users query error or timeout:', queryError.message);
+            // ✅ Ne pas logger comme erreur si c'est juste un timeout - c'est normal si la DB est lente
+            if (queryError.message?.includes('timeout')) {
+              console.log('⏱️ [useSupabaseSession] Users query timeout (using fallback)');
+            } else {
+              console.warn('⚠️ [useSupabaseSession] Users query error:', queryError.message);
+            }
             userError = queryError;
             // ✅ Ne pas bloquer - utiliser le fallback immédiatement
           }
@@ -576,7 +583,12 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
                 profError = profResult.error;
               }
             } catch (profQueryError: any) {
-              console.warn('⚠️ [useSupabaseSession] Professionals query error or timeout:', profQueryError.message);
+              // ✅ Ne pas logger comme erreur si c'est juste un timeout
+              if (profQueryError.message?.includes('timeout')) {
+                console.log('⏱️ [useSupabaseSession] Professionals query timeout (using fallback)');
+              } else {
+                console.warn('⚠️ [useSupabaseSession] Professionals query error:', profQueryError.message);
+              }
               profError = profQueryError;
             }
           }

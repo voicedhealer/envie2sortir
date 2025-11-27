@@ -82,12 +82,34 @@ export async function getCurrentUser() {
     return null;
   }
   
-  // Vérifier si c'est un user
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', authUser.id)
-    .maybeSingle();
+  // ✅ OPTIMISATION : Ajouter des timeouts pour éviter les blocages
+  const queryTimeout = 5000; // 5 secondes max par requête
+  
+  // Vérifier si c'est un user avec timeout
+  let userData = null;
+  let userError = null;
+  try {
+    const userQueryPromise = supabase
+      .from('users')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), queryTimeout)
+    );
+    
+    const result = await Promise.race([userQueryPromise, timeoutPromise]) as any;
+    userData = result?.data;
+    userError = result?.error;
+  } catch (error: any) {
+    if (error.message?.includes('timeout')) {
+      console.log('⏱️ [getCurrentUser] Users query timeout');
+    } else {
+      console.warn('⚠️ [getCurrentUser] Users query error:', error.message);
+    }
+    userError = error;
+  }
   
   console.log('🔍 Recherche dans users:', {
     found: !!userData,
@@ -104,13 +126,31 @@ export async function getCurrentUser() {
     };
   }
   
-  // Vérifier si c'est un professional
-  // Récupérer d'abord le professional, puis l'établissement séparément
-  const { data: professionalData, error: professionalError } = await supabase
-    .from('professionals')
-    .select('*')
-    .eq('id', authUser.id)
-    .maybeSingle();
+  // Vérifier si c'est un professional avec timeout
+  let professionalData = null;
+  let professionalError = null;
+  try {
+    const profQueryPromise = supabase
+      .from('professionals')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Query timeout')), queryTimeout)
+    );
+    
+    const result = await Promise.race([profQueryPromise, timeoutPromise]) as any;
+    professionalData = result?.data;
+    professionalError = result?.error;
+  } catch (error: any) {
+    if (error.message?.includes('timeout')) {
+      console.log('⏱️ [getCurrentUser] Professionals query timeout');
+    } else {
+      console.warn('⚠️ [getCurrentUser] Professionals query error:', error.message);
+    }
+    professionalError = error;
+  }
   
   console.log('🔍 Recherche dans professionals:', {
     found: !!professionalData,
@@ -119,12 +159,25 @@ export async function getCurrentUser() {
   });
   
   if (professionalData) {
-    // Récupérer l'établissement séparément
-    const { data: establishment } = await supabase
-      .from('establishments')
-      .select('id')
-      .eq('owner_id', professionalData.id)
-      .maybeSingle();
+    // Récupérer l'établissement séparément avec timeout
+    let establishment = null;
+    try {
+      const estQueryPromise = supabase
+        .from('establishments')
+        .select('id')
+        .eq('owner_id', professionalData.id)
+        .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout')), queryTimeout)
+      );
+      
+      const result = await Promise.race([estQueryPromise, timeoutPromise]) as any;
+      establishment = result?.data;
+    } catch (error: any) {
+      // Si la requête établissement timeout, continuer quand même
+      console.log('⏱️ [getCurrentUser] Establishment query timeout, continuing without it');
+    }
     
     console.log('✅ Professionnel trouvé, établissement:', establishment?.id || 'aucun');
     

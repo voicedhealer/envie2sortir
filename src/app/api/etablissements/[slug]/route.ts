@@ -93,6 +93,97 @@ function isValidCoordinates(lat?: number, lng?: number): boolean {
 }
 
 /**
+ * GET - Récupération d'un établissement par son slug
+ * 
+ * @param request - NextRequest
+ * @param params - Paramètres de route contenant le slug (Promise en Next.js 15+)
+ * 
+ * @returns NextResponse avec l'établissement ou une erreur
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
+  try {
+    const { slug } = await params;
+    const supabase = await createClient();
+
+    // Récupérer l'établissement (sans la relation owner pour éviter les erreurs)
+    const { data: establishment, error: establishmentError } = await supabase
+      .from('establishments')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (establishmentError || !establishment) {
+      console.error('Erreur récupération établissement:', establishmentError);
+      return NextResponse.json(
+        { error: "Établissement non trouvé" },
+        { status: 404 }
+      );
+    }
+
+    // Récupérer le propriétaire séparément si nécessaire
+    let owner = null;
+    if (establishment.owner_id) {
+      const { data: ownerData } = await supabase
+        .from('professionals')
+        .select('id, first_name, last_name, email')
+        .eq('id', establishment.owner_id)
+        .maybeSingle();
+      owner = ownerData;
+    }
+
+    // Transformer les données pour correspondre au format attendu
+    const formattedEstablishment = {
+      id: establishment.id,
+      slug: establishment.slug,
+      name: establishment.name,
+      description: establishment.description,
+      address: establishment.address,
+      city: establishment.city,
+      postalCode: establishment.postal_code,
+      latitude: establishment.latitude,
+      longitude: establishment.longitude,
+      phone: establishment.phone,
+      email: establishment.email,
+      website: establishment.website,
+      instagram: establishment.instagram,
+      facebook: establishment.facebook,
+      tiktok: establishment.tiktok,
+      youtube: establishment.youtube,
+      priceMin: establishment.price_min,
+      priceMax: establishment.price_max,
+      status: establishment.status,
+      subscription: establishment.subscription,
+      createdAt: establishment.created_at,
+      updatedAt: establishment.updated_at,
+      owner: owner ? {
+        id: owner.id,
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+        email: owner.email
+      } : null
+    };
+
+    return NextResponse.json({
+      success: true,
+      establishment: formattedEstablishment
+    });
+
+  } catch (error) {
+    console.error("❌ Erreur récupération établissement:", error);
+    return NextResponse.json(
+      { 
+        error: "Erreur interne du serveur",
+        details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Erreur inconnue' : undefined
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * PUT - Mise à jour d'un établissement
  * 
  * @param request - NextRequest contenant les données à mettre à jour
@@ -627,108 +718,6 @@ export async function DELETE(
         error: "Erreur interne du serveur",
         details: process.env.NODE_ENV === 'development' ? error instanceof Error ? error.message : 'Erreur inconnue' : undefined
       },
-      { status: 500 }
-    );
-  }
-}
-//get api research
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  try {
-    const { slug } = await params;
-    const supabase = await createClient();
-    
-    // Récupérer l'établissement avec relations
-    const { data: establishment, error: establishmentError } = await supabase
-      .from('establishments')
-      .select(`
-        *,
-        images (*),
-        events (*),
-        owner:professionals!establishments_owner_id_fkey (
-          id,
-          first_name,
-          last_name,
-          email,
-          phone
-        )
-      `)
-      .eq('slug', slug)
-      .eq('status', 'approved')
-      .single();
-    
-    if (establishmentError || !establishment) {
-      return NextResponse.json(
-        { error: "Établissement non trouvé" },
-        { status: 404 }
-      );
-    }
-
-    // Récupérer les compteurs (favorites, likes, comments)
-    const [favoritesCount, likesCount, commentsCount] = await Promise.all([
-      supabase.from('user_favorites').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
-      supabase.from('user_likes').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id),
-      supabase.from('user_comments').select('id', { count: 'exact', head: true }).eq('establishment_id', establishment.id)
-    ]);
-
-    // Filtrer les événements à venir et trier
-    const now = new Date().toISOString();
-    const upcomingEvents = (establishment.events || [])
-      .filter((event: any) => event.start_date >= now)
-      .sort((a: any, b: any) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
-      .slice(0, 10);
-
-    // Trier les images par ordre
-    const sortedImages = (establishment.images || []).sort((a: any, b: any) => a.ordre - b.ordre);
-
-    // Parser les JSON fields avec gestion des erreurs
-    const parseJsonField = (field: any) => {
-      if (!field) return null;
-      if (typeof field === 'object') return field;
-      if (typeof field !== 'string') return field;
-      try {
-        return JSON.parse(field);
-      } catch (error) {
-        console.warn('Erreur parsing JSON field:', field, error);
-        return null;
-      }
-    };
-
-    const response = {
-      ...establishment,
-      images: sortedImages,
-      events: upcomingEvents,
-      owner: establishment.owner ? {
-        firstName: establishment.owner.first_name,
-        lastName: establishment.owner.last_name,
-        email: establishment.owner.email,
-        phone: establishment.owner.phone
-      } : null,
-      _count: {
-        favorites: favoritesCount.count || 0,
-        likes: likesCount.count || 0,
-        comments: commentsCount.count || 0
-      },
-      activities: parseJsonField(establishment.activities) || [],
-      services: parseJsonField(establishment.services) || [],
-      ambiance: parseJsonField(establishment.ambiance) || [],
-      paymentMethods: parseJsonField(establishment.payment_methods) || [],
-      horairesOuverture: parseJsonField(establishment.horaires_ouverture) || {},
-      envieTags: parseJsonField(establishment.envie_tags) || [],
-      informationsPratiques: parseJsonField(establishment.informations_pratiques) || [],
-    };
-
-    return NextResponse.json({
-      success: true,
-      data: response
-    });
-    
-  } catch (error) {
-    console.error("❌ Erreur récupération établissement:", error);
-    return NextResponse.json(
-      { error: "Erreur interne du serveur" },
       { status: 500 }
     );
   }

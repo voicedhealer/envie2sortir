@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { logger } from "@/lib/monitoring/logger";
 
 // Schema de validation
 const professionalInquirySchema = z.object({
@@ -78,7 +79,16 @@ export async function POST(request: NextRequest) {
     // id (uuid), first_name, last_name, establishment_name, city, description, created_at, ip_address
     
     // Insérer la demande dans la table professional_inquiries
-    const { error: insertError } = await supabase
+    await logger.info('Professional inquiry submission attempt', {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      establishmentName: data.establishmentName,
+      city: data.city,
+      hasDescription: !!data.description,
+      ipAddress: ip,
+    });
+
+    const { data: insertData, error: insertError } = await supabase
       .from('professional_inquiries')
       .insert({
         first_name: data.firstName,
@@ -87,19 +97,21 @@ export async function POST(request: NextRequest) {
         city: data.city,
         description: data.description || null,
         ip_address: ip,
-      });
+      })
+      .select();
 
     if (insertError) {
-      console.error('Erreur insertion demande professionnelle:', insertError);
-      // Logger quand même pour le debug
-      console.log(`📋 [Professional Inquiry] Nouvelle demande (non sauvegardée):`, {
+      await logger.error('Professional inquiry insertion failed', {
+        error: insertError.message,
+        code: insertError.code,
+        details: insertError.details,
+        hint: insertError.hint,
         firstName: data.firstName,
         lastName: data.lastName,
         establishmentName: data.establishmentName,
         city: data.city,
-        description: data.description,
-        ip,
-      });
+        ipAddress: ip,
+      }, new Error(insertError.message));
       
       // Ne pas bloquer si la table n'existe pas encore, juste logger
       // Retourner un succès pour ne pas frustrer l'utilisateur
@@ -110,12 +122,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log(`📋 [Professional Inquiry] Nouvelle demande enregistrée:`, {
+    await logger.info('Professional inquiry successfully inserted', {
+      inquiryId: insertData?.[0]?.id,
       firstName: data.firstName,
       lastName: data.lastName,
       establishmentName: data.establishmentName,
       city: data.city,
-      ip,
+      ipAddress: ip,
+      createdAt: insertData?.[0]?.created_at,
     });
 
     return NextResponse.json({
@@ -124,7 +138,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ [Professional Inquiry] Erreur:', error);
+    await logger.error('Professional inquiry unexpected error', {
+      error: error instanceof Error ? error.message : String(error),
+      ipAddress: request.ip || 'unknown',
+    }, error instanceof Error ? error : new Error(String(error)));
     
     return NextResponse.json(
       { 

@@ -12,7 +12,7 @@ import { getCurrentUser } from "@/lib/supabase/helpers";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
@@ -43,7 +43,22 @@ export async function POST(
     }
 
     // ✅ CORRECTION : Vérifier si c'est le propriétaire qui consulte
-    const user = await getCurrentUser();
+    // Gérer les erreurs de getCurrentUser gracieusement (peut timeout ou échouer)
+    let user = null;
+    try {
+      // Timeout pour getCurrentUser pour éviter de bloquer
+      const getUserPromise = getCurrentUser();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('getCurrentUser timeout')), 3000)
+      );
+      
+      user = await Promise.race([getUserPromise, timeoutPromise]).catch(() => null);
+    } catch (error) {
+      // Si getCurrentUser échoue, continuer quand même (peut être un utilisateur non connecté)
+      console.log('ℹ️ [Stats] getCurrentUser failed, continuing without user check:', error);
+      user = null;
+    }
+    
     if (user && user.id === establishment.owner_id) {
       console.log('🔒 Vue/click du propriétaire ignorée pour:', establishment.name);
       return NextResponse.json({
@@ -83,17 +98,68 @@ export async function POST(
       updateData.clicks_count = currentClicks + 1;
     }
 
-    const { data: updatedEstablishment, error: updateError } = await supabase
-      .from('establishments')
-      .update(updateData)
-      .eq('id', id)
-      .select('id, name, views_count, clicks_count')
-      .single();
-
+    // ✅ CORRECTION : Utiliser directement le client admin pour les stats
+    // Les stats doivent être incrémentées même pour les utilisateurs non authentifiés
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    let updatedEstablishment: any = null;
+    let updateError: any = null;
+    
+    if (supabaseUrl && serviceKey) {
+      // Utiliser le client admin pour bypass RLS
+      const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+      const adminClient = createClientAdmin(supabaseUrl, serviceKey, {
+        auth: { persistSession: false }
+      });
+      
+      const adminResult = await adminClient
+        .from('establishments')
+        .update(updateData)
+        .eq('id', id)
+        .select('id, name, views_count, clicks_count')
+        .single();
+      
+      updatedEstablishment = adminResult.data;
+      updateError = adminResult.error;
+    } else {
+      // Fallback sur le client normal si les clés admin ne sont pas disponibles
+      const result = await supabase
+        .from('establishments')
+        .update(updateData)
+        .eq('id', id)
+        .select('id, name, views_count, clicks_count')
+        .single();
+      
+      updatedEstablishment = result.data;
+      updateError = result.error;
+    }
+    
     if (updateError || !updatedEstablishment) {
-      console.error('Erreur incrémentation statistique:', updateError);
+      // Log détaillé pour debug
+      const errorDetails = {
+        error: updateError,
+        code: updateError?.code,
+        message: updateError?.message,
+        details: updateError?.details,
+        hint: updateError?.hint,
+        updateData,
+        establishmentId: id,
+        hasAdminClient: !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY)
+      };
+      
+      console.error('❌ Erreur incrémentation statistique:', JSON.stringify(errorDetails, null, 2));
+      
+      // Retourner l'erreur détaillée en développement
+      const errorMessage = process.env.NODE_ENV === 'development' 
+        ? `Erreur lors de l'incrémentation des statistiques: ${updateError?.message || 'Erreur inconnue'}`
+        : "Erreur lors de l'incrémentation des statistiques";
+      
       return NextResponse.json(
-        { error: "Erreur lors de l'incrémentation des statistiques" },
+        { 
+          error: errorMessage,
+          ...(process.env.NODE_ENV === 'development' && { details: errorDetails })
+        },
         { status: 500 }
       );
     }

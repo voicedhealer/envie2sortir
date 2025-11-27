@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from '@/lib/fake-toast';
-import { CheckCircle, XCircle, Clock, AlertCircle, Mail, Building2, User, Phone, Hash } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, AlertCircle, Mail, Building2, User, Phone, Hash, Briefcase, MapPin, FileText } from 'lucide-react';
 
 interface Professional {
   id: string;
@@ -30,16 +30,30 @@ interface UpdateRequest {
   professional: Professional;
 }
 
+interface ProfessionalInquiry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  establishmentName: string;
+  city: string;
+  description: string | null;
+  ipAddress: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface ModificationsManagerProps {
   pendingRequests: UpdateRequest[];
   recentHistory: UpdateRequest[];
+  professionalInquiries: ProfessionalInquiry[];
 }
 
 export default function ModificationsManager({ 
   pendingRequests: initialPending, 
-  recentHistory: initialHistory 
+  recentHistory: initialHistory,
+  professionalInquiries: initialInquiries
 }: ModificationsManagerProps) {
-  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'inquiries'>('pending');
   const [pendingRequests, setPendingRequests] = useState(initialPending);
   const [recentHistory, setRecentHistory] = useState(initialHistory);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
@@ -223,6 +237,16 @@ export default function ModificationsManager({
             >
               Historique ({recentHistory.length})
             </button>
+            <button
+              onClick={() => setActiveTab('inquiries')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'inquiries'
+                  ? 'border-orange-500 text-orange-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Demandes Pro ({initialInquiries.length})
+            </button>
           </nav>
         </div>
 
@@ -359,7 +383,7 @@ export default function ModificationsManager({
                 })
               )}
             </div>
-          ) : (
+          ) : activeTab === 'history' ? (
             <div className="space-y-3">
               {recentHistory.length === 0 ? (
                 <div className="text-center py-12">
@@ -416,6 +440,80 @@ export default function ModificationsManager({
                     </div>
                   );
                 })
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {initialInquiries.length === 0 ? (
+                <div className="text-center py-12">
+                  <Briefcase className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Aucune demande professionnelle
+                  </h3>
+                  <p className="text-gray-600">
+                    Aucune demande depuis la page d'attente
+                  </p>
+                </div>
+              ) : (
+                initialInquiries.map((inquiry) => (
+                  <div key={inquiry.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-4">
+                          <div className="p-2 bg-blue-100 rounded-lg">
+                            <Briefcase className="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {inquiry.establishmentName}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {inquiry.firstName} {inquiry.lastName}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div className="flex items-center">
+                              <MapPin className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="text-gray-500">Ville:</span>
+                              <span className="ml-2 text-gray-900 font-medium">{inquiry.city}</span>
+                            </div>
+                            {inquiry.ipAddress && (
+                              <div className="flex items-center">
+                                <span className="text-gray-500">IP:</span>
+                                <span className="ml-2 text-gray-900 font-mono text-xs">{inquiry.ipAddress}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {inquiry.description && (
+                          <div className="mb-4">
+                            <div className="flex items-center mb-2">
+                              <FileText className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="text-sm font-medium text-gray-700">Description</span>
+                            </div>
+                            <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
+                              {inquiry.description}
+                            </p>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-gray-500">
+                          Reçue le {new Date(inquiry.createdAt).toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           )}

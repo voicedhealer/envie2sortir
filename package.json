@@ -30,6 +30,8 @@
     "test:railway": "tsx scripts/test-railway-api.ts",
     "test:railway:compare": "tsx scripts/test-railway-comparison.ts",
     "test:cloudflare": "tsx scripts/test-cloudflare-api.ts",
+    "test:session": "tsx scripts/test-session-fixes.ts",
+    "test:session:unit": "jest --testPathPatterns=session-fixes.test.ts",
     "verify:email": "tsx scripts/verify-user-email.ts",
     "fix:images-ordre": "tsx scripts/fix-images-ordre.ts",
     "check:establishment": "tsx scripts/check-establishment.ts",
