@@ -424,7 +424,7 @@ export default function EstablishmentReviews({ establishment }: EstablishmentRev
                       )}
                     </div>
                   </div>
-                  <p className="review-text">{review.comment}</p>
+                  <p className="review-text line-clamp-1">{review.comment}</p>
                   <p className="text-xs text-gray-500 mt-2">
                     {formatDate(review.date)}
                   </p>

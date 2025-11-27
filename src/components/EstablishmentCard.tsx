@@ -267,6 +267,22 @@ export default function EstablishmentCard({
     if (user?.role === 'user' || user?.userType === 'user') {
       checkFavoriteStatus();
     }
+
+    // Écouter les changements de favoris depuis d'autres composants (EstablishmentActions, MapComponent, etc.)
+    const handleFavoriteChanged = (event: CustomEvent) => {
+      const { establishmentId, isFavorite } = event.detail;
+      
+      // Mettre à jour l'état seulement si c'est pour cet établissement
+      if (establishmentId === establishment.id) {
+        setIsLiked(isFavorite);
+      }
+    };
+
+    window.addEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+
+    return () => {
+      window.removeEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    };
   }, [user, establishment.id]);
 
   const checkFavoriteStatus = async () => {
