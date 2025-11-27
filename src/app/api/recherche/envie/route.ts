@@ -337,12 +337,74 @@ export async function GET(request: NextRequest) {
         // Si la recherche est pour de la nourriture, vérifier que c'est un restaurant
         if (searchIsForFood) {
           const isRestaurant = est.activities?.some((a: any) => 
-            typeof a === 'string' && a.toLowerCase().includes('restaurant')
+            typeof a === 'string' && (
+              a.toLowerCase().includes('restaurant') || 
+              a.toLowerCase().includes('cuisine') ||
+              a === 'burger' || 
+              a === 'fast_food' || 
+              a === 'pizzeria'
+            )
           ) || est.description?.toLowerCase().includes('restaurant');
           
           if (!isRestaurant) {
             console.log(`  🚫 ${est.name}: Écarté car la recherche est pour de la nourriture mais ce n'est pas un restaurant`);
             return false;
+          }
+        }
+        
+        // Filtrage strict pour les cuisines spécifiques avec mots-clés associés
+        const cuisineActivities: { [key: string]: string[] } = {
+          'italien': ['restaurant_italien', 'pizzeria'],
+          'indien': ['restaurant_indien'],
+          'japonais': ['restaurant_japonais'],
+          'chinois': ['restaurant_chinois'],
+          'mexicain': ['restaurant_mexicain', 'tacos_mexicain']
+        };
+        
+        const cuisineKeywords: { [key: string]: string[] } = {
+          'italien': ['pâtes', 'pates', 'lasagne', 'risotto', 'parmesan', 'mozzarella', 'antipasti', 'carbonara', 'bolognaise', 'tagliatelle', 'ravioli', 'gnocchi', 'tiramisu', 'panna cotta', 'prosciutto', 'burrata', 'pesto', 'marinara', 'napolitaine', 'margherita'],
+          'indien': ['curry', 'tandoori', 'naan', 'biryani', 'tikka', 'masala', 'dal', 'samosa', 'pakora', 'korma', 'vindaloo', 'roti', 'chapati'],
+          'japonais': ['sushi', 'sashimi', 'ramen', 'tempura', 'yakitori', 'teriyaki', 'maki', 'nigiri', 'udon', 'soba', 'miso', 'wasabi', 'gingembre'],
+          'chinois': ['wok', 'dim sum', 'canard', 'laqué', 'pékinois', 'cantonais', 'sichuan', 'mapo', 'tofu', 'nems', 'riz cantonais', 'porc aigre-doux'],
+          'mexicain': ['tacos', 'burrito', 'quesadilla', 'guacamole', 'salsa', 'nachos', 'fajitas', 'enchilada', 'tortilla']
+        };
+        
+        // Normaliser le texte pour la recherche
+        const normalizeText = (text: string) => 
+          text?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+        
+        for (const [keyword, requiredActivities] of Object.entries(cuisineActivities)) {
+          if (keywords.some(kw => kw.includes(keyword))) {
+            // Vérifier d'abord l'activité
+            const hasRequiredActivity = est.activities?.some((a: any) => 
+              typeof a === 'string' && requiredActivities.includes(a)
+            );
+            
+            if (hasRequiredActivity) {
+              // Si l'activité est présente, on accepte
+              continue;
+            }
+            
+            // Si pas d'activité, vérifier les mots-clés associés
+            const associatedKeywords = cuisineKeywords[keyword] || [];
+            const nameNormalized = normalizeText(est.name || '');
+            const descriptionNormalized = normalizeText(est.description || '');
+            const tagsNormalized = (est.tags || []).map((tag: any) => 
+              normalizeText(typeof tag === 'string' ? tag : tag.tag || '')
+            ).join(' ');
+            const allText = `${nameNormalized} ${descriptionNormalized} ${tagsNormalized}`;
+            
+            const hasAssociatedKeyword = associatedKeywords.some(associatedKw => {
+              const kwNormalized = normalizeText(associatedKw);
+              return allText.includes(kwNormalized);
+            });
+            
+            if (!hasAssociatedKeyword) {
+              console.log(`  🚫 ${est.name}: Écarté car recherche "${keyword}" mais pas d'activité requise (${requiredActivities.join(', ')}) ni de mot-clé associé`);
+              return false;
+            } else {
+              console.log(`  ✅ ${est.name}: Accepté car contient un mot-clé associé à "${keyword}"`);
+            }
           }
         }
         

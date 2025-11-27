@@ -54,7 +54,17 @@ const ACTIVITY_ASSOCIATIONS: { [key: string]: string[] } = {
   'tapas': ['tapas', 'bar', 'restaurant']
 };
 
-// Mots-clés critiques qui nécessitent un filtre strict par activité
+// Mots-clés associés pour chaque cuisine (pour accepter les établissements avec ces mots dans nom/description/tags)
+const CUISINE_KEYWORDS: { [key: string]: string[] } = {
+  'italien': ['pâtes', 'pates', 'lasagne', 'risotto', 'parmesan', 'mozzarella', 'antipasti', 'carbonara', 'bolognaise', 'tagliatelle', 'ravioli', 'gnocchi', 'tiramisu', 'panna cotta', 'prosciutto', 'burrata', 'pesto', 'marinara', 'napolitaine', 'margherita'],
+  'indien': ['curry', 'tandoori', 'naan', 'biryani', 'tikka', 'masala', 'dal', 'samosa', 'pakora', 'korma', 'vindaloo', 'roti', 'chapati'],
+  'japonais': ['sushi', 'sashimi', 'ramen', 'tempura', 'yakitori', 'teriyaki', 'maki', 'nigiri', 'udon', 'soba', 'miso', 'wasabi', 'gingembre'],
+  'chinois': ['wok', 'dim sum', 'canard', 'laqué', 'pékinois', 'cantonais', 'sichuan', 'mapo', 'tofu', 'nems', 'riz cantonais', 'porc aigre-doux'],
+  'mexicain': ['tacos', 'burrito', 'quesadilla', 'guacamole', 'salsa', 'nachos', 'fajitas', 'enchilada', 'tortilla'],
+  'espagnol': ['tapas', 'paella', 'jambon', 'serrano', 'chorizo', 'gazpacho', 'tortilla', 'espagnole', 'sangria']
+};
+
+// Mots-clés critiques qui nécessitent un filtre strict par activité OU mots-clés associés
 const CRITICAL_KEYWORDS: { [key: string]: string[] } = {
   // Cuisine spécifique
   'tandoori': ['restaurant_indien', 'cuisine_indienne'],
@@ -64,6 +74,7 @@ const CRITICAL_KEYWORDS: { [key: string]: string[] } = {
   'burger': ['burger', 'fast_food'],
   'tapas': ['tapas', 'restaurant_espagnol'],
   'chinois': ['restaurant_chinois', 'cuisine_chinoise'],
+  'italien': ['restaurant_italien', 'pizzeria'],
   
   // Activités spécifiques
   'karting': ['karting'],
@@ -93,19 +104,50 @@ const CRITICAL_KEYWORDS: { [key: string]: string[] } = {
 function shouldIncludeEstablishment(establishment: any, keywords: string[]): boolean {
   const establishmentActivities = establishment.activities || [];
   
+  // Normaliser le texte de l'établissement pour la recherche
+  const normalizeText = (text: string) => 
+    text?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") || "";
+  
+  const nameNormalized = normalizeText(establishment.name || '');
+  const descriptionNormalized = normalizeText(establishment.description || '');
+  const tagsNormalized = (establishment.tags || []).map((tag: any) => 
+    normalizeText(typeof tag === 'string' ? tag : tag.tag || '')
+  ).join(' ');
+  const allText = `${nameNormalized} ${descriptionNormalized} ${tagsNormalized}`;
+  
   for (const keyword of keywords) {
     const requiredActivities = CRITICAL_KEYWORDS[keyword];
     
     if (requiredActivities) {
-      // Si le mot-clé est critique, l'établissement DOIT avoir au moins une activité requise
+      // Vérifier d'abord si l'établissement a l'activité requise
       const hasRequiredActivity = establishmentActivities.some((activity: string) => 
         requiredActivities.includes(activity)
       );
       
-      if (!hasRequiredActivity) {
-        console.log(`❌ FILTRÉ (critique): ${establishment.name} - pas d'activité requise pour "${keyword}"`);
-        return false;
+      if (hasRequiredActivity) {
+        // Si l'activité est présente, on accepte
+        continue;
       }
+      
+      // Si pas d'activité, vérifier les mots-clés associés pour les cuisines
+      const associatedKeywords = CUISINE_KEYWORDS[keyword];
+      if (associatedKeywords) {
+        const hasAssociatedKeyword = associatedKeywords.some(associatedKw => {
+          // Rechercher le mot-clé associé dans le texte normalisé
+          const kwNormalized = normalizeText(associatedKw);
+          return allText.includes(kwNormalized);
+        });
+        
+        if (hasAssociatedKeyword) {
+          // Si un mot-clé associé est trouvé, on accepte
+          console.log(`✅ ACCEPTÉ (mots-clés associés): ${establishment.name} - contient un mot-clé associé à "${keyword}"`);
+          continue;
+        }
+      }
+      
+      // Si ni activité ni mot-clé associé, on filtre
+      console.log(`❌ FILTRÉ (critique): ${establishment.name} - pas d'activité requise ni de mot-clé associé pour "${keyword}"`);
+      return false;
     }
   }
   
@@ -120,7 +162,7 @@ function shouldIncludeEstablishment(establishment: any, keywords: string[]): boo
     // Si recherche alimentaire spécifique, exclure les non-restaurants
     const hasRestaurantActivity = establishmentActivities.some((activity: string) => 
       activity.includes('restaurant') || activity.includes('cuisine') || 
-      activity === 'burger' || activity === 'fast_food'
+      activity === 'burger' || activity === 'fast_food' || activity === 'pizzeria'
     );
     
     if (!hasRestaurantActivity) {

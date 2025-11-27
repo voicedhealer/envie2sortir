@@ -61,9 +61,8 @@ const nextConfig: NextConfig = {
         ...config.cache,
         // Utiliser filesystem cache au lieu de memory pour les grandes chaînes
         type: 'filesystem',
-        buildDependencies: {
-          config: [__filename],
-        },
+        // ✅ CORRECTION : Ne pas inclure buildDependencies pour éviter les warnings
+        // Next.js gère déjà les dépendances de build automatiquement
       };
     }
 
