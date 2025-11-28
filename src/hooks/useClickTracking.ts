@@ -24,26 +24,43 @@ export function useClickTracking(establishmentId: string) {
       const dayOfWeek = now.toLocaleDateString('fr-FR', { weekday: 'long' });
       const timeSlot = `${hour}h-${hour + 1}h`;
       
+      const payload = {
+        establishmentId,
+        ...data,
+        hour,
+        dayOfWeek,
+        timeSlot,
+        userAgent: typeof window !== 'undefined' ? window.navigator.userAgent : 'server',
+        referrer: typeof window !== 'undefined' ? window.document.referrer : '',
+        timestamp: now.toISOString(),
+      };
+
+      console.log('📊 [useClickTracking] Envoi tracking:', {
+        establishmentId,
+        elementType: data.elementType,
+        elementId: data.elementId,
+        elementName: data.elementName,
+        action: data.action,
+      });
+      
       // Envoyer les données de tracking de manière asynchrone
-      await fetch('/api/analytics/track', {
+      const response = await fetch('/api/analytics/track', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          establishmentId,
-          ...data,
-          hour,
-          dayOfWeek,
-          timeSlot,
-          userAgent: navigator.userAgent,
-          referrer: document.referrer,
-          timestamp: now.toISOString(),
-        }),
+        body: JSON.stringify(payload),
       });
+
+      if (response.ok) {
+        console.log('✅ [useClickTracking] Tracking enregistré avec succès');
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ [useClickTracking] Erreur API:', errorData);
+      }
     } catch (error) {
-      // Silencieux - ne pas interrompre l'expérience utilisateur
-      console.debug('Analytics tracking failed:', error);
+      // Log l'erreur pour le débogage
+      console.error('❌ [useClickTracking] Erreur tracking:', error);
     }
   }, [establishmentId]);
 

@@ -77,15 +77,33 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
     const fetchAnalytics = async () => {
       try {
         setLoading(true);
+        setError(null);
+        console.log(`🔍 [ClickAnalytics] Récupération analytics pour établissement ${establishmentId}, période ${period}`);
+        
         const response = await fetch(`/api/analytics/track?establishmentId=${establishmentId}&period=${period}`);
         
+        console.log(`📡 [ClickAnalytics] Réponse API:`, {
+          ok: response.ok,
+          status: response.status,
+          statusText: response.statusText,
+        });
+        
         if (!response.ok) {
-          throw new Error('Failed to fetch analytics');
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('❌ [ClickAnalytics] Erreur API:', errorData);
+          throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch analytics`);
         }
         
         const analyticsData = await response.json();
+        console.log('✅ [ClickAnalytics] Données reçues:', {
+          totalClicks: analyticsData.totalClicks,
+          topElementsCount: analyticsData.topElements?.length,
+          statsByTypeCount: analyticsData.statsByType?.length,
+          hourlyStatsCount: analyticsData.hourlyStats?.length,
+        });
         setData(analyticsData);
       } catch (err) {
+        console.error('❌ [ClickAnalytics] Erreur:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -120,6 +138,7 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Chargement des analytics...</span>
       </div>
     );
   }
@@ -127,7 +146,11 @@ export default function ClickAnalyticsDashboard({ establishmentId, period = '30d
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-800">Erreur lors du chargement des statistiques: {error}</p>
+        <p className="text-red-800 font-semibold mb-2">Erreur lors du chargement des statistiques</p>
+        <p className="text-red-600 text-sm">{error}</p>
+        <p className="text-red-500 text-xs mt-2">
+          Vérifiez que votre établissement a un abonnement PREMIUM et que des interactions ont été enregistrées.
+        </p>
       </div>
     );
   }

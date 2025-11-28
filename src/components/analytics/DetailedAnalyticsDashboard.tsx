@@ -90,15 +90,25 @@ export default function DetailedAnalyticsDashboard({
     const fetchDetailedAnalytics = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch(`/api/analytics/detailed?establishmentId=${establishmentId}&period=${period}`);
         
         if (!response.ok) {
-          throw new Error('Failed to fetch detailed analytics');
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('❌ [DetailedAnalytics] Erreur API:', errorData);
+          throw new Error(errorData.error || `HTTP ${response.status}: Failed to fetch detailed analytics`);
         }
         
         const analyticsData = await response.json();
+        console.log('✅ [DetailedAnalytics] Données reçues:', {
+          totalInteractions: analyticsData.totalInteractions,
+          uniqueVisitors: analyticsData.uniqueVisitors,
+          hourlyStatsCount: analyticsData.hourlyStats?.length,
+          popularSections: analyticsData.popularSections,
+        });
         setData(analyticsData);
       } catch (err) {
+        console.error('❌ [DetailedAnalytics] Erreur:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -195,7 +205,7 @@ export default function DetailedAnalyticsDashboard({
           <p>Utile pour identifier les créneaux de forte affluence et optimiser vos horaires d'ouverture.</p>
         </div>
         
-        {data.hourlyStats.length === 0 ? (
+        {data.hourlyStats.length === 0 || data.hourlyStats.every(h => h.interactions === 0) ? (
           <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
             <div className="text-center">
               <div className="text-gray-400 mb-4">
@@ -260,7 +270,7 @@ export default function DetailedAnalyticsDashboard({
             </ResponsiveContainer>
             
             {/* Insights */}
-            {data.hourlyStats.length > 0 && (
+            {data.hourlyStats.some(h => h.interactions > 0) && (
               <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <div className="text-sm">
                   <span className="font-medium text-green-800">Insights :</span>
@@ -390,37 +400,82 @@ export default function DetailedAnalyticsDashboard({
         <div className="mb-4 text-sm text-gray-600">
           <p>Quelles sections de votre page intéressent le plus vos visiteurs ?</p>
         </div>
-        <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={data.popularSections} layout="horizontal" margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
-            <XAxis 
-              type="number" 
-              tick={{ fill: '#374151', fontSize: 12 }}
-              axisLine={{ stroke: '#D1D5DB' }}
-              tickLine={{ stroke: '#D1D5DB' }}
-            />
-            <YAxis 
-              dataKey="sectionName" 
-              type="category" 
-              width={120}
-              tick={{ fill: '#374151', fontSize: 12 }}
-              axisLine={{ stroke: '#D1D5DB' }}
-              tickLine={{ stroke: '#D1D5DB' }}
-            />
-            <Tooltip 
-              contentStyle={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #E5E7EB',
-                borderRadius: '8px',
-                color: '#374151',
-                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-              }}
-              labelStyle={{ color: '#374151' }}
-              formatter={(value, name) => [value, name === 'openCount' ? 'Ouvertures' : 'Visiteurs uniques']}
-            />
-            <Bar dataKey="openCount" fill="#3B82F6" radius={[0, 4, 4, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        {data.popularSections.length === 0 ? (
+          <div className="flex items-center justify-center h-96 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="text-center">
+              <div className="text-gray-400 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune donnée disponible</h3>
+              <p className="text-gray-500 mb-4">
+                Les statistiques des sections apparaîtront ici une fois que vos visiteurs commenceront à ouvrir les sections de votre page.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Debug: Afficher les données en texte pour vérification */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
+                <strong>Debug:</strong> {JSON.stringify(data.popularSections, null, 2)}
+              </div>
+            )}
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart 
+                data={data.popularSections} 
+                layout="horizontal" 
+                margin={{ top: 20, right: 30, left: 150, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
+                <XAxis 
+                  type="number" 
+                  domain={[0, (dataMax: number) => {
+                    const max = Math.max(...data.popularSections.map(s => s.openCount));
+                    return Math.ceil(max * 1.2);
+                  }]}
+                  tick={{ fill: '#374151', fontSize: 12 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                  allowDecimals={false}
+                />
+                <YAxis 
+                  dataKey="sectionName" 
+                  type="category" 
+                  width={140}
+                  tick={{ fill: '#374151', fontSize: 12 }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                  tickLine={{ stroke: '#D1D5DB' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #E5E7EB',
+                    borderRadius: '8px',
+                    color: '#374151',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                  labelStyle={{ color: '#374151', fontWeight: 'bold' }}
+                  formatter={(value: any, name: string) => {
+                    if (name === 'openCount') {
+                      return [value, 'Ouvertures'];
+                    }
+                    return [value, 'Visiteurs uniques'];
+                  }}
+                  labelFormatter={(label) => `Section: ${label}`}
+                />
+                <Bar 
+                  dataKey="openCount" 
+                  fill="#3B82F6" 
+                  radius={[0, 4, 4, 0]}
+                  name="Ouvertures"
+                  isAnimationActive={true}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </>
+        )}
       </div>
 
       {/* Statistiques des horaires */}
@@ -491,7 +546,7 @@ export default function DetailedAnalyticsDashboard({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {data.contactStats.map((contact, index) => (
-            <div key={contact.contactType} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div key={`contact-${contact.contactType}-${index}`} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
                   {index + 1}

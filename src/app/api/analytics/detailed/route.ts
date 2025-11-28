@@ -70,6 +70,8 @@ export async function GET(request: NextRequest) {
     const startDateISO = startDate.toISOString();
 
     // Récupérer toutes les données d'analytics pour l'établissement
+    console.log(`🔍 [Analytics Detailed] Récupération données pour établissement ${establishmentId}, période ${period}, depuis ${startDateISO}`);
+    
     const { data: analytics, error: analyticsError } = await supabase
       .from('click_analytics')
       .select('*')
@@ -78,12 +80,18 @@ export async function GET(request: NextRequest) {
       .order('timestamp', { ascending: false });
 
     if (analyticsError) {
-      console.error('Erreur récupération analytics:', analyticsError);
+      console.error('❌ [Analytics Detailed] Erreur récupération analytics:', analyticsError);
       return NextResponse.json(
-        { error: 'Failed to fetch detailed analytics' },
+        { 
+          error: 'Failed to fetch detailed analytics',
+          details: analyticsError.message,
+          code: analyticsError.code
+        },
         { status: 500 }
       );
     }
+
+    console.log(`✅ [Analytics Detailed] ${analytics?.length || 0} enregistrements trouvés`);
 
     if (!analytics || analytics.length === 0) {
       // Retourner des données vides au lieu de données mockées
@@ -141,14 +149,16 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const hourlyStats = Array.from(hourlyMap.entries())
-      .map(([hour, data]) => ({
+    // Créer un tableau complet de 24 heures, même pour les heures sans données
+    const hourlyStats = Array.from({ length: 24 }, (_, hour) => {
+      const hourData = hourlyMap.get(hour);
+      return {
         hour,
-        interactions: data.interactions,
-        visitors: data.visitors.size,
-        timeSlot: `${hour}h-${hour + 1}h`,
-      }))
-      .sort((a, b) => a.hour - b.hour);
+        interactions: hourData ? hourData.interactions : 0,
+        visitors: hourData ? hourData.visitors.size : 0,
+        timeSlot: `${hour.toString().padStart(2, '0')}h-${(hour + 1).toString().padStart(2, '0')}h`,
+      };
+    });
 
     // Statistiques par jour
     const dailyMap = new Map<string, { interactions: number; visitors: Set<string>; dayOfWeek: string }>();
@@ -261,9 +271,9 @@ export async function GET(request: NextRequest) {
     });
 
     const totalContactClicks = Array.from(contactMap.values()).reduce((sum, contact) => sum + contact.clicks, 0);
-    const contactStats = Array.from(contactMap.values())
-      .map(contact => ({
-        contactType: contact.contactName.split(' ')[1] || 'unknown',
+    const contactStats = Array.from(contactMap.entries())
+      .map(([contactType, contact]) => ({
+        contactType: contactType || 'unknown',
         contactName: contact.contactName,
         clicks: contact.clicks,
         percentage: totalContactClicks > 0 ? (contact.clicks / totalContactClicks) * 100 : 0,
@@ -328,7 +338,7 @@ export async function GET(request: NextRequest) {
       })
       .sort((a, b) => b.clicks - a.clicks);
 
-    return NextResponse.json({
+    const responseData = {
       totalInteractions,
       uniqueVisitors,
       averageSessionTime,
@@ -343,7 +353,16 @@ export async function GET(request: NextRequest) {
       },
       contactStats,
       linkStats,
+    };
+
+    console.log(`✅ [Analytics Detailed] Données formatées:`, {
+      totalInteractions,
+      uniqueVisitors,
+      hourlyStatsCount: hourlyStats.length,
+      popularElementsCount: popularElements.length,
     });
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error fetching detailed analytics:', error);

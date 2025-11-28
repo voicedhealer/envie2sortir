@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/fake-toast';
 import { useEstablishmentStats } from '@/hooks/useEstablishmentStats';
+import { useClickTracking } from '@/hooks/useClickTracking';
 import { PublicMenuDisplay } from '@/types/menu.types';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 
@@ -28,6 +29,7 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
   const { session, user } = useSupabaseSession();
   const router = useRouter();
   const { incrementClick } = useEstablishmentStats();
+  const { trackClick } = useClickTracking(establishment.id);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showCommentForm, setShowCommentForm] = useState(false);
@@ -190,17 +192,39 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
 
   const handleCall = () => {
     if (establishment.phone) {
+      trackClick({
+        elementType: 'contact',
+        elementId: 'phone',
+        elementName: 'Appeler',
+        action: 'click',
+        sectionContext: 'actions_rapides',
+      });
       window.open(`tel:${establishment.phone}`, '_self');
     }
   };
 
   const handleDirections = () => {
+    trackClick({
+      elementType: 'button',
+      elementId: 'directions',
+      elementName: 'Itinéraire',
+      action: 'click',
+      sectionContext: 'actions_rapides',
+    });
     const address = establishment.address;
     const encodedAddress = encodeURIComponent(address);
     window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodedAddress}`, '_blank');
   };
 
   const handleShare = async () => {
+    trackClick({
+      elementType: 'button',
+      elementId: 'share',
+      elementName: 'Partager',
+      action: 'click',
+      sectionContext: 'actions_rapides',
+    });
+    
     // 1. Essayer l'API Web Share (mobile principalement)
     if (navigator.share) {
       try {
@@ -255,6 +279,14 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
       toast.error('Vous devez être connecté pour ajouter aux favoris');
       return;
     }
+
+    trackClick({
+      elementType: 'button',
+      elementId: 'favorite',
+      elementName: isLiked ? 'Retirer des favoris' : 'Ajouter aux favoris',
+      action: 'click',
+      sectionContext: 'actions_rapides',
+    });
 
     setIsLoading(true);
     try {
@@ -410,6 +442,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           <button
             onClick={() => {
               if (menus.length > 0) {
+                trackClick({
+                  elementType: 'button',
+                  elementId: 'menu',
+                  elementName: 'Consulter le menu',
+                  action: 'click',
+                  sectionContext: 'actions_rapides',
+                });
                 incrementClick(establishment.id);
                 setShowMenuModal(true);
               }
@@ -431,6 +470,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
           <div className="relative contact-dropdown w-full h-full flex">
             <button
               onClick={() => {
+                trackClick({
+                  elementType: 'button',
+                  elementId: 'contact',
+                  elementName: 'Contacter',
+                  action: 'click',
+                  sectionContext: 'actions_rapides',
+                });
                 incrementClick(establishment.id);
                 setShowContactOptions(!showContactOptions);
               }}
@@ -446,6 +492,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 {establishment.phone && (
                   <button
                     onClick={() => {
+                      trackClick({
+                        elementType: 'contact',
+                        elementId: 'phone-dropdown',
+                        elementName: 'Appeler',
+                        action: 'click',
+                        sectionContext: 'actions_rapides',
+                      });
                       window.open(`tel:${establishment.phone}`);
                       setShowContactOptions(false);
                     }}
@@ -458,6 +511,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 {establishment.whatsappPhone && (
                   <button
                     onClick={() => {
+                      trackClick({
+                        elementType: 'contact',
+                        elementId: 'whatsapp',
+                        elementName: 'WhatsApp',
+                        action: 'click',
+                        sectionContext: 'actions_rapides',
+                      });
                       const cleanPhone = establishment.whatsappPhone!.replace(/[\s\.\-\(\)]/g, '');
                       const phoneWithCountryCode = cleanPhone.startsWith('+33') 
                         ? cleanPhone 
@@ -478,6 +538,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 {establishment.messengerUrl && (
                   <button
                     onClick={() => {
+                      trackClick({
+                        elementType: 'contact',
+                        elementId: 'messenger',
+                        elementName: 'Messenger',
+                        action: 'click',
+                        sectionContext: 'actions_rapides',
+                      });
                       window.open(establishment.messengerUrl!);
                       setShowContactOptions(false);
                     }}
@@ -490,6 +557,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
                 {establishment.email && (
                   <button
                     onClick={() => {
+                      trackClick({
+                        elementType: 'contact',
+                        elementId: 'email',
+                        elementName: 'Email',
+                        action: 'click',
+                        sectionContext: 'actions_rapides',
+                      });
                       window.open(`mailto:${establishment.email}`);
                       setShowContactOptions(false);
                     }}
@@ -543,6 +617,13 @@ export default function EstablishmentActions({ establishment }: EstablishmentAct
         <div className="w-full">
           <button
             onClick={() => {
+              trackClick({
+                elementType: 'button',
+                elementId: 'review',
+                elementName: 'Laisser un avis',
+                action: 'click',
+                sectionContext: 'actions_rapides',
+              });
               handleReviewClick();
               incrementClick(establishment.id);
             }}

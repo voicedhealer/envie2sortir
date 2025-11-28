@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
     }
 
     const startDateISO = startDate.toISOString();
+    console.log(`🔍 [Analytics GET] Récupération données pour établissement ${establishmentId}, période ${period}, depuis ${startDateISO}`);
 
     // Récupérer toutes les données d'analytics pour cette période
     const { data: allClicks, error: clicksError } = await supabase
@@ -154,7 +155,7 @@ export async function GET(request: NextRequest) {
       .gte('timestamp', startDateISO);
 
     if (clicksError) {
-      console.error('❌ [Analytics] Erreur récupération analytics:', clicksError);
+      console.error('❌ [Analytics GET] Erreur récupération analytics:', clicksError);
       return NextResponse.json(
         { 
           error: 'Erreur lors de la récupération des analytics',
@@ -164,6 +165,8 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log(`✅ [Analytics GET] ${allClicks?.length || 0} enregistrements trouvés`);
 
     // Grouper par élément (elementType, elementId, elementName)
     const statsMap = new Map<string, { elementType: string; elementId: string; elementName: string; count: number }>();
@@ -199,6 +202,12 @@ export async function GET(request: NextRequest) {
       elementType,
       _count: { id: count }
     }));
+
+    console.log(`✅ [Analytics GET] Données formatées:`, {
+      totalClicks: allClicks?.length || 0,
+      topElementsCount: stats.length,
+      statsByTypeCount: statsByType.length,
+    });
 
     // Statistiques temporelles (clics par heure de la journée)
     const hourlyData = (allClicks || []).map((click: any) => ({
