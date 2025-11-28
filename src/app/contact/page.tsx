@@ -133,7 +133,7 @@ export default function ContactPage() {
                 <Phone className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Téléphone</h3>
-              <p className="text-gray-600">01 23 45 67 89</p>
+              <p className="text-gray-600">06.61.32.38.03</p>
               <p className="text-sm text-gray-500 mt-1">Lun-Ven 9h-18h</p>
             </div>
 
@@ -142,8 +142,9 @@ export default function ContactPage() {
                 <MapPin className="w-8 h-8 text-white" />
               </div>
               <h3 className="text-xl font-semibold mb-2">Adresse</h3>
-              <p className="text-gray-600">Paris, France</p>
-              <p className="text-sm text-gray-500 mt-1">Support à distance</p>
+              <p className="text-gray-600">7 rue magedeleine</p>
+              <p className="text-gray-600">21800 Neuilly-Crimolois</p>
+              <p className="text-sm text-gray-500 mt-1">Fondateur : Vivien Bernardot - Auto-entrepreneur</p>
             </div>
           </div>
 

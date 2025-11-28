@@ -692,6 +692,178 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     relatedTags: ["futuriste", "découverte", "original", "innovant"]
   },
 
+  // 🎢 SENSATIONS FORTES & AVENTURE
+  circuit_voiture_sport: {
+    primaryTags: ["circuit", "voiture", "sport", "vitesse", "adrénaline"],
+    secondaryTags: ["piste", "course", "sportive", "sensation", "forte"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  circuit_moto: {
+    primaryTags: ["circuit", "moto", "vitesse", "adrénaline", "sport"],
+    secondaryTags: ["piste", "course", "moto", "sensation", "forte"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  bapteme_ulm: {
+    primaryTags: ["ulm", "baptême", "vol", "avion", "ciel"],
+    secondaryTags: ["aérien", "sensation", "forte", "vue", "panoramique"],
+    relatedTags: ["aventure", "aérien", "découverte", "unique", "mémorable"]
+  },
+  parachutisme: {
+    primaryTags: ["parachutisme", "parachute", "saut", "ciel", "adrénaline"],
+    secondaryTags: ["tandem", "duo", "sensation", "forte", "chute", "libre"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  saut_elastique: {
+    primaryTags: ["saut", "élastique", "bungee", "jump", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "hauteur", "chute", "extrême"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  parapente: {
+    primaryTags: ["parapente", "vol", "libre", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "nature"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  deltaplane: {
+    primaryTags: ["deltaplane", "vol", "libre", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "nature"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  bapteme_helicoptere: {
+    primaryTags: ["hélicoptère", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "luxe"],
+    relatedTags: ["aventure", "aérien", "luxe", "découverte", "mémorable"]
+  },
+  bapteme_avion: {
+    primaryTags: ["avion", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "aérien"],
+    relatedTags: ["aventure", "aérien", "découverte", "unique", "mémorable"]
+  },
+  vol_cerf_volant: {
+    primaryTags: ["cerf-volant", "traction", "kite", "surf", "vent"],
+    secondaryTags: ["sensation", "forte", "mer", "plage", "sport"],
+    relatedTags: ["aventure", "sport", "nature", "mer", "unique"]
+  },
+  accrobranche: {
+    primaryTags: ["accrobranche", "arbre", "tyrolienne", "aventure", "nature"],
+    secondaryTags: ["parcours", "hauteur", "défi", "sécurisé", "famille"],
+    relatedTags: ["aventure", "nature", "défi", "famille", "découverte"]
+  },
+  tyrolienne: {
+    primaryTags: ["tyrolienne", "glisse", "corde", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "hauteur", "vitesse", "défi"],
+    relatedTags: ["aventure", "nature", "défi", "famille", "unique"]
+  },
+  via_ferrata: {
+    primaryTags: ["via", "ferrata", "escalade", "falaise", "aventure"],
+    secondaryTags: ["sensation", "forte", "hauteur", "défi", "nature"],
+    relatedTags: ["aventure", "nature", "défi", "sport", "unique"]
+  },
+  escalade: {
+    primaryTags: ["escalade", "falaise", "mur", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "hauteur", "défi", "technique"],
+    relatedTags: ["aventure", "sport", "défi", "technique", "unique"]
+  },
+  canyoning: {
+    primaryTags: ["canyoning", "canyon", "eau", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "descente", "rapide", "sport"],
+    relatedTags: ["aventure", "nature", "eau", "sport", "unique"]
+  },
+  rafting: {
+    primaryTags: ["rafting", "eau", "vive", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "rivière", "rapide", "équipe"],
+    relatedTags: ["aventure", "sport", "eau", "équipe", "unique"]
+  },
+  hydrospeed: {
+    primaryTags: ["hydrospeed", "eau", "vive", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "rivière", "rapide", "individuel"],
+    relatedTags: ["aventure", "sport", "eau", "extrême", "unique"]
+  },
+  surf: {
+    primaryTags: ["surf", "vague", "mer", "océan", "sport"],
+    secondaryTags: ["sensation", "forte", "glisse", "nature", "plage"],
+    relatedTags: ["aventure", "sport", "mer", "nature", "unique"]
+  },
+  kitesurf: {
+    primaryTags: ["kitesurf", "kite", "surf", "vent", "mer"],
+    secondaryTags: ["sensation", "forte", "glisse", "nature", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "nature", "unique"]
+  },
+  wingsuit: {
+    primaryTags: ["wingsuit", "vol", "libre", "ciel", "extrême"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "parachute", "chute"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  saut_en_chute_libre: {
+    primaryTags: ["chute", "libre", "parachute", "ciel", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "extrême", "tandem", "saut"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  bapteme_voiture_course: {
+    primaryTags: ["voiture", "course", "baptême", "circuit", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "piste", "sportive"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  bapteme_moto_course: {
+    primaryTags: ["moto", "course", "baptême", "circuit", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "piste", "sportive"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  quad: {
+    primaryTags: ["quad", "tout", "terrain", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "chemin", "sport"],
+    relatedTags: ["aventure", "sport", "nature", "défi", "unique"]
+  },
+  buggy: {
+    primaryTags: ["buggy", "désert", "aventure", "sport", "nature"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "sable", "vitesse"],
+    relatedTags: ["aventure", "sport", "nature", "défi", "unique"]
+  },
+  jet_ski: {
+    primaryTags: ["jet", "ski", "mer", "eau", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "glisse", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "vitesse", "unique"]
+  },
+  flyboard: {
+    primaryTags: ["flyboard", "vol", "eau", "sensation", "forte"],
+    secondaryTags: ["adrénaline", "extrême", "mer", "sport", "unique"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  plongee: {
+    primaryTags: ["plongée", "sous-marine", "mer", "océan", "découverte"],
+    secondaryTags: ["sensation", "forte", "nature", "poissons", "aventure"],
+    relatedTags: ["aventure", "nature", "mer", "découverte", "unique"]
+  },
+  plongee_bouteille: {
+    primaryTags: ["plongée", "bouteille", "scaphandre", "mer", "océan"],
+    secondaryTags: ["sensation", "forte", "nature", "profondeur", "aventure"],
+    relatedTags: ["aventure", "nature", "mer", "découverte", "unique"]
+  },
+  plongee_apnee: {
+    primaryTags: ["plongée", "apnée", "libre", "mer", "océan"],
+    secondaryTags: ["sensation", "forte", "nature", "profondeur", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "défi", "unique"]
+  },
+  saut_parachute_tandem: {
+    primaryTags: ["parachute", "tandem", "duo", "saut", "ciel"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "chute", "libre"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  bapteme_planeur: {
+    primaryTags: ["planeur", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "silence"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  bapteme_hot_air_balloon: {
+    primaryTags: ["montgolfière", "ballon", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "romantique"],
+    relatedTags: ["aventure", "aérien", "romantique", "découverte", "unique"]
+  },
+  saut_base_jump: {
+    primaryTags: ["base", "jump", "saut", "extrême", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "parachute", "hauteur", "extrême"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+
   // 👶 ENFANTS & FAMILLE - Activités et établissements pour enfants
   trampoline_parc: {
     primaryTags: ["trampoline", "parc", "enfants", "saut", "rebond"],
@@ -828,6 +1000,103 @@ export const CATEGORY_TAGS_MAPPING: CategoryTagsMapping = {
     primaryTags: ["centre", "multiactivité", "salles", "jeux", "groupe"],
     secondaryTags: ["blind test", "quiz", "escape game", "karaoké", "bowling"],
     relatedTags: ["diversifié", "entre amis", "famille", "entreprise", "anniversaire"]
+  },
+
+  // 💆 Soins & Beauté
+  coiffeur: {
+    primaryTags: ["coiffeur", "salon", "coupe", "cheveux", "coiffure"],
+    secondaryTags: ["coloration", "mise", "plis", "soin", "cheveux"],
+    relatedTags: ["beauté", "soin", "personnel", "relaxation", "professionnel"]
+  },
+  coiffeur_homme: {
+    primaryTags: ["coiffeur", "homme", "coupe", "barbe", "rasage"],
+    secondaryTags: ["tondeuse", "ciseaux", "soin", "barbe", "moustache"],
+    relatedTags: ["masculin", "soin", "personnel", "traditionnel", "professionnel"]
+  },
+  coiffeur_femme: {
+    primaryTags: ["coiffeur", "femme", "coupe", "coloration", "mise"],
+    secondaryTags: ["plis", "balayage", "mèches", "soin", "cheveux"],
+    relatedTags: ["féminin", "beauté", "soin", "personnel", "professionnel"]
+  },
+  coiffeur_enfant: {
+    primaryTags: ["coiffeur", "enfant", "coupe", "famille", "jeune"],
+    secondaryTags: ["doux", "rapide", "amusant", "patience", "soin"],
+    relatedTags: ["familial", "décontracté", "enfants", "soin", "personnel"]
+  },
+  salon_beaute: {
+    primaryTags: ["salon", "beauté", "soin", "visage", "corps"],
+    secondaryTags: ["esthétique", "relaxation", "bien-être", "professionnel", "soin"],
+    relatedTags: ["détente", "soin", "personnel", "beauté", "relaxation"]
+  },
+  institut_beaute: {
+    primaryTags: ["institut", "beauté", "soin", "visage", "corps"],
+    secondaryTags: ["esthétique", "relaxation", "bien-être", "professionnel", "soin"],
+    relatedTags: ["détente", "soin", "personnel", "beauté", "raffiné"]
+  },
+  massage: {
+    primaryTags: ["massage", "relaxation", "bien-être", "corps", "détente"],
+    secondaryTags: ["huile", "soin", "professionnel", "thérapeutique", "relaxant"],
+    relatedTags: ["détente", "soin", "personnel", "bien-être", "relaxation"]
+  },
+  massage_relaxant: {
+    primaryTags: ["massage", "relaxant", "détente", "bien-être", "corps"],
+    secondaryTags: ["huile", "aromathérapie", "calme", "zen", "relaxation"],
+    relatedTags: ["détente", "soin", "personnel", "bien-être", "apaisant"]
+  },
+  massage_sportif: {
+    primaryTags: ["massage", "sportif", "sport", "récupération", "muscles"],
+    secondaryTags: ["thérapeutique", "décontractant", "sport", "performance", "soin"],
+    relatedTags: ["sport", "récupération", "soin", "personnel", "thérapeutique"]
+  },
+  massage_oriental: {
+    primaryTags: ["massage", "oriental", "traditionnel", "bien-être", "corps"],
+    secondaryTags: ["huile", "chaud", "traditionnel", "relaxation", "soin"],
+    relatedTags: ["traditionnel", "exotique", "soin", "personnel", "découverte"]
+  },
+  spa: {
+    primaryTags: ["spa", "bien-être", "relaxation", "détente", "soin"],
+    secondaryTags: ["jacuzzi", "sauna", "hammam", "massage", "bien-être"],
+    relatedTags: ["luxe", "détente", "soin", "personnel", "premium"]
+  },
+  centre_esthetique: {
+    primaryTags: ["centre", "esthétique", "beauté", "soin", "visage"],
+    secondaryTags: ["soin", "corps", "relaxation", "professionnel", "bien-être"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "raffiné"]
+  },
+  manucure_pedicure: {
+    primaryTags: ["manucure", "pédicure", "ongles", "beauté", "soin"],
+    secondaryTags: ["vernis", "pose", "ongles", "soin", "mains"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "professionnel"]
+  },
+  epilation: {
+    primaryTags: ["épilation", "soin", "corps", "beauté", "définitif"],
+    secondaryTags: ["laser", "cire", "soin", "corps", "professionnel"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "détente"]
+  },
+  soin_visage: {
+    primaryTags: ["soin", "visage", "beauté", "peau", "esthétique"],
+    secondaryTags: ["nettoyage", "hydratation", "masque", "professionnel", "soin"],
+    relatedTags: ["beauté", "soin", "personnel", "relaxation", "professionnel"]
+  },
+  soin_corps: {
+    primaryTags: ["soin", "corps", "beauté", "relaxation", "esthétique"],
+    secondaryTags: ["gommage", "enveloppement", "hydratation", "professionnel", "soin"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "relaxation"]
+  },
+  maquillage: {
+    primaryTags: ["maquillage", "beauté", "makeup", "art", "professionnel"],
+    secondaryTags: ["maquilleur", "soirée", "mariage", "événement", "beauté"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "artistique"]
+  },
+  barbe_moustache: {
+    primaryTags: ["barbe", "moustache", "rasage", "soin", "homme"],
+    secondaryTags: ["tondeuse", "ciseaux", "soin", "barbe", "traditionnel"],
+    relatedTags: ["masculin", "soin", "personnel", "traditionnel", "professionnel"]
+  },
+  onglerie: {
+    primaryTags: ["onglerie", "ongles", "beauté", "soin", "mains"],
+    secondaryTags: ["pose", "vernis", "gel", "soin", "professionnel"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "professionnel"]
   },
 
   // ❓ Autres
@@ -1952,6 +2221,280 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["futuriste", "découverte", "original", "innovant"]
   },
 
+  // 🎢 SENSATIONS FORTES & AVENTURE - Informations complètes
+  circuit_voiture_sport: {
+    label: "Circuit voiture de sport",
+    services: ["Tours de circuit", "Voiture de sport", "Piste", "Instructeur", "Sécurité"],
+    ambiance: ["Adrénaline", "Vitesse", "Sportive", "Mémorable"],
+    primaryTags: ["circuit", "voiture", "sport", "vitesse", "adrénaline"],
+    secondaryTags: ["piste", "course", "sportive", "sensation", "forte"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  circuit_moto: {
+    label: "Circuit moto",
+    services: ["Tours de circuit", "Moto", "Piste", "Instructeur", "Sécurité"],
+    ambiance: ["Adrénaline", "Vitesse", "Sportive", "Mémorable"],
+    primaryTags: ["circuit", "moto", "vitesse", "adrénaline", "sport"],
+    secondaryTags: ["piste", "course", "moto", "sensation", "forte"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  bapteme_ulm: {
+    label: "Baptême ULM",
+    services: ["Vol en ULM", "Vue panoramique", "Pilote professionnel", "Sécurité", "Découverte"],
+    ambiance: ["Aérienne", "Sensation forte", "Découverte", "Unique"],
+    primaryTags: ["ulm", "baptême", "vol", "avion", "ciel"],
+    secondaryTags: ["aérien", "sensation", "forte", "vue", "panoramique"],
+    relatedTags: ["aventure", "aérien", "découverte", "unique", "mémorable"]
+  },
+  parachutisme: {
+    label: "Parachutisme",
+    services: ["Saut en parachute", "Tandem", "Instructeur", "Sécurité", "Vidéo"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["parachutisme", "parachute", "saut", "ciel", "adrénaline"],
+    secondaryTags: ["tandem", "duo", "sensation", "forte", "chute", "libre"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  saut_elastique: {
+    label: "Saut à l'élastique",
+    services: ["Saut bungee", "Hauteur", "Sécurité", "Équipement", "Sensation"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["saut", "élastique", "bungee", "jump", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "hauteur", "chute", "extrême"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  parapente: {
+    label: "Parapente",
+    services: ["Vol en parapente", "Décollage", "Pilote", "Vue panoramique", "Sécurité"],
+    ambiance: ["Aérienne", "Naturelle", "Découverte", "Unique"],
+    primaryTags: ["parapente", "vol", "libre", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "nature"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  deltaplane: {
+    label: "Deltaplane",
+    services: ["Vol en deltaplane", "Décollage", "Pilote", "Vue panoramique", "Sécurité"],
+    ambiance: ["Aérienne", "Naturelle", "Découverte", "Unique"],
+    primaryTags: ["deltaplane", "vol", "libre", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "nature"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  bapteme_helicoptere: {
+    label: "Baptême hélicoptère",
+    services: ["Vol en hélicoptère", "Vue panoramique", "Pilote professionnel", "Luxe", "Sécurité"],
+    ambiance: ["Luxueuse", "Aérienne", "Découverte", "Mémorable"],
+    primaryTags: ["hélicoptère", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "luxe"],
+    relatedTags: ["aventure", "aérien", "luxe", "découverte", "mémorable"]
+  },
+  bapteme_avion: {
+    label: "Baptême avion",
+    services: ["Vol en avion", "Vue panoramique", "Pilote professionnel", "Sécurité", "Découverte"],
+    ambiance: ["Aérienne", "Découverte", "Unique", "Mémorable"],
+    primaryTags: ["avion", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "aérien"],
+    relatedTags: ["aventure", "aérien", "découverte", "unique", "mémorable"]
+  },
+  vol_cerf_volant: {
+    label: "Vol cerf-volant / Kitesurf",
+    services: ["Kitesurf", "Traction", "Mer", "Plage", "Instructeur"],
+    ambiance: ["Sportive", "Naturelle", "Aventure", "Unique"],
+    primaryTags: ["cerf-volant", "traction", "kite", "surf", "vent"],
+    secondaryTags: ["sensation", "forte", "mer", "plage", "sport"],
+    relatedTags: ["aventure", "sport", "nature", "mer", "unique"]
+  },
+  accrobranche: {
+    label: "Accrobranche",
+    services: ["Parcours aérien", "Tyrolienne", "Hauteur", "Sécurité", "Moniteur"],
+    ambiance: ["Aventure", "Naturelle", "Défi", "Familiale"],
+    primaryTags: ["accrobranche", "arbre", "tyrolienne", "aventure", "nature"],
+    secondaryTags: ["parcours", "hauteur", "défi", "sécurisé", "famille"],
+    relatedTags: ["aventure", "nature", "défi", "famille", "découverte"]
+  },
+  tyrolienne: {
+    label: "Tyrolienne",
+    services: ["Glisse sur corde", "Hauteur", "Vitesse", "Sécurité", "Sensation"],
+    ambiance: ["Aventure", "Naturelle", "Défi", "Unique"],
+    primaryTags: ["tyrolienne", "glisse", "corde", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "hauteur", "vitesse", "défi"],
+    relatedTags: ["aventure", "nature", "défi", "famille", "unique"]
+  },
+  via_ferrata: {
+    label: "Via ferrata",
+    services: ["Escalade sécurisée", "Falaise", "Hauteur", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Naturelle", "Défi", "Sportive"],
+    primaryTags: ["via", "ferrata", "escalade", "falaise", "aventure"],
+    secondaryTags: ["sensation", "forte", "hauteur", "défi", "nature"],
+    relatedTags: ["aventure", "nature", "défi", "sport", "unique"]
+  },
+  escalade: {
+    label: "Escalade",
+    services: ["Escalade falaise", "Mur d'escalade", "Équipement", "Moniteur", "Sécurité"],
+    ambiance: ["Sportive", "Défi", "Technique", "Aventure"],
+    primaryTags: ["escalade", "falaise", "mur", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "hauteur", "défi", "technique"],
+    relatedTags: ["aventure", "sport", "défi", "technique", "unique"]
+  },
+  canyoning: {
+    label: "Canyoning",
+    services: ["Descente canyon", "Eau vive", "Rapide", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Naturelle", "Sportive", "Unique"],
+    primaryTags: ["canyoning", "canyon", "eau", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "descente", "rapide", "sport"],
+    relatedTags: ["aventure", "nature", "eau", "sport", "unique"]
+  },
+  rafting: {
+    label: "Rafting",
+    services: ["Descente rivière", "Eau vive", "Équipe", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Sportive", "Conviviale", "Unique"],
+    primaryTags: ["rafting", "eau", "vive", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "rivière", "rapide", "équipe"],
+    relatedTags: ["aventure", "sport", "eau", "équipe", "unique"]
+  },
+  hydrospeed: {
+    label: "Hydrospeed",
+    services: ["Descente rivière", "Eau vive", "Individuel", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Sportive", "Extrême", "Unique"],
+    primaryTags: ["hydrospeed", "eau", "vive", "aventure", "sport"],
+    secondaryTags: ["sensation", "forte", "rivière", "rapide", "individuel"],
+    relatedTags: ["aventure", "sport", "eau", "extrême", "unique"]
+  },
+  surf: {
+    label: "Surf",
+    services: ["Surf vague", "Mer", "Océan", "Planche", "Cours"],
+    ambiance: ["Sportive", "Naturelle", "Aventure", "Unique"],
+    primaryTags: ["surf", "vague", "mer", "océan", "sport"],
+    secondaryTags: ["sensation", "forte", "glisse", "nature", "plage"],
+    relatedTags: ["aventure", "sport", "mer", "nature", "unique"]
+  },
+  kitesurf: {
+    label: "Kitesurf",
+    services: ["Kitesurf", "Vent", "Mer", "Planche", "Cours"],
+    ambiance: ["Sportive", "Naturelle", "Aventure", "Unique"],
+    primaryTags: ["kitesurf", "kite", "surf", "vent", "mer"],
+    secondaryTags: ["sensation", "forte", "glisse", "nature", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "nature", "unique"]
+  },
+  wingsuit: {
+    label: "Wingsuit",
+    services: ["Vol wingsuit", "Chute libre", "Parachute", "Extrême", "Sécurité"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["wingsuit", "vol", "libre", "ciel", "extrême"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "parachute", "chute"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  saut_en_chute_libre: {
+    label: "Saut en chute libre",
+    services: ["Chute libre", "Parachute", "Tandem", "Sécurité", "Vidéo"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["chute", "libre", "parachute", "ciel", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "extrême", "tandem", "saut"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  bapteme_voiture_course: {
+    label: "Baptême voiture de course",
+    services: ["Tours de circuit", "Voiture de course", "Pilote", "Sécurité", "Sensation"],
+    ambiance: ["Adrénaline", "Vitesse", "Sportive", "Mémorable"],
+    primaryTags: ["voiture", "course", "baptême", "circuit", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "piste", "sportive"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  bapteme_moto_course: {
+    label: "Baptême moto de course",
+    services: ["Tours de circuit", "Moto de course", "Pilote", "Sécurité", "Sensation"],
+    ambiance: ["Adrénaline", "Vitesse", "Sportive", "Mémorable"],
+    primaryTags: ["moto", "course", "baptême", "circuit", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "piste", "sportive"],
+    relatedTags: ["adrénaline", "vitesse", "sport", "aventure", "mémorable"]
+  },
+  quad: {
+    label: "Quad",
+    services: ["Quad tout terrain", "Parcours", "Nature", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Sportive", "Naturelle", "Unique"],
+    primaryTags: ["quad", "tout", "terrain", "aventure", "nature"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "chemin", "sport"],
+    relatedTags: ["aventure", "sport", "nature", "défi", "unique"]
+  },
+  buggy: {
+    label: "Buggy",
+    services: ["Buggy désert", "Sable", "Vitesse", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Sportive", "Naturelle", "Unique"],
+    primaryTags: ["buggy", "désert", "aventure", "sport", "nature"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "sable", "vitesse"],
+    relatedTags: ["aventure", "sport", "nature", "défi", "unique"]
+  },
+  jet_ski: {
+    label: "Jet ski",
+    services: ["Jet ski", "Mer", "Vitesse", "Équipement", "Sécurité"],
+    ambiance: ["Aventure", "Sportive", "Vitesse", "Unique"],
+    primaryTags: ["jet", "ski", "mer", "eau", "vitesse"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "glisse", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "vitesse", "unique"]
+  },
+  flyboard: {
+    label: "Flyboard",
+    services: ["Flyboard", "Vol eau", "Sensation", "Équipement", "Instructeur"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["flyboard", "vol", "eau", "sensation", "forte"],
+    secondaryTags: ["adrénaline", "extrême", "mer", "sport", "unique"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  plongee: {
+    label: "Plongée sous-marine",
+    services: ["Plongée", "Mer", "Océan", "Découverte", "Équipement"],
+    ambiance: ["Aventure", "Naturelle", "Découverte", "Unique"],
+    primaryTags: ["plongée", "sous-marine", "mer", "océan", "découverte"],
+    secondaryTags: ["sensation", "forte", "nature", "poissons", "aventure"],
+    relatedTags: ["aventure", "nature", "mer", "découverte", "unique"]
+  },
+  plongee_bouteille: {
+    label: "Plongée bouteille",
+    services: ["Plongée scaphandre", "Bouteille", "Profondeur", "Équipement", "Guide"],
+    ambiance: ["Aventure", "Naturelle", "Découverte", "Unique"],
+    primaryTags: ["plongée", "bouteille", "scaphandre", "mer", "océan"],
+    secondaryTags: ["sensation", "forte", "nature", "profondeur", "aventure"],
+    relatedTags: ["aventure", "nature", "mer", "découverte", "unique"]
+  },
+  plongee_apnee: {
+    label: "Plongée apnée",
+    services: ["Plongée libre", "Apnée", "Profondeur", "Technique", "Guide"],
+    ambiance: ["Aventure", "Sportive", "Défi", "Unique"],
+    primaryTags: ["plongée", "apnée", "libre", "mer", "océan"],
+    secondaryTags: ["sensation", "forte", "nature", "profondeur", "sport"],
+    relatedTags: ["aventure", "sport", "mer", "défi", "unique"]
+  },
+  saut_parachute_tandem: {
+    label: "Saut parachute tandem",
+    services: ["Saut tandem", "Parachute", "Duo", "Instructeur", "Sécurité"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["parachute", "tandem", "duo", "saut", "ciel"],
+    secondaryTags: ["sensation", "forte", "adrénaline", "chute", "libre"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+  bapteme_planeur: {
+    label: "Baptême planeur",
+    services: ["Vol planeur", "Vue panoramique", "Silence", "Pilote", "Sécurité"],
+    ambiance: ["Aérienne", "Naturelle", "Découverte", "Unique"],
+    primaryTags: ["planeur", "baptême", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "silence"],
+    relatedTags: ["aventure", "aérien", "nature", "découverte", "unique"]
+  },
+  bapteme_hot_air_balloon: {
+    label: "Baptême montgolfière",
+    services: ["Vol montgolfière", "Ballon", "Vue panoramique", "Romantique", "Sécurité"],
+    ambiance: ["Romantique", "Aérienne", "Découverte", "Unique"],
+    primaryTags: ["montgolfière", "ballon", "vol", "ciel", "aérien"],
+    secondaryTags: ["sensation", "forte", "vue", "panoramique", "romantique"],
+    relatedTags: ["aventure", "aérien", "romantique", "découverte", "unique"]
+  },
+  saut_base_jump: {
+    label: "Base jump",
+    services: ["Saut extrême", "Parachute", "Hauteur", "Extrême", "Sécurité"],
+    ambiance: ["Adrénaline", "Extrême", "Aventure", "Mémorable"],
+    primaryTags: ["base", "jump", "saut", "extrême", "adrénaline"],
+    secondaryTags: ["sensation", "forte", "parachute", "hauteur", "extrême"],
+    relatedTags: ["adrénaline", "extrême", "aventure", "unique", "mémorable"]
+  },
+
   // 👶 ENFANTS & FAMILLE - Informations complètes
   trampoline_parc: {
     label: "Trampoline parc",
@@ -2140,6 +2683,160 @@ export const ACTIVITY_INFO: Record<string, ActivityInfo> = {
     relatedTags: ["diversifié", "entre amis", "famille", "entreprise", "anniversaire"]
   },
 
+  // 💆 Soins & Beauté - Informations complètes
+  coiffeur: {
+    label: "Coiffeur",
+    services: ["Coupe", "Coloration", "Mise en plis", "Soin cheveux", "Conseil"],
+    ambiance: ["Professionnelle", "Relaxante", "Soignée", "Accueillante"],
+    primaryTags: ["coiffeur", "salon", "coupe", "cheveux", "coiffure"],
+    secondaryTags: ["coloration", "mise", "plis", "soin", "cheveux"],
+    relatedTags: ["beauté", "soin", "personnel", "relaxation", "professionnel"]
+  },
+  coiffeur_homme: {
+    label: "Coiffeur homme",
+    services: ["Coupe homme", "Barbe", "Rasage", "Soin barbe", "Tondeuse"],
+    ambiance: ["Masculine", "Traditionnelle", "Professionnelle", "Décontractée"],
+    primaryTags: ["coiffeur", "homme", "coupe", "barbe", "rasage"],
+    secondaryTags: ["tondeuse", "ciseaux", "soin", "barbe", "moustache"],
+    relatedTags: ["masculin", "soin", "personnel", "traditionnel", "professionnel"]
+  },
+  coiffeur_femme: {
+    label: "Coiffeur femme",
+    services: ["Coupe femme", "Coloration", "Mèches", "Balayage", "Mise en plis", "Soin"],
+    ambiance: ["Féminine", "Raffinée", "Professionnelle", "Soignée"],
+    primaryTags: ["coiffeur", "femme", "coupe", "coloration", "mise"],
+    secondaryTags: ["plis", "balayage", "mèches", "soin", "cheveux"],
+    relatedTags: ["féminin", "beauté", "soin", "personnel", "professionnel"]
+  },
+  coiffeur_enfant: {
+    label: "Coiffeur enfant",
+    services: ["Coupe enfant", "Soin doux", "Patience", "Rapide", "Amusant"],
+    ambiance: ["Familiale", "Décontractée", "Patiente", "Amusante"],
+    primaryTags: ["coiffeur", "enfant", "coupe", "famille", "jeune"],
+    secondaryTags: ["doux", "rapide", "amusant", "patience", "soin"],
+    relatedTags: ["familial", "décontracté", "enfants", "soin", "personnel"]
+  },
+  salon_beaute: {
+    label: "Salon de beauté",
+    services: ["Soin visage", "Soin corps", "Épilation", "Manucure", "Pédicure", "Maquillage"],
+    ambiance: ["Relaxante", "Professionnelle", "Soignée", "Détendue"],
+    primaryTags: ["salon", "beauté", "soin", "visage", "corps"],
+    secondaryTags: ["esthétique", "relaxation", "bien-être", "professionnel", "soin"],
+    relatedTags: ["détente", "soin", "personnel", "beauté", "relaxation"]
+  },
+  institut_beaute: {
+    label: "Institut de beauté",
+    services: ["Soin visage", "Soin corps", "Épilation", "Manucure", "Pédicure", "Massage"],
+    ambiance: ["Raffinée", "Professionnelle", "Luxueuse", "Détendue"],
+    primaryTags: ["institut", "beauté", "soin", "visage", "corps"],
+    secondaryTags: ["esthétique", "relaxation", "bien-être", "professionnel", "soin"],
+    relatedTags: ["détente", "soin", "personnel", "beauté", "raffiné"]
+  },
+  massage: {
+    label: "Massage",
+    services: ["Massage corps", "Relaxation", "Bien-être", "Soin professionnel"],
+    ambiance: ["Relaxante", "Apaisante", "Professionnelle", "Détendue"],
+    primaryTags: ["massage", "relaxation", "bien-être", "corps", "détente"],
+    secondaryTags: ["huile", "soin", "professionnel", "thérapeutique", "relaxant"],
+    relatedTags: ["détente", "soin", "personnel", "bien-être", "relaxation"]
+  },
+  massage_relaxant: {
+    label: "Massage relaxant",
+    services: ["Massage doux", "Aromathérapie", "Relaxation", "Bien-être", "Détente"],
+    ambiance: ["Calme", "Zen", "Apaisante", "Relaxante"],
+    primaryTags: ["massage", "relaxant", "détente", "bien-être", "corps"],
+    secondaryTags: ["huile", "aromathérapie", "calme", "zen", "relaxation"],
+    relatedTags: ["détente", "soin", "personnel", "bien-être", "apaisant"]
+  },
+  massage_sportif: {
+    label: "Massage sportif",
+    services: ["Massage musculaire", "Récupération", "Décontractant", "Thérapeutique"],
+    ambiance: ["Sportive", "Professionnelle", "Thérapeutique", "Efficace"],
+    primaryTags: ["massage", "sportif", "sport", "récupération", "muscles"],
+    secondaryTags: ["thérapeutique", "décontractant", "sport", "performance", "soin"],
+    relatedTags: ["sport", "récupération", "soin", "personnel", "thérapeutique"]
+  },
+  massage_oriental: {
+    label: "Massage oriental",
+    services: ["Massage traditionnel", "Huile chaude", "Techniques orientales", "Bien-être"],
+    ambiance: ["Traditionnelle", "Exotique", "Relaxante", "Authentique"],
+    primaryTags: ["massage", "oriental", "traditionnel", "bien-être", "corps"],
+    secondaryTags: ["huile", "chaud", "traditionnel", "relaxation", "soin"],
+    relatedTags: ["traditionnel", "exotique", "soin", "personnel", "découverte"]
+  },
+  spa: {
+    label: "Spa",
+    services: ["Massage", "Jacuzzi", "Sauna", "Hammam", "Soin visage", "Soin corps"],
+    ambiance: ["Luxueuse", "Relaxante", "Premium", "Détendue"],
+    primaryTags: ["spa", "bien-être", "relaxation", "détente", "soin"],
+    secondaryTags: ["jacuzzi", "sauna", "hammam", "massage", "bien-être"],
+    relatedTags: ["luxe", "détente", "soin", "personnel", "premium"]
+  },
+  centre_esthetique: {
+    label: "Centre esthétique",
+    services: ["Soin visage", "Soin corps", "Épilation", "Manucure", "Pédicure", "Massage"],
+    ambiance: ["Professionnelle", "Raffinée", "Soignée", "Détendue"],
+    primaryTags: ["centre", "esthétique", "beauté", "soin", "visage"],
+    secondaryTags: ["soin", "corps", "relaxation", "professionnel", "bien-être"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "raffiné"]
+  },
+  manucure_pedicure: {
+    label: "Manucure & Pédicure",
+    services: ["Soin ongles", "Pose vernis", "Soin mains", "Soin pieds", "Décorations"],
+    ambiance: ["Soignée", "Détendue", "Professionnelle", "Féminine"],
+    primaryTags: ["manucure", "pédicure", "ongles", "beauté", "soin"],
+    secondaryTags: ["vernis", "pose", "ongles", "soin", "mains"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "professionnel"]
+  },
+  epilation: {
+    label: "Épilation",
+    services: ["Épilation cire", "Épilation laser", "Soin corps", "Définitif", "Professionnel"],
+    ambiance: ["Professionnelle", "Soignée", "Efficace", "Détendue"],
+    primaryTags: ["épilation", "soin", "corps", "beauté", "définitif"],
+    secondaryTags: ["laser", "cire", "soin", "corps", "professionnel"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "détente"]
+  },
+  soin_visage: {
+    label: "Soin visage",
+    services: ["Nettoyage", "Hydratation", "Masque", "Gommage", "Soin professionnel"],
+    ambiance: ["Relaxante", "Professionnelle", "Soignée", "Détendue"],
+    primaryTags: ["soin", "visage", "beauté", "peau", "esthétique"],
+    secondaryTags: ["nettoyage", "hydratation", "masque", "professionnel", "soin"],
+    relatedTags: ["beauté", "soin", "personnel", "relaxation", "professionnel"]
+  },
+  soin_corps: {
+    label: "Soin corps",
+    services: ["Gommage", "Enveloppement", "Hydratation", "Massage", "Soin professionnel"],
+    ambiance: ["Relaxante", "Détendue", "Professionnelle", "Soignée"],
+    primaryTags: ["soin", "corps", "beauté", "relaxation", "esthétique"],
+    secondaryTags: ["gommage", "enveloppement", "hydratation", "professionnel", "soin"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "relaxation"]
+  },
+  maquillage: {
+    label: "Maquillage",
+    services: ["Maquillage professionnel", "Soirée", "Mariage", "Événement", "Conseil"],
+    ambiance: ["Artistique", "Professionnelle", "Créative", "Soignée"],
+    primaryTags: ["maquillage", "beauté", "makeup", "art", "professionnel"],
+    secondaryTags: ["maquilleur", "soirée", "mariage", "événement", "beauté"],
+    relatedTags: ["beauté", "soin", "personnel", "professionnel", "artistique"]
+  },
+  barbe_moustache: {
+    label: "Soin barbe & moustache",
+    services: ["Taille barbe", "Rasage", "Soin barbe", "Tondeuse", "Ciseaux"],
+    ambiance: ["Masculine", "Traditionnelle", "Professionnelle", "Décontractée"],
+    primaryTags: ["barbe", "moustache", "rasage", "soin", "homme"],
+    secondaryTags: ["tondeuse", "ciseaux", "soin", "barbe", "traditionnel"],
+    relatedTags: ["masculin", "soin", "personnel", "traditionnel", "professionnel"]
+  },
+  onglerie: {
+    label: "Onglerie",
+    services: ["Pose ongles", "Vernis gel", "Décorations", "Soin ongles", "Professionnel"],
+    ambiance: ["Soignée", "Créative", "Professionnelle", "Détendue"],
+    primaryTags: ["onglerie", "ongles", "beauté", "soin", "mains"],
+    secondaryTags: ["pose", "vernis", "gel", "soin", "professionnel"],
+    relatedTags: ["beauté", "soin", "personnel", "détente", "professionnel"]
+  },
+
   // ❓ Autres
   autre: {
     label: "Autre activité",
@@ -2215,6 +2912,15 @@ export function getGroupedActivities() {
     "🎯 Sports & Activités": [
     "bowling", "billard_americain", "billard_francais", "roller_indoor", "moto_electrique_indoor", "futsal", "karting", "laser_game", "vr_experience"
     ],
+    "🎢 Sensations fortes & Aventure": [
+      "circuit_voiture_sport", "circuit_moto", "bapteme_ulm", "parachutisme", "saut_elastique",
+      "parapente", "deltaplane", "bapteme_helicoptere", "bapteme_avion", "vol_cerf_volant",
+      "accrobranche", "tyrolienne", "via_ferrata", "escalade", "canyoning",
+      "rafting", "hydrospeed", "surf", "kitesurf", "wingsuit",
+      "saut_en_chute_libre", "bapteme_voiture_course", "bapteme_moto_course", "quad", "buggy",
+      "jet_ski", "flyboard", "plongee", "plongee_bouteille", "plongee_apnee",
+      "saut_parachute_tandem", "bapteme_planeur", "bapteme_hot_air_balloon", "saut_base_jump"
+    ],
     "🎮 Escape Games": [
       "escape_game", "escape_game_horreur", "escape_game_aventure", "escape_game_mystere",
       "escape_game_sf", "escape_game_fantasy", "escape_game_familial"
@@ -2229,6 +2935,14 @@ export function getGroupedActivities() {
       "parc_jeux_interieur", "mini_golf", "parc_attractions_familial", "centre_anniversaires",
       "parc_animalier", "parc_plage_enfants", "centre_equitation_enfants", "parc_skate_enfants",
       "centre_cirque_enfants"
+    ],
+    "💆 Soins & Beauté": [
+      "coiffeur", "coiffeur_homme", "coiffeur_femme", "coiffeur_enfant",
+      "salon_beaute", "institut_beaute", "centre_esthetique",
+      "massage", "massage_relaxant", "massage_sportif", "massage_oriental",
+      "spa", "soin_visage", "soin_corps",
+      "manucure_pedicure", "onglerie", "epilation",
+      "maquillage", "barbe_moustache"
     ],
     "❓ Autres": [
       "autre"

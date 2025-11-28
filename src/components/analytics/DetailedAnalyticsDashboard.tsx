@@ -142,6 +142,8 @@ export default function DetailedAnalyticsDashboard({
     );
   }
 
+  // Le calcul du domaine de l'axe X est fait dans la fonction IIFE du graphique
+
   return (
     <div className="space-y-6">
       {/* En-tête avec statistiques clés */}
@@ -416,64 +418,137 @@ export default function DetailedAnalyticsDashboard({
           </div>
         ) : (
           <>
-            {/* Debug: Afficher les données en texte pour vérification */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-                <strong>Debug:</strong> {JSON.stringify(data.popularSections, null, 2)}
+            {(() => {
+              // Calculer le max
+              const sectionsMaxOpenCount = Math.max(...data.popularSections.map(s => Number(s.openCount) || 0));
+              
+              // Arrondir l'axe
+              let sectionsYAxisMax: number;
+              if (sectionsMaxOpenCount <= 10) {
+                sectionsYAxisMax = 10;
+              } else if (sectionsMaxOpenCount <= 20) {
+                sectionsYAxisMax = 20;
+              } else if (sectionsMaxOpenCount <= 50) {
+                sectionsYAxisMax = Math.ceil(sectionsMaxOpenCount / 10) * 10;
+              } else {
+                sectionsYAxisMax = Math.ceil(sectionsMaxOpenCount / 20) * 20;
+              }
+              
+              // Préparer les données - TRIER PAR ORDRE DÉCROISSANT pour avoir les plus gros à gauche
+              const chartData = [...data.popularSections]
+                .map(section => ({
+                  sectionName: section.sectionName,
+                  sectionId: section.sectionId,
+                  openCount: Number(section.openCount) || 0,
+                  uniqueVisitors: Number(section.uniqueVisitors) || 0,
+                }))
+                .sort((a, b) => b.openCount - a.openCount); // Du plus grand au plus petit
+              
+              return (
+                <ResponsiveContainer width="100%" height={450}>
+                  <BarChart 
+                    data={chartData} 
+                    margin={{ top: 30, right: 30, left: 20, bottom: 80 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
+                    <XAxis 
+                      dataKey="sectionName" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                      tick={{ fill: '#374151', fontSize: 11 }}
+                      axisLine={{ stroke: '#D1D5DB' }}
+                      tickLine={{ stroke: '#D1D5DB' }}
+                    />
+                    <YAxis 
+                      domain={[0, sectionsYAxisMax]}
+                      tick={{ fill: '#374151', fontSize: 12 }}
+                      axisLine={{ stroke: '#D1D5DB' }}
+                      tickLine={{ stroke: '#D1D5DB' }}
+                      allowDecimals={false}
+                      label={{ 
+                        value: 'Nombre d\'ouvertures', 
+                        angle: -90, 
+                        position: 'insideLeft',
+                        style: { textAnchor: 'middle', fill: '#374151', fontSize: 12 }
+                      }}
+                    />
+                    <Tooltip 
+                      contentStyle={{
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #E5E7EB',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: any, name: string, props: any) => {
+                        const section = props.payload;
+                        const totalOpens = data.popularSections.reduce((sum, s) => sum + Number(s.openCount), 0);
+                        const percentage = totalOpens > 0 ? ((Number(value) / totalOpens) * 100).toFixed(1) : 0;
+                        return [
+                          `${value} ouverture${value > 1 ? 's' : ''} (${percentage}%) • ${section.uniqueVisitors} visiteur${section.uniqueVisitors > 1 ? 's' : ''}`,
+                          'Détails'
+                        ];
+                      }}
+                      labelFormatter={(label) => `Section: ${label}`}
+                    />
+                    <Bar 
+                      dataKey="openCount" 
+                      radius={[4, 4, 0, 0]}
+                      label={{ 
+                        position: 'top', 
+                        formatter: (value: number) => value > 0 ? `${value}` : '',
+                        fill: '#374151',
+                        fontSize: 11,
+                        fontWeight: 600
+                      }}
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${entry.sectionId}`} 
+                          fill={COLORS[index % COLORS.length]} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              );
+            })()}
+            
+            {/* Statistiques résumées */}
+            {data.popularSections.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-blue-800 mb-1">Section #1</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {data.popularSections[0]?.sectionName}
+                    </div>
+                    <div className="text-xs text-blue-600 mt-1">
+                      {data.popularSections[0]?.openCount} ouvertures
+                    </div>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-green-800 mb-1">Total ouvertures</div>
+                    <div className="text-lg font-bold text-green-600">
+                      {data.popularSections.reduce((sum, s) => sum + Number(s.openCount), 0)}
+                    </div>
+                    <div className="text-xs text-green-600 mt-1">
+                      Toutes sections
+                    </div>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="text-sm font-medium text-purple-800 mb-1">Moyenne par section</div>
+                    <div className="text-lg font-bold text-purple-600">
+                      {Math.round(data.popularSections.reduce((sum, s) => sum + Number(s.openCount), 0) / data.popularSections.length)}
+                    </div>
+                    <div className="text-xs text-purple-600 mt-1">
+                      ouvertures
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart 
-                data={data.popularSections} 
-                layout="horizontal" 
-                margin={{ top: 20, right: 30, left: 150, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" opacity={0.6} />
-                <XAxis 
-                  type="number" 
-                  domain={[0, (dataMax: number) => {
-                    const max = Math.max(...data.popularSections.map(s => s.openCount));
-                    return Math.ceil(max * 1.2);
-                  }]}
-                  tick={{ fill: '#374151', fontSize: 12 }}
-                  axisLine={{ stroke: '#D1D5DB' }}
-                  tickLine={{ stroke: '#D1D5DB' }}
-                  allowDecimals={false}
-                />
-                <YAxis 
-                  dataKey="sectionName" 
-                  type="category" 
-                  width={140}
-                  tick={{ fill: '#374151', fontSize: 12 }}
-                  axisLine={{ stroke: '#D1D5DB' }}
-                  tickLine={{ stroke: '#D1D5DB' }}
-                />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '8px',
-                    color: '#374151',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                  }}
-                  labelStyle={{ color: '#374151', fontWeight: 'bold' }}
-                  formatter={(value: any, name: string) => {
-                    if (name === 'openCount') {
-                      return [value, 'Ouvertures'];
-                    }
-                    return [value, 'Visiteurs uniques'];
-                  }}
-                  labelFormatter={(label) => `Section: ${label}`}
-                />
-                <Bar 
-                  dataKey="openCount" 
-                  fill="#3B82F6" 
-                  radius={[0, 4, 4, 0]}
-                  name="Ouvertures"
-                  isAnimationActive={true}
-                />
-              </BarChart>
-            </ResponsiveContainer>
           </>
         )}
       </div>

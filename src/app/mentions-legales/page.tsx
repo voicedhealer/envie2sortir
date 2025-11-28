@@ -29,9 +29,10 @@ export default function LegalMentionsPage() {
                   Plateforme ultra-locale de divertissements
                 </p>
                 <p className="text-gray-700 mb-4">
-                  <strong>Adresse :</strong> Paris, France<br />
+                  <strong>Adresse :</strong> 7 rue magedeleine, 21800 Neuilly-Crimolois<br />
                   <strong>Email :</strong> contact@envie2sortir.fr<br />
-                  <strong>Téléphone :</strong> 01 23 45 67 89
+                  <strong>Téléphone :</strong> 06.61.32.38.03<br />
+                  <strong>Fondateur :</strong> Vivien Bernardot - Statut auto-entrepreneur
                 </p>
                 <p className="text-gray-700">
                   <strong>Directeur de la publication :</strong> Vivien, Fondateur
@@ -130,8 +131,9 @@ export default function LegalMentionsPage() {
                 </p>
                 <div className="space-y-2 text-gray-700">
                   <p><strong>Email :</strong> contact@envie2sortir.fr</p>
-                  <p><strong>Téléphone :</strong> 01 23 45 67 89</p>
-                  <p><strong>Adresse :</strong> Paris, France</p>
+                  <p><strong>Téléphone :</strong> 06.61.32.38.03</p>
+                  <p><strong>Adresse :</strong> 7 rue magedeleine, 21800 Neuilly-Crimolois</p>
+                  <p><strong>Fondateur :</strong> Vivien Bernardot - Statut auto-entrepreneur</p>
                 </div>
               </div>
             </div>

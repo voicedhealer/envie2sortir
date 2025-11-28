@@ -331,7 +331,7 @@ const HelpModal = memo(function HelpModal({ isOpen, onClose, currentStep }: Help
             steps: [
               {
                 title: "Contact téléphonique",
-                description: "Appelez-nous au 01 23 45 67 89 (Lun-Ven 9h-18h, Sam 10h-16h)"
+                description: "Appelez-nous au 06.61.32.38.03 (Lun-Ven 9h-18h, Sam 10h-16h)"
               },
               {
                 title: "Bouton d'aide",
@@ -448,7 +448,7 @@ const HelpModal = memo(function HelpModal({ isOpen, onClose, currentStep }: Help
               Notre équipe est là pour vous accompagner
             </p>
             <div className="space-y-2 text-sm text-gray-600">
-              <p><strong>Téléphone :</strong> 01 23 45 67 89</p>
+              <p><strong>Téléphone :</strong> 06.61.32.38.03</p>
               <p><strong>Horaires :</strong> Lun-Ven 9h-18h, Sam 10h-16h</p>
             </div>
           </div>

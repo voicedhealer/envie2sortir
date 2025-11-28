@@ -305,6 +305,9 @@ export default function TermsOfServicePage() {
                 <div className="bg-orange-50 rounded-xl p-6">
                   <p className="font-semibold text-orange-900">Envie2Sortir</p>
                   <p className="text-orange-800">Email : contact@envie2sortir.fr</p>
+                  <p className="text-orange-800">Téléphone : 06.61.32.38.03</p>
+                  <p className="text-orange-800">Adresse : 7 rue magedeleine, 21800 Neuilly-Crimolois</p>
+                  <p className="text-orange-800">Fondateur : Vivien Bernardot - Statut auto-entrepreneur</p>
                 </div>
               </div>
             </div>

@@ -372,8 +372,9 @@ export default function PrivacyPolicyPage() {
                 </p>
                 <div className="space-y-2 text-gray-700">
                   <p><strong>Email :</strong> contact@envie2sortir.fr</p>
-                  <p><strong>Téléphone :</strong> 01 23 45 67 89</p>
-                  <p><strong>Adresse :</strong> Paris, France</p>
+                  <p><strong>Téléphone :</strong> 06.61.32.38.03</p>
+                  <p><strong>Adresse :</strong> 7 rue magedeleine, 21800 Neuilly-Crimolois</p>
+                  <p><strong>Fondateur :</strong> Vivien Bernardot - Statut auto-entrepreneur</p>
                 </div>
                 <p className="text-gray-600 text-sm mt-4">
                   Vous pouvez également contacter notre délégué à la protection des données (DPO) à l'adresse dpo@envie2sortir.fr

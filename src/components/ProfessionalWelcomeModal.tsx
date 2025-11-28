@@ -244,7 +244,7 @@ const ProfessionalWelcomeModal = memo(function ProfessionalWelcomeModal({ isOpen
                   <p className="text-sm text-gray-600">
                     Pour une aide physique, contactez-nous au{' '}
                     <span className="font-mono bg-blue-100 px-2 py-1 rounded text-blue-800">
-                      01 23 45 67 89
+                      06.61.32.38.03
                     </span>
                   </p>
                 </div>
