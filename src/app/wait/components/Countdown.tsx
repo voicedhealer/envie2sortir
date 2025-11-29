@@ -27,9 +27,15 @@ const Countdown: React.FC = () => {
     return { days: 0, hours: 0, minutes: 0, seconds: 0 };
   };
 
-  const [timeLeft, setTimeLeft] = useState<TimeLeft>(calculateTimeLeft());
+  // Initialiser avec des valeurs par défaut pour éviter les problèmes d'hydratation
+  const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Marquer comme monté côté client et calculer immédiatement
+    setMounted(true);
+    setTimeLeft(calculateTimeLeft());
+
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
@@ -48,6 +54,18 @@ const Countdown: React.FC = () => {
       <span className="text-gray-400 text-xs md:text-sm mt-2 font-medium tracking-widest uppercase">{label}</span>
     </div>
   );
+
+  // Afficher un placeholder jusqu'à ce que le composant soit monté côté client
+  if (!mounted) {
+    return (
+      <div className="flex justify-center flex-wrap mt-8 md:mt-12">
+        <TimeUnit value={0} label="Jours" />
+        <TimeUnit value={0} label="Heures" />
+        <TimeUnit value={0} label="Minutes" />
+        <TimeUnit value={0} label="Secondes" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex justify-center flex-wrap mt-8 md:mt-12">

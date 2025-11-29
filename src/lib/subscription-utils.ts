@@ -1,9 +1,10 @@
 /**
- * Utilitaires pour la gestion des abonnements FREE vs PREMIUM
+ * Utilitaires pour la gestion des abonnements FREE vs PREMIUM vs WAITLIST_BETA
  * Centralise toute la logique métier pour éviter les incohérences
+ * WAITLIST_BETA : Premium gratuit avant le lancement officiel
  */
 
-export type SubscriptionType = 'FREE' | 'PREMIUM';
+export type SubscriptionType = 'FREE' | 'PREMIUM' | 'WAITLIST_BETA';
 
 export interface SubscriptionFeatures {
   minImages: number;
@@ -34,13 +35,22 @@ export const SUBSCRIPTION_FEATURES: Record<SubscriptionType, SubscriptionFeature
     canUsePromotions: true,
     canUsePrioritySupport: true,
   },
+  WAITLIST_BETA: {
+    minImages: 1,
+    maxImages: 5,  // Jusqu'à 5 photos avec effet Papillon (même que PREMIUM)
+    canCreateEvents: true,  // Accès premium gratuit avant le lancement
+    canUseAdvancedAnalytics: true,
+    canUsePromotions: true,
+    canUsePrioritySupport: true,
+  },
 };
 
 /**
  * Vérifie si un utilisateur a accès à une fonctionnalité Premium
+ * WAITLIST_BETA est considéré comme premium (accès gratuit avant le lancement)
  */
 export function hasPremiumAccess(subscription: SubscriptionType): boolean {
-  return subscription === 'PREMIUM';
+  return subscription === 'PREMIUM' || subscription === 'WAITLIST_BETA';
 }
 
 /**
@@ -129,12 +139,27 @@ export function getAvailableFeatures(subscription: SubscriptionType): string[] {
  * Retourne le statut d'affichage pour l'UI
  */
 export function getSubscriptionDisplayInfo(subscription: SubscriptionType) {
+  const isPremium = subscription === 'PREMIUM' || subscription === 'WAITLIST_BETA';
+  const label = subscription === 'WAITLIST_BETA' 
+    ? 'Beta Premium' 
+    : subscription === 'PREMIUM' 
+      ? 'Premium' 
+      : 'Basic';
+  
+  const badgeColor = subscription === 'WAITLIST_BETA'
+    ? 'bg-purple-100 text-purple-800'  // Badge spécial pour waitlist
+    : subscription === 'PREMIUM'
+      ? 'bg-orange-100 text-orange-800'
+      : 'bg-gray-100 text-gray-800';
+  
   return {
     type: subscription,
-    label: subscription === 'PREMIUM' ? 'Premium' : 'Basic',
-    badgeColor: subscription === 'PREMIUM' ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800',
+    label,
+    badgeColor,
     features: getAvailableFeatures(subscription),
     minImages: getMinImages(subscription),
-    maxImages: getMaxImages(subscription)
+    maxImages: getMaxImages(subscription),
+    isPremium,
+    isWaitlistBeta: subscription === 'WAITLIST_BETA'
   };
 }

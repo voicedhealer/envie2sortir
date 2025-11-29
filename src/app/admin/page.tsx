@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import CloudflareMetricsCharts from '@/components/admin/CloudflareMetricsCharts';
 import { CloudflareDetailedMetrics } from '@/lib/cloudflare-api';
+import AdminLaunchPanel from '@/components/AdminLaunchPanel';
 
 interface DashboardStats {
   pendingCount: number;
@@ -806,6 +807,11 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Panel d'activation du lancement */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <AdminLaunchPanel />
+      </div>
 
       {/* Cartes de statistiques */}
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">

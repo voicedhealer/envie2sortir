@@ -5,7 +5,7 @@ import Background from './components/Background';
 import Countdown from './components/Countdown';
 import Newsletter from './components/Newsletter';
 import AiVision from './components/AiVision';
-import ProfessionalForm from './components/ProfessionalForm';
+import WaitlistSignupForm from '@/components/WaitlistSignupForm';
 import { MapPin, Briefcase, Store, Ticket } from 'lucide-react';
 
 const WaitPage: React.FC = () => {
@@ -25,15 +25,19 @@ const WaitPage: React.FC = () => {
         <div className="mb-2 relative group cursor-default">
             {/* Sound wave simulation */}
             <div className="flex justify-center items-end h-8 gap-1 mb-2 opacity-80">
-                {[...Array(9)].map((_, i) => (
-                    <div key={i} className="w-1 bg-gradient-to-t from-[#ff1fa9] via-[#ff751f] to-[#ff3a3a] rounded-full animate-pulse" 
-                         style={{ 
-                             height: `${Math.random() * 100}%`, 
-                             animationDelay: `${i * 0.1}s`,
-                             animationDuration: '1s'
-                         }}>
-                    </div>
-                ))}
+                {[...Array(9)].map((_, i) => {
+                    // Utiliser des valeurs fixes pour éviter les problèmes d'hydratation
+                    const heights = [72, 45, 77, 2, 23, 16, 11, 68, 31];
+                    return (
+                        <div key={i} className="w-1 bg-gradient-to-t from-[#ff1fa9] via-[#ff751f] to-[#ff3a3a] rounded-full animate-pulse" 
+                             style={{ 
+                                 height: `${heights[i] || 50}%`, 
+                                 animationDelay: `${i * 0.1}s`,
+                                 animationDuration: '1s'
+                             }}>
+                        </div>
+                    );
+                })}
             </div>
             
             <h1 className="text-6xl md:text-8xl font-bold text-[#ff751f] drop-shadow-[0_2px_10px_rgba(255,117,31,0.5)] transform -rotate-2 hover:rotate-0 transition-transform duration-300">
@@ -111,7 +115,7 @@ const WaitPage: React.FC = () => {
             </p>
             
             <div className="w-full relative z-10">
-              <ProfessionalForm />
+              <WaitlistSignupForm />
             </div>
             
             <div className="mt-4 text-xs text-[#ff751f] font-medium animate-pulse relative z-10">
