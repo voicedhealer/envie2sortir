@@ -40,6 +40,32 @@ export default function AdminWaitlistPage() {
     password: '', // Optionnel, généré automatiquement si vide
   });
 
+  // Redirection si pas admin (dans useEffect pour éviter l'erreur de rendu)
+  useEffect(() => {
+    if (!loading && (!session || session.user?.role !== 'admin')) {
+      router.push('/auth?error=AccessDenied');
+    }
+  }, [session, loading, router]);
+
+  // Charger la liste au montage
+  useEffect(() => {
+    const loadWaitlistPros = async () => {
+      try {
+        const res = await fetch('/api/admin/waitlist/list');
+        if (res.ok) {
+          const data = await res.json();
+          setWaitlistPros(data.professionals || []);
+        }
+      } catch (error) {
+        console.error('Erreur chargement waitlist:', error);
+      }
+    };
+
+    if (session?.user?.role === 'admin') {
+      loadWaitlistPros();
+    }
+  }, [session]);
+
   // Vérifier l'authentification
   if (loading) {
     return (
@@ -50,7 +76,6 @@ export default function AdminWaitlistPage() {
   }
 
   if (!session || session.user?.role !== 'admin') {
-    router.push('/auth?error=AccessDenied');
     return null;
   }
 
@@ -91,7 +116,18 @@ export default function AdminWaitlistPage() {
         });
         setShowForm(false);
         // Recharger la liste
-        loadWaitlistPros();
+        const reloadList = async () => {
+          try {
+            const res = await fetch('/api/admin/waitlist/list');
+            if (res.ok) {
+              const data = await res.json();
+              setWaitlistPros(data.professionals || []);
+            }
+          } catch (error) {
+            console.error('Erreur chargement waitlist:', error);
+          }
+        };
+        reloadList();
       } else {
         setResponse(data);
       }
@@ -104,25 +140,6 @@ export default function AdminWaitlistPage() {
       setIsLoading(false);
     }
   };
-
-  const loadWaitlistPros = async () => {
-    try {
-      const res = await fetch('/api/admin/waitlist/list');
-      if (res.ok) {
-        const data = await res.json();
-        setWaitlistPros(data.professionals || []);
-      }
-    } catch (error) {
-      console.error('Erreur chargement waitlist:', error);
-    }
-  };
-
-  // Charger la liste au montage
-  useEffect(() => {
-    if (session?.user?.role === 'admin') {
-      loadWaitlistPros();
-    }
-  }, [session]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">

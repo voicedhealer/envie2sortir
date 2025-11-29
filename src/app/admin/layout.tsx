@@ -32,6 +32,13 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [pendingEstablishments, setPendingEstablishments] = useState(0);
   const [pendingModifications, setPendingModifications] = useState(0);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    gestion: true,
+    communication: false,
+    analytics: false,
+    outils: false
+  });
 
   useEffect(() => {
     // ✅ CORRECTION : Attendre que le chargement soit terminé avant de vérifier
@@ -122,13 +129,12 @@ export default function AdminLayout({
     return pathname.startsWith(path);
   };
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    gestion: true,
-    communication: false,
-    analytics: false,
-    outils: false
-  });
+  const toggleSection = (sectionId: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
 
   // Navigation organisée par catégories
   const navigationSections = [
@@ -239,13 +245,6 @@ export default function AdminLayout({
       ]
     }
   ];
-
-  const toggleSection = (sectionId: string) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [sectionId]: !prev[sectionId]
-    }));
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

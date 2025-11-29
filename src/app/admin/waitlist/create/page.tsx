@@ -24,20 +24,7 @@ export default function AdminWaitlistCreatePage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdProfessionalId, setCreatedProfessionalId] = useState<string | null>(null);
 
-  // Vérifier l'authentification
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
-      </div>
-    );
-  }
-
-  if (!session || session.user?.role !== 'admin') {
-    router.push('/auth?error=AccessDenied');
-    return null;
-  }
-
+  // Tous les hooks doivent être appelés avant les conditions de retour
   const {
     currentStep,
     formData,
@@ -63,6 +50,26 @@ export default function AdminWaitlistCreatePage() {
     setCurrentStep,
     submitProgress
   } = useEstablishmentForm({ establishment: null, isEditMode: false });
+
+  // Redirection si pas admin (dans useEffect pour éviter l'erreur de rendu)
+  useEffect(() => {
+    if (!loading && (!session || session.user?.role !== 'admin')) {
+      router.push('/auth?error=AccessDenied');
+    }
+  }, [session, loading, router]);
+
+  // Vérifier l'authentification
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (!session || session.user?.role !== 'admin') {
+    return null;
+  }
 
   // Fonction de soumission personnalisée pour la waitlist
   const handleWaitlistSubmit = async () => {

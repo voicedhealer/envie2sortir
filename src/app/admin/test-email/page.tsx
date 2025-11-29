@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Loader2, Mail, CheckCircle2, AlertCircle, Send } from 'lucide-react';
@@ -12,6 +12,13 @@ export default function TestEmailPage() {
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message?: string; error?: string; emailId?: string } | null>(null);
 
+  // Redirection si pas admin (dans useEffect pour éviter l'erreur de rendu)
+  useEffect(() => {
+    if (!loading && (!session || session.user?.role !== 'admin')) {
+      router.push('/auth?error=AccessDenied');
+    }
+  }, [session, loading, router]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -21,7 +28,6 @@ export default function TestEmailPage() {
   }
 
   if (!session || session.user?.role !== 'admin') {
-    router.push('/auth?error=AccessDenied');
     return null;
   }
 
