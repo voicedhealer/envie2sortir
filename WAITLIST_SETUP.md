@@ -65,14 +65,14 @@ Vous pouvez vérifier dans Supabase Dashboard > Table Editor.
 
 ## Étape 6 : Test du système
 
-### 1. Tester l'inscription à la waitlist
+### 1. Ajouter un professionnel en waitlist (depuis l'admin)
 
-1. Allez sur `/wait`
-2. Remplissez le formulaire "Espace Professionnels"
-3. Utilisez des données de test :
-   - Email : test@example.com
-   - SIRET : 12345678901234 (14 chiffres)
-   - Téléphone : 0612345678
+1. Connectez-vous en tant qu'admin
+2. Allez sur `/admin/waitlist`
+3. Cliquez sur "Ajouter un professionnel"
+4. Remplissez le formulaire avec les données du professionnel
+5. Le mot de passe sera généré automatiquement si vous ne le remplissez pas
+6. Cliquez sur "Créer en waitlist"
 
 ### 2. Vérifier dans Supabase
 
@@ -84,9 +84,10 @@ Vous pouvez vérifier dans Supabase Dashboard > Table Editor.
 ### 3. Tester le panel admin
 
 1. Connectez-vous en tant qu'admin
-2. Allez sur `/admin`
+2. Allez sur `/admin` ou `/admin/waitlist`
 3. Vous devriez voir le "Panel d'activation du lancement"
 4. Vérifiez que le compteur de waitlist s'affiche
+5. La liste des professionnels en waitlist doit s'afficher
 
 ### 4. Tester l'activation (⚠️ Attention : crée des abonnements Stripe)
 

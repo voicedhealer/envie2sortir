@@ -5,7 +5,7 @@ import Background from './components/Background';
 import Countdown from './components/Countdown';
 import Newsletter from './components/Newsletter';
 import AiVision from './components/AiVision';
-import WaitlistSignupForm from '@/components/WaitlistSignupForm';
+import ProfessionalForm from './components/ProfessionalForm';
 import { MapPin, Briefcase, Store, Ticket } from 'lucide-react';
 
 const WaitPage: React.FC = () => {
@@ -115,7 +115,7 @@ const WaitPage: React.FC = () => {
             </p>
             
             <div className="w-full relative z-10">
-              <WaitlistSignupForm />
+              <ProfessionalForm />
             </div>
             
             <div className="mt-4 text-xs text-[#ff751f] font-medium animate-pulse relative z-10">
