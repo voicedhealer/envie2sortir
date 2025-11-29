@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Home
 } from "lucide-react";
 import MessageBadge from "@/components/messaging/MessageBadge";
 
@@ -247,11 +248,11 @@ export default function AdminLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gray-50">
+      {/* Sidebar - Fixe à gauche sur desktop */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 lg:static lg:inset-0`}>
+      } lg:translate-x-0`}>
         <div className="flex flex-col h-full">
           {/* Header Sidebar */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200">
@@ -262,6 +263,17 @@ export default function AdminLayout({
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+
+          {/* Bouton Home */}
+          <div className="px-4 py-2 border-b border-gray-200">
+            <Link
+              href="/"
+              className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <Home className="w-5 h-5" />
+              <span>Retour au site</span>
+            </Link>
           </div>
 
           {/* Navigation */}
@@ -361,8 +373,8 @@ export default function AdminLayout({
         />
       )}
 
-      {/* Contenu principal */}
-      <div className="flex-1 flex flex-col lg:ml-0">
+      {/* Contenu principal - Avec marge pour la sidebar sur desktop */}
+      <div className="flex-1 flex flex-col lg:ml-64">
         {/* Header mobile */}
         <header className="lg:hidden bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
           <div className="flex items-center justify-between p-4">

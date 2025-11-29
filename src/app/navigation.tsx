@@ -12,8 +12,8 @@ export default function Navigation() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Masquer la navigation sur la page /wait
-  if (pathname === '/wait') {
+  // Masquer la navigation sur la page /wait et toutes les pages admin
+  if (pathname === '/wait' || pathname.startsWith('/admin')) {
     return null;
   }
 
