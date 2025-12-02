@@ -85,9 +85,26 @@ interface SmartSummaryStepProps {
 }
 
 export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps) {
-  // Debug temporaire pour YouTube
+  // Debug temporaire pour YouTube et contact
   console.log('🔍 SmartSummaryStep - data.youtube:', data.youtube);
   console.log('🔍 SmartSummaryStep - data keys:', Object.keys(data));
+  console.log('🔍 SmartSummaryStep - Données de contact:', JSON.stringify({
+    phone: data.phone,
+    email: data.email,
+    whatsappPhone: data.whatsappPhone,
+    messengerUrl: data.messengerUrl,
+    website: data.website,
+    instagram: data.instagram,
+    facebook: data.facebook,
+    tiktok: data.tiktok,
+    youtube: data.youtube
+  }, null, 2));
+  console.log('🔍 SmartSummaryStep - Données du propriétaire:', JSON.stringify({
+    accountFirstName: (data as any).accountFirstName,
+    accountLastName: (data as any).accountLastName,
+    professionalEmail: (data as any).professionalEmail,
+    professionalPhone: (data as any).professionalPhone
+  }, null, 2));
   
   // Fonction pour nettoyer les tags avec barres de séparation
   const cleanTagText = (text: string): string => {

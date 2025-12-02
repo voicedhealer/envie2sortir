@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "@/lib/fake-toast";
-import { getSubscriptionDisplayInfo, getPremiumRequiredMessage } from "@/lib/subscription-utils";
+import { getSubscriptionDisplayInfo, getPremiumRequiredMessage, type SubscriptionType } from "@/lib/subscription-utils";
 import ImageUpload from "@/components/ImageUpload";
 import { FileText, Calendar, Euro, Image as ImageIcon } from 'lucide-react';
 
@@ -24,7 +24,7 @@ interface Event {
 interface EventsManagerProps {
   establishmentId: string;
   isPremium: boolean;
-  subscription: 'FREE' | 'PREMIUM';
+  subscription: SubscriptionType;
 }
 
 export default function EventsManager({ establishmentId, isPremium, subscription }: EventsManagerProps) {

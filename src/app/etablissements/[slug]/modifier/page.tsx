@@ -84,20 +84,37 @@ export default async function EditEstablishmentPage({
     notFound();
   }
 
-  // Récupérer les tags séparément (optionnel, silencieux si erreur)
+  // Récupérer les tags séparément depuis la table etablissement_tags
+  // ✅ IMPORTANT : Ne récupérer que les tags normaux (type_tag != 'envie')
+  // Les envieTags sont récupérés depuis envie_tags (JSONB) pour éviter les doublons
   let tagsData: any[] = [];
   try {
+    // ✅ Supabase PostgREST utilise snake_case pour les noms de colonnes
     const { data: tags, error: tagsError } = await supabase
       .from('etablissement_tags')
-      .select('tag, type_tag, poids')
-      .eq('establishment_id', establishmentData.id);
+      .select('*')
+      .eq('etablissement_id', establishmentData.id)
+      .neq('type_tag', 'envie'); // ✅ Exclure les envieTags (récupérés depuis envie_tags)
 
-    if (!tagsError && tags) {
+    if (tagsError) {
+      console.error('⚠️ [Edit Establishment] Erreur récupération tags:', {
+        error: tagsError,
+        code: tagsError?.code,
+        message: tagsError?.message,
+        details: tagsError?.details,
+        hint: tagsError?.hint,
+        establishmentId: establishmentData.id
+      });
+    } else if (tags && tags.length > 0) {
       tagsData = tags;
+      console.log(`✅ [Edit Establishment] ${tags.length} tags normaux récupérés pour l'établissement ${establishmentData.id}:`, tags.map(t => `${t.tag} (${t.type_tag || t.typeTag})`));
+    } else {
+      console.log(`ℹ️ [Edit Establishment] Aucun tag normal trouvé dans etablissement_tags pour l'établissement ${establishmentData.id}`);
     }
-    // Ne pas logger l'erreur car les tags sont optionnels et l'erreur peut être due à RLS
+    
+    // Les envieTags sont récupérés depuis envie_tags (JSONB) dans le hook useEstablishmentForm
   } catch (error) {
-    // Ignorer silencieusement les erreurs de tags
+    console.error('❌ [Edit Establishment] Exception lors de la récupération des tags:', error);
   }
 
   // Récupérer le propriétaire séparément (optionnel, ne bloque pas si erreur)
@@ -120,6 +137,12 @@ export default async function EditEstablishmentPage({
       });
     } else {
       ownerData = owner;
+      console.log('✅ [Edit Establishment] Données du propriétaire récupérées:', {
+        firstName: owner.first_name,
+        lastName: owner.last_name,
+        email: owner.email,
+        phone: owner.phone
+      });
     }
   } catch (error) {
     console.error('⚠️ [Edit Establishment] Exception lors de la récupération du propriétaire:', error);
@@ -127,6 +150,16 @@ export default async function EditEstablishmentPage({
 
 
   // Transformer les données pour correspondre au format attendu
+  console.log('🔍 [Edit Establishment] Données de contact récupérées depuis la base:', JSON.stringify({
+    phone: establishmentData.phone,
+    email: establishmentData.email,
+    website: establishmentData.website,
+    instagram: establishmentData.instagram,
+    facebook: establishmentData.facebook,
+    whatsapp_phone: establishmentData.whatsapp_phone,
+    messenger_url: establishmentData.messenger_url
+  }, null, 2));
+  
   const establishment = {
     id: establishmentData.id,
     name: establishmentData.name,
@@ -139,6 +172,8 @@ export default async function EditEstablishmentPage({
     latitude: establishmentData.latitude,
     longitude: establishmentData.longitude,
     phone: establishmentData.phone,
+    whatsappPhone: establishmentData.whatsapp_phone,
+    messengerUrl: establishmentData.messenger_url,
     email: establishmentData.email,
     website: establishmentData.website,
     instagram: establishmentData.instagram,
@@ -162,12 +197,26 @@ export default async function EditEstablishmentPage({
     rejectionReason: establishmentData.rejection_reason,
     rejectedAt: establishmentData.rejected_at,
     lastModifiedAt: establishmentData.last_modified_at,
-    envieTags: typeof establishmentData.envie_tags === 'string' ? JSON.parse(establishmentData.envie_tags) : establishmentData.envie_tags,
-    tags: (tagsData || []).map((tag: any) => ({
-      tag: tag.tag,
-      typeTag: tag.type_tag,
-      poids: tag.poids
-    })),
+    envieTags: (() => {
+      try {
+        const envieTags = typeof establishmentData.envie_tags === 'string' 
+          ? JSON.parse(establishmentData.envie_tags) 
+          : establishmentData.envie_tags;
+        console.log(`💭 [Edit Establishment] envieTags récupérés pour l'établissement ${establishmentData.id}:`, envieTags);
+        return envieTags;
+      } catch (error) {
+        console.error('❌ [Edit Establishment] Erreur parsing envieTags:', error);
+        return null;
+      }
+    })(),
+    tags: (tagsData || []).map((tag: any) => {
+      const mappedTag = {
+        tag: tag.tag,
+        typeTag: tag.typeTag || tag.type_tag, // Gérer les deux formats
+        poids: tag.poids
+      };
+      return mappedTag;
+    }),
     owner: ownerData ? {
       id: ownerData.id,
       firstName: ownerData.first_name,

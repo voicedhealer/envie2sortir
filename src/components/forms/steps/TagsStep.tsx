@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import EnvieTagsInput from '@/components/forms/EnvieTagsInput';
 import TagsSelector from '@/components/forms/TagsSelector';
 import { getSuggestedTags } from '@/lib/establishment-form.utils';
@@ -18,6 +19,12 @@ export default function TagsStep({
   onTagsChange,
   onEnvieTagsGenerated
 }: TagsStepProps) {
+  // Log pour déboguer les tags reçus
+  useEffect(() => {
+    console.log("🏷️ [TagsStep] Tags reçus dans formData.tags:", formData.tags);
+    console.log("🏷️ [TagsStep] Nombre de tags:", formData.tags?.length || 0);
+  }, [formData.tags]);
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock, MessageSquare, Youtube, Music } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Instagram, Facebook, Globe, BarChart3, TrendingUp, Eye, Lock, MessageSquare, Youtube, Music, RefreshCw, Edit } from "lucide-react";
 import EventsManager from "./EventsManager";
 import ImagesManager from "./ImagesManager";
 import ParametresManager from "./ParametresManager";
@@ -12,6 +13,7 @@ import DetailedAnalyticsDashboard from "@/components/analytics/DetailedAnalytics
 import DealsManager from "./DealsManager";
 import DealsGlobalStats from "@/components/DealsGlobalStats";
 import MessageBadge from "@/components/messaging/MessageBadge";
+import { hasPremiumAccess, getSubscriptionDisplayInfo, type SubscriptionType } from "@/lib/subscription-utils";
 // import ProfessionalWelcomeModal from "@/components/ProfessionalWelcomeModal";
 
 interface User {
@@ -62,7 +64,7 @@ interface Professional {
   phone: string;
   siret: string;
   companyName: string;
-  subscriptionPlan: 'FREE' | 'PREMIUM';
+  subscriptionPlan: SubscriptionType;
 }
 
 interface DashboardContentProps {
@@ -72,9 +74,50 @@ interface DashboardContentProps {
 }
 
 export default function DashboardContent({ user, establishment, professional }: DashboardContentProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'overview' | 'images' | 'events' | 'menus' | 'deals' | 'analytics' | 'parametres'>('overview');
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'overview' | 'detailed'>('overview');
+  const [isRequestingValidation, setIsRequestingValidation] = useState(false);
   // const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  // Déterminer si l'utilisateur a accès premium (inclut WAITLIST_BETA)
+  const hasPremium = hasPremiumAccess(professional.subscriptionPlan);
+  const subscriptionDisplay = getSubscriptionDisplayInfo(professional.subscriptionPlan);
+
+  // Fonction pour redemander une validation
+  const handleRequestValidation = async () => {
+    if (!establishment.slug) {
+      alert('Erreur: Slug de l\'établissement manquant');
+      return;
+    }
+
+    setIsRequestingValidation(true);
+    try {
+      const response = await fetch(`/api/etablissements/${establishment.slug}/request-validation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la demande de revalidation');
+      }
+
+      // Afficher un message de succès
+      alert(data.message || 'Votre demande de validation a été envoyée avec succès !');
+      
+      // Recharger la page pour afficher le nouveau statut
+      router.refresh();
+    } catch (error: any) {
+      console.error('Erreur lors de la demande de revalidation:', error);
+      alert(error.message || 'Erreur lors de la demande de revalidation. Veuillez réessayer.');
+    } finally {
+      setIsRequestingValidation(false);
+    }
+  };
 
   // // Détecter la première visite de l'espace professionnel
   // useEffect(() => {
@@ -143,11 +186,11 @@ export default function DashboardContent({ user, establishment, professional }: 
               </button> */}
               <div className="flex items-center gap-2 mt-1">
                 <p className={`text-sm ${
-                  professional.subscriptionPlan === 'PREMIUM' 
+                  hasPremium 
                     ? 'text-orange-600 font-medium' 
                     : 'text-gray-500'
                 }`}>
-                  Compte : {professional.subscriptionPlan === 'PREMIUM' ? 'Premium' : 'Basic'}
+                  Compte : {subscriptionDisplay.label}
                 </p>
                 <Link
                   href="/dashboard/subscription"
@@ -203,7 +246,7 @@ export default function DashboardContent({ user, establishment, professional }: 
             >
               Mes menus
             </button>
-            {professional.subscriptionPlan === 'PREMIUM' && (
+            {hasPremium && (
               <button
                 onClick={() => setActiveTab('deals')}
                 className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
@@ -215,7 +258,7 @@ export default function DashboardContent({ user, establishment, professional }: 
                 Bons plans
               </button>
             )}
-            {professional.subscriptionPlan === 'PREMIUM' ? (
+            {hasPremium ? (
               <button
                 onClick={() => setActiveTab('analytics')}
                 className={`py-4 px-2 sm:px-3 border-b-2 font-medium text-xs sm:text-sm flex items-center whitespace-nowrap ${
@@ -278,7 +321,7 @@ export default function DashboardContent({ user, establishment, professional }: 
           </div>
         </div>
         
-        {/* Informations de rejet */}
+        {/* Informations de statut */}
         {establishment.status === 'rejected' && establishment.rejectionReason && (
           <div className="px-6 py-4 bg-red-50 border-t border-red-200">
             <div className="flex items-start">
@@ -287,13 +330,13 @@ export default function DashboardContent({ user, establishment, professional }: 
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
-              <div className="ml-3">
+              <div className="ml-3 flex-1">
                 <h3 className="text-sm font-medium text-red-800">
                   Votre établissement a été rejeté
                 </h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p><strong>Raison du rejet :</strong></p>
-                  <p className="mt-1">{establishment.rejectionReason}</p>
+                  <p className="mt-1 bg-white/50 rounded px-2 py-1">{establishment.rejectionReason}</p>
                   {establishment.rejectedAt && (
                     <p className="mt-2 text-xs text-red-600">
                       Rejeté le {new Date(establishment.rejectedAt).toLocaleDateString('fr-FR', {
@@ -306,15 +349,64 @@ export default function DashboardContent({ user, establishment, professional }: 
                     </p>
                   )}
                 </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    href={`/etablissements/${establishment.slug}/modifier`}
+                    className="inline-flex items-center px-4 py-2 border border-orange-300 text-sm font-medium rounded-md text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modifier l'établissement
+                  </Link>
+                  <button
+                    onClick={handleRequestValidation}
+                    disabled={isRequestingValidation}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isRequestingValidation ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Redemander une validation
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Informations en attente */}
+        {establishment.status === 'pending' && (
+          <div className="px-6 py-4 bg-yellow-50 border-t border-yellow-200">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Votre établissement est en attente de validation
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>Votre établissement a été soumis et est actuellement en cours de révision par notre équipe.</p>
+                  <p className="mt-1">Vous serez notifié dès qu'une décision sera prise.</p>
+                </div>
                 <div className="mt-4">
                   <Link
                     href={`/etablissements/${establishment.slug}/modifier`}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                    className="inline-flex items-center px-4 py-2 border border-orange-300 text-sm font-medium rounded-md text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-colors"
                   >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    Modifier et redemander validation
+                    <Edit className="w-4 h-4 mr-2" />
+                    Modifier l'établissement
                   </Link>
                 </div>
               </div>
@@ -540,21 +632,21 @@ export default function DashboardContent({ user, establishment, professional }: 
       ) : activeTab === 'events' ? (
         <EventsManager 
           establishmentId={establishment.id} 
-          isPremium={professional.subscriptionPlan === 'PREMIUM'} 
+          isPremium={hasPremium} 
           subscription={professional.subscriptionPlan}
         />
       ) : activeTab === 'menus' ? (
         <MenuManager 
           establishmentId={establishment.id} 
-          isPremium={professional.subscriptionPlan === 'PREMIUM'}
+          isPremium={hasPremium}
         />
       ) : activeTab === 'deals' ? (
         <DealsManager 
           establishmentId={establishment.id} 
-          isPremium={professional.subscriptionPlan === 'PREMIUM'}
+          isPremium={hasPremium}
         />
       ) : activeTab === 'analytics' ? (
-        professional.subscriptionPlan !== 'PREMIUM' ? (
+        !hasPremium ? (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center mb-4">
               <Lock className="w-6 h-6 text-orange-600" />

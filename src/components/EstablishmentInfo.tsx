@@ -383,7 +383,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
         creditCards: 'Cartes de crédit',
         debitCards: 'Cartes de débit',
         cash: 'Espèces',
-        cashOnly: 'Espèces uniquement',
+        // ❌ SUPPRIMÉ : "Espèces uniquement" - personne n'accepte juste des espèces !
+        // cashOnly: 'Espèces uniquement',
         nfc: 'Paiement mobile NFC', // Normalisé au singulier
         mobilePayments: 'Paiement mobile NFC', // Normalisé
         contactlessPayments: 'Paiements sans contact',
@@ -573,7 +574,8 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
             creditCards: 'Cartes de crédit',
             debitCards: 'Cartes de débit',
             cash: 'Espèces',
-            cashOnly: 'Espèces uniquement',
+            // ❌ SUPPRIMÉ : "Espèces uniquement" - personne n'accepte juste des espèces !
+            // cashOnly: 'Espèces uniquement',
             nfc: 'Paiement mobile NFC', // Normalisé
             mobilePayments: 'Paiement mobile NFC', // Normalisé
             contactlessPayments: 'Paiements sans contact',
@@ -602,9 +604,17 @@ export default function EstablishmentInfo({ establishment }: EstablishmentInfoPr
   });
   
   // Dédupliquer en utilisant une clé normalisée (minuscules, sans espaces multiples)
+  // ❌ FILTRER "Espèces uniquement" - personne n'accepte juste des espèces !
   const seen = new Set<string>();
   const moyensPaiement = normalizedPayments.filter(p => {
-    const key = p.toLowerCase().replace(/\s+/g, ' ').trim();
+    const cleaned = cleanItemDisplay(p).trim();
+    const key = cleaned.toLowerCase().replace(/\s+/g, ' ').trim();
+    
+    // Exclure "Espèces uniquement" complètement
+    if (key === 'espèces uniquement' || key === 'especes uniquement') {
+      return false;
+    }
+    
     if (seen.has(key)) {
       return false;
     }

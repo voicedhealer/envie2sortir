@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/lib/fake-toast";
 import ImageUpload from "@/components/ImageUpload";
-import { getMinImages, getMaxImages } from "@/lib/subscription-utils";
+import { getMinImages, getMaxImages, getSubscriptionDisplayInfo, type SubscriptionType } from "@/lib/subscription-utils";
 import { 
   DndContext, 
   closestCenter,
@@ -27,7 +27,7 @@ interface ImagesManagerProps {
   establishmentId: string; // Gardé pour compatibilité mais non utilisé
   establishmentSlug: string; // Gardé pour compatibilité mais non utilisé
   currentImageUrl?: string | null;
-  subscription?: 'FREE' | 'PREMIUM';
+  subscription?: SubscriptionType;
 }
 
 // Fonction utilitaire pour construire l'URL d'image
@@ -752,7 +752,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
               Limite d'images atteinte
             </h4>
             <p className="text-gray-600 mb-4">
-              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription === 'PREMIUM' ? 'Premium' : 'Basic'}.
+              Vous avez atteint la limite de {maxImages} image{maxImages > 1 ? 's' : ''} pour votre plan {subscription ? getSubscriptionDisplayInfo(subscription).label : 'Basic'}.
             </p>
             {subscription === 'FREE' && (
               <div className="bg-gradient-to-br from-orange-50 to-pink-50 border-2 border-[#ff751f] rounded-xl p-6">
@@ -775,7 +775,7 @@ export default function ImagesManager({ establishmentId, establishmentSlug, curr
         
         <div className="mt-4 text-sm text-gray-500">
           Images actuelles : {images.length}/{maxImages} 
-          {subscription === 'PREMIUM' ? ' (Plan Premium)' : ' (Plan Basic)'}
+          {subscription ? ` (Plan ${getSubscriptionDisplayInfo(subscription).label})` : ' (Plan Basic)'}
         </div>
       </div>
 

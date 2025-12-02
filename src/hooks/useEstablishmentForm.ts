@@ -36,7 +36,18 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
   const { user, loading: sessionLoading } = useSupabaseSession();
   
   // États principaux
-  const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 2 : 0);
+  // En mode édition, démarrer sur l'étape 3 (Informations sur l'établissement)
+  // car l'enrichissement a normalement déjà été fait
+  // L'utilisateur peut toujours revenir en arrière avec "Précédent" pour refaire l'enrichissement
+  const [currentStep, setCurrentStep] = useState<FormStep>(isEditMode ? 3 : 0);
+  
+  // ❌ Protection : Si on arrive sur l'étape 6 en mode édition, rediriger vers l'étape 7
+  useEffect(() => {
+    if (isEditMode && currentStep === 6) {
+      console.log('⚠️ [useEstablishmentForm] Étape 6 détectée en mode édition, redirection vers étape 7');
+      setCurrentStep(7);
+    }
+  }, [currentStep, isEditMode]);
   const [submitProgress, setSubmitProgress] = useState<string>('');
   const [formData, setFormData] = useState<ProfessionalData>(() => {
     // Pré-remplir avec les données existantes si en mode édition
@@ -75,7 +86,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         services: establishment.services || [],
         ambiance: establishment.ambiance || [],
         paymentMethods: [],
-        tags: establishment.tags || [],
+        // Convertir les tags d'objets {tag, typeTag, poids} en tableau de strings
+        tags: (establishment.tags && Array.isArray(establishment.tags)) 
+          ? establishment.tags.map((t: any) => typeof t === 'string' ? t : t.tag).filter(Boolean)
+          : [],
         photos: [],
         hours: establishment.horairesOuverture || {},
         website: establishment.website || "",
@@ -205,16 +219,87 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       // Charger les données du professionnel (propriétaire)
       if (establishment.owner) {
         console.log('👤 Chargement des données du professionnel:', establishment.owner);
+        const ownerSiret = establishment.owner?.siret || "";
+        
+        console.log('👤 [useEstablishmentForm] Chargement des données du propriétaire:', {
+          firstName: establishment.owner?.firstName,
+          lastName: establishment.owner?.lastName,
+          email: establishment.owner?.email,
+          phone: establishment.owner?.phone
+        });
+        
         setFormData(prev => ({
           ...prev,
+          // ✅ Charger les données du propriétaire dans les champs account* pour l'affichage
+          accountFirstName: establishment.owner?.firstName || "",
+          accountLastName: establishment.owner?.lastName || "",
+          accountEmail: establishment.owner?.email || "",
+          accountPhone: establishment.owner?.phone || "",
+          // Garder aussi les anciens champs pour compatibilité
           firstName: establishment.owner?.firstName || "",
           lastName: establishment.owner?.lastName || "",
           email: establishment.owner?.email || "",
           phone: establishment.owner?.phone || "",
           companyName: establishment.owner?.companyName || "",
-          siret: establishment.owner?.siret || "",
+          siret: ownerSiret,
           legalStatus: establishment.owner?.legalStatus || ""
         }));
+        
+        // ✅ Récupérer les données SIRET enrichies depuis l'API INSEE si le SIRET est disponible
+        if (ownerSiret && ownerSiret.trim().length === 14) {
+          console.log('🔍 [useEstablishmentForm] Récupération des données INSEE pour le SIRET:', ownerSiret);
+          fetch('/api/siret/verify', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ siret: ownerSiret })
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.isValid && data.data) {
+                console.log('✅ [useEstablishmentForm] Données INSEE récupérées:', data.data);
+                setFormData(prev => ({
+                  ...prev,
+                  siretAddress: data.data.address || establishment.address || "",
+                  siretActivity: data.data.activityLabel || "",
+                  siretCreationDate: data.data.creationDate || "",
+                  siretEffectifs: data.data.effectifTranche || ""
+                }));
+              } else {
+                console.log('⚠️ [useEstablishmentForm] Données INSEE non disponibles, utilisation des valeurs par défaut');
+                // Utiliser l'adresse de l'établissement comme fallback
+                setFormData(prev => ({
+                  ...prev,
+                  siretAddress: establishment.address || "",
+                  siretActivity: "",
+                  siretCreationDate: "",
+                  siretEffectifs: ""
+                }));
+              }
+            })
+            .catch(error => {
+              console.error('❌ [useEstablishmentForm] Erreur récupération données INSEE:', error);
+              // En cas d'erreur, utiliser l'adresse de l'établissement comme fallback
+              setFormData(prev => ({
+                ...prev,
+                siretAddress: establishment.address || "",
+                siretActivity: "",
+                siretCreationDate: "",
+                siretEffectifs: ""
+              }));
+            });
+        } else {
+          // Si pas de SIRET, utiliser l'adresse de l'établissement comme fallback
+          console.log('⚠️ [useEstablishmentForm] Pas de SIRET valide, utilisation de l\'adresse de l\'établissement');
+          setFormData(prev => ({
+            ...prev,
+            siretAddress: establishment.address || "",
+            siretActivity: "",
+            siretCreationDate: "",
+            siretEffectifs: ""
+          }));
+        }
       }
       
       const parsedAddress = parseAddress(establishment.address || "");
@@ -246,7 +331,40 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         tiktok: establishment.tiktok || "",
         youtube: establishment.youtube || "",
         activities: establishment.activities ? (typeof establishment.activities === 'string' ? JSON.parse(establishment.activities) : establishment.activities) : [],
-        paymentMethods: (establishment as any).paymentMethods ? convertPaymentMethodsArrayToObject(typeof (establishment as any).paymentMethods === 'string' ? JSON.parse((establishment as any).paymentMethods) : (establishment as any).paymentMethods) : {},
+        // ✅ CORRECTION : Garder les paymentMethods en format tableau (pas objet)
+        // Convertir depuis la base de données (peut être string JSON, tableau, ou objet)
+        paymentMethods: (() => {
+          const paymentMethodsData = (establishment as any).paymentMethods;
+          console.log('🔍 [useEstablishmentForm] paymentMethodsData brut:', paymentMethodsData);
+          
+          if (!paymentMethodsData) {
+            console.log('⚠️ [useEstablishmentForm] Aucun paymentMethodsData');
+            return [];
+          }
+          
+          // Si c'est une string, parser
+          const parsed = typeof paymentMethodsData === 'string' 
+            ? JSON.parse(paymentMethodsData) 
+            : paymentMethodsData;
+          
+          console.log('🔍 [useEstablishmentForm] paymentMethodsData parsé:', parsed, 'Type:', typeof parsed, 'IsArray:', Array.isArray(parsed));
+          
+          // Si c'est déjà un tableau, le retourner
+          if (Array.isArray(parsed)) {
+            console.log('✅ [useEstablishmentForm] paymentMethods est un tableau:', parsed);
+            return parsed;
+          }
+          
+          // Si c'est un objet, le convertir en tableau
+          if (typeof parsed === 'object' && parsed !== null) {
+            const converted = convertPaymentMethodsObjectToArray(parsed);
+            console.log('✅ [useEstablishmentForm] paymentMethods converti depuis objet:', converted);
+            return converted;
+          }
+          
+          console.log('⚠️ [useEstablishmentForm] Format de paymentMethods non reconnu');
+          return [];
+        })(),
         horairesOuverture: establishment.horairesOuverture ? (typeof establishment.horairesOuverture === 'string' ? JSON.parse(establishment.horairesOuverture) : establishment.horairesOuverture) : {},
         prixMoyen: establishment.prixMoyen || "",
         capaciteMax: establishment.capaciteMax || "",
@@ -256,6 +374,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         priceMin: typeof establishment.priceMin === 'number' ? establishment.priceMin : undefined,
         priceMax: typeof establishment.priceMax === 'number' ? establishment.priceMax : undefined
       };
+      
+      console.log('📋 [useEstablishmentForm] Données de contact chargées:', JSON.stringify({
+        phone: newFormData.phone,
+        email: newFormData.email,
+        website: newFormData.website,
+        instagram: newFormData.instagram,
+        facebook: newFormData.facebook,
+        whatsappPhone: newFormData.whatsappPhone,
+        messengerUrl: newFormData.messengerUrl
+      }, null, 2));
       
       setFormData(prev => ({ ...prev, ...newFormData }));
       
@@ -273,6 +401,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           const services = typeof establishment.services === 'string' 
             ? JSON.parse(establishment.services) 
             : establishment.services;
+          console.log('🔍 [useEstablishmentForm] services chargés:', services, 'Type:', typeof services, 'IsArray:', Array.isArray(services));
           setFormData(prev => ({ ...prev, services: Array.isArray(services) ? services : [] }));
         } catch (error) {
           console.error('Erreur parsing services:', error);
@@ -284,6 +413,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           const ambiance = typeof establishment.ambiance === 'string' 
             ? JSON.parse(establishment.ambiance) 
             : establishment.ambiance;
+          console.log('🔍 [useEstablishmentForm] ambiance chargée:', ambiance, 'Type:', typeof ambiance, 'IsArray:', Array.isArray(ambiance));
           setFormData(prev => ({ ...prev, ambiance: Array.isArray(ambiance) ? ambiance : [] }));
         } catch (error) {
           console.error('Erreur parsing ambiance:', error);
@@ -295,23 +425,127 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           const informationsPratiques = typeof establishment.informationsPratiques === 'string' 
             ? JSON.parse(establishment.informationsPratiques) 
             : establishment.informationsPratiques;
+          console.log('🔍 [useEstablishmentForm] informationsPratiques chargées:', informationsPratiques, 'Type:', typeof informationsPratiques, 'IsArray:', Array.isArray(informationsPratiques));
           setFormData(prev => ({ ...prev, informationsPratiques: Array.isArray(informationsPratiques) ? informationsPratiques : [] }));
         } catch (error) {
           console.error('Erreur parsing informationsPratiques:', error);
         }
       }
       
-      // Charger les tags existants
-      if (establishment.tags && Array.isArray(establishment.tags)) {
-        const existingTags = establishment.tags.map((t: any) => t.tag);
-        console.log("🏷️ Tags existants chargés:", existingTags);
-        setFormData(prev => ({ ...prev, tags: existingTags }));
+      // Charger les tags existants depuis establishment.tags (tableau d'objets {tag, typeTag, poids})
+      let loadedTags: string[] = [];
+      console.log("🔍 [useEstablishmentForm] establishment.tags reçu:", establishment.tags);
+      if (establishment.tags && Array.isArray(establishment.tags) && establishment.tags.length > 0) {
+        // Convertir les objets en strings (gérer les deux formats : objet ou string)
+        const existingTags = establishment.tags
+          .map((t: any) => {
+            if (typeof t === 'string') return t;
+            if (t && typeof t === 'object' && t.tag) return t.tag;
+            return null;
+          })
+          .filter(Boolean) as string[];
+        console.log("🏷️ Tags existants chargés (après conversion):", existingTags);
+        loadedTags = [...existingTags];
+      } else {
+        console.log("⚠️ [useEstablishmentForm] establishment.tags n'est pas un tableau ou est vide:", establishment.tags);
       }
       
-      // Charger les envie tags existants
+      // Charger et fusionner les envie tags existants avec les tags normaux
+      console.log("🔍 [useEstablishmentForm] Vérification envieTags:", {
+        hasEnvieTags: !!(establishment as any).envieTags,
+        envieTagsType: typeof (establishment as any).envieTags,
+        envieTagsValue: (establishment as any).envieTags,
+        isArray: Array.isArray((establishment as any).envieTags),
+        isNull: (establishment as any).envieTags === null,
+        isUndefined: (establishment as any).envieTags === undefined
+      });
+      console.log("🔍 [useEstablishmentForm] establishment complet (pour debug):", {
+        id: establishment?.id,
+        name: establishment?.name,
+        tags: establishment?.tags,
+        envieTags: (establishment as any)?.envieTags,
+        allKeys: Object.keys(establishment || {})
+      });
+      
       if ((establishment as any).envieTags && Array.isArray((establishment as any).envieTags)) {
-        console.log("💭 Envie tags existants chargés:", (establishment as any).envieTags);
-        setFormData(prev => ({ ...prev, envieTags: (establishment as any).envieTags }));
+        const envieTags = (establishment as any).envieTags;
+        console.log("💭 Envie tags existants chargés:", envieTags);
+        
+        // Normaliser la casse pour éviter les doublons (garder la casse originale du premier tag trouvé)
+        const normalizedTagsMap = new Map<string, string>();
+        
+        // Ajouter les tags normaux avec normalisation
+        loadedTags.forEach(tag => {
+          const normalized = tag.toLowerCase();
+          if (!normalizedTagsMap.has(normalized)) {
+            normalizedTagsMap.set(normalized, tag); // Garder la casse originale
+          }
+        });
+        
+        // Ajouter les envieTags avec normalisation
+        envieTags.forEach((tag: string) => {
+          const normalized = tag.toLowerCase();
+          if (!normalizedTagsMap.has(normalized)) {
+            normalizedTagsMap.set(normalized, tag); // Garder la casse originale
+          }
+        });
+        
+        const allTags = Array.from(normalizedTagsMap.values());
+        console.log("✅ Tags fusionnés (normaux + envie, sans doublons):", allTags);
+        setFormData(prev => ({ 
+          ...prev, 
+          tags: allTags,
+          envieTags: envieTags 
+        }));
+        // Mettre à jour envieGeneratedTags pour la cohérence
+        setEnvieGeneratedTags(envieTags);
+      } else if ((establishment as any).envieTags) {
+        // Si envieTags existe mais n'est pas un tableau, essayer de le convertir
+        console.log("⚠️ [useEstablishmentForm] envieTags existe mais n'est pas un tableau, tentative de conversion");
+        try {
+          const envieTags = Array.isArray((establishment as any).envieTags) 
+            ? (establishment as any).envieTags 
+            : typeof (establishment as any).envieTags === 'string'
+            ? JSON.parse((establishment as any).envieTags)
+            : [];
+          if (Array.isArray(envieTags) && envieTags.length > 0) {
+            // Normaliser la casse pour éviter les doublons
+            const normalizedTagsMap = new Map<string, string>();
+            
+            loadedTags.forEach(tag => {
+              const normalized = tag.toLowerCase();
+              if (!normalizedTagsMap.has(normalized)) {
+                normalizedTagsMap.set(normalized, tag);
+              }
+            });
+            
+            envieTags.forEach((tag: string) => {
+              const normalized = tag.toLowerCase();
+              if (!normalizedTagsMap.has(normalized)) {
+                normalizedTagsMap.set(normalized, tag);
+              }
+            });
+            
+            const allTags = Array.from(normalizedTagsMap.values());
+            console.log("✅ Tags fusionnés (après conversion envieTags, sans doublons):", allTags);
+            setFormData(prev => ({ 
+              ...prev, 
+              tags: allTags,
+              envieTags: envieTags 
+            }));
+            setEnvieGeneratedTags(envieTags);
+          } else {
+            console.log("✅ Tags normaux seulement (envieTags vide ou invalide):", loadedTags);
+            setFormData(prev => ({ ...prev, tags: loadedTags }));
+          }
+        } catch (error) {
+          console.error("❌ [useEstablishmentForm] Erreur conversion envieTags:", error);
+          setFormData(prev => ({ ...prev, tags: loadedTags }));
+        }
+      } else {
+        // Si pas d'envieTags, juste mettre les tags normaux
+        console.log("✅ Tags normaux seulement (pas d'envieTags):", loadedTags);
+        setFormData(prev => ({ ...prev, tags: loadedTags }));
       }      
       console.log('✅ Toutes les données chargées en mode édition');
     }
@@ -699,7 +933,21 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
   };
 
   const handleTagsChange = (tags: string[]) => {
-    const allTags = [...new Set([...tags, ...envieGeneratedTags])];
+    // Séparer les tags normaux des envieTags
+    const normalTags = tags.filter(tag => 
+      typeof tag === 'string' && !tag.toLowerCase().startsWith('envie de')
+    );
+    const envieTagsFromTags = tags.filter(tag => 
+      typeof tag === 'string' && tag.toLowerCase().startsWith('envie de')
+    );
+    
+    // Mettre à jour envieGeneratedTags si des envieTags sont présents
+    if (envieTagsFromTags.length > 0) {
+      setEnvieGeneratedTags(envieTagsFromTags);
+    }
+    
+    // Combiner les tags normaux avec les envieTags existants
+    const allTags = [...new Set([...normalTags, ...envieGeneratedTags, ...envieTagsFromTags])];
     setFormData(prev => ({ ...prev, tags: allTags }));
   };
 
@@ -818,6 +1066,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 6:
+        // ❌ En mode édition, l'étape 6 (abonnement) est toujours validée (elle est sautée)
+        if (isEditMode) {
+          return true;
+        }
         if (!formData.subscriptionPlan) {
           newErrors.subscriptionPlan = "Veuillez sélectionner un plan";
         } else if (formData.subscriptionPlan === 'premium' && !formData.subscriptionPlanType) {
@@ -842,13 +1094,27 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
 
   const nextStep = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(8, prev + 1) as FormStep);
+      setCurrentStep(prev => {
+        let next = prev + 1;
+        // ❌ En mode édition, sauter l'étape 6 (abonnement)
+        if (isEditMode && next === 6) {
+          next = 7; // Passer directement à l'étape 7 (Résumé)
+        }
+        return Math.min(8, next) as FormStep;
+      });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(0, prev - 1) as FormStep);
+    setCurrentStep(prev => {
+      let previous = prev - 1;
+      // ❌ En mode édition, sauter l'étape 6 (abonnement) en revenant en arrière
+      if (isEditMode && previous === 6) {
+        previous = 5; // Revenir directement à l'étape 5 (Tags)
+      }
+      return Math.max(0, previous) as FormStep;
+    });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -893,6 +1159,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           services: formData.services,
           ambiance: formData.ambiance,
           paymentMethods: formData.paymentMethods,
+          informationsPratiques: formData.informationsPratiques,
           horairesOuverture: formData.hours,
           phone: formData.phone,
           whatsappPhone: formData.whatsappPhone,
@@ -918,8 +1185,26 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           clienteleInfo: formData.hybridClienteleInfo,
           detailedPayments: formData.hybridDetailedPayments,
           childrenServices: formData.hybridChildrenServices,
-          parkingInfo: formData.hybridParkingInfo
+          parkingInfo: formData.hybridParkingInfo,
+          // ✅ AJOUT : Inclure les tags et envieTags
+          tags: formData.tags || [],
+          envieTags: envieGeneratedTags || []
         };
+
+        console.log('📤 [handleSubmit] Données envoyées pour modification:', {
+          services: updateData.services,
+          ambiance: updateData.ambiance,
+          paymentMethods: updateData.paymentMethods,
+          informationsPratiques: updateData.informationsPratiques,
+          servicesCount: Array.isArray(updateData.services) ? updateData.services.length : 0,
+          ambianceCount: Array.isArray(updateData.ambiance) ? updateData.ambiance.length : 0,
+          paymentMethodsCount: Array.isArray(updateData.paymentMethods) ? updateData.paymentMethods.length : 0,
+          informationsPratiquesCount: Array.isArray(updateData.informationsPratiques) ? updateData.informationsPratiques.length : 0,
+          tags: updateData.tags,
+          envieTags: updateData.envieTags,
+          tagsCount: updateData.tags?.length || 0,
+          envieTagsCount: updateData.envieTags?.length || 0
+        });
 
         const csrfToken = await getCSRFToken();
 

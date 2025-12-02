@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface EnvieTagsInputProps {
   onEnvieTagsGenerated: (tags: string[]) => void;
@@ -14,6 +14,29 @@ interface EnvieTagsInputProps {
 export default function EnvieTagsInput({ onEnvieTagsGenerated, existingTags }: EnvieTagsInputProps) {
   const [envieInput, setEnvieInput] = useState('');
   const [generatedTags, setGeneratedTags] = useState<string[]>([]);
+
+  // Initialiser les tags générés avec les tags existants qui commencent par "Envie de"
+  useEffect(() => {
+    const envieTagsFromExisting = existingTags.filter(tag => 
+      typeof tag === 'string' && tag.toLowerCase().startsWith('envie de')
+    );
+    
+    // Normaliser pour éviter les doublons (garder la casse originale)
+    const normalizedMap = new Map<string, string>();
+    envieTagsFromExisting.forEach(tag => {
+      const normalized = tag.toLowerCase();
+      if (!normalizedMap.has(normalized)) {
+        normalizedMap.set(normalized, tag);
+      }
+    });
+    
+    const uniqueEnvieTags = Array.from(normalizedMap.values());
+    
+    if (uniqueEnvieTags.length > 0 && generatedTags.length === 0) {
+      // Seulement initialiser si on n'a pas encore de tags générés
+      setGeneratedTags(uniqueEnvieTags);
+    }
+  }, [existingTags]); // Se déclenche quand existingTags change
 
   /**
    * Génère des tags à partir d'une envie saisie

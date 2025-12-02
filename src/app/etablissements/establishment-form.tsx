@@ -130,7 +130,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           />
         );
 
-      // === Étape 2 : Informations de l'établissement ===
+      // === Étape 2 : Enrichissement Google Maps ===
       case 2:
         return (
           <EnrichmentStepWrapper
@@ -200,7 +200,13 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
         );
 
       // === Étape 6 : Sélection de l'abonnement ===
+      // ❌ En mode édition, cette étape est sautée (ne pas afficher)
       case 6:
+        if (isEditMode) {
+          // Si on arrive ici en mode édition, rediriger vers l'étape suivante
+          // (normalement cela ne devrait pas arriver grâce à nextStep/prevStep)
+          return null;
+        }
         return (
           <SubscriptionStep
             formData={{
@@ -231,6 +237,23 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
 
       // === Étape 8 : Récapitulatif final ===
       case 8:
+        // Log pour déboguer les données passées au récapitulatif
+        console.log('📋 [establishment-form] Données passées au récapitulatif:', JSON.stringify({
+          phone: formData.phone,
+          email: formData.email,
+          whatsappPhone: formData.whatsappPhone,
+          messengerUrl: formData.messengerUrl,
+          website: formData.website,
+          instagram: formData.instagram,
+          facebook: formData.facebook,
+          tiktok: formData.tiktok,
+          youtube: formData.youtube,
+          accountFirstName: formData.accountFirstName,
+          accountLastName: formData.accountLastName,
+          accountEmail: formData.accountEmail,
+          accountPhone: formData.accountPhone
+        }, null, 2));
+        
         return (
           <SummaryStepWrapper
             formData={{
@@ -245,6 +268,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               tags: formData.tags,
               phone: formData.phone,
               email: formData.email,
+              whatsappPhone: formData.whatsappPhone,
+              messengerUrl: formData.messengerUrl,
               website: formData.website,
               instagram: formData.instagram,
               facebook: formData.facebook,
@@ -254,6 +279,9 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               accountLastName: formData.accountLastName,
               accountPhone: formData.accountPhone,
               accountEmail: formData.accountEmail,
+              // ✅ Ajouter les données professionnelles pour l'affichage
+              professionalEmail: formData.accountEmail || formData.email,
+              professionalPhone: formData.accountPhone || formData.phone,
               // Nouvelles données SIRET enrichies
               siret: formData.siret,
               companyName: formData.companyName,
@@ -358,7 +386,9 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             type="button"
             data-testid="form-button-previous"
             onClick={prevStep}
-            disabled={isEditMode ? currentStep === 2 : currentStep === 0}
+            // En mode édition, permettre de revenir jusqu'à l'étape 2 (Enrichissement)
+            // mais pas avant (étapes 0 et 1 non nécessaires en édition)
+            disabled={isEditMode ? currentStep < 2 : currentStep === 0}
             className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Précédent

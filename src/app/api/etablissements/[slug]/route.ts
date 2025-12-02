@@ -409,7 +409,19 @@ export async function PUT(
     if (body.status !== undefined) updateData.status = body.status;
     if (body.priceMin !== undefined) updateData.price_min = body.priceMin;
     if (body.priceMax !== undefined) updateData.price_max = body.priceMax;
-    if (body.informationsPratiques !== undefined) updateData.informations_pratiques = typeof body.informationsPratiques === 'string' ? body.informationsPratiques : JSON.stringify(body.informationsPratiques);
+    if (body.informationsPratiques !== undefined) {
+      const informationsPratiquesArray = Array.isArray(body.informationsPratiques)
+        ? body.informationsPratiques
+        : (typeof body.informationsPratiques === 'string' ? JSON.parse(body.informationsPratiques) : []);
+      
+      console.log('💾 [PUT /api/etablissements/[slug]] Sauvegarde informationsPratiques:', {
+        original: body.informationsPratiques,
+        array: informationsPratiquesArray,
+        count: informationsPratiquesArray.length
+      });
+      
+      updateData.informations_pratiques = JSON.stringify(informationsPratiquesArray);
+    }
     if (body.subscription !== undefined) updateData.subscription = body.subscription;
 
     // Ajouter les coordonnées GPS si fournies
@@ -424,22 +436,47 @@ export async function PUT(
     }
 
     // Gérer les services et ambiance (array ou JSON string)
-    if (body.services) {
-      updateData.services = Array.isArray(body.services) 
-        ? JSON.stringify(body.services)
-        : body.services;
+    if (body.services !== undefined) {
+      const servicesArray = Array.isArray(body.services) 
+        ? body.services 
+        : (typeof body.services === 'string' ? JSON.parse(body.services) : []);
+      
+      console.log('💾 [PUT /api/etablissements/[slug]] Sauvegarde services:', {
+        original: body.services,
+        array: servicesArray,
+        count: servicesArray.length
+      });
+      
+      updateData.services = JSON.stringify(servicesArray);
     }
-    if (body.ambiance) {
-      updateData.ambiance = Array.isArray(body.ambiance)
-        ? JSON.stringify(body.ambiance)
-        : body.ambiance;
+    if (body.ambiance !== undefined) {
+      const ambianceArray = Array.isArray(body.ambiance)
+        ? body.ambiance
+        : (typeof body.ambiance === 'string' ? JSON.parse(body.ambiance) : []);
+      
+      console.log('💾 [PUT /api/etablissements/[slug]] Sauvegarde ambiance:', {
+        original: body.ambiance,
+        array: ambianceArray,
+        count: ambianceArray.length
+      });
+      
+      updateData.ambiance = JSON.stringify(ambianceArray);
     }
 
     // Gérer les moyens de paiement (array ou JSON string)
-    if (body.paymentMethods) {
-      updateData.payment_methods = Array.isArray(body.paymentMethods) 
-        ? JSON.stringify(body.paymentMethods)
-        : body.paymentMethods;
+    if (body.paymentMethods !== undefined) {
+      // ✅ Toujours sauvegarder en format tableau (JSON stringifié)
+      const paymentMethodsArray = Array.isArray(body.paymentMethods) 
+        ? body.paymentMethods 
+        : (typeof body.paymentMethods === 'string' ? JSON.parse(body.paymentMethods) : []);
+      
+      console.log('💾 [PUT /api/etablissements/[slug]] Sauvegarde paymentMethods:', {
+        original: body.paymentMethods,
+        array: paymentMethodsArray,
+        count: paymentMethodsArray.length
+      });
+      
+      updateData.payment_methods = JSON.stringify(paymentMethodsArray);
     }
 
     // Gérer les horaires d'ouverture
@@ -485,25 +522,110 @@ export async function PUT(
     }
 
     // Gérer les tags après la mise à jour de l'établissement
-    if (body.tags && Array.isArray(body.tags)) {
-      // Supprimer les anciens tags
-      await supabase
-        .from('etablissement_tags')
-        .delete()
-        .eq('etablissement_id', establishment.id);
+    // Supprimer tous les anciens tags (normaux et envie)
+    await supabase
+      .from('etablissement_tags')
+      .delete()
+      .eq('etablissement_id', establishment.id);
 
-      // Créer les nouveaux tags
-      if (body.tags.length > 0) {
-        const tagsToCreate = body.tags.map(tag => ({
-          etablissement_id: establishment.id,
-          tag: tag.toLowerCase(),
-          type_tag: 'manuel',
-          poids: 10
-        }));
-        
-        await supabase
-          .from('etablissement_tags')
-          .insert(tagsToCreate);
+    // Créer les nouveaux tags (normaux + envieTags)
+    const allTagsToCreate: Array<{etablissement_id: string, tag: string, type_tag: string, poids: number}> = [];
+
+    // Tags normaux (depuis body.tags, en excluant les envieTags qui commencent par "Envie de")
+    if (body.tags && Array.isArray(body.tags)) {
+      const normalTags = body.tags.filter(tag => 
+        typeof tag === 'string' && !tag.toLowerCase().startsWith('envie de')
+      );
+      
+      console.log(`🔍 [PUT /api/etablissements/[slug]] Tags normaux reçus:`, normalTags);
+      
+      normalTags.forEach(tag => {
+        const tagNormalized = tag.toLowerCase();
+        // Vérifier qu'on n'a pas déjà ce tag (éviter les doublons)
+        const tagExists = allTagsToCreate.some(t => t.tag === tagNormalized && t.type_tag === 'manuel');
+        if (!tagExists) {
+          allTagsToCreate.push({
+            etablissement_id: establishment.id,
+            tag: tagNormalized,
+            type_tag: 'manuel',
+            poids: 10
+          });
+        }
+      });
+      
+      console.log(`✅ [PUT /api/etablissements/[slug]] ${normalTags.length} tags normaux à créer`);
+    }
+
+    // EnvieTags (depuis body.envieTags ou depuis body.tags qui commencent par "Envie de")
+    const envieTagsRaw: string[] = [];
+    
+    if (body.envieTags && Array.isArray(body.envieTags)) {
+      envieTagsRaw.push(...body.envieTags);
+    } else if (body.tags && Array.isArray(body.tags)) {
+      // Extraire les tags "Envie de" depuis body.tags
+      const envieTagsFromTags = body.tags.filter(tag => 
+        typeof tag === 'string' && tag.toLowerCase().startsWith('envie de')
+      );
+      envieTagsRaw.push(...envieTagsFromTags);
+    }
+
+    // Dédupliquer les envieTags en normalisant la casse (garder la casse originale du premier)
+    const envieTagsMap = new Map<string, string>();
+    envieTagsRaw.forEach(envieTag => {
+      const normalized = envieTag.toLowerCase();
+      if (!envieTagsMap.has(normalized)) {
+        envieTagsMap.set(normalized, envieTag);
+      }
+    });
+    const envieTags = Array.from(envieTagsMap.values());
+
+    // Créer les tags "envie" (toujours en minuscule dans la base)
+    envieTags.forEach(envieTag => {
+      allTagsToCreate.push({
+        etablissement_id: establishment.id,
+        tag: envieTag.toLowerCase(),
+        type_tag: 'envie',
+        poids: 3
+      });
+    });
+
+    // Insérer tous les tags en une seule fois
+    if (allTagsToCreate.length > 0) {
+        console.log(`📤 [PUT /api/etablissements/[slug]] Insertion de ${allTagsToCreate.length} tags:`, allTagsToCreate.map(t => `${t.tag} (${t.type_tag})`));
+      
+      const { data: insertedTags, error: tagsInsertError } = await supabase
+        .from('etablissement_tags')
+        .insert(allTagsToCreate)
+        .select();
+      
+      if (tagsInsertError) {
+        console.error('❌ [PUT /api/etablissements/[slug]] Erreur insertion tags:', {
+          error: tagsInsertError,
+          code: tagsInsertError.code,
+          message: tagsInsertError.message,
+          details: tagsInsertError.details,
+          hint: tagsInsertError.hint,
+          tagsToInsert: allTagsToCreate
+        });
+      } else {
+        console.log(`✅ [PUT /api/etablissements/[slug]] ${insertedTags?.length || 0} tags insérés avec succès pour l'établissement ${establishment.id}`);
+        if (insertedTags && insertedTags.length > 0) {
+          console.log(`📋 [PUT /api/etablissements/[slug]] Tags insérés:`, insertedTags.map(t => `${t.tag} (${t.type_tag || t.typeTag})`));
+        }
+      }
+    } else {
+      console.log(`ℹ️ [PUT /api/etablissements/[slug]] Aucun tag à insérer`);
+    }
+
+    // Mettre à jour aussi envie_tags dans la table establishments (pour compatibilité)
+    if (envieTags.length > 0) {
+      const { error: envieTagsUpdateError } = await supabase
+        .from('establishments')
+        .update({ envie_tags: JSON.stringify(envieTags) })
+        .eq('id', establishment.id);
+      
+      if (envieTagsUpdateError) {
+        console.error('❌ [PUT /api/etablissements/[slug]] Erreur mise à jour envie_tags:', envieTagsUpdateError);
       }
     }
 

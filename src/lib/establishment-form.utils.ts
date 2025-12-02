@@ -208,7 +208,8 @@ export function convertPaymentMethodsObjectToArray(paymentMethodsObj: any) {
     if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit');
     if (paymentMethodsObj.debitCards) methods.push('Cartes de débit');
     if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC');
-    if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
+    // ❌ SUPPRIMÉ : "Espèces uniquement" - personne n'accepte juste des espèces !
+    // if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
     if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant');
     if (paymentMethodsObj.pluxee) methods.push('Pluxee');
     
