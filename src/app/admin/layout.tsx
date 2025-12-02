@@ -28,7 +28,7 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { session, loading } = useSupabaseSession();
+  const { session, loading, refreshSession } = useSupabaseSession();
   const router = useRouter();
   const pathname = usePathname();
   const [pendingEstablishments, setPendingEstablishments] = useState(0);
@@ -45,32 +45,67 @@ export default function AdminLayout({
     // ✅ CORRECTION : Attendre que le chargement soit terminé avant de vérifier
     if (loading) return; // En cours de chargement
     
-    // ✅ CORRECTION : Vérifier la session avec un petit délai pour laisser le temps
-    // à la session de se synchroniser après la redirection depuis /auth
-    const checkAuth = setTimeout(() => {
+    // ✅ NOUVEAU : Vérifier la session avec plusieurs tentatives pour gérer le rafraîchissement
+    let attempts = 0;
+    const maxAttempts = 3;
+    const checkInterval = 500; // 500ms entre chaque tentative
+    
+    const checkAuth = async () => {
+      attempts++;
+      
       // ✅ CORRECTION : Vérifier que la session existe ET que le rôle est admin
       // Éviter les redirections en boucle en vérifiant que nous ne sommes pas déjà sur /auth
       if (!session || session.user?.role !== 'admin') {
-        // Vérifier que nous ne sommes pas déjà en train de rediriger
-        if (pathname !== '/auth') {
-          console.log('🚫 [AdminLayout] Accès refusé, redirection vers /auth', {
+        // ✅ NOUVEAU : Si c'est la première tentative et qu'on n'a pas de session, essayer de rafraîchir
+        if (attempts === 1 && !session && pathname !== '/auth') {
+          console.log('🔄 [AdminLayout] Tentative de rafraîchissement de session...');
+          try {
+            await refreshSession();
+            // Attendre un peu pour que le rafraîchissement se propage
+            setTimeout(checkAuth, checkInterval);
+            return;
+          } catch (error) {
+            console.warn('⚠️ [AdminLayout] Erreur lors du rafraîchissement de session:', error);
+          }
+        }
+        
+        // Si on a encore des tentatives et qu'on n'est pas sur /auth, réessayer
+        if (attempts < maxAttempts && pathname !== '/auth') {
+          console.log(`⏳ [AdminLayout] Tentative ${attempts}/${maxAttempts} - Session en cours de synchronisation...`, {
             hasSession: !!session,
             role: session?.user?.role,
             pathname,
             loading
           });
-          router.push('/auth?error=AccessDenied');
+          setTimeout(checkAuth, checkInterval);
+          return;
+        }
+        
+        // Vérifier que nous ne sommes pas déjà en train de rediriger
+        if (pathname !== '/auth') {
+          console.log('🚫 [AdminLayout] Accès refusé après toutes les tentatives, redirection vers /auth', {
+            hasSession: !!session,
+            role: session?.user?.role,
+            pathname,
+            loading,
+            attempts
+          });
+          router.push('/auth?error=AccessDenied&redirect=' + encodeURIComponent(pathname));
         }
       } else {
         console.log('✅ [AdminLayout] Session admin valide', {
           userId: session.user.id,
-          role: session.user.role
+          role: session.user.role,
+          attempts
         });
       }
-    }, 200); // Délai pour laisser la session se synchroniser après redirection
+    };
     
-    return () => clearTimeout(checkAuth);
-  }, [session, loading, router, pathname]);
+    // Démarrer la vérification avec un petit délai initial
+    const timeoutId = setTimeout(checkAuth, 200);
+    
+    return () => clearTimeout(timeoutId);
+  }, [session, loading, router, pathname, refreshSession]);
 
   // Récupérer le nombre de demandes en attente
   useEffect(() => {
@@ -201,6 +236,7 @@ export default function AdminLayout({
     {
       id: 'analytics',
       label: 'Analytics & Intelligence',
+      shortLabel: 'Analytics',
       items: [
         {
           href: '/admin/analytics',
@@ -271,7 +307,7 @@ export default function AdminLayout({
               href="/"
               className="flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
-              <Home className="w-5 h-5" />
+              <Home className="w-5 h-5 flex-shrink-0" />
               <span>Retour au site</span>
             </Link>
           </div>
@@ -290,13 +326,13 @@ export default function AdminLayout({
                       key={item.href}
                       href={item.href}
                       onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center space-x-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                      className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                         isCurrentActive
                           ? 'bg-orange-100 text-orange-700 shadow-sm'
                           : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                       }`}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-5 h-5 flex-shrink-0" />
                       <span className="flex-1">{item.label}</span>
                       {item.customBadge ? (
                         <MessageBadge />
@@ -313,22 +349,28 @@ export default function AdminLayout({
               // Sections avec catégories
               const isExpanded = expandedSections[section.id];
               
+              // Trouver une icône pour la section (utiliser la première icône des items ou une icône par défaut)
+              const SectionIcon = section.items.length > 0 ? section.items[0].icon : BarChart3;
+              
               return (
                 <div key={section.id} className="space-y-1">
                   <button
                     onClick={() => toggleSection(section.id)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors leading-tight"
                   >
-                    <span>{section.label}</span>
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <SectionIcon className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate whitespace-nowrap text-xs leading-tight">{(section as any).shortLabel || section.label}</span>
+                    </div>
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4" />
+                      <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
                     ) : (
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-4 h-4 flex-shrink-0 ml-2" />
                     )}
                   </button>
                   
                   {isExpanded && (
-                    <div className="space-y-1 ml-2">
+                    <div className="space-y-1">
                       {section.items.map((item) => {
                         const Icon = item.icon;
                         const isCurrentActive = isActive(item.href);
@@ -344,7 +386,7 @@ export default function AdminLayout({
                                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                             }`}
                           >
-                            <Icon className="w-4 h-4" />
+                            <Icon className="w-5 h-5 flex-shrink-0" />
                             <span className="flex-1">{item.label}</span>
                             {item.customBadge ? (
                               <MessageBadge />

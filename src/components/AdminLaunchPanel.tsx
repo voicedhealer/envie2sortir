@@ -79,33 +79,33 @@ export default function AdminLaunchPanel() {
   return (
     <div className="space-y-6">
       {/* En-tête */}
-      <div className="bg-gradient-to-r from-[#ff751f]/20 via-[#ff1fa9]/20 to-[#ff3a3a]/20 border border-white/10 rounded-xl p-6">
+      <div className="bg-gradient-to-r from-[#ff751f]/10 via-[#ff1fa9]/10 to-[#ff3a3a]/10 border border-gray-200 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
           <Rocket className="text-[#ff751f] w-6 h-6" />
-          <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff751f] to-[#ff1fa9]">
+          <h2 className="text-2xl font-bold text-gray-900">
             Activation du lancement
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-black/40 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Date de lancement</p>
-            <p className="text-lg font-semibold text-white">{launchDate}</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 mb-2">Date de lancement</p>
+            <p className="text-xl font-bold text-gray-900">{launchDate}</p>
           </div>
 
-          <div className="bg-black/40 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Jours restants</p>
-            <p className="text-lg font-semibold text-white">
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 mb-2">Jours restants</p>
+            <p className="text-xl font-bold text-gray-900">
               {launchActive ? 'Lancé' : `${daysUntilLaunch} jour${daysUntilLaunch > 1 ? 's' : ''}`}
             </p>
           </div>
 
-          <div className="bg-black/40 rounded-lg p-4">
-            <p className="text-sm text-gray-400 mb-1">Professionnels en waitlist</p>
+          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+            <p className="text-sm font-medium text-gray-600 mb-2">Professionnels en waitlist</p>
             {isLoading ? (
-              <Loader2 className="animate-spin text-[#ff751f] w-5 h-5" />
+              <Loader2 className="animate-spin text-[#ff751f] w-6 h-6" />
             ) : (
-              <p className="text-lg font-semibold text-white">{waitlistCount ?? '...'}</p>
+              <p className="text-xl font-bold text-gray-900">{waitlistCount ?? '...'}</p>
             )}
           </div>
         </div>
@@ -113,13 +113,13 @@ export default function AdminLaunchPanel() {
 
       {/* Bouton d'activation */}
       {!launchActive && (
-        <div className="bg-black/40 border border-white/10 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Activer le lancement officiel
               </h3>
-              <p className="text-sm text-gray-400">
+              <p className="text-sm text-gray-700">
                 Cette action va créer les abonnements Stripe pour tous les professionnels en waitlist
                 et les convertir en premium.
               </p>

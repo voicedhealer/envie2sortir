@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle2, AlertCircle, Plus, Users } from 'lucide-react';
 import AdminLaunchPanel from '@/components/AdminLaunchPanel';
 import Link from 'next/link';
@@ -21,12 +21,26 @@ interface WaitlistPro {
 }
 
 export default function AdminWaitlistPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-orange-500 w-8 h-8" />
+      </div>
+    }>
+      <AdminWaitlistContent />
+    </Suspense>
+  );
+}
+
+function AdminWaitlistContent() {
   const { session, loading } = useSupabaseSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [response, setResponse] = useState<{ success: boolean; message?: string; error?: string; password?: string } | null>(null);
   const [waitlistPros, setWaitlistPros] = useState<WaitlistPro[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [stripeSuccess, setStripeSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -40,6 +54,19 @@ export default function AdminWaitlistPage() {
     password: '', // Optionnel, généré automatiquement si vide
   });
 
+  // Vérifier le paramètre stripe_success dans l'URL
+  useEffect(() => {
+    const stripeSuccessParam = searchParams.get('stripe_success');
+    if (stripeSuccessParam === 'true') {
+      setStripeSuccess(true);
+      // Nettoyer l'URL après 5 secondes
+      setTimeout(() => {
+        router.replace('/admin/waitlist');
+        setStripeSuccess(false);
+      }, 5000);
+    }
+  }, [searchParams, router]);
+
   // Redirection si pas admin (dans useEffect pour éviter l'erreur de rendu)
   useEffect(() => {
     if (!loading && (!session || session.user?.role !== 'admin')) {
@@ -47,12 +74,18 @@ export default function AdminWaitlistPage() {
     }
   }, [session, loading, router]);
 
-  // Charger la liste au montage
+  // Charger la liste au montage (une seule fois)
   useEffect(() => {
+    if (loading || !session?.user?.role || session.user.role !== 'admin') {
+      return;
+    }
+
+    let isMounted = true;
+
     const loadWaitlistPros = async () => {
       try {
         const res = await fetch('/api/admin/waitlist/list');
-        if (res.ok) {
+        if (res.ok && isMounted) {
           const data = await res.json();
           setWaitlistPros(data.professionals || []);
         }
@@ -61,10 +94,12 @@ export default function AdminWaitlistPage() {
       }
     };
 
-    if (session?.user?.role === 'admin') {
-      loadWaitlistPros();
-    }
-  }, [session]);
+    loadWaitlistPros();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user?.role, loading]);
 
   // Vérifier l'authentification
   if (loading) {
@@ -179,6 +214,26 @@ export default function AdminWaitlistPage() {
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <AdminLaunchPanel />
         </div>
+
+        {/* Message de succès Stripe */}
+        {stripeSuccess && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl shadow-lg p-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="text-green-600 flex-shrink-0 mt-0.5 w-6 h-6" />
+              <div className="flex-1">
+                <h3 className="text-green-900 font-bold text-lg mb-2">
+                  ✅ Paiement Stripe réussi !
+                </h3>
+                <p className="text-green-800">
+                  La méthode de paiement a été collectée avec succès. Le professionnel est maintenant en waitlist avec un abonnement Stripe configuré.
+                </p>
+                <p className="text-green-700 text-sm mt-2">
+                  Le professionnel sera automatiquement activé en PREMIUM lors du lancement officiel.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Formulaire d'ajout */}
         {showForm && (

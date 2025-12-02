@@ -65,12 +65,18 @@ export async function POST(request: NextRequest) {
       phone: normalizeTwilioTestNumber(formData.get('accountPhone') as string),
     };
 
+    // Récupérer le plan choisi (free ou premium)
+    const chosenPlan = (formData.get('subscriptionPlan') as string) || 'free';
+    const chosenPlanType = (formData.get('subscriptionPlanType') as string) || 'monthly';
+
     const professionalData = {
       siret: formData.get('siret') as string,
       companyName: formData.get('companyName') as string,
       legalStatus: formData.get('legalStatus') as string,
       subscriptionPlan: 'waitlist_beta' as const, // FORCER en waitlist
       subscriptionPlanType: 'monthly' as const, // Pas utilisé en waitlist mais requis
+      chosenPlan: chosenPlan as 'free' | 'premium', // Plan choisi pour l'activation future
+      chosenPlanType: chosenPlanType as 'monthly' | 'annual', // Type d'abonnement choisi
     };
 
     const establishmentData = {
@@ -255,7 +261,7 @@ export async function POST(request: NextRequest) {
     const authUserId = authData.user.id;
 
     try {
-      // Créer le Professional avec WAITLIST_BETA
+      // Créer le Professional avec WAITLIST_BETA et stocker le plan choisi
       const { data: professional, error: professionalError } = await adminClient
         .from('professionals')
         .insert({
@@ -268,6 +274,8 @@ export async function POST(request: NextRequest) {
           company_name: professionalData.companyName,
           legal_status: professionalData.legalStatus,
           subscription_plan: 'WAITLIST_BETA', // FORCER en waitlist
+          waitlist_chosen_plan: professionalData.chosenPlan, // Plan choisi (free ou premium)
+          waitlist_chosen_plan_type: professionalData.chosenPlan === 'premium' ? professionalData.chosenPlanType : null, // Type d'abonnement si premium
           siret_verified: false,
         })
         .select()
@@ -391,8 +399,8 @@ export async function POST(request: NextRequest) {
           facebook: establishmentData.facebook,
           tiktok: establishmentData.tiktok,
           youtube: establishmentData.youtube,
-          prix_min: establishmentData.priceMin || null,
-          prix_max: establishmentData.priceMax || null,
+          price_min: establishmentData.priceMin || null,
+          price_max: establishmentData.priceMax || null,
           informations_pratiques: establishmentData.informationsPratiques,
           the_fork_link: establishmentData.theForkLink,
           uber_eats_link: establishmentData.uberEatsLink,
@@ -413,6 +421,79 @@ export async function POST(request: NextRequest) {
           { error: establishmentError?.message || 'Erreur lors de la création de l\'établissement' },
           { status: 500 }
         );
+      }
+
+      // Si premium est choisi, créer un abonnement Stripe avec le prix waitlist (0€)
+      // pour collecter la méthode de paiement
+      let checkoutUrl = null;
+      let stripeCustomerId = null;
+      let stripeSubscriptionId = null;
+
+      if (professionalData.chosenPlan === 'premium') {
+        try {
+          const { isStripeConfigured, getStripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
+          
+          if (isStripeConfigured() && STRIPE_PRICE_IDS.waitlist) {
+            const stripe = getStripe();
+            
+            // Créer ou récupérer le customer Stripe
+            let customerId = professional.stripe_customer_id;
+            if (!customerId) {
+              const customer = await stripe.customers.create({
+                email: accountData.email,
+                name: `${accountData.firstName} ${accountData.lastName}`,
+                metadata: {
+                  professional_id: professional.id,
+                  source: 'waitlist_beta',
+                },
+              });
+              customerId = customer.id;
+              stripeCustomerId = customerId;
+              
+              // Sauvegarder le customer_id
+              await adminClient
+                .from('professionals')
+                .update({ stripe_customer_id: customerId })
+                .eq('id', professional.id);
+            } else {
+              stripeCustomerId = customerId;
+            }
+
+            // Créer la session de checkout avec le prix waitlist (0€)
+            const session = await stripe.checkout.sessions.create({
+              customer: customerId,
+              mode: 'subscription',
+              payment_method_types: ['card'],
+              line_items: [{ price: STRIPE_PRICE_IDS.waitlist, quantity: 1 }],
+              success_url: `${getBaseUrl()}/admin/waitlist?stripe_success=true&professional_id=${professional.id}`,
+              cancel_url: `${getBaseUrl()}/admin/waitlist?canceled=true`,
+              metadata: {
+                professional_id: professional.id,
+                plan_type: professionalData.chosenPlanType,
+                source: 'waitlist_beta',
+              },
+              subscription_data: {
+                metadata: {
+                  professional_id: professional.id,
+                  plan_type: professionalData.chosenPlanType,
+                  source: 'waitlist_beta',
+                  chosen_plan: 'premium',
+                  chosen_plan_type: professionalData.chosenPlanType,
+                },
+                // Période d'essai jusqu'à la date de lancement (ou 30 jours par défaut)
+                trial_period_days: 30,
+              },
+            });
+
+            checkoutUrl = session.url;
+            console.log(`✅ [Waitlist Create Full] Session Stripe créée pour ${accountData.email}: ${session.id}`);
+          } else {
+            console.warn('⚠️ [Waitlist Create Full] Stripe non configuré ou prix waitlist manquant');
+          }
+        } catch (stripeError: any) {
+          console.error('❌ [Waitlist Create Full] Erreur création session Stripe:', stripeError);
+          // Ne pas bloquer la création si Stripe échoue
+        }
       }
 
       // Créer les tags
@@ -453,6 +534,9 @@ export async function POST(request: NextRequest) {
         message: 'Professionnel créé en waitlist avec succès !',
         professionalId: professional.id,
         establishmentId: establishment.id,
+        checkoutUrl: checkoutUrl, // URL Stripe Checkout si premium est choisi
+        chosenPlan: professionalData.chosenPlan,
+        chosenPlanType: professionalData.chosenPlanType,
       }, { status: 201 });
 
     } catch (error: any) {

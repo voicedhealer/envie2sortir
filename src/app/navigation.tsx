@@ -12,15 +12,16 @@ export default function Navigation() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Fermer le menu mobile quand on change de page
+  // IMPORTANT: Tous les hooks doivent être appelés avant les conditions de retour
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   // Masquer la navigation sur la page /wait et toutes les pages admin
   if (pathname === '/wait' || pathname.startsWith('/admin')) {
     return null;
   }
-
-  // Fermer le menu mobile quand on change de page
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
 
   // Fonction pour le scroll fluide vers une section
   const scrollToSection = (sectionId: string) => {

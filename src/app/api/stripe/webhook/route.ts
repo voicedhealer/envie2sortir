@@ -70,32 +70,62 @@ export async function POST(request: NextRequest) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const professionalId = session.metadata?.professional_id;
+        const source = session.metadata?.source; // 'waitlist_beta' ou autre
 
         if (professionalId && session.subscription) {
-          // Mettre à jour le professionnel avec l'abonnement
-          await supabase
-            .from('professionals')
-            .update({
-              stripe_subscription_id: session.subscription as string,
-              subscription_plan: 'PREMIUM',
-            })
-            .eq('id', professionalId);
-
-          // Mettre à jour l'établissement
-          const { data: establishment } = await supabase
-            .from('establishments')
-            .select('id')
-            .eq('owner_id', professionalId)
-            .single();
-
-          if (establishment) {
+          // ✅ NOUVEAU : Vérifier si c'est un abonnement waitlist
+          const isWaitlist = source === 'waitlist_beta';
+          
+          if (isWaitlist) {
+            console.log(`💳 [Webhook] Checkout waitlist complété pour le professionnel ${professionalId}`);
+            
+            // Pour la waitlist, on garde WAITLIST_BETA mais on enregistre l'abonnement Stripe
+            // L'activation en PREMIUM se fera lors du lancement officiel
             await supabase
-              .from('establishments')
-              .update({ subscription: 'PREMIUM' })
-              .eq('id', establishment.id);
-          }
+              .from('professionals')
+              .update({
+                stripe_subscription_id: session.subscription as string,
+                stripe_customer_id: session.customer as string,
+                // Garder WAITLIST_BETA jusqu'au lancement
+                subscription_plan: 'WAITLIST_BETA',
+              })
+              .eq('id', professionalId);
 
-          console.log(`✅ Abonnement activé pour le professionnel ${professionalId}`);
+            // Logger dans subscription_logs
+            await supabase.from('subscription_logs').insert({
+              professional_id: professionalId,
+              old_status: 'WAITLIST_BETA',
+              new_status: 'WAITLIST_BETA',
+              reason: 'waitlist_stripe_checkout_completed',
+            });
+
+            console.log(`✅ [Webhook] Abonnement Stripe waitlist enregistré pour le professionnel ${professionalId}`);
+          } else {
+            // Abonnement normal (non-waitlist)
+            await supabase
+              .from('professionals')
+              .update({
+                stripe_subscription_id: session.subscription as string,
+                subscription_plan: 'PREMIUM',
+              })
+              .eq('id', professionalId);
+
+            // Mettre à jour l'établissement
+            const { data: establishment } = await supabase
+              .from('establishments')
+              .select('id')
+              .eq('owner_id', professionalId)
+              .single();
+
+            if (establishment) {
+              await supabase
+                .from('establishments')
+                .update({ subscription: 'PREMIUM' })
+                .eq('id', establishment.id);
+            }
+
+            console.log(`✅ [Webhook] Abonnement activé pour le professionnel ${professionalId}`);
+          }
         }
         break;
       }

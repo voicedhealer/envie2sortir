@@ -105,3 +105,5 @@ DELETE FROM auth.users WHERE email = 'envie2sortir.fr@gmail.com';
 - Les métadonnées sont configurées pour que le rôle soit `admin` à la fois dans `app_metadata` et `user_metadata`
 
 
+
+

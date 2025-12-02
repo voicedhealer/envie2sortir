@@ -158,9 +158,19 @@ export async function updateSession(request: NextRequest) {
                      request.nextUrl.searchParams.get('from') === 'auth';
   
   // ✅ CORRECTION : Si on a des cookies Supabase VALIDES mais pas de user, attendre un peu
-  // (la session pourrait être en cours de synchronisation)
+  // (la session pourrait être en cours de synchronisation ou de rafraîchissement)
   // Mais si les cookies sont vides (après déconnexion), on doit rediriger
   const shouldWaitForSession = hasValidSupabaseCookies && !user && pathname.startsWith('/admin');
+  
+  // ✅ NOUVEAU : Vérifier si l'erreur est due à un token expiré (peut être rafraîchi)
+  const isTokenExpired = getUserError?.message?.includes('expired') || 
+                         getUserError?.message?.includes('JWT') ||
+                         getUserError?.status === 401;
+  
+  // ✅ NOUVEAU : Si le token est expiré mais qu'on a des cookies valides, laisser passer
+  // Le client pourra rafraîchir le token automatiquement
+  const shouldAllowTokenRefresh = isTokenExpired && hasValidSupabaseCookies && 
+                                   (pathname.startsWith('/admin') || pathname.startsWith('/dashboard'));
   
   // ✅ CORRECTION : Si pas de user ET pas de cookies valides → rediriger vers /auth
   if (
@@ -168,6 +178,7 @@ export async function updateSession(request: NextRequest) {
     !isStripeSuccess &&
     !isFromAuth && // ✅ Éviter les boucles si on vient de /auth
     !shouldWaitForSession && // ✅ Ne pas rediriger si on a des cookies VALIDES (session en cours)
+    !shouldAllowTokenRefresh && // ✅ Ne pas rediriger si le token peut être rafraîchi
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/admin') ||
       pathname.startsWith('/mon-compte'))
@@ -178,6 +189,8 @@ export async function updateSession(request: NextRequest) {
       hasSupabaseCookies,
       hasValidSupabaseCookies,
       isFromAuth,
+      isTokenExpired,
+      shouldAllowTokenRefresh,
       cookiesCount: request.cookies.getAll().length,
       supabaseCookiesCount: supabaseCookies.length,
       getUserError: getUserError?.message
@@ -187,6 +200,15 @@ export async function updateSession(request: NextRequest) {
     // Ajouter un paramètre pour éviter les boucles
     url.searchParams.set('redirect', pathname);
     return NextResponse.redirect(url);
+  }
+  
+  // ✅ NOUVEAU : Logger si on permet le rafraîchissement de token
+  if (shouldAllowTokenRefresh) {
+    console.log('⏳ [Middleware] Token expiré détecté, permettant le rafraîchissement automatique', {
+      path: pathname,
+      hasValidCookies: hasValidSupabaseCookies,
+      error: getUserError?.message
+    });
   }
   
   // ✅ CORRECTION : Si on a un utilisateur admin mais qu'on est sur /auth, rediriger vers /admin

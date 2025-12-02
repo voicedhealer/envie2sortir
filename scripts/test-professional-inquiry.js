@@ -87,3 +87,5 @@ async function testProfessionalInquiry() {
 // Exécuter le test
 testProfessionalInquiry();
 
+
+

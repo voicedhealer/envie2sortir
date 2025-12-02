@@ -59,6 +59,7 @@ export const stripe = new Proxy({} as Stripe, {
 export const STRIPE_PRICE_IDS = {
   monthly: process.env.STRIPE_PRICE_ID_MONTHLY || '', // Plan mensuel à 29,90€
   annual: process.env.STRIPE_PRICE_ID_ANNUAL || '', // Plan annuel à 305€ (-15%)
+  waitlist: process.env.STRIPE_PRICE_ID_WAITLIST || '', // Plan waitlist à 0€ (pour collecter la méthode de paiement)
 };
 
 // Pour compatibilité avec l'ancien code
@@ -83,7 +84,7 @@ export const getBaseUrl = () => {
 export function isStripeConfigured(): boolean {
   return !!(
     process.env.STRIPE_SECRET_KEY &&
-    (STRIPE_PRICE_IDS.monthly || STRIPE_PRICE_IDS.annual) &&
+    (STRIPE_PRICE_IDS.monthly || STRIPE_PRICE_IDS.annual || STRIPE_PRICE_IDS.waitlist) &&
     process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   );
 }

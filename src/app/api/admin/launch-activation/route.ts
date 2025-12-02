@@ -94,10 +94,10 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Récupérer tous les professionnels en waitlist
+    // Récupérer tous les professionnels en waitlist avec leur plan choisi
     const { data: waitlistPros, error: fetchError } = await adminClient
       .from('professionals')
-      .select('id, email, first_name, last_name, stripe_customer_id, stripe_subscription_id')
+      .select('id, email, first_name, last_name, stripe_customer_id, stripe_subscription_id, waitlist_chosen_plan, waitlist_chosen_plan_type')
       .eq('subscription_plan', 'WAITLIST_BETA');
 
     if (fetchError) {
@@ -154,40 +154,97 @@ export async function POST(request: NextRequest) {
           console.log(`ℹ️ [Launch Activation] Customer Stripe existant pour ${pro.email}: ${customerId}`);
         }
 
-        // 2. Créer la Stripe Subscription (utilise STRIPE_PRICE_ID_MONTHLY par défaut)
-        const priceId = STRIPE_PRICE_IDS.monthly;
-        if (!priceId) {
-          throw new Error('STRIPE_PRICE_ID_MONTHLY non configuré');
-        }
-
-        // Vérifier si une subscription existe déjà
+        // 2. Gérer l'abonnement Stripe selon le plan choisi
+        const chosenPlan = pro.waitlist_chosen_plan || 'free';
+        const chosenPlanType = pro.waitlist_chosen_plan_type || 'monthly';
+        
         let subscriptionId = pro.stripe_subscription_id;
+        let finalSubscriptionPlan = 'FREE';
 
-        if (!subscriptionId) {
-          const subscription = await stripe.subscriptions.create({
-            customer: customerId,
-            items: [{ price: priceId }],
-            metadata: {
-              professional_id: pro.id,
-              source: 'launch_activation',
-            },
-            // Ne pas facturer immédiatement si on veut une période d'essai
-            // billing_cycle_anchor: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, // Dans 30 jours
-          });
-          subscriptionId = subscription.id;
-          console.log(`✅ [Launch Activation] Subscription Stripe créée pour ${pro.email}: ${subscriptionId}`);
+        if (chosenPlan === 'premium') {
+          // Si premium est choisi, basculer vers le vrai plan
+          const priceId = chosenPlanType === 'annual' 
+            ? STRIPE_PRICE_IDS.annual 
+            : STRIPE_PRICE_IDS.monthly;
+          
+          if (!priceId) {
+            throw new Error(`Aucun prix Stripe configuré pour le plan ${chosenPlanType}`);
+          }
+
+          if (subscriptionId) {
+            // Si un abonnement waitlist existe, le mettre à jour vers le vrai plan
+            try {
+              const existingSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+              
+              // Mettre à jour l'abonnement avec le nouveau prix
+              const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
+                items: [{
+                  id: existingSubscription.items.data[0].id,
+                  price: priceId,
+                }],
+                metadata: {
+                  professional_id: pro.id,
+                  source: 'launch_activation',
+                  plan_type: chosenPlanType,
+                  waitlist_activation: 'true',
+                },
+                // Terminer la période d'essai et commencer la facturation
+                trial_end: 'now',
+              });
+              
+              subscriptionId = updatedSubscription.id;
+              finalSubscriptionPlan = 'PREMIUM';
+              console.log(`✅ [Launch Activation] Abonnement Stripe mis à jour vers ${chosenPlanType} pour ${pro.email}: ${subscriptionId}`);
+            } catch (updateError: any) {
+              console.warn(`⚠️ [Launch Activation] Erreur mise à jour abonnement pour ${pro.email}, création d'un nouvel abonnement:`, updateError);
+              
+              // Si la mise à jour échoue, créer un nouvel abonnement
+              const newSubscription = await stripe.subscriptions.create({
+                customer: customerId,
+                items: [{ price: priceId }],
+                metadata: {
+                  professional_id: pro.id,
+                  source: 'launch_activation',
+                  plan_type: chosenPlanType,
+                  waitlist_activation: 'true',
+                },
+              });
+              
+              subscriptionId = newSubscription.id;
+              finalSubscriptionPlan = 'PREMIUM';
+              console.log(`✅ [Launch Activation] Nouvel abonnement Stripe créé (${chosenPlanType}) pour ${pro.email}: ${subscriptionId}`);
+            }
+          } else {
+            // Si aucun abonnement n'existe, créer un nouvel abonnement
+            const subscription = await stripe.subscriptions.create({
+              customer: customerId,
+              items: [{ price: priceId }],
+              metadata: {
+                professional_id: pro.id,
+                source: 'launch_activation',
+                plan_type: chosenPlanType,
+                waitlist_activation: 'true',
+              },
+            });
+            
+            subscriptionId = subscription.id;
+            finalSubscriptionPlan = 'PREMIUM';
+            console.log(`✅ [Launch Activation] Nouvel abonnement Stripe créé (${chosenPlanType}) pour ${pro.email}: ${subscriptionId}`);
+          }
         } else {
-          console.log(`ℹ️ [Launch Activation] Subscription Stripe existante pour ${pro.email}: ${subscriptionId}`);
+          // Si free est choisi, pas besoin d'abonnement Stripe
+          finalSubscriptionPlan = 'FREE';
+          console.log(`ℹ️ [Launch Activation] Plan gratuit choisi pour ${pro.email}, pas d'abonnement Stripe`);
         }
 
-        // 3. Mettre à jour le Professional
+        // 3. Mettre à jour le Professional avec le plan final
         const { error: updateProError } = await adminClient
           .from('professionals')
           .update({
-            subscription_plan: 'PREMIUM',
+            subscription_plan: finalSubscriptionPlan,
             stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            premium_activation_date: new Date().toISOString(),
+            stripe_subscription_id: subscriptionId || null, // null si plan gratuit
+            premium_activation_date: finalSubscriptionPlan === 'PREMIUM' ? new Date().toISOString() : null,
           })
           .eq('id', pro.id);
 
@@ -205,7 +262,7 @@ export async function POST(request: NextRequest) {
         if (establishment) {
           const { error: updateEstError } = await adminClient
             .from('establishments')
-            .update({ subscription: 'PREMIUM' })
+            .update({ subscription: finalSubscriptionPlan })
             .eq('id', establishment.id);
 
           if (updateEstError) {

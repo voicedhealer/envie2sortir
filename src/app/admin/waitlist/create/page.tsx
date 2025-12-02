@@ -128,6 +128,14 @@ export default function AdminWaitlistCreatePage() {
         throw new Error(result.error || 'Erreur lors de la création');
       }
 
+      // ✅ NOUVEAU : Si un plan premium est choisi et qu'une URL Stripe est retournée, rediriger
+      if (result.checkoutUrl && result.chosenPlan === 'premium') {
+        console.log('💳 [Waitlist Create] Redirection vers Stripe Checkout:', result.checkoutUrl);
+        // Rediriger vers Stripe pour collecter la méthode de paiement
+        window.location.href = result.checkoutUrl;
+        return; // Ne pas afficher le message de succès, la redirection va se faire
+      }
+
       setCreatedProfessionalId(result.professionalId);
       setShowSuccess(true);
     } catch (error: any) {

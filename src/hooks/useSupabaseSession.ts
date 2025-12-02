@@ -26,6 +26,24 @@ const userDataCache = new Map<string, { data: SessionUser | null; timestamp: num
 const CACHE_DURATION = 30 * 1000; // 30 secondes
 const pendingUserRequests = new Map<string, Promise<SessionUser | null>>();
 
+// ✅ NOUVEAU : Singleton global pour partager la session entre toutes les instances
+let globalSessionState: {
+  session: any | null;
+  user: SessionUser | null;
+  loading: boolean;
+  initialized: boolean;
+  getSessionPromise: Promise<any> | null;
+} = {
+  session: null,
+  user: null,
+  loading: true,
+  initialized: false,
+  getSessionPromise: null,
+};
+
+// ✅ NOUVEAU : Verrouillage pour éviter les appels multiples simultanés à getSession()
+let getSessionLock = false;
+
 export function useSupabaseSession(): UseSupabaseSessionReturn {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [session, setSession] = useState<any | null>(null);
@@ -60,16 +78,142 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     };
   }, []);
 
+  // ✅ NOUVEAU : Listener pour détecter quand la page revient au focus avec rafraîchissement rapide
   useEffect(() => {
-    // ✅ Protection contre les initialisations multiples
-    if (initDoneRef.current) {
-      console.log('⏭️ [useSupabaseSession] Initialisation déjà effectuée, skip');
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        // ✅ OPTIMISATION : Toujours vérifier la session au retour, même si loading
+        // Cela permet de détecter rapidement les sessions expirées après une longue période
+        try {
+          // ✅ NOUVEAU : Essayer d'abord de rafraîchir le token si on a une session
+          if (sessionRef.current) {
+            try {
+              const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+              if (!refreshError && refreshedSession?.session) {
+                console.log('🔄 [useSupabaseSession] Token rafraîchi au retour sur la page');
+                // Mettre à jour la session
+                const userMetadata = refreshedSession.session.user.user_metadata || {};
+                const appMetadata = refreshedSession.session.user.app_metadata || {};
+                const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+                
+                const immediateUser: SessionUser = {
+                  id: refreshedSession.session.user.id,
+                  email: refreshedSession.session.user.email || '',
+                  firstName: userMetadata.first_name || userMetadata.firstName || null,
+                  lastName: userMetadata.last_name || userMetadata.lastName || null,
+                  role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+                  userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+                };
+                
+                if (isMountedRef.current) {
+                  setUser(immediateUser);
+                  setSession(refreshedSession.session);
+                  sessionRef.current = refreshedSession.session;
+                  userRef.current = immediateUser;
+                  setLoading(false);
+                }
+                return; // Sortir tôt si le rafraîchissement a réussi
+              }
+            } catch (refreshErr) {
+              console.warn('⚠️ [useSupabaseSession] Erreur lors du rafraîchissement au retour:', refreshErr);
+            }
+          }
+          
+          // Si pas de session ou rafraîchissement échoué, vérifier la session actuelle
+          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+          
+          if (error || !currentSession) {
+            // Session expirée ou invalide
+            console.log('⚠️ [useSupabaseSession] Session expirée détectée au retour sur la page');
+            if (isMountedRef.current) {
+              setUser(null);
+              setSession(null);
+              setLoading(false);
+            }
+          } else if (currentSession.user && (!sessionRef.current || sessionRef.current.user.id !== currentSession.user.id)) {
+            // Session rafraîchie ou nouvelle session
+            console.log('🔄 [useSupabaseSession] Session rafraîchie au retour sur la page');
+            sessionDetectedRef.current = true;
+            if (isMountedRef.current) {
+              const userMetadata = currentSession.user.user_metadata || {};
+              const appMetadata = currentSession.user.app_metadata || {};
+              const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+              
+              const immediateUser: SessionUser = {
+                id: currentSession.user.id,
+                email: currentSession.user.email || '',
+                firstName: userMetadata.first_name || userMetadata.firstName || null,
+                lastName: userMetadata.last_name || userMetadata.lastName || null,
+                role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+                userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+              };
+              
+              setUser(immediateUser);
+              setSession(currentSession);
+              sessionRef.current = currentSession;
+              userRef.current = immediateUser;
+              setLoading(false);
+              
+              // Rafraîchir les données utilisateur en arrière-plan
+              fetchUserData(currentSession.user).catch(() => {});
+            }
+          }
+        } catch (error) {
+          console.error('❌ [useSupabaseSession] Erreur lors de la vérification de session au retour:', error);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    // ✅ NOUVEAU : Si la session globale est déjà initialisée, utiliser ses valeurs
+    if (globalSessionState.initialized && globalSessionState.session) {
+      console.log('✅ [useSupabaseSession] Utilisation de la session globale existante');
+      setSession(globalSessionState.session);
+      setUser(globalSessionState.user);
+      setLoading(false);
+      sessionRef.current = globalSessionState.session;
+      userRef.current = globalSessionState.user;
+      sessionDetectedRef.current = true;
+      initDoneRef.current = true;
       return;
     }
+    
+    // ✅ Protection contre les initialisations multiples (par instance)
+    if (initDoneRef.current) {
+      console.log('⏭️ [useSupabaseSession] Initialisation déjà effectuée pour cette instance, skip');
+      return;
+    }
+    
+    // ✅ NOUVEAU : Si une autre instance est en train d'initialiser, attendre
+    if (globalSessionState.getSessionPromise) {
+      console.log('⏳ [useSupabaseSession] Une autre instance initialise, attente...');
+      globalSessionState.getSessionPromise.then((result) => {
+        if (result?.session) {
+          setSession(result.session);
+          setUser(globalSessionState.user);
+          setLoading(false);
+          sessionRef.current = result.session;
+          userRef.current = globalSessionState.user;
+          sessionDetectedRef.current = true;
+        }
+      }).catch(() => {
+        // En cas d'erreur, continuer avec l'initialisation normale
+      });
+      initDoneRef.current = true;
+      return;
+    }
+    
     initDoneRef.current = true;
     
-    // ✅ Timeout de sécurité : forcer la fin de synchronisation après 20 secondes maximum
-    // Augmenté pour laisser plus de temps aux requêtes DB qui peuvent être lentes
+    // ✅ OPTIMISATION : Timeout de sécurité réduit à 5 secondes maximum
+    // Pour une reconnexion rapide après une longue période d'inactivité
     syncTimeoutRef.current = setTimeout(() => {
       if (isMountedRef.current && loadingRef.current) {
         // ✅ Vérifier si une session a été détectée avant de forcer la fin
@@ -77,43 +221,80 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           console.log('✅ [useSupabaseSession] Session détectée, arrêt du chargement');
           setLoading(false);
         } else {
-          console.warn('⚠️ [useSupabaseSession] Timeout de sécurité: forcer la fin de synchronisation après 20s (pas de session détectée)');
+          console.warn('⚠️ [useSupabaseSession] Timeout de sécurité: forcer la fin de synchronisation après 5s (pas de session détectée)');
           setLoading(false);
         }
         if (syncTimeoutRef.current) {
           clearTimeout(syncTimeoutRef.current);
         }
       }
-    }, 20000);
+    }, 5000); // ✅ Réduit de 20s à 5s pour une reconnexion plus rapide
     
-    // Fallback : si après 10 secondes on n'a toujours pas de session ET qu'aucune session n'a été détectée
-    immediateFallbackRef.current = setTimeout(() => {
+    // ✅ OPTIMISATION : Fallback rapide après 2 secondes pour détecter rapidement les sessions expirées
+    immediateFallbackRef.current = setTimeout(async () => {
       // ✅ CORRECTION : Ne pas annuler si une session a été détectée OU si on a déjà une session/user
       // Vérifier aussi les cookies pour éviter de perdre une session valide
       const hasCookies = typeof document !== 'undefined' && 
-        document.cookie.split(';').some(c => c.trim().startsWith('sb-'));
+        document.cookie.split(';').some(c => {
+          const cookie = c.trim();
+          return cookie.startsWith('sb-') && !cookie.includes('deleted') && !cookie.includes('null');
+        });
       
-      if (isMountedRef.current && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current && !hasCookies) {
-        console.warn('⚠️ [useSupabaseSession] Fallback: no session found after 10s, stopping load');
-        setLoading(false);
-        setUser(null);
-        setSession(null);
-        if (syncTimeoutRef.current) {
-          clearTimeout(syncTimeoutRef.current);
-          syncTimeoutRef.current = null;
+      // ✅ NOUVEAU : Vérifier rapidement si la session est vraiment expirée
+      if (isMountedRef.current && loadingRef.current && !sessionRef.current && !userRef.current && !sessionDetectedRef.current) {
+        try {
+          // Tentative rapide de récupération de session
+          const { data: { session: quickSession }, error: quickError } = await supabase.auth.getSession();
+          
+          if (quickSession?.user) {
+            // Session trouvée rapidement, continuer
+            console.log('✅ [useSupabaseSession] Session trouvée lors du fallback rapide');
+            sessionDetectedRef.current = true;
+            return; // Ne pas arrêter le chargement
+          } else if (!hasCookies || quickError?.message?.includes('expired') || quickError?.message?.includes('JWT')) {
+            // Pas de cookies valides ou session expirée - arrêter rapidement
+            console.warn('⚠️ [useSupabaseSession] Fallback rapide: session expirée ou absente après 2s');
+            setLoading(false);
+            setUser(null);
+            setSession(null);
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
+            return;
+          }
+        } catch (error) {
+          // En cas d'erreur, si pas de cookies, arrêter
+          if (!hasCookies) {
+            console.warn('⚠️ [useSupabaseSession] Fallback rapide: erreur et pas de cookies, arrêt');
+            setLoading(false);
+            setUser(null);
+            setSession(null);
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
+            return;
+          }
         }
-        if (immediateFallbackRef.current) {
-          clearTimeout(immediateFallbackRef.current);
-          immediateFallbackRef.current = null;
-        }
-      } else if (isMountedRef.current && loadingRef.current && (sessionDetectedRef.current || hasCookies)) {
-        // ✅ Si on a des cookies ou une session détectée, continuer à attendre (mais avec timeout de sécurité)
+      }
+      
+      // ✅ Si on a des cookies ou une session détectée, continuer à attendre (mais avec timeout de sécurité)
+      if (isMountedRef.current && loadingRef.current && (sessionDetectedRef.current || hasCookies)) {
         console.log('⏳ [useSupabaseSession] Session en cours de synchronisation, continuation du chargement...');
       }
-    }, 20000); // ✅ Timeout de sécurité global (20s) - différent du timeout de requête DB (5s)
+    }, 2000); // ✅ Réduit de 20s à 2s pour une détection rapide des sessions expirées
     
     // Récupérer la session initiale
-    // ✅ SIMPLIFIÉ : On fait confiance à onAuthStateChange qui est plus fiable
+    // ✅ NOUVEAU : Utiliser un verrouillage global pour éviter les appels multiples
     const getSession = async () => {
       // ✅ Protection : ne pas appeler si une session est déjà en cours de traitement
       if (sessionDetectedRef.current && (sessionRef.current || userRef.current)) {
@@ -128,11 +309,104 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         return;
       }
       
+      // ✅ NOUVEAU : Vérifier le verrouillage global
+      if (getSessionLock) {
+        console.log('⏳ [useSupabaseSession] getSession déjà en cours (verrou global), attente...');
+        if (globalSessionState.getSessionPromise) {
+          try {
+            const result = await globalSessionState.getSessionPromise;
+            // Le résultat peut être soit { data: { session } } soit directement l'erreur
+            const session = result?.data?.session || result?.session;
+            if (session && isMountedRef.current) {
+              setSession(session);
+              setUser(globalSessionState.user);
+              setLoading(false);
+              sessionRef.current = session;
+              userRef.current = globalSessionState.user;
+              sessionDetectedRef.current = true;
+            }
+          } catch (error) {
+            console.warn('⚠️ [useSupabaseSession] Erreur lors de l\'attente de la session globale:', error);
+          }
+        }
+        return;
+      }
+      
+      // ✅ NOUVEAU : Acquérir le verrou
+      getSessionLock = true;
+      console.log('🔄 [useSupabaseSession] Getting initial session... (verrou acquis)');
+      
       try {
-        console.log('🔄 [useSupabaseSession] Getting initial session...');
+        // ✅ OPTIMISATION : Timeout pour getSession (2 secondes max - réduit)
+        const getSessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout')), 2000)
+        );
         
-        // ✅ Appel simple sans race condition agressive
-        const { data, error } = await supabase.auth.getSession();
+        // ✅ NOUVEAU : Stocker la promesse globalement pour que les autres instances puissent l'attendre
+        const racePromise = Promise.race([
+          getSessionPromise,
+          timeoutPromise
+        ]) as Promise<any>;
+        
+        globalSessionState.getSessionPromise = racePromise;
+        
+        let data: any;
+        let error: any;
+        
+        try {
+          const result = await racePromise;
+          
+          // Le résultat peut être soit { data, error } soit directement l'erreur
+          if (result?.data !== undefined || result?.error) {
+            data = result.data;
+            error = result.error;
+          } else if (result?.session) {
+            // Si c'est directement la session
+            data = { session: result.session };
+            error = null;
+          } else {
+            // Sinon c'est probablement une erreur
+            error = result;
+            data = null;
+          }
+        } catch (raceError: any) {
+          // ✅ OPTIMISATION : Gérer les timeouts
+          if (raceError?.message?.includes('timeout')) {
+            console.warn('⏱️ [useSupabaseSession] getSession timeout, vérification rapide des cookies');
+            // Vérifier rapidement les cookies
+            const hasCookies = typeof document !== 'undefined' && 
+              document.cookie.split(';').some(c => {
+                const cookie = c.trim();
+                return cookie.startsWith('sb-') && !cookie.includes('deleted') && !cookie.includes('null');
+              });
+            
+            if (hasCookies) {
+              // On a des cookies, continuer à attendre onAuthStateChange
+              console.log('⏳ [useSupabaseSession] Cookies présents malgré timeout, attente de onAuthStateChange');
+              return;
+            } else {
+              // Pas de cookies, arrêter rapidement
+              console.warn('⚠️ [useSupabaseSession] Pas de cookies et timeout, arrêt');
+              if (isMountedRef.current) {
+                setUser(null);
+                setSession(null);
+                setLoading(false);
+              }
+              if (syncTimeoutRef.current) {
+                clearTimeout(syncTimeoutRef.current);
+                syncTimeoutRef.current = null;
+              }
+              if (immediateFallbackRef.current) {
+                clearTimeout(immediateFallbackRef.current);
+                immediateFallbackRef.current = null;
+              }
+              return;
+            }
+          }
+          // Autre erreur, la propager
+          throw raceError;
+        }
         
         if (!isMountedRef.current) return;
         
@@ -167,15 +441,21 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           const appMetadata = currentSession.user.app_metadata || {};
           const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
           
-            const immediateUser: SessionUser = {
-              id: currentSession.user.id,
-              email: currentSession.user.email || '',
-              firstName: userMetadata.first_name || userMetadata.firstName || null,
-              lastName: userMetadata.last_name || userMetadata.lastName || null,
-              role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
-              // ✅ CORRECTION : Les admins n'ont pas de userType
-              userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
-            };
+          const immediateUser: SessionUser = {
+            id: currentSession.user.id,
+            email: currentSession.user.email || '',
+            firstName: userMetadata.first_name || userMetadata.firstName || null,
+            lastName: userMetadata.last_name || userMetadata.lastName || null,
+            role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+            // ✅ CORRECTION : Les admins n'ont pas de userType
+            userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+          };
+          
+          // ✅ NOUVEAU : Mettre à jour l'état global
+          globalSessionState.session = currentSession;
+          globalSessionState.user = immediateUser;
+          globalSessionState.loading = false;
+          globalSessionState.initialized = true;
           
           if (isMountedRef.current) {
             console.log('⚡ [useSupabaseSession] Displaying user immediately from JWT (getSession):', {
@@ -203,12 +483,23 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           }
           
           // ✅ En arrière-plan, essayer de récupérer les données complètes
-          fetchUserData(currentSession.user).catch((err) => {
+          fetchUserData(currentSession.user).then((fullUser) => {
+            if (fullUser) {
+              globalSessionState.user = fullUser;
+            }
+          }).catch((err) => {
             console.log('ℹ️ [useSupabaseSession] Background fetch from getSession completed or failed:', err?.message || 'success');
           });
         } else if (!sessionDetectedRef.current) {
           // Pas de session et aucune détectée par onAuthStateChange
           console.log('⚠️ [useSupabaseSession] No session found');
+          
+          // ✅ NOUVEAU : Mettre à jour l'état global
+          globalSessionState.session = null;
+          globalSessionState.user = null;
+          globalSessionState.loading = false;
+          globalSessionState.initialized = true;
+          
           if (isMountedRef.current) {
             setUser(null);
             setSession(null);
@@ -226,6 +517,11 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         }
       } catch (error) {
         console.error('❌ [useSupabaseSession] Error in getSession:', error);
+        
+        // ✅ NOUVEAU : Mettre à jour l'état global même en cas d'erreur
+        globalSessionState.initialized = true;
+        globalSessionState.loading = false;
+        
         // En cas d'erreur, ne pas écraser si onAuthStateChange a déjà une session
         if (isMountedRef.current && !sessionDetectedRef.current) {
           setUser(null);
@@ -241,6 +537,10 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
             immediateFallbackRef.current = null;
           }
         }
+      } finally {
+        // ✅ NOUVEAU : Libérer le verrou à la fin
+        getSessionLock = false;
+        globalSessionState.getSessionPromise = null;
       }
     };
 
@@ -254,6 +554,59 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         userId: currentSession?.user?.id,
         userEmail: currentSession?.user?.email
       });
+      
+      // ✅ NOUVEAU : Gérer spécifiquement TOKEN_REFRESHED pour éviter les problèmes de session expirée
+      if (event === 'TOKEN_REFRESHED') {
+        if (currentSession?.user) {
+          console.log('🔄 [useSupabaseSession] Token rafraîchi, mise à jour de la session');
+          sessionDetectedRef.current = true;
+          
+          // ✅ PROTECTION: Vérifier que l'utilisateur n'a pas changé
+          if (userRef.current && userRef.current.id !== currentSession.user.id) {
+            console.error('❌ [useSupabaseSession] User ID changed during token refresh!', {
+              previousUserId: userRef.current.id,
+              newUserId: currentSession.user.id
+            });
+            return;
+          }
+          
+          // Mettre à jour la session immédiatement
+          const userMetadata = currentSession.user.user_metadata || {};
+          const appMetadata = currentSession.user.app_metadata || {};
+          const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+          
+          const immediateUser: SessionUser = {
+            id: currentSession.user.id,
+            email: currentSession.user.email || '',
+            firstName: userMetadata.first_name || userMetadata.firstName || null,
+            lastName: userMetadata.last_name || userMetadata.lastName || null,
+            role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+            userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+          };
+          
+          if (isMountedRef.current) {
+            setUser(immediateUser);
+            setSession(currentSession);
+            sessionRef.current = currentSession;
+            userRef.current = immediateUser;
+            setLoading(false);
+            
+            // Nettoyer les timeouts
+            if (syncTimeoutRef.current) {
+              clearTimeout(syncTimeoutRef.current);
+              syncTimeoutRef.current = null;
+            }
+            if (immediateFallbackRef.current) {
+              clearTimeout(immediateFallbackRef.current);
+              immediateFallbackRef.current = null;
+            }
+            
+            // Rafraîchir les données en arrière-plan si nécessaire
+            fetchUserData(currentSession.user).catch(() => {});
+          }
+        }
+        return; // Sortir tôt pour TOKEN_REFRESHED
+      }
       
       // ✅ Marquer qu'une session a été détectée pour éviter le fallback
       if (currentSession) {
@@ -271,20 +624,6 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         if (isMountedRef.current && loadingRef.current && (sessionRef.current || userRef.current)) {
           console.log('✅ [useSupabaseSession] Session déjà présente, arrêt immédiat du chargement');
           setLoading(false);
-        }
-      }
-      
-      // ✅ PROTECTION: Vérifier que l'utilisateur n'a pas changé lors d'un TOKEN_REFRESHED
-      if (event === 'TOKEN_REFRESHED' && userRef.current && currentSession?.user) {
-        if (userRef.current.id !== currentSession.user.id) {
-          console.error('❌ [useSupabaseSession] User ID changed during token refresh!', {
-            previousUserId: userRef.current.id,
-            newUserId: currentSession.user.id,
-            previousUserEmail: userRef.current.email,
-            newUserEmail: currentSession.user.email
-          });
-          // Ne pas mettre à jour si l'utilisateur a changé (probablement un problème de session)
-          return;
         }
       }
       
@@ -311,6 +650,12 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
               // ✅ CORRECTION : Les admins n'ont pas de userType
               userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
             };
+            
+            // ✅ NOUVEAU : Mettre à jour l'état global
+            globalSessionState.session = currentSession;
+            globalSessionState.user = immediateUser;
+            globalSessionState.loading = false;
+            globalSessionState.initialized = true;
             
             // ✅ Afficher immédiatement avec les données JWT
             if (isMountedRef.current) {
@@ -346,6 +691,13 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('👋 [useSupabaseSession] User signed out');
+          
+          // ✅ NOUVEAU : Mettre à jour l'état global
+          globalSessionState.session = null;
+          globalSessionState.user = null;
+          globalSessionState.loading = false;
+          globalSessionState.initialized = true;
+          
           if (isMountedRef.current) {
             setUser(null);
             setSession(null);
@@ -724,25 +1076,69 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
         pendingUserRequests.delete(user.id);
       }
       
+      // ✅ NOUVEAU : Forcer le rafraîchissement du token avant de récupérer la session
+      // Cela permet de rafraîchir un token expiré
+      try {
+        const { data: { session: refreshResult }, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.warn('⚠️ [useSupabaseSession] Error refreshing token, trying getSession:', refreshError.message);
+        } else if (refreshResult?.session) {
+          console.log('✅ [useSupabaseSession] Token refreshed successfully');
+        }
+      } catch (refreshErr) {
+        console.warn('⚠️ [useSupabaseSession] Refresh token failed, continuing with getSession:', refreshErr);
+      }
+      
       // Récupérer la session actuelle
       const { data: { session: currentSession }, error } = await supabase.auth.getSession();
       
       if (error) {
         console.error('❌ [useSupabaseSession] Error refreshing session:', error);
+        // Si l'erreur indique une session expirée, nettoyer l'état
+        if (error.message?.includes('expired') || error.message?.includes('JWT')) {
+          console.log('🚪 [useSupabaseSession] Session expirée, nettoyage de l\'état');
+          setUser(null);
+          setSession(null);
+          setLoading(false);
+        }
         return;
       }
       
       if (currentSession?.user) {
         console.log('✅ [useSupabaseSession] Refreshing user data for:', currentSession.user.id);
-        await fetchUserData(currentSession.user);
+        
+        // Mettre à jour immédiatement avec les métadonnées JWT
+        const userMetadata = currentSession.user.user_metadata || {};
+        const appMetadata = currentSession.user.app_metadata || {};
+        const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+        
+        const immediateUser: SessionUser = {
+          id: currentSession.user.id,
+          email: currentSession.user.email || '',
+          firstName: userMetadata.first_name || userMetadata.firstName || null,
+          lastName: userMetadata.last_name || userMetadata.lastName || null,
+          role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+          userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+        };
+        
+        setUser(immediateUser);
         setSession(currentSession);
+        sessionRef.current = currentSession;
+        userRef.current = immediateUser;
+        sessionDetectedRef.current = true;
+        setLoading(false);
+        
+        // Rafraîchir les données complètes en arrière-plan
+        await fetchUserData(currentSession.user).catch(() => {});
       } else {
         console.log('⚠️ [useSupabaseSession] No session found during refresh');
         setUser(null);
         setSession(null);
+        setLoading(false);
       }
     } catch (error) {
       console.error('❌ [useSupabaseSession] Error in refreshSession:', error);
+      setLoading(false);
     }
   };
 
