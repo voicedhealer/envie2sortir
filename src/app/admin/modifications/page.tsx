@@ -54,6 +54,11 @@ export default async function AdminModificationsPage() {
 
   if (pendingError) {
     console.error('Erreur récupération demandes en attente:', pendingError);
+  } else {
+    console.log('✅ Demandes en attente récupérées:', pendingRequestsData?.length || 0);
+    if (pendingRequestsData && pendingRequestsData.length > 0) {
+      console.log('📋 Première demande (raw):', JSON.stringify(pendingRequestsData[0], null, 2));
+    }
   }
 
   // Récupérer l'historique récent
@@ -115,10 +120,23 @@ export default async function AdminModificationsPage() {
   }));
 
   // Transformer les données pour correspondre au format attendu
-  const pendingRequests = (pendingRequestsData || []).map((req: any) => ({
+  const pendingRequests = (pendingRequestsData || []).map((req: any) => {
+    const transformed = {
     ...req,
+    id: req.id,
+    professionalId: req.professional_id,
+    fieldName: req.field_name,
+    oldValue: req.old_value,
+    newValue: req.new_value,
+    requestedByFirstName: req.requested_by_first_name,
+    requestedByLastName: req.requested_by_last_name,
+    status: req.status,
+    rejectionReason: req.rejection_reason,
     requestedAt: req.requested_at,
     reviewedAt: req.reviewed_at,
+    reviewedBy: req.reviewed_by,
+    isEmailVerified: req.is_email_verified,
+    isSmsVerified: req.is_sms_verified,
     professional: req.professional ? {
       id: req.professional.id,
       email: req.professional.email,
@@ -128,12 +146,35 @@ export default async function AdminModificationsPage() {
       phone: req.professional.phone,
       siret: req.professional.siret
     } : null
-  }));
+    };
+    
+    // Log pour déboguer
+    if (transformed.fieldName === 'companyName') {
+      console.log('🏢 Transformation companyName:', {
+        raw: { field_name: req.field_name, old_value: req.old_value, new_value: req.new_value },
+        transformed: { fieldName: transformed.fieldName, oldValue: transformed.oldValue, newValue: transformed.newValue }
+      });
+    }
+    
+    return transformed;
+  });
 
   const recentHistory = (recentHistoryData || []).map((req: any) => ({
     ...req,
+    id: req.id,
+    professionalId: req.professional_id,
+    fieldName: req.field_name,
+    oldValue: req.old_value,
+    newValue: req.new_value,
+    requestedByFirstName: req.requested_by_first_name,
+    requestedByLastName: req.requested_by_last_name,
+    status: req.status,
+    rejectionReason: req.rejection_reason,
     requestedAt: req.requested_at,
     reviewedAt: req.reviewed_at,
+    reviewedBy: req.reviewed_by,
+    isEmailVerified: req.is_email_verified,
+    isSmsVerified: req.is_sms_verified,
     professional: req.professional ? {
       id: req.professional.id,
       email: req.professional.email,

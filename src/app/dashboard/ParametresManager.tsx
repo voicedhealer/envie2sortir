@@ -51,6 +51,7 @@ export default function ParametresManager({ professional }: ParametresManagerPro
   const [smsVerified, setSmsVerified] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
+  const [requestedBy, setRequestedBy] = useState({ firstName: '', lastName: '' });
   const [pendingRequests, setPendingRequests] = useState<UpdateRequest[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
@@ -160,6 +161,7 @@ export default function ParametresManager({ professional }: ParametresManagerPro
     setEditingField(null);
     setSmsVerified(false);
     setEditValues({});
+    setRequestedBy({ firstName: '', lastName: '' });
   };
 
   const handleSubmitUpdate = async (fieldName: string) => {
@@ -175,6 +177,15 @@ export default function ParametresManager({ professional }: ParametresManagerPro
       return;
     }
 
+    // Pour les champs nécessitant validation admin, vérifier que le nom et prénom sont remplis
+    const fieldsRequiringAdminApproval = ['email', 'siret', 'companyName'];
+    if (fieldsRequiringAdminApproval.includes(fieldName)) {
+      if (!requestedBy.firstName.trim() || !requestedBy.lastName.trim()) {
+        toast.error('Veuillez renseigner le nom et prénom de la personne effectuant cette modification');
+        return;
+      }
+    }
+
     try {
       const response = await fetch('/api/professional/request-update', {
         method: 'POST',
@@ -182,7 +193,9 @@ export default function ParametresManager({ professional }: ParametresManagerPro
         body: JSON.stringify({
           fieldName,
           newValue,
-          smsVerified: true
+          smsVerified: true,
+          requestedByFirstName: fieldsRequiringAdminApproval.includes(fieldName) ? requestedBy.firstName.trim() : undefined,
+          requestedByLastName: fieldsRequiringAdminApproval.includes(fieldName) ? requestedBy.lastName.trim() : undefined
         })
       });
 
@@ -383,13 +396,35 @@ export default function ParametresManager({ professional }: ParametresManagerPro
             </label>
             {editingField === 'email' ? (
               <div>
-                <div className="flex space-x-2 mb-2">
+                <div className="space-y-3 mb-3">
                   <input
                     type="email"
                     value={editValues.email || ''}
                     onChange={(e) => setEditValues({ ...editValues, email: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="nouveau@email.com"
                   />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-900 mb-2">Personne effectuant cette modification :</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={requestedBy.firstName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, firstName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Prénom *"
+                      />
+                      <input
+                        type="text"
+                        value={requestedBy.lastName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, lastName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Nom *"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
                   <button
                     onClick={() => handleSubmitUpdate('email')}
                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -403,7 +438,7 @@ export default function ParametresManager({ professional }: ParametresManagerPro
                     Annuler
                   </button>
                 </div>
-                <p className="text-xs text-orange-600">
+                <p className="text-xs text-orange-600 mt-2">
                   ⚠️ Un email de vérification sera envoyé à votre nouvelle adresse
                 </p>
               </div>
@@ -485,13 +520,35 @@ export default function ParametresManager({ professional }: ParametresManagerPro
             </label>
             {editingField === 'companyName' ? (
               <div>
-                <div className="flex space-x-2 mb-2">
+                <div className="space-y-3 mb-3">
                   <input
                     type="text"
                     value={editValues.companyName || ''}
                     onChange={(e) => setEditValues({ ...editValues, companyName: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    placeholder="Nouveau nom de l'entreprise"
                   />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-900 mb-2">Personne effectuant cette modification :</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={requestedBy.firstName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, firstName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Prénom *"
+                      />
+                      <input
+                        type="text"
+                        value={requestedBy.lastName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, lastName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Nom *"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
                   <button
                     onClick={() => handleSubmitUpdate('companyName')}
                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -505,7 +562,7 @@ export default function ParametresManager({ professional }: ParametresManagerPro
                     Annuler
                   </button>
                 </div>
-                <p className="text-xs text-orange-600">
+                <p className="text-xs text-orange-600 mt-2">
                   ⚠️ Cette modification nécessite une validation admin
                 </p>
               </div>
@@ -535,15 +592,36 @@ export default function ParametresManager({ professional }: ParametresManagerPro
             </label>
             {editingField === 'siret' ? (
               <div>
-                <div className="flex space-x-2 mb-2">
+                <div className="space-y-3 mb-3">
                   <input
                     type="text"
                     value={editValues.siret || ''}
                     onChange={(e) => setEditValues({ ...editValues, siret: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono"
                     placeholder="14 chiffres"
                     maxLength={14}
                   />
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <p className="text-xs font-medium text-blue-900 mb-2">Personne effectuant cette modification :</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={requestedBy.firstName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, firstName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Prénom *"
+                      />
+                      <input
+                        type="text"
+                        value={requestedBy.lastName}
+                        onChange={(e) => setRequestedBy({ ...requestedBy, lastName: e.target.value })}
+                        className="px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        placeholder="Nom *"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-2">
                   <button
                     onClick={() => handleSubmitUpdate('siret')}
                     className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
@@ -557,7 +635,7 @@ export default function ParametresManager({ professional }: ParametresManagerPro
                     Annuler
                   </button>
                 </div>
-                <p className="text-xs text-orange-600">
+                <p className="text-xs text-orange-600 mt-2">
                   ⚠️ Cette modification nécessite une validation admin
                 </p>
               </div>

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { fieldName, newValue, smsVerified } = body;
+    const { fieldName, newValue, smsVerified, requestedByFirstName, requestedByLastName } = body;
 
     // Utiliser le client admin pour bypass RLS (route utilisée par les professionnels authentifiés)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -198,6 +198,8 @@ export async function POST(request: NextRequest) {
           field_name: fieldName,
           old_value: oldValue,
           new_value: newValue.trim(),
+          requested_by_first_name: requestedByFirstName?.trim() || null,
+          requested_by_last_name: requestedByLastName?.trim() || null,
           verification_token: verificationToken,
           is_email_verified: fieldName !== 'email',
           is_sms_verified: true,

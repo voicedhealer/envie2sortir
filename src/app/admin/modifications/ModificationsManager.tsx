@@ -20,6 +20,8 @@ interface UpdateRequest {
   fieldName: string;
   oldValue: string;
   newValue: string;
+  requestedByFirstName: string | null;
+  requestedByLastName: string | null;
   status: string;
   rejectionReason: string | null;
   requestedAt: string;
@@ -59,6 +61,8 @@ export default function ModificationsManager({
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
   const [showRejectionModal, setShowRejectionModal] = useState<string | null>(null);
+  const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
+  const [requestToApprove, setRequestToApprove] = useState<UpdateRequest | null>(null);
 
   const getFieldIcon = (fieldName: string) => {
     const icons: Record<string, any> = {
@@ -84,19 +88,23 @@ export default function ModificationsManager({
     return labels[fieldName] || fieldName;
   };
 
-  const handleApprove = async (requestId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir approuver cette modification ?')) {
-      return;
-    }
+  const handleApproveClick = (request: UpdateRequest) => {
+    setRequestToApprove(request);
+    setShowApproveModal(request.id);
+  };
 
-    setIsProcessing(requestId);
+  const handleApprove = async () => {
+    if (!requestToApprove) return;
+
+    setIsProcessing(requestToApprove.id);
+    setShowApproveModal(null);
 
     try {
       const response = await fetch('/api/admin/review-update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          requestId,
+          requestId: requestToApprove.id,
           action: 'approve'
         })
       });
@@ -116,6 +124,7 @@ export default function ModificationsManager({
       toast.error('Erreur lors de l\'approbation');
     } finally {
       setIsProcessing(null);
+      setRequestToApprove(null);
     }
   };
 
@@ -311,16 +320,35 @@ export default function ModificationsManager({
                           </div>
 
                           {/* Changement demandé */}
-                          <div className="flex items-center space-x-4 mb-4">
-                            <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-3">
-                              <p className="text-xs text-red-600 font-medium mb-1">Ancienne valeur</p>
-                              <p className="text-sm text-gray-900 font-mono">{request.oldValue}</p>
+                          <div className="mb-4">
+                            <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                              <Icon className="w-4 h-4 mr-2 text-orange-600" />
+                              Modification demandée : {getFieldLabel(request.fieldName)}
+                            </h4>
+                            <div className="flex items-center space-x-4">
+                              <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-3">
+                                <p className="text-xs text-red-600 font-medium mb-1">Ancienne valeur</p>
+                                <p className="text-sm text-gray-900 font-mono break-words">
+                                  {request.oldValue || <span className="text-gray-400 italic">(vide)</span>}
+                                </p>
+                              </div>
+                              <div className="text-gray-400 text-xl">→</div>
+                              <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p className="text-xs text-green-600 font-medium mb-1">Nouvelle valeur</p>
+                                <p className="text-sm text-gray-900 font-mono break-words">
+                                  {request.newValue || <span className="text-gray-400 italic">(vide)</span>}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-gray-400">→</div>
-                            <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3">
-                              <p className="text-xs text-green-600 font-medium mb-1">Nouvelle valeur</p>
-                              <p className="text-sm text-gray-900 font-mono">{request.newValue}</p>
-                            </div>
+                            {/* Personne effectuant la modification */}
+                            {(request.requestedByFirstName || request.requestedByLastName) && (
+                              <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p className="text-xs text-blue-700 font-medium mb-1">Personne effectuant cette modification :</p>
+                                <p className="text-sm text-blue-900 font-medium">
+                                  {request.requestedByFirstName} {request.requestedByLastName}
+                                </p>
+                              </div>
+                            )}
                           </div>
 
                           {/* Statut des vérifications */}
@@ -361,7 +389,7 @@ export default function ModificationsManager({
                         {/* Actions */}
                         <div className="ml-6 flex flex-col space-y-2">
                           <button
-                            onClick={() => handleApprove(request.id)}
+                            onClick={() => handleApproveClick(request)}
                             disabled={isProcessing === request.id || (!request.isEmailVerified && request.fieldName === 'email')}
                             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -519,6 +547,97 @@ export default function ModificationsManager({
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation d'approbation */}
+      {showApproveModal && requestToApprove && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+            <div className="flex items-center mb-4">
+              <div className="p-2 bg-green-100 rounded-full mr-3">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                Confirmer l'approbation
+              </h3>
+            </div>
+            
+            <p className="text-gray-700 mb-4">
+              Êtes-vous sûr de vouloir approuver cette modification ?
+            </p>
+
+            {/* Détails de la modification */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Champ modifié</p>
+                <p className="text-sm text-gray-900 font-medium">
+                  {getFieldLabel(requestToApprove.fieldName)}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Ancienne valeur</p>
+                  <p className="text-sm text-gray-900 bg-red-50 border border-red-200 rounded px-2 py-1 break-words">
+                    {requestToApprove.oldValue || <span className="text-gray-400 italic">(vide)</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Nouvelle valeur</p>
+                  <p className="text-sm text-gray-900 bg-green-50 border border-green-200 rounded px-2 py-1 break-words">
+                    {requestToApprove.newValue || <span className="text-gray-400 italic">(vide)</span>}
+                  </p>
+                </div>
+              </div>
+
+              {requestToApprove.requestedByFirstName && requestToApprove.requestedByLastName && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 mb-1">Demandé par</p>
+                  <p className="text-sm text-gray-900">
+                    {requestToApprove.requestedByFirstName} {requestToApprove.requestedByLastName}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-1">Professionnel</p>
+                <p className="text-sm text-gray-900">
+                  {requestToApprove.professional.companyName} - {requestToApprove.professional.firstName} {requestToApprove.professional.lastName}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={handleApprove}
+                disabled={isProcessing === requestToApprove.id}
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
+              >
+                {isProcessing === requestToApprove.id ? (
+                  <>
+                    <Clock className="w-4 h-4 mr-2 animate-spin" />
+                    Traitement...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Confirmer l'approbation
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowApproveModal(null);
+                  setRequestToApprove(null);
+                }}
+                disabled={isProcessing === requestToApprove.id}
+                className="flex-1 bg-gray-300 text-gray-700 py-2.5 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de rejet */}
       {showRejectionModal && (

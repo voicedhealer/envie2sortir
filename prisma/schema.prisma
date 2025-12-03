@@ -80,6 +80,8 @@ model ProfessionalUpdateRequest {
   fieldName         String
   oldValue          String
   newValue          String
+  requestedByFirstName String?
+  requestedByLastName  String?
   verificationToken String?
   isEmailVerified   Boolean      @default(false)
   smsCode           String?

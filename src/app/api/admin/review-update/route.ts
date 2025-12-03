@@ -99,15 +99,106 @@ export async function POST(request: NextRequest) {
       const updateData: any = {};
       updateData[dbFieldName] = updateRequest.new_value;
 
+      // Utiliser le client admin pour contourner les RLS
+      let clientToUse = supabase;
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        
+        if (supabaseUrl && supabaseServiceKey) {
+          const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+          clientToUse = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+            auth: {
+              autoRefreshToken: false,
+              persistSession: false
+            }
+          });
+          console.log('✅ [Review Update] Utilisation du client admin pour toutes les mises à jour');
+        }
+      } catch (error) {
+        console.warn('⚠️ [Review Update] Impossible de créer le client admin, utilisation du client normal');
+      }
+
       // Appliquer la modification au professionnel
-      const { error: updateProError } = await supabase
+      console.log(`📋 [Review Update] Mise à jour professionnel: ${updateRequest.professional_id}, champ: ${dbFieldName}, nouvelle valeur: "${updateRequest.new_value}"`);
+      const { error: updateProError, data: updatedProfessional } = await clientToUse
         .from('professionals')
         .update(updateData)
-        .eq('id', updateRequest.professional_id);
+        .eq('id', updateRequest.professional_id)
+        .select('id, company_name');
 
       if (updateProError) {
-        console.error('Erreur mise à jour professionnel:', updateProError);
+        console.error('❌ [Review Update] Erreur mise à jour professionnel:', updateProError);
+        console.error('   Détails:', {
+          message: updateProError.message,
+          code: updateProError.code,
+          details: updateProError.details,
+          hint: updateProError.hint
+        });
         return NextResponse.json({ error: 'Erreur lors de la mise à jour du professionnel' }, { status: 500 });
+      }
+
+      if (updatedProfessional && updatedProfessional.length > 0) {
+        console.log(`✅ [Review Update] Professionnel mis à jour avec succès: ${JSON.stringify(updatedProfessional[0])}`);
+      } else {
+        console.warn('⚠️ [Review Update] Aucune donnée retournée après mise à jour professionnel');
+      }
+
+      // Si c'est le nom de l'entreprise, mettre à jour aussi l'établissement associé
+      if (updateRequest.field_name === 'companyName') {
+        console.log(`🏢 [Review Update] Mise à jour du nom de l'établissement pour professional_id: ${updateRequest.professional_id}`);
+
+        // Récupérer l'établissement (sans .single() pour éviter les erreurs si plusieurs ou aucun)
+        const { data: establishments, error: establishmentError } = await clientToUse
+          .from('establishments')
+          .select('id, name, owner_id')
+          .eq('owner_id', updateRequest.professional_id);
+
+        if (establishmentError) {
+          console.error('❌ [Review Update] Erreur récupération établissement:', establishmentError);
+          console.error('   Détails:', {
+            message: establishmentError.message,
+            code: establishmentError.code,
+            details: establishmentError.details,
+            hint: establishmentError.hint
+          });
+          // Ne pas bloquer si l'établissement n'existe pas encore
+        } else if (establishments && establishments.length > 0) {
+          // Prendre le premier établissement (relation 1:1 normalement)
+          const establishment = establishments[0];
+          console.log(`📋 [Review Update] Établissement trouvé: id=${establishment.id}, name actuel="${establishment.name}"`);
+          console.log(`📋 [Review Update] Nouveau nom à appliquer: "${updateRequest.new_value}"`);
+          console.log(`📋 [Review Update] Owner ID: ${establishment.owner_id}, Professional ID: ${updateRequest.professional_id}`);
+          
+          if (establishments.length > 1) {
+            console.warn(`⚠️ [Review Update] Plusieurs établissements trouvés (${establishments.length}), mise à jour du premier uniquement`);
+          }
+          
+          const { error: updateEstablishmentError, data: updatedData } = await clientToUse
+            .from('establishments')
+            .update({ name: updateRequest.new_value })
+            .eq('id', establishment.id)
+            .select('id, name');
+
+          if (updateEstablishmentError) {
+            console.error('❌ [Review Update] Erreur mise à jour établissement:', updateEstablishmentError);
+            console.error('   Détails:', {
+              message: updateEstablishmentError.message,
+              code: updateEstablishmentError.code,
+              details: updateEstablishmentError.details,
+              hint: updateEstablishmentError.hint
+            });
+            // Ne pas bloquer, juste logger l'erreur
+          } else {
+            console.log(`✅ [Review Update] Nom de l'établissement mis à jour avec succès`);
+            if (updatedData && updatedData.length > 0) {
+              console.log(`✅ [Review Update] Vérification - Nouveau nom: "${updatedData[0].name}"`);
+            }
+          }
+        } else {
+          console.warn(`⚠️ [Review Update] Aucun établissement trouvé pour professional_id: ${updateRequest.professional_id}`);
+          console.warn(`   Cela peut être normal si l'établissement n'a pas encore été créé`);
+        }
       }
 
       console.log(`✅ Modification approuvée: ${updateRequest.field_name} de ${updateRequest.old_value} à ${updateRequest.new_value}`);
