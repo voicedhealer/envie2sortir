@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireEstablishment } from "@/lib/supabase/helpers";
+import { hasPremiumAccess, type SubscriptionType } from "@/lib/subscription-utils";
 
 // Forcer le mode dynamique pour éviter les erreurs de build
 export const dynamic = 'force-dynamic';
@@ -25,14 +26,14 @@ export async function PUT(
 
     const supabase = await createClient();
 
-    // Vérifier que l'établissement est Premium
+    // Vérifier que l'établissement est Premium (inclut WAITLIST_BETA)
     const { data: establishment, error: establishmentError } = await supabase
       .from('establishments')
       .select('subscription')
       .eq('id', user.establishmentId)
       .single();
 
-    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
+    if (establishmentError || !establishment || !hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       return NextResponse.json({ error: "Fonctionnalité réservée aux abonnements Premium" }, { status: 403 });
     }
 
@@ -123,14 +124,14 @@ export async function DELETE(
 
     const supabase = await createClient();
 
-    // Vérifier que l'établissement est Premium
+    // Vérifier que l'établissement est Premium (inclut WAITLIST_BETA)
     const { data: establishment, error: establishmentError } = await supabase
       .from('establishments')
       .select('subscription')
       .eq('id', user.establishmentId)
       .single();
 
-    if (establishmentError || !establishment || establishment.subscription !== 'PREMIUM') {
+    if (establishmentError || !establishment || !hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       return NextResponse.json({ error: "Fonctionnalité réservée aux abonnements Premium" }, { status: 403 });
     }
 

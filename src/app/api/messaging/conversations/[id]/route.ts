@@ -13,14 +13,33 @@ export async function GET(
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
-    const supabase = await createClient();
-
     const { id } = await params;
 
-    const { data: conversation, error: conversationError } = await supabase
-      .from('conversations')
-      .select(`
+    // Vérifier les droits d'accès d'abord
+    const isUserAdmin = await isAdmin();
+    const isUserProfessional = user.userType === "professional" || user.role === "professional" || user.role === "pro";
+    
+    // Utiliser le client admin pour contourner les restrictions RLS sur la table users
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: "Erreur de configuration serveur" 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
+    // Récupérer la conversation (sans jointure vers users pour les professionnels)
+    const selectQuery = isUserAdmin 
+      ? `
         *,
         professional:professionals!conversations_professional_id_fkey (
           id,
@@ -35,7 +54,21 @@ export async function GET(
           last_name,
           email
         )
-      `)
+      `
+      : `
+        *,
+        professional:professionals!conversations_professional_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          company_name
+        )
+      `;
+
+    const { data: conversation, error: conversationError } = await adminClient
+      .from('conversations')
+      .select(selectQuery)
       .eq('id', id)
       .single();
 
@@ -47,9 +80,8 @@ export async function GET(
     }
 
     // Vérifier les droits d'accès
-    const isUserAdmin = await isAdmin();
     const isProfessionalOwner = 
-      user.userType === "professional" && 
+      isUserProfessional && 
       conversation.professional_id === user.id;
 
     if (!isUserAdmin && !isProfessionalOwner) {
@@ -59,8 +91,8 @@ export async function GET(
       );
     }
 
-    // Récupérer les messages
-    const { data: messages, error: messagesError } = await supabase
+    // Récupérer les messages (utiliser adminClient)
+    const { data: messages, error: messagesError } = await adminClient
       .from('messages')
       .select('*')
       .eq('conversation_id', id)
@@ -72,12 +104,14 @@ export async function GET(
 
     // Convertir snake_case -> camelCase
     const professional = Array.isArray(conversation.professional) ? conversation.professional[0] : conversation.professional;
-    const admin = Array.isArray(conversation.admin) ? conversation.admin[0] : conversation.admin;
+    const admin = isUserAdmin && conversation.admin 
+      ? (Array.isArray(conversation.admin) ? conversation.admin[0] : conversation.admin)
+      : null;
 
     const formattedConversation = {
       ...conversation,
       professionalId: conversation.professional_id,
-      adminId: conversation.admin_id,
+      adminId: conversation.admin_id || null,
       lastMessageAt: conversation.last_message_at,
       createdAt: conversation.created_at,
       updatedAt: conversation.updated_at,

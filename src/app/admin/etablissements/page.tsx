@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/lib/fake-toast';
 
 interface Professional {
   id: string;
@@ -130,9 +131,17 @@ export default function AdminEstablishmentsPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Erreur lors de l\'action');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de l\'action' }));
+        throw new Error(errorData.message || 'Erreur lors de l\'action');
+      }
       
       const result = await response.json();
+      
+      // Utiliser le nom de l'établissement depuis la réponse API ou depuis la liste locale
+      const establishmentName = result.establishmentName || 
+                                establishments.find(e => e.id === establishmentId)?.name || 
+                                'l\'établissement';
       
       // Mettre à jour la liste
       hasFetchedRef.current = ''; // Réinitialiser pour forcer le rechargement
@@ -143,9 +152,32 @@ export default function AdminEstablishmentsPage() {
       setRejectionReason('');
       setSelectedEstablishment(null);
       
-      alert(result.message);
+      // Messages de notification améliorés selon l'action
+      const actionMessages: Record<string, { icon: string; message: string }> = {
+        'approve': {
+          icon: '✅',
+          message: `"${establishmentName}" a été approuvé avec succès ! L'établissement est maintenant visible sur la plateforme.`
+        },
+        'reject': {
+          icon: '❌',
+          message: `"${establishmentName}" a été rejeté. Le professionnel a été notifié.`
+        },
+        'pending': {
+          icon: '⏳',
+          message: `"${establishmentName}" a été remis en attente.`
+        },
+        'delete': {
+          icon: '🗑️',
+          message: `"${establishmentName}" a été supprimé.`
+        }
+      };
+      
+      const notification = actionMessages[action] || { icon: '✅', message: result.message };
+      toast.success(`${notification.icon} ${notification.message}`);
+      
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erreur inconnue');
+      const errorMessage = err instanceof Error ? err.message : 'Erreur inconnue';
+      toast.error(`❌ ${errorMessage}`);
     } finally {
       setActionLoading(null);
     }

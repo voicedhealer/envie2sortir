@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSupabaseSession } from "@/hooks/useSupabaseSession";
 import { useRouter } from "next/navigation";
 import { MessageSquare, Plus, ArrowLeft } from "lucide-react";
@@ -16,15 +16,97 @@ export default function MessagingPage() {
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Redirection si non authentifié ou pas pro (dans useEffect pour éviter l'erreur React)
-  useEffect(() => {
-    if (!loading && (!session?.user || (session.user.userType !== "professional" && session.user.role !== "professional"))) {
-      router.push("/auth");
-    }
-  }, [loading, session, router]);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
+  const hasCheckedAccessRef = useRef(false);
+  const checkTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Affichage du chargement
-  if (loading) {
+  // Timeout de sécurité pour éviter de rester bloqué indéfiniment sur le chargement de la session
+  useEffect(() => {
+    if (loading) {
+      safetyTimeoutRef.current = setTimeout(() => {
+        console.warn('⚠️ [Messagerie] Timeout de sécurité - déblocage du chargement de session');
+        // Ne pas forcer le déblocage, mais loguer pour debug
+      }, 10000); // 10 secondes maximum
+    }
+
+    return () => {
+      if (safetyTimeoutRef.current) {
+        clearTimeout(safetyTimeoutRef.current);
+      }
+    };
+  }, [loading]);
+
+  // Vérifier si l'utilisateur est un professionnel via API (plus fiable que la session côté client)
+  useEffect(() => {
+    // Ne vérifier qu'une seule fois si on a déjà vérifié
+    if (hasCheckedAccessRef.current) {
+      return;
+    }
+    
+    // Attendre que le chargement de la session soit terminé
+    if (loading) {
+      return;
+    }
+    
+    // Si pas de session après le chargement, rediriger
+    if (!session?.user) {
+      router.push("/auth");
+      hasCheckedAccessRef.current = true;
+      return;
+    }
+
+    // Vérifier l'accès en arrière-plan (ne bloque pas l'affichage)
+    const checkProfessionalAccess = async () => {
+      setIsCheckingAccess(true);
+      
+      try {
+        const response = await fetch('/api/auth/verify-establishment');
+        const data = await response.json();
+        
+        if (!response.ok || !data.hasEstablishment) {
+          console.error('❌ [Messagerie] Utilisateur non professionnel ou sans établissement');
+          router.push("/auth");
+        }
+      } catch (error) {
+        console.error('❌ [Messagerie] Erreur vérification professionnel:', error);
+        // En cas d'erreur, vérifier au moins que la session existe
+        if (!session?.user) {
+          router.push("/auth");
+        }
+      } finally {
+        setIsCheckingAccess(false);
+        hasCheckedAccessRef.current = true;
+      }
+    };
+
+    checkProfessionalAccess();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, session?.user]);
+
+  // Timeout de sécurité : si loading reste true trop longtemps, forcer l'affichage
+  const [forceDisplay, setForceDisplay] = useState(false);
+  
+  useEffect(() => {
+    if (loading) {
+      const timeout = setTimeout(() => {
+        console.warn('⚠️ [Messagerie] Timeout de sécurité - affichage forcé après 2 secondes');
+        setForceDisplay(true);
+      }, 2000); // 2 secondes maximum
+      
+      return () => clearTimeout(timeout);
+    } else {
+      setForceDisplay(false);
+    }
+  }, [loading]);
+
+  // Si on a une session, on peut afficher même si loading est encore true
+  // (le hook peut mettre du temps à se mettre à jour)
+  const canDisplay = !loading || forceDisplay || session?.user;
+
+  // Affichage du chargement uniquement si on charge la session ET qu'on n'a pas de session ET qu'on n'a pas forcé l'affichage
+  // La vérification d'accès se fait en arrière-plan et ne bloque pas l'affichage
+  if (loading && !forceDisplay && !session?.user) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-gray-500">Chargement...</div>
@@ -32,8 +114,8 @@ export default function MessagingPage() {
     );
   }
 
-  // Si pas de session ou pas professionnel, ne rien afficher (redirection en cours)
-  if (!session?.user || (session.user.userType !== "professional" && session.user.role !== "professional")) {
+  // Si pas de session après le chargement (ou après timeout), ne rien afficher (redirection en cours)
+  if (!canDisplay || (!session?.user && !forceDisplay)) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-gray-500">Redirection...</div>

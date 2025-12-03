@@ -174,7 +174,7 @@ export async function PATCH(request: NextRequest) {
       updatedAt: updatedEstablishment.updated_at
     };
 
-    // Message de succès
+    // Message de succès avec le nom de l'établissement
     const actionMessages: Record<string, string> = {
       'approve': 'approuvé',
       'reject': 'rejeté',
@@ -182,12 +182,14 @@ export async function PATCH(request: NextRequest) {
       'delete': 'supprimé'
     };
     const actionMessage = actionMessages[action] || 'modifié';
+    const establishmentName = establishment.name || 'l\'établissement';
 
     return NextResponse.json({ 
       success: true, 
       establishment: formattedEstablishment,
       action: adminAction || null, // Peut être null si l'enregistrement a échoué
-      message: `Établissement ${actionMessage} avec succès`
+      message: `"${establishmentName}" ${actionMessage} avec succès`,
+      establishmentName: establishmentName
     });
 
   } catch (error) {

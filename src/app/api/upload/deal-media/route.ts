@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { uploadFileAdmin } from '@/lib/supabase/helpers';
+import { hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 
 const PDF_VALIDATION = {
   maxSize: 10 * 1024 * 1024, // 10MB
@@ -45,8 +46,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Établissement introuvable ou accès refusé' }, { status: 404 });
     }
 
-    // Vérifier que l'établissement est premium
-    if (establishment.subscription !== 'PREMIUM') {
+    // Vérifier que l'établissement est premium (inclut WAITLIST_BETA)
+    if (!hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       return NextResponse.json({ 
         error: 'Cette fonctionnalité est réservée aux comptes Premium' 
       }, { status: 403 });

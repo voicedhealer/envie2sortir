@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentUser } from '@/lib/supabase/helpers';
-import { getPremiumRequiredError } from '@/lib/subscription-utils';
+import { getPremiumRequiredError, hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!establishment || establishment.subscription !== 'PREMIUM') {
+    if (!establishment || !hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       const error = getPremiumRequiredError('Analytics');
       return NextResponse.json(error, { status: error.status });
     }

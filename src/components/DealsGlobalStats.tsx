@@ -30,7 +30,11 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
         const response = await fetch(`/api/deals/engagement?establishmentId=${establishmentId}`);
         
         if (!response.ok) {
-          throw new Error('Erreur lors du chargement des statistiques');
+          const errorData = await response.json().catch(() => ({}));
+          if (errorData.error && errorData.error.includes('Premium')) {
+            throw new Error('Fonctionnalité réservée aux abonnements Premium');
+          }
+          throw new Error(errorData.error || 'Erreur lors du chargement des statistiques');
         }
         
         const data = await response.json();
@@ -78,11 +82,19 @@ export default function DealsGlobalStats({ establishmentId }: DealsGlobalStatsPr
   }
 
   if (error || !stats) {
+    const isPremiumError = error?.includes('Premium');
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="text-center text-gray-500">
-          <BarChart3 className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-          <p>{error || 'Aucune donnée disponible'}</p>
+        <div className="text-center">
+          <BarChart3 className={`w-12 h-12 mx-auto mb-3 ${isPremiumError ? 'text-orange-400' : 'text-gray-400'}`} />
+          <p className={`font-medium ${isPremiumError ? 'text-orange-600' : 'text-gray-500'}`}>
+            {error || 'Aucune donnée disponible'}
+          </p>
+          {isPremiumError && (
+            <p className="text-sm text-gray-500 mt-2">
+              Vérifiez que votre établissement a un abonnement PREMIUM et que des interactions ont été enregistrées.
+            </p>
+          )}
         </div>
       </div>
     );

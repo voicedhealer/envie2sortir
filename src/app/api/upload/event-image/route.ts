@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment, uploadFileAdmin } from '@/lib/supabase/helpers';
 import { validateFile, IMAGE_VALIDATION } from '@/lib/security';
 import { recordAPIMetric, createRequestLogger } from '@/lib/monitoring';
+import { hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -65,8 +66,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Établissement introuvable' }, { status: 404 });
     }
 
-    // Vérifier l'accès Premium pour les événements
-    if (establishment.subscription !== 'PREMIUM') {
+    // Vérifier l'accès Premium pour les événements (inclut WAITLIST_BETA)
+    if (!hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       return NextResponse.json({ 
         error: 'Fonctionnalité réservée aux abonnements Premium',
         subscription: establishment.subscription

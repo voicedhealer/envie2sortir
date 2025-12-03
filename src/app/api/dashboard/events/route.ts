@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireEstablishment } from "@/lib/supabase/helpers";
-import { getPremiumRequiredError, validateSubscriptionAccess } from "@/lib/subscription-utils";
+import { getPremiumRequiredError, validateSubscriptionAccess, type SubscriptionType } from "@/lib/subscription-utils";
 
 /**
  * API pour gérer les événements d'un établissement
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    // Vérifier l'accès Premium avec validation centralisée
-    const validation = validateSubscriptionAccess(establishment.subscription as 'FREE' | 'PREMIUM', 'canCreateEvents');
+    // Vérifier l'accès Premium avec validation centralisée (inclut WAITLIST_BETA)
+    const validation = validateSubscriptionAccess(establishment.subscription as SubscriptionType, 'canCreateEvents');
     if (!validation.hasAccess) {
       const error = getPremiumRequiredError('Événements');
       return NextResponse.json(error, { status: error.status });
@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Établissement non trouvé" }, { status: 404 });
     }
 
-    // Vérifier l'accès Premium avec validation centralisée
-    const validation = validateSubscriptionAccess(establishment.subscription as 'FREE' | 'PREMIUM', 'canCreateEvents');
+    // Vérifier l'accès Premium avec validation centralisée (inclut WAITLIST_BETA)
+    const validation = validateSubscriptionAccess(establishment.subscription as SubscriptionType, 'canCreateEvents');
     if (!validation.hasAccess) {
       const error = getPremiumRequiredError('Événements');
       return NextResponse.json(error, { status: error.status });

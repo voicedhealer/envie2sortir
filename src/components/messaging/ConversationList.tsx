@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -59,13 +59,9 @@ export default function ConversationList({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  useEffect(() => {
-    setPage(1); // Réinitialiser la page lors du changement de filtre
-    fetchConversations(1, true);
-  }, [statusFilter, refreshTrigger]);
-
-  const fetchConversations = async (pageNum: number = page, reset: boolean = false) => {
+  const fetchConversations = useCallback(async (pageNum: number, reset: boolean = false) => {
     try {
+      setIsLoading(true);
       const params = new URLSearchParams();
       if (statusFilter !== "all") {
         params.append("status", statusFilter);
@@ -74,6 +70,7 @@ export default function ConversationList({
       params.append("limit", "20");
 
       const response = await fetch(`/api/messaging/conversations?${params}`);
+      
       if (response.ok) {
         const data = await response.json();
         const newConversations = data.conversations || [];
@@ -86,22 +83,39 @@ export default function ConversationList({
         
         // S'il y a moins de 20 résultats, on a atteint la fin
         setHasMore(newConversations.length === 20);
+      } else {
+        // Gérer les erreurs HTTP
+        const errorData = await response.json().catch(() => ({ error: "Erreur serveur" }));
+        console.error("Erreur lors du chargement des conversations:", errorData);
+        
+        // En cas d'erreur, réinitialiser la liste si c'est un reset
+        if (reset) {
+          setConversations([]);
+        }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des conversations:", error);
+      // En cas d'erreur réseau, réinitialiser la liste si c'est un reset
+      if (reset) {
+        setConversations([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter]);
 
-  const loadMore = () => {
+  useEffect(() => {
+    setPage(1); // Réinitialiser la page lors du changement de filtre
+    fetchConversations(1, true);
+  }, [statusFilter, refreshTrigger, fetchConversations]);
+
+  const loadMore = useCallback(() => {
     if (!isLoading && hasMore) {
       const nextPage = page + 1;
       setPage(nextPage);
-      setIsLoading(true);
       fetchConversations(nextPage, false);
     }
-  };
+  }, [isLoading, hasMore, page, fetchConversations]);
 
   const getPreviewText = (conv: Conversation) => {
     if (conv.messages.length > 0) {

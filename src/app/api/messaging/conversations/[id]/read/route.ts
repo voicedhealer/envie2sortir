@@ -13,12 +13,28 @@ export async function PATCH(
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
-    const supabase = await createClient();
     const { id } = await params;
 
+    // Utiliser le client admin pour contourner les restrictions RLS
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: "Erreur de configuration serveur" 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     // Vérifier que la conversation existe
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversation, error: conversationError } = await adminClient
       .from('conversations')
       .select('id, professional_id')
       .eq('id', id)
@@ -33,8 +49,9 @@ export async function PATCH(
 
     // Vérifier les droits d'accès
     const isUserAdmin = await isAdmin();
+    const isUserProfessional = user.userType === "professional" || user.role === "professional" || user.role === "pro";
     const isProfessionalOwner = 
-      user.userType === "professional" && 
+      isUserProfessional && 
       conversation.professional_id === user.id;
 
     if (!isUserAdmin && !isProfessionalOwner) {
@@ -47,7 +64,7 @@ export async function PATCH(
     // Marquer comme lus les messages de l'autre partie
     const senderTypeToMarkAsRead = isUserAdmin ? "PROFESSIONAL" : "ADMIN";
 
-    const { count, error: updateError } = await supabase
+    const { count, error: updateError } = await adminClient
       .from('messages')
       .update({ is_read: true })
       .eq('conversation_id', id)

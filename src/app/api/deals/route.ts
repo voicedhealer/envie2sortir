@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
+import { hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -81,8 +82,8 @@ export async function POST(request: NextRequest) {
       }, { status: 404 });
     }
 
-    // Vérifier que l'établissement est premium
-    if (establishment.subscription !== 'PREMIUM') {
+    // Vérifier que l'établissement est premium (inclut WAITLIST_BETA)
+    if (!hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       console.error('❌ Établissement non premium:', establishment.subscription);
       return NextResponse.json({ 
         error: 'Cette fonctionnalité est réservée aux comptes Premium' 

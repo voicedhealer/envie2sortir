@@ -6,13 +6,16 @@ import { useRouter } from 'next/navigation';
 import ClickAnalyticsDashboard from '@/components/analytics/ClickAnalyticsDashboard';
 import DetailedAnalyticsDashboard from '@/components/analytics/DetailedAnalyticsDashboard';
 import { BarChart3, TrendingUp, Users, Eye, Lock } from 'lucide-react';
+import { hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 
 export default function AnalyticsPage() {
   const { session, loading: sessionLoading } = useSupabaseSession();
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'overview' | 'detailed'>('overview');
   const [establishmentId, setEstablishmentId] = useState<string | null>(null);
-  const isPremium = session?.user?.subscription === 'PREMIUM' || session?.user?.role === 'admin';
+  const isPremium = (session?.user?.subscription 
+    ? hasPremiumAccess(session.user.subscription as SubscriptionType) 
+    : false) || session?.user?.role === 'admin';
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

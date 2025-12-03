@@ -5,6 +5,7 @@ import { Plus, Edit, Trash2, Calendar, Clock, Image as ImageIcon, FileText, Eye,
 import { formatDealTime, formatPrice, calculateDiscount, isDealActive } from '@/lib/deal-utils';
 import DealEngagementStats from '@/components/DealEngagementStats';
 import HelpTooltip from '@/components/HelpTooltip';
+import { toast } from '@/lib/fake-toast';
 
 interface DailyDeal {
   id: string;
@@ -147,15 +148,16 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
         // Afficher les économies réalisées
         if (data.totalSavingsPercentage > 0) {
           console.log(`✅ Image optimisée: ${data.totalSavingsPercentage.toFixed(1)}% d'économie d'espace`);
-          // Optionnel: afficher une notification à l'utilisateur
-          // alert(`Image optimisée ! ${data.totalSavingsPercentage.toFixed(1)}% d'économie d'espace`);
+          toast.success(`📸 Image optimisée ! ${data.totalSavingsPercentage.toFixed(1)}% d'économie d'espace`);
+        } else {
+          toast.success('📸 Image ajoutée avec succès !');
         }
       } else {
-        alert(data.error || 'Erreur lors de l\'upload de l\'image');
+        toast.error(`❌ ${data.error || 'Erreur lors de l\'upload de l\'image'}`);
       }
     } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      alert('Erreur lors de l\'upload de l\'image');
+      toast.error('❌ Erreur lors de l\'upload de l\'image');
     } finally {
       setUploadingImage(false);
     }
@@ -186,12 +188,13 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           pdfUrl: data.fileUrl,
           imageUrl: '' // Effacer l'image si un PDF est ajouté
         }));
+        toast.success('📄 PDF ajouté avec succès !');
       } else {
-        alert(data.error || 'Erreur lors de l\'upload du PDF');
+        toast.error(`❌ ${data.error || 'Erreur lors de l\'upload du PDF'}`);
       }
     } catch (error) {
       console.error('Erreur lors de l\'upload:', error);
-      alert('Erreur lors de l\'upload du PDF');
+      toast.error('❌ Erreur lors de l\'upload du PDF');
     } finally {
       setUploadingPdf(false);
     }
@@ -201,20 +204,20 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
     e.preventDefault();
 
     if (isUploadingMedia) {
-      alert('Veuillez patienter, un upload est en cours...');
+      toast.error('⏳ Veuillez patienter, un upload est en cours...');
       return;
     }
     
     // Validation : exactement un média (image OU PDF) doit être fourni
     if (!formData.imageUrl && !formData.pdfUrl) {
-      alert('Veuillez ajouter soit une image, soit un PDF pour votre bon plan');
+      toast.error('📎 Veuillez ajouter soit une image, soit un PDF pour votre bon plan');
       return;
     }
     
     // Validation des dates pour les bons plans non récurrents
     if (!formData.isRecurring) {
       if (!formData.dateDebut || !formData.dateFin) {
-        alert('Veuillez renseigner les dates de début et de fin');
+        toast.error('📅 Veuillez renseigner les dates de début et de fin');
         return;
       }
     }
@@ -254,24 +257,27 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           errorData = { error: errorText };
         }
         
-        alert(errorData.error || `Erreur ${response.status}: ${response.statusText}`);
+        toast.error(`❌ ${errorData.error || `Erreur ${response.status}: ${response.statusText}`}`);
         return;
       }
 
       const data = await response.json();
       
       if (data.success) {
-        alert(editingDeal ? 'Bon plan mis à jour avec succès !' : 'Bon plan créé avec succès !');
+        const successMessage = editingDeal 
+          ? '✨ Bon plan mis à jour avec succès !' 
+          : '🎉 Bon plan créé avec succès !';
+        toast.success(successMessage);
         
         await loadDeals();
         resetForm();
         setShowForm(false);
       } else {
-        alert(data.error || 'Erreur lors de la sauvegarde');
+        toast.error(`❌ ${data.error || 'Erreur lors de la sauvegarde'}`);
       }
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde du bon plan: ' + (error instanceof Error ? error.message : 'Erreur inconnue'));
+      toast.error(`❌ Erreur lors de la sauvegarde du bon plan: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   };
 
@@ -314,13 +320,14 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
       const data = await response.json();
       
       if (data.success) {
+        toast.success('🗑️ Bon plan supprimé avec succès !');
         await loadDeals();
       } else {
-        alert(data.error || 'Erreur lors de la suppression');
+        toast.error(`❌ ${data.error || 'Erreur lors de la suppression'}`);
       }
     } catch (error) {
       console.error('Erreur lors de la suppression:', error);
-      alert('Erreur lors de la suppression du bon plan');
+      toast.error('❌ Erreur lors de la suppression du bon plan');
     }
   };
 
