@@ -34,6 +34,7 @@ export default function AdminLayout({
   const pathname = usePathname();
   const [pendingEstablishments, setPendingEstablishments] = useState(0);
   const [pendingModifications, setPendingModifications] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     gestion: true,
@@ -138,6 +139,17 @@ export default function AdminLayout({
       }
     } catch (error) {
       console.error('Erreur récupération compteurs:', error);
+    }
+
+    // Récupérer le nombre de messages non lus
+    try {
+      const messagesResponse = await fetch('/api/messaging/unread-count');
+      if (messagesResponse.ok) {
+        const messagesData = await messagesResponse.json();
+        setUnreadMessagesCount(messagesData.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Erreur récupération messages non lus:', error);
     }
   };
 
@@ -402,6 +414,12 @@ export default function AdminLayout({
               // Trouver une icône pour la section (utiliser la première icône des items ou une icône par défaut)
               const SectionIcon = section.items.length > 0 ? section.items[0].icon : BarChart3;
               
+              // Calculer le badge pour la section (si elle contient des items avec badges)
+              // Afficher le badge sur le parent seulement si la section est fermée
+              const sectionBadge = section.id === 'communication' && !isExpanded && unreadMessagesCount > 0
+                ? unreadMessagesCount
+                : null;
+              
               return (
                 <div key={section.id} className="space-y-1">
                   <button
@@ -412,11 +430,18 @@ export default function AdminLayout({
                       <SectionIcon className="w-4 h-4 flex-shrink-0" />
                       <span className="truncate whitespace-nowrap text-xs leading-tight">{(section as any).shortLabel || section.label}</span>
                     </div>
-                    {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 flex-shrink-0 ml-2" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 flex-shrink-0 ml-2" />
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {sectionBadge && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse">
+                          {sectionBadge > 9 ? "9+" : sectionBadge}
+                        </span>
+                      )}
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                      )}
+                    </div>
                   </button>
                   
                   {isExpanded && (

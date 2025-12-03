@@ -13,8 +13,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 });
     }
 
-    // ✅ Utiliser le client normal - RLS vérifie automatiquement les permissions
-    const supabase = await createClient();
     const { id } = await params;
 
     const body = await request.json();
@@ -27,14 +25,33 @@ export async function PATCH(
       );
     }
 
+    // Utiliser le client admin pour contourner les restrictions RLS
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: "Erreur de configuration serveur" 
+      }, { status: 500 });
+    }
+    
+    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+
     // Vérifier que la conversation existe
-    const { data: conversation, error: conversationError } = await supabase
+    const { data: conversation, error: conversationError } = await adminClient
       .from('conversations')
       .select('id, professional_id')
       .eq('id', id)
       .single();
 
     if (conversationError || !conversation) {
+      console.error('❌ [PATCH /api/messaging/conversations/[id]/status] Erreur récupération conversation:', conversationError);
       return NextResponse.json(
         { error: "Conversation non trouvée" },
         { status: 404 }
@@ -43,23 +60,42 @@ export async function PATCH(
 
     // Vérifier les droits d'accès
     const isUserAdmin = await isAdmin();
+    let isUserProfessional = user.userType === "professional" || user.role === "professional" || user.role === "pro";
+    
+    // Si userType n'est pas défini, vérifier dans la table professionals
+    if (!isUserProfessional && !isUserAdmin) {
+      const { data: professionalCheck } = await adminClient
+        .from('professionals')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (professionalCheck) {
+        isUserProfessional = true;
+      }
+    }
+    
     const isProfessionalOwner = 
-      user.userType === "professional" && 
+      isUserProfessional && 
       conversation.professional_id === user.id;
 
     if (!isUserAdmin && !isProfessionalOwner) {
+      console.error('❌ [PATCH /api/messaging/conversations/[id]/status] Accès non autorisé:', {
+        isUserAdmin,
+        isUserProfessional,
+        isProfessionalOwner,
+        userId: user.id,
+        conversationProfessionalId: conversation.professional_id
+      });
       return NextResponse.json(
         { error: "Accès non autorisé" },
         { status: 403 }
       );
     }
 
-    // Mettre à jour le statut
-    const { data: updatedConversation, error: updateError } = await supabase
-      .from('conversations')
-      .update({ status })
-      .eq('id', id)
-      .select(`
+    // Mettre à jour le statut (utiliser adminClient)
+    const selectQuery = isUserAdmin 
+      ? `
         *,
         professional:professionals!conversations_professional_id_fkey (
           id,
@@ -74,23 +110,44 @@ export async function PATCH(
           last_name,
           email
         )
-      `)
+      `
+      : `
+        *,
+        professional:professionals!conversations_professional_id_fkey (
+          id,
+          first_name,
+          last_name,
+          email,
+          company_name
+        )
+      `;
+
+    const { data: updatedConversation, error: updateError } = await adminClient
+      .from('conversations')
+      .update({ status })
+      .eq('id', id)
+      .select(selectQuery)
       .single();
 
     if (updateError || !updatedConversation) {
-      console.error('Erreur mise à jour statut:', updateError);
-      return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
+      console.error('❌ [PATCH /api/messaging/conversations/[id]/status] Erreur mise à jour statut:', updateError);
+      return NextResponse.json({ 
+        error: "Erreur serveur",
+        details: updateError?.message || 'Erreur inconnue'
+      }, { status: 500 });
     }
 
-    // Compter les messages
-    const { count: messagesCount } = await supabase
+    // Compter les messages (utiliser adminClient)
+    const { count: messagesCount } = await adminClient
       .from('messages')
       .select('*', { count: 'exact', head: true })
       .eq('conversation_id', id);
 
     // Convertir snake_case -> camelCase
     const professional = Array.isArray(updatedConversation.professional) ? updatedConversation.professional[0] : updatedConversation.professional;
-    const admin = Array.isArray(updatedConversation.admin) ? updatedConversation.admin[0] : updatedConversation.admin;
+    const admin = isUserAdmin && updatedConversation.admin 
+      ? (Array.isArray(updatedConversation.admin) ? updatedConversation.admin[0] : updatedConversation.admin)
+      : null;
 
     const formattedConversation = {
       ...updatedConversation,

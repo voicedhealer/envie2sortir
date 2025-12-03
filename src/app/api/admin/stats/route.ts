@@ -19,17 +19,36 @@ export async function GET() {
     const pendingCount = pendingResult.count || 0;
     const activeCount = activeResult.count || 0;
 
-    // Récupérer les 5 derniers établissements inscrits
-    const { data: recentEstablishments, error: recentError } = await supabase
+    // Récupérer les 5 derniers établissements inscrits (tous statuts confondus)
+    // Utiliser le client admin pour contourner RLS si nécessaire
+    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    let adminClient = supabase;
+    if (supabaseUrl && supabaseServiceKey) {
+      adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }) as any;
+    }
+
+    const { data: recentEstablishments, error: recentError } = await adminClient
       .from('establishments')
       .select(`
-        *,
-        owner:professionals!establishments_owner_id_fkey (
+        id,
+        name,
+        status,
+        created_at,
+        updated_at,
+        owner_id,
+        professionals!establishments_owner_id_fkey (
           first_name,
           last_name
         )
       `)
-      .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(5);
 
@@ -39,16 +58,23 @@ export async function GET() {
 
     // Convertir snake_case -> camelCase
     const formattedEstablishments = (recentEstablishments || []).map((est: any) => {
-      const owner = Array.isArray(est.owner) ? est.owner[0] : est.owner;
+      // La jointure retourne 'professionals' (nom de la table), pas 'owner'
+      const owner = Array.isArray(est.professionals) ? est.professionals[0] : est.professionals;
       
       return {
-        ...est,
+        id: est.id,
+        name: est.name,
+        category: 'Non spécifié', // À adapter selon vos besoins
+        status: est.status,
         createdAt: est.created_at,
         updatedAt: est.updated_at,
         owner: owner ? {
-          firstName: owner.first_name,
-          lastName: owner.last_name
-        } : null
+          firstName: owner.first_name || 'Non renseigné',
+          lastName: owner.last_name || 'Non renseigné'
+        } : {
+          firstName: 'Non renseigné',
+          lastName: 'Non renseigné'
+        }
       };
     });
 

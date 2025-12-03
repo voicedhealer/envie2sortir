@@ -75,8 +75,27 @@ export async function GET(request: NextRequest) {
 
     if (isUserAdmin) {
       console.log('👑 [GET /api/messaging/conversations] Mode admin - récupération de toutes les conversations');
+      // Utiliser le client admin pour contourner les restrictions RLS sur la table users
+      const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.error('❌ [GET /api/messaging/conversations] Variables d\'environnement Supabase manquantes');
+        return NextResponse.json({ 
+          error: "Erreur de configuration serveur" 
+        }, { status: 500 });
+      }
+      
+      const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      });
+      
       // Admin peut voir toutes les conversations
-      let query = supabase
+      let query = adminClient
         .from('conversations')
         .select(`
           *,
@@ -101,10 +120,20 @@ export async function GET(request: NextRequest) {
         query = query.eq('status', status);
       }
 
+      // Exclure les conversations fermées depuis plus de 45 jours (archivées)
+      const archiveThreshold = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.or(`closed_at.is.null,closed_at.gt.${archiveThreshold}`);
+
       const { data: conversationsData, error: conversationsError } = await query;
 
       if (conversationsError) {
         console.error('❌ [GET /api/messaging/conversations] Erreur récupération conversations (admin):', conversationsError);
+        console.error('❌ [GET /api/messaging/conversations] Détails erreur:', {
+          message: conversationsError?.message,
+          code: conversationsError?.code,
+          details: conversationsError?.details,
+          hint: conversationsError?.hint
+        });
         return NextResponse.json({ 
           error: "Erreur serveur",
           details: conversationsError?.message || 'Erreur inconnue'
@@ -120,8 +149,8 @@ export async function GET(request: NextRequest) {
       if (conversationIds.length === 0) {
         conversations = [];
       } else {
-        // Récupérer tous les derniers messages en une seule requête
-        const { data: allLastMessages } = await supabase
+        // Récupérer tous les derniers messages en une seule requête (utiliser adminClient)
+        const { data: allLastMessages } = await adminClient
           .from('messages')
           .select('id, content, created_at, sender_type, is_read, conversation_id')
           .in('conversation_id', conversationIds)
@@ -135,8 +164,8 @@ export async function GET(request: NextRequest) {
           }
         });
         
-        // Récupérer tous les counts de messages non lus en une seule requête
-        const { data: allUnreadMessages } = await supabase
+        // Récupérer tous les counts de messages non lus en une seule requête (utiliser adminClient)
+        const { data: allUnreadMessages } = await adminClient
           .from('messages')
           .select('conversation_id')
           .in('conversation_id', conversationIds)
@@ -240,146 +269,9 @@ export async function GET(request: NextRequest) {
         query = query.eq('status', status);
       }
 
-      console.log('💼 [GET /api/messaging/conversations] Exécution requête pour professionnel:', user.id);
-      const { data: conversationsData, error: conversationsError } = await query;
-
-      if (conversationsError) {
-        console.error('❌ [GET /api/messaging/conversations] Erreur récupération conversations (pro):', conversationsError);
-        console.error('❌ [GET /api/messaging/conversations] Détails erreur:', {
-          message: conversationsError?.message,
-          code: conversationsError?.code,
-          details: conversationsError?.details,
-          hint: conversationsError?.hint
-        });
-        return NextResponse.json({ 
-          error: "Erreur serveur",
-          details: conversationsError?.message || 'Erreur inconnue'
-        }, { status: 500 });
-      }
-
-      console.log(`✅ [GET /api/messaging/conversations] ${conversationsData?.length || 0} conversations récupérées (pro)`);
-
-      // Optimisation: Récupérer tous les IDs de conversations
-      const conversationIds = (conversationsData || []).map((conv: any) => conv.id);
-      
-      // Si aucune conversation, retourner un tableau vide
-      if (conversationIds.length === 0) {
-        conversations = [];
-      } else {
-        // Récupérer tous les derniers messages en une seule requête
-        const { data: allLastMessages } = await supabase
-          .from('messages')
-          .select('id, content, created_at, sender_type, is_read, conversation_id')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: false });
-        
-        // Grouper les messages par conversation_id et prendre le premier
-        const lastMessagesByConv = new Map<string, any>();
-        allLastMessages?.forEach((msg: any) => {
-          if (!lastMessagesByConv.has(msg.conversation_id)) {
-            lastMessagesByConv.set(msg.conversation_id, msg);
-          }
-        });
-        
-        // Récupérer tous les counts de messages non lus en une seule requête
-        const { data: allUnreadMessages } = await supabase
-          .from('messages')
-          .select('conversation_id')
-          .in('conversation_id', conversationIds)
-          .eq('is_read', false)
-          .eq('sender_type', 'ADMIN');
-        
-        // Compter les messages non lus par conversation
-        const unreadCountsByConv = new Map<string, number>();
-        allUnreadMessages?.forEach((msg: any) => {
-          const count = unreadCountsByConv.get(msg.conversation_id) || 0;
-          unreadCountsByConv.set(msg.conversation_id, count + 1);
-        });
-        
-        // Construire les conversations avec les données récupérées
-        conversations = (conversationsData || []).map((conv: any) => {
-          const lastMessage = lastMessagesByConv.get(conv.id);
-          const unreadCount = unreadCountsByConv.get(conv.id) || 0;
-
-          const professional = Array.isArray(conv.professional) ? conv.professional[0] : conv.professional;
-          // Pas de données admin pour les professionnels (RLS bloque l'accès à la table users)
-
-          return {
-            ...conv,
-            professionalId: conv.professional_id,
-            adminId: conv.admin_id || null,
-            lastMessageAt: conv.last_message_at,
-            createdAt: conv.created_at,
-            updatedAt: conv.updated_at,
-            professional: professional ? {
-              id: professional.id,
-              firstName: professional.first_name,
-              lastName: professional.last_name,
-              email: professional.email,
-              companyName: professional.company_name
-            } : null,
-            admin: null, // Les professionnels ne peuvent pas lire les données admin (RLS)
-            messages: lastMessage ? [{
-              id: lastMessage.id,
-              content: lastMessage.content,
-              createdAt: lastMessage.created_at,
-              senderType: lastMessage.sender_type,
-              isRead: lastMessage.is_read
-            }] : [],
-            _count: {
-              messages: unreadCount
-            }
-          };
-        });
-
-        // Filtrer par messages non lus si demandé
-        if (unreadOnly) {
-          conversations = conversations.filter((conv: any) => conv._count.messages > 0);
-        }
-      }
-    } else if (isUserProfessional) {
-      console.log('💼 [GET /api/messaging/conversations] Mode professionnel - récupération conversations pour:', user.id);
-      // Pro ne peut voir que ses conversations
-      // Utiliser le client admin pour contourner les restrictions RLS sur la table users
-      // (même sans jointure explicite, Supabase vérifie la contrainte FK)
-      const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.error('❌ [GET /api/messaging/conversations] Variables d\'environnement Supabase manquantes');
-        return NextResponse.json({ 
-          error: "Erreur de configuration serveur" 
-        }, { status: 500 });
-      }
-      
-      const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      });
-      
-      // Ne pas inclure la jointure vers users car RLS bloque l'accès pour les professionnels
-      let query = adminClient
-        .from('conversations')
-        .select(`
-          *,
-          professional:professionals!conversations_professional_id_fkey (
-            id,
-            first_name,
-            last_name,
-            email,
-            company_name
-          )
-        `)
-        .eq('professional_id', user.id)
-        .order('last_message_at', { ascending: false})
-        .range(offset, offset + limit - 1); // Pagination
-
-      if (status) {
-        query = query.eq('status', status);
-      }
+      // Exclure les conversations fermées depuis plus de 45 jours (archivées)
+      const archiveThreshold = new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.or(`closed_at.is.null,closed_at.gt.${archiveThreshold}`);
 
       console.log('💼 [GET /api/messaging/conversations] Exécution requête pour professionnel:', user.id);
       const { data: conversationsData, error: conversationsError } = await query;

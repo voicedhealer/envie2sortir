@@ -87,9 +87,15 @@ export default function ConversationDetail({
 
   const markAsRead = async () => {
     try {
-      await fetch(`/api/messaging/conversations/${conversationId}/read`, {
+      const response = await fetch(`/api/messaging/conversations/${conversationId}/read`, {
         method: "PATCH",
       });
+      if (response.ok) {
+        // Rafraîchir la conversation pour mettre à jour les messages marqués comme lus
+        fetchConversation();
+        // Notifier le parent pour rafraîchir la liste des conversations (badge)
+        onMessageSent();
+      }
     } catch (error) {
       console.error("Erreur lors du marquage comme lu:", error);
     }
