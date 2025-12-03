@@ -22,20 +22,25 @@ export async function GET(request: NextRequest) {
       console.error('Erreur de santé DB:', databaseError);
     }
 
-    // Vérifier la santé de Redis (simulé pour l'instant)
+    // Vérifier la santé de Redis (seulement si configuré)
     let redisHealth = false;
     let redisError = null;
+    const isRedisConfigured = !!process.env.REDIS_URL;
     
-    try {
-      // Dans un vrai environnement, tester la connexion Redis
-      // const redis = new Redis(process.env.REDIS_URL);
-      // await redis.ping();
-      
-      // Pour l'instant, simuler Redis comme non configuré
-      redisHealth = false;
-      redisError = 'Redis non configuré en développement';
-    } catch (error) {
-      redisError = error instanceof Error ? error.message : 'Erreur Redis inconnue';
+    if (isRedisConfigured) {
+      try {
+        // Dans un vrai environnement, tester la connexion Redis
+        // const redis = new Redis(process.env.REDIS_URL);
+        // await redis.ping();
+        // redisHealth = true;
+        
+        // Pour l'instant, simuler Redis comme non configuré même si l'URL est présente
+        // (car le client Redis n'est pas installé)
+        redisHealth = false;
+        redisError = 'Redis URL configurée mais client non initialisé';
+      } catch (error) {
+        redisError = error instanceof Error ? error.message : 'Erreur Redis inconnue';
+      }
     }
 
     // Statut global
@@ -44,6 +49,7 @@ export async function GET(request: NextRequest) {
     const healthStatus = {
       database: databaseHealth,
       redis: redisHealth,
+      redisConfigured: isRedisConfigured, // Indique si Redis est configuré (même si non actif)
       overall: overallHealth,
       timestamp: new Date().toISOString(),
       version: process.env.npm_package_version || '1.0.0',
@@ -56,7 +62,8 @@ export async function GET(request: NextRequest) {
         },
         redis: {
           status: redisHealth ? 'healthy' : 'unhealthy',
-          error: redisError
+          error: redisError,
+          configured: isRedisConfigured
         }
       }
     };

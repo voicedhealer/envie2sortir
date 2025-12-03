@@ -19,7 +19,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Home
+  Home,
+  TrendingUp
 } from "lucide-react";
 import MessageBadge from "@/components/messaging/MessageBadge";
 
@@ -207,6 +208,20 @@ export default function AdminLayout({
         {
           href: '/admin/historique',
           label: 'Historique',
+          icon: History,
+          badge: null,
+          customBadge: false
+        },
+        {
+          href: '/admin/professionnels',
+          label: 'Statistiques Pro',
+          icon: TrendingUp,
+          badge: null,
+          customBadge: false
+        },
+        {
+          href: '/admin/professionnels/historique',
+          label: 'Historique Stats',
           icon: History,
           badge: null,
           customBadge: false

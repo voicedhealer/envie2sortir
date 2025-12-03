@@ -45,6 +45,7 @@ interface SystemMetrics {
 interface HealthStatus {
   database: boolean;
   redis: boolean;
+  redisConfigured?: boolean; // Indique si Redis est configuré (même si non actif)
   overall: boolean;
 }
 
@@ -280,7 +281,11 @@ export default function AdminDashboard() {
     }
 
     isFetchingRef.current = true;
-    setIsLoading(true);
+    // Ne pas mettre setIsLoading(true) pour les rafraîchissements automatiques
+    // pour éviter de masquer l'interface
+    if (!hasInitializedRef.current) {
+      setIsLoading(true);
+    }
     
     console.log('🔄 [AdminPage] Début du chargement des données admin...');
 
@@ -294,6 +299,7 @@ export default function AdminDashboard() {
         fetchConfigStatusRef.current()
       ]);
       setLastUpdate(new Date());
+      setIsLoading(false);
       console.log('✅ [AdminPage] Toutes les données chargées');
     } catch (error) {
       console.error("❌ [AdminPage] Erreur lors du chargement des données:", error);
@@ -466,7 +472,7 @@ export default function AdminDashboard() {
           <h3 className="text-lg font-medium text-gray-900 mb-4">
             🏥 Status de Santé du Système
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className={`grid grid-cols-1 gap-4 ${health.redisConfigured ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             <div className={`p-4 rounded-lg ${health.database ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
               <div className="flex items-center">
                 <div className={`w-3 h-3 rounded-full ${health.database ? 'bg-green-500' : 'bg-red-500'} mr-3`}></div>
@@ -476,15 +482,17 @@ export default function AdminDashboard() {
                 {health.database ? '✅ Opérationnelle' : '❌ Erreur'}
               </div>
             </div>
-            <div className={`p-4 rounded-lg ${health.redis ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'} border`}>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full ${health.redis ? 'bg-green-500' : 'bg-yellow-500'} mr-3`}></div>
-                <span className="font-medium">Cache Redis</span>
+            {health.redisConfigured && (
+              <div className={`p-4 rounded-lg ${health.redis ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'} border`}>
+                <div className="flex items-center">
+                  <div className={`w-3 h-3 rounded-full ${health.redis ? 'bg-green-500' : 'bg-yellow-500'} mr-3`}></div>
+                  <span className="font-medium">Cache Redis</span>
+                </div>
+                <div className="text-sm text-gray-600 mt-1">
+                  {health.redis ? '✅ Actif' : '⚠️ Non configuré'}
+                </div>
               </div>
-              <div className="text-sm text-gray-600 mt-1">
-                {health.redis ? '✅ Actif' : '⚠️ Non configuré'}
-              </div>
-            </div>
+            )}
             <div className={`p-4 rounded-lg ${health.overall ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
               <div className="flex items-center">
                 <div className={`w-3 h-3 rounded-full ${health.overall ? 'bg-green-500' : 'bg-red-500'} mr-3`}></div>
@@ -492,85 +500,6 @@ export default function AdminDashboard() {
               </div>
               <div className="text-sm text-gray-600 mt-1">
                 {health.overall ? '✅ Opérationnel' : '❌ Problème détecté'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Métriques système réelles uniquement */}
-      {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Mémoire - Réelle */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Mémoire Node.js</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {metrics.memory.percentage.toFixed(1)}%
-                </p>
-                <p className="text-xs text-gray-400">
-                  {Math.round(metrics.memory.used / 1024 / 1024)} MB / {Math.round(metrics.memory.total / 1024 / 1024)} MB
-                </p>
-              </div>
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                metrics.memory.percentage > 80 ? 'bg-red-100' : 
-                metrics.memory.percentage > 60 ? 'bg-yellow-100' : 'bg-green-100'
-              }`}>
-                <span className={`text-lg ${
-                  metrics.memory.percentage > 80 ? 'text-red-600' : 
-                  metrics.memory.percentage > 60 ? 'text-yellow-600' : 'text-green-600'
-                }`}>
-                  💾
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* CPU - Non disponible */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">CPU</p>
-                <p className="text-lg font-semibold text-gray-400">
-                  Non disponible
-                </p>
-                <p className="text-xs text-gray-400">Monitoring requis</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-lg text-gray-400">⚡</span>
-              </div>
-            </div>
-          </div>
-
-          {/* API Requests - Non disponible */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Requêtes API</p>
-                <p className="text-lg font-semibold text-gray-400">
-                  Non disponible
-                </p>
-                <p className="text-xs text-gray-400">Monitoring requis</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-lg text-gray-400">📡</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Taux d'erreur - Non disponible */}
-          <div className="bg-gray-50 p-6 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Taux d'erreur</p>
-                <p className="text-lg font-semibold text-gray-400">
-                  Non disponible
-                </p>
-                <p className="text-xs text-gray-400">Monitoring requis</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <span className="text-lg text-gray-400">🚨</span>
               </div>
             </div>
           </div>

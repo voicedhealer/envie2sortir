@@ -63,6 +63,7 @@ export default function ModificationsManager({
   const [showRejectionModal, setShowRejectionModal] = useState<string | null>(null);
   const [showApproveModal, setShowApproveModal] = useState<string | null>(null);
   const [requestToApprove, setRequestToApprove] = useState<UpdateRequest | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const getFieldIcon = (fieldName: string) => {
     const icons: Record<string, any> = {
@@ -114,8 +115,16 @@ export default function ModificationsManager({
       if (response.ok) {
         toast.success('Modification approuvée avec succès');
         
-        // Rafraîchir la page
-        window.location.reload();
+        // Retirer la demande de la liste des en attente et l'ajouter à l'historique
+        setPendingRequests(prev => prev.filter(req => req.id !== requestToApprove.id));
+        setRecentHistory(prev => [{
+          ...requestToApprove,
+          status: 'approved',
+          reviewedAt: new Date().toISOString()
+        }, ...prev]);
+        
+        // Déclencher un rafraîchissement des données
+        setRefreshTrigger(prev => prev + 1);
       } else {
         toast.error(data.error || 'Erreur lors de l\'approbation');
       }
@@ -154,8 +163,20 @@ export default function ModificationsManager({
         setShowRejectionModal(null);
         setRejectionReason('');
         
-        // Rafraîchir la page
-        window.location.reload();
+        // Retirer la demande de la liste des en attente et l'ajouter à l'historique
+        const rejectedRequest = pendingRequests.find(req => req.id === requestId);
+        if (rejectedRequest) {
+          setPendingRequests(prev => prev.filter(req => req.id !== requestId));
+          setRecentHistory(prev => [{
+            ...rejectedRequest,
+            status: 'rejected',
+            rejectionReason: rejectionReason.trim(),
+            reviewedAt: new Date().toISOString()
+          }, ...prev]);
+        }
+        
+        // Déclencher un rafraîchissement des données
+        setRefreshTrigger(prev => prev + 1);
       } else {
         toast.error(data.error || 'Erreur lors du rejet');
       }
@@ -550,7 +571,7 @@ export default function ModificationsManager({
 
       {/* Modal de confirmation d'approbation */}
       {showApproveModal && requestToApprove && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
             <div className="flex items-center mb-4">
               <div className="p-2 bg-green-100 rounded-full mr-3">
@@ -641,7 +662,7 @@ export default function ModificationsManager({
 
       {/* Modal de rejet */}
       {showRejectionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Raison du rejet
