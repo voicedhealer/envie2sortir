@@ -656,10 +656,40 @@ export default function EstablishmentCard({
     return `${baseUrl}?${params.toString()}`;
   };
 
+  // Fonction pour tracker le clic sur un établissement depuis une recherche
+  const handleEstablishmentClick = async () => {
+    // Si on vient d'une recherche "envie", tracker le clic dans search_analytics
+    if (from === 'envie' && searchParams?.envie) {
+      try {
+        const response = await fetch('/api/analytics/search/track', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            searchTerm: searchParams.envie,
+            clickedEstablishmentId: establishment.id,
+            clickedEstablishmentName: establishment.name,
+          }),
+        });
+
+        if (response.ok) {
+          console.log('✅ [EstablishmentCard] Clic tracké dans search_analytics');
+        } else {
+          console.warn('⚠️ [EstablishmentCard] Impossible de tracker le clic dans search_analytics');
+        }
+      } catch (error) {
+        console.warn('⚠️ [EstablishmentCard] Erreur tracking clic:', error);
+        // Ne pas bloquer la navigation en cas d'erreur
+      }
+    }
+  };
+
   return (
     <Link 
       href={getEstablishmentUrl()}
       className="group block"
+      onClick={handleEstablishmentClick}
     >
       <div className={`relative bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden establishment-card mb-6 flex flex-col min-h-110 ${
         isHot ? 'ring-2 ring-orange-200 ring-opacity-50' : ''

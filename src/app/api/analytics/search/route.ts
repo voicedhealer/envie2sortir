@@ -119,11 +119,30 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.searchCount - a.searchCount);
 
     // Recherches sans résultats (opportunités)
-    const searchesWithoutResults = topSearches
-      .filter(search => !search.hasResults)
-      .map(search => ({
-        searchTerm: search.searchTerm,
-        count: search.searchCount,
+    // Une recherche est "sans résultats" si TOUTES les recherches pour ce terme ont result_count === 0
+    // On vérifie dans les données brutes pour être sûr
+    const searchesWithoutResultsMap = new Map<string, number>();
+    (searches || []).forEach((search: any) => {
+      const term = (search.search_term || '').toLowerCase().trim();
+      // Si cette recherche spécifique n'a pas de résultats
+      if ((search.result_count || 0) === 0) {
+        searchesWithoutResultsMap.set(term, (searchesWithoutResultsMap.get(term) || 0) + 1);
+      }
+    });
+
+    // Filtrer pour ne garder que les termes où TOUTES les recherches n'ont pas de résultats
+    const searchesWithoutResults = Array.from(searchesWithoutResultsMap.entries())
+      .filter(([term, count]) => {
+        // Vérifier qu'aucune recherche pour ce terme n'a eu de résultats
+        const hasAnyResults = (searches || []).some((search: any) => {
+          const searchTerm = (search.search_term || '').toLowerCase().trim();
+          return searchTerm === term && (search.result_count || 0) > 0;
+        });
+        return !hasAnyResults;
+      })
+      .map(([searchTerm, count]) => ({
+        searchTerm,
+        count,
       }));
 
     // Tendances temporelles - grouper par jour
@@ -141,13 +160,74 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
 
+    // Statistiques des villes les plus recherchées
+    const cityMap = new Map<string, number>();
+    (searches || []).forEach((search: any) => {
+      const searchCity = search.searched_city || search.city;
+      if (searchCity) {
+        cityMap.set(searchCity, (cityMap.get(searchCity) || 0) + 1);
+      }
+    });
+    const topCities = Array.from(cityMap.entries())
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+
+    // Statistiques des rayons de recherche (si disponible)
+    const radiusMap = new Map<number, number>();
+    (searches || []).forEach((search: any) => {
+      const radius = search.search_radius;
+      if (radius !== null && radius !== undefined) {
+        radiusMap.set(radius, (radiusMap.get(radius) || 0) + 1);
+      }
+    });
+    const radiusStats = Array.from(radiusMap.entries())
+      .map(([radius, count]) => ({ radius, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // Parcours utilisateur : séquences de recherche -> clic
+    // IMPORTANT: Si un clic existe, la recherche DOIT avoir des résultats (logique métier)
+    const userJourneys: Array<{
+      searchTerm: string;
+      city?: string;
+      radius?: number;
+      hasResults: boolean;
+      hasClick: boolean;
+      clickedEstablishment?: string;
+      dataInconsistency?: boolean; // Flag pour détecter les incohérences
+    }> = (searches || []).map((search: any) => {
+      const hasClick = !!(search.clicked_establishment_id && search.clicked_establishment_name);
+      const resultCount = search.result_count || 0;
+      const hasResults = resultCount > 0;
+      
+      // Détecter les incohérences : un clic ne peut pas exister sans résultats
+      const dataInconsistency = hasClick && !hasResults;
+      
+      // Si un clic existe mais result_count = 0, c'est probablement une incohérence de timing
+      // On considère qu'il y a eu des résultats (sinon le clic serait impossible)
+      const correctedHasResults = hasClick ? true : hasResults;
+      
+      return {
+        searchTerm: search.search_term,
+        city: search.searched_city || search.city,
+        radius: search.search_radius,
+        hasResults: correctedHasResults,
+        hasClick,
+        clickedEstablishment: search.clicked_establishment_name || undefined,
+        dataInconsistency, // Garder l'info pour le debug
+      };
+    });
+
     return NextResponse.json({
       period,
       startDate: startDateISO,
       totalSearches: (searches || []).length,
       topSearches: topSearches.slice(0, 20),
       searchesWithoutResults,
-      searchTrends
+      searchTrends,
+      topCities,
+      radiusStats,
+      userJourneys: userJourneys.slice(0, 100) // Limiter à 100 pour éviter une réponse trop lourde
     });
   } catch (error) {
     console.error('Search analytics error:', error);

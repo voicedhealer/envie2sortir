@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { Brain, TrendingUp, Target, BarChart3, Users, CheckCircle, AlertCircle } from 'lucide-react';
+import ValidationModal from '@/components/ValidationModal';
 
 interface LearningStats {
   totalPatterns: number;
@@ -40,6 +41,14 @@ export default function LearningDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [editingPattern, setEditingPattern] = useState<string | null>(null);
   const [correctedType, setCorrectedType] = useState<string>('');
+  const [validationModal, setValidationModal] = useState<{
+    isOpen: boolean;
+    patternId: string;
+    patternName: string;
+    detectedType: string;
+    confidence?: number;
+  } | null>(null);
+  const [isValidating, setIsValidating] = useState(false);
   const hasRedirectedRef = useRef(false);
   const hasFetchedRef = useRef(false);
 
@@ -295,11 +304,20 @@ export default function LearningDashboard() {
     }
   };
 
-  const handleValidatePattern = async (patternId: string, patternName: string, detectedType: string) => {
-    if (!confirm(`Valider la détection "${detectedType}" pour "${patternName}" ?`)) {
-      return;
-    }
+  const handleValidatePattern = (patternId: string, patternName: string, detectedType: string, confidence?: number) => {
+    setValidationModal({
+      isOpen: true,
+      patternId,
+      patternName,
+      detectedType,
+      confidence: confidence ? Math.round(confidence * 100) : undefined
+    });
+  };
 
+  const confirmValidation = async () => {
+    if (!validationModal) return;
+
+    setIsValidating(true);
     try {
       const response = await fetch('/api/admin/learning/validate', {
         method: 'POST',
@@ -307,9 +325,9 @@ export default function LearningDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          patternId,
-          patternName,
-          validatedType: detectedType,
+          patternId: validationModal.patternId,
+          patternName: validationModal.patternName,
+          validatedType: validationModal.detectedType,
           validatedBy: session?.user?.email || 'admin'
         }),
       });
@@ -318,11 +336,14 @@ export default function LearningDashboard() {
         // Recharger les données
         hasFetchedRef.current = false; // Réinitialiser pour permettre le rechargement
         await fetchLearningData();
+        setValidationModal(null);
       } else {
         setError('Erreur lors de la validation du pattern');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur inconnue');
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -543,7 +564,7 @@ export default function LearningDashboard() {
                           ) : (
                             <>
                               <button
-                                onClick={() => handleValidatePattern(pattern.id, pattern.name, pattern.detectedType)}
+                                onClick={() => handleValidatePattern(pattern.id, pattern.name, pattern.detectedType, pattern.confidence)}
                                 className="text-green-600 hover:text-green-900 text-xs bg-green-50 px-2 py-1 rounded"
                               >
                                 ✓ Valider
@@ -596,6 +617,20 @@ export default function LearningDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Modal de validation */}
+      {validationModal && (
+        <ValidationModal
+          isOpen={validationModal.isOpen}
+          onClose={() => setValidationModal(null)}
+          patternName={validationModal.patternName}
+          detectedType={validationModal.detectedType}
+          confidence={validationModal.confidence}
+          onValidate={confirmValidation}
+          onCancel={() => setValidationModal(null)}
+          isLoading={isValidating}
+        />
+      )}
     </div>
   );
 }

@@ -24,6 +24,22 @@ interface SearchAnalyticsData {
     searchTerm: string;
     count: number;
   }>;
+  topCities?: Array<{
+    city: string;
+    count: number;
+  }>;
+  radiusStats?: Array<{
+    radius: number;
+    count: number;
+  }>;
+  userJourneys?: Array<{
+    searchTerm: string;
+    city?: string;
+    radius?: number;
+    hasResults: boolean;
+    hasClick: boolean;
+    clickedEstablishment?: string;
+  }>;
 }
 
 export default function AdminRecherchesPage() {
@@ -293,14 +309,14 @@ export default function AdminRecherchesPage() {
             </div>
 
             {/* Opportunités - Recherches sans résultats */}
-            {data.searchesWithoutResults.length > 0 && (
+            {data.searchesWithoutResults && data.searchesWithoutResults.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <AlertCircle className="w-5 h-5 text-orange-600 mr-2" />
                   💡 Opportunités - Recherches sans résultats
                 </h3>
                 <div className="mb-4 text-sm text-gray-600">
-                  <p>Ces termes sont recherchés mais n'ont pas de résultats. Des opportunités d'amélioration !</p>
+                  <p>Ces termes sont recherchés mais n'ont <strong>aucun résultat</strong> (result_count = 0). Des opportunités d'amélioration !</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -309,6 +325,104 @@ export default function AdminRecherchesPage() {
                       <div className="flex items-center justify-between">
                         <div className="font-medium text-orange-900">"{search.searchTerm}"</div>
                         <div className="text-sm font-semibold text-orange-600">{search.count}×</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Villes les plus recherchées */}
+            {data.topCities && data.topCities.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Users className="w-5 h-5 text-blue-600 mr-2" />
+                  🏙️ Villes les plus recherchées
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {data.topCities.map((city, index) => (
+                    <div key={city.city} className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <span className="text-blue-600 font-bold mr-2">#{index + 1}</span>
+                          <div className="font-medium text-blue-900">{city.city}</div>
+                        </div>
+                        <div className="text-sm font-semibold text-blue-600">{city.count} recherche{city.count > 1 ? 's' : ''}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Statistiques des rayons de recherche */}
+            {data.radiusStats && data.radiusStats.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <TrendingUp className="w-5 h-5 text-purple-600 mr-2" />
+                  📍 Rayons de recherche utilisés
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {data.radiusStats.map((stat) => (
+                    <div key={stat.radius} className="p-4 bg-purple-50 border border-purple-200 rounded-lg text-center">
+                      <div className="text-2xl font-bold text-purple-600">{stat.radius} km</div>
+                      <div className="text-sm text-purple-800 mt-1">{stat.count} fois</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Parcours utilisateur (échantillon) */}
+            {data.userJourneys && data.userJourneys.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Search className="w-5 h-5 text-green-600 mr-2" />
+                  🗺️ Parcours utilisateur (échantillon)
+                </h3>
+                <div className="mb-4 text-sm text-gray-600">
+                  <p>Exemples de parcours utilisateur : recherche → résultats → clic</p>
+                </div>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {data.userJourneys.slice(0, 20).map((journey, index) => (
+                    <div key={index} className={`p-4 border rounded-lg ${
+                      journey.dataInconsistency 
+                        ? 'bg-yellow-50 border-yellow-300' 
+                        : 'bg-gray-50 border-gray-200'
+                    }`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900 mb-1">
+                            "{journey.searchTerm}"
+                            {journey.dataInconsistency && (
+                              <span className="ml-2 text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                                ⚠️ Incohérence détectée
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-600 space-y-1">
+                            {journey.city && <div>📍 Ville: {journey.city}</div>}
+                            {journey.radius && <div>📏 Rayon: {journey.radius} km</div>}
+                            <div className="flex items-center gap-4 mt-2">
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                journey.hasResults ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                              }`}>
+                                {journey.hasResults ? '✅ Avec résultats' : '❌ Sans résultats'}
+                              </span>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                journey.hasClick ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {journey.hasClick ? `🖱️ Clic: ${journey.clickedEstablishment}` : '🖱️ Pas de clic'}
+                              </span>
+                            </div>
+                            {journey.dataInconsistency && (
+                              <div className="mt-2 text-xs text-yellow-700 italic">
+                                Note: Un clic a été enregistré mais result_count = 0. 
+                                Cela peut indiquer un problème de timing dans le tracking.
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}

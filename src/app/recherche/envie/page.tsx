@@ -220,6 +220,7 @@ function EnvieSearchContent() {
                 body: JSON.stringify({
                   searchTerm: envie.trim(),
                   resultCount: data.pagination.totalResults,
+                  radius: rayon ? parseInt(rayon) : undefined,
                 }),
               });
               if (searchResponse.ok) {

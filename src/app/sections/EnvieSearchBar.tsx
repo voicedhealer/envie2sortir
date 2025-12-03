@@ -251,6 +251,7 @@ export default function EnvieSearchBar() {
           resultCount: 0, // Sera mis à jour sur la page de résultats
           searchedCity: searchedCity,
           city: cityValue !== "Autour de moi" ? cityValue : undefined,
+          radius: selectedRadius, // Rayon de recherche en km
         }),
       });
 
