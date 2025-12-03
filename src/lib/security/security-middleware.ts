@@ -10,6 +10,17 @@ export async function applySecurityMiddleware(
   let rateLimitResult;
   const method = request.method;
   
+  // Exclure complètement les routes admin du rate limiting
+  // Les routes admin sont protégées par authentification et n'ont pas besoin de rate limiting strict
+  const isAdminRoute = endpoint.startsWith('/admin') || 
+                       endpoint.startsWith('/api/admin/') || 
+                       endpoint.startsWith('/api/analytics/');
+  
+  // Si c'est une route admin, ne pas appliquer de rate limiting
+  if (isAdminRoute) {
+    return null; // Continuer sans rate limiting
+  }
+  
   // Exclure les routes admin analytics du rate limiting strict
   // /api/analytics/search est une route admin, pas une recherche utilisateur
   const isAdminAnalyticsRoute = endpoint.includes('/api/analytics/');

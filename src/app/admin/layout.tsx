@@ -158,12 +158,47 @@ export default function AdminLayout({
     return null;
   }
 
+  // Collecter tous les chemins de navigation pour éviter les conflits
+  const getAllPaths = () => {
+    const paths: string[] = [];
+    navigationSections.forEach(section => {
+      section.items.forEach(item => {
+        paths.push(item.href);
+      });
+    });
+    return paths;
+  };
+
   // Fonction pour déterminer si un lien est actif
   const isActive = (path: string) => {
     if (path === '/admin') {
       return pathname === '/admin';
     }
-    return pathname.startsWith(path);
+    
+    // Correspondance exacte
+    if (pathname === path) {
+      return true;
+    }
+    
+    // Vérifier si le pathname commence par ce path + '/'
+    if (!pathname.startsWith(path + '/')) {
+      return false;
+    }
+    
+    // Si on arrive ici, le pathname commence par path + '/'
+    // Mais on ne doit activer ce chemin que s'il n'y a pas de chemin plus spécifique qui correspondrait
+    const allPaths = getAllPaths();
+    const hasMoreSpecificPath = allPaths.some(otherPath => {
+      // Ignorer le chemin actuel
+      if (otherPath === path) return false;
+      // Vérifier si otherPath est plus long et commence par path + '/'
+      return otherPath.length > path.length && 
+             otherPath.startsWith(path + '/') &&
+             pathname.startsWith(otherPath);
+    });
+    
+    // Ne pas activer si un chemin plus spécifique correspond
+    return !hasMoreSpecificPath;
   };
 
   const toggleSection = (sectionId: string) => {

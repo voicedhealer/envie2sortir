@@ -45,17 +45,25 @@ export default function AdminRecherchesPage() {
     try {
       hasFetchedRef.current = period;
       setLoading(true);
+      setError(null); // Réinitialiser l'erreur
       const response = await fetch(`/api/analytics/search?period=${period}`);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch search analytics');
+        if (response.status === 429) {
+          const errorData = await response.json().catch(() => ({}));
+          const retryAfter = errorData.retryAfter || 60;
+          throw new Error(`Trop de requêtes. Veuillez réessayer dans ${retryAfter} secondes.`);
+        }
+        throw new Error(`Erreur ${response.status}: Failed to fetch search analytics`);
       }
       
       const analyticsData = await response.json();
       setData(analyticsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
       hasFetchedRef.current = null; // Permettre de réessayer en cas d'erreur
+      console.error('❌ Erreur fetchSearchAnalytics:', err);
     } finally {
       setLoading(false);
     }

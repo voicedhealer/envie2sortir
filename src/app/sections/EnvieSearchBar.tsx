@@ -240,7 +240,8 @@ export default function EnvieSearchBar() {
    */
   const trackSearch = async (searchTerm: string, searchedCity?: string) => {
     try {
-      await fetch('/api/analytics/search/track', {
+      console.log('🔍 [EnvieSearchBar] Tracking recherche:', searchTerm, searchedCity);
+      const response = await fetch('/api/analytics/search/track', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,8 +253,16 @@ export default function EnvieSearchBar() {
           city: cityValue !== "Autour de moi" ? cityValue : undefined,
         }),
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ [EnvieSearchBar] Recherche trackée avec succès:', data);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ [EnvieSearchBar] Erreur tracking:', response.status, errorData);
+      }
     } catch (error) {
-      console.error('Error tracking search:', error);
+      console.error('❌ [EnvieSearchBar] Error tracking search:', error);
       // Ne pas bloquer l'utilisateur en cas d'erreur de tracking
     }
   };

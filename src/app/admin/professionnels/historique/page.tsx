@@ -203,6 +203,87 @@ export default function ProfessionalsHistoryPage() {
     );
   }
 
+  // Calculer les métriques de comparaison
+  const calculateMetrics = () => {
+    if (!historyData || historyData.history.length === 0) {
+      return null;
+    }
+
+    const sortedHistory = [...historyData.history].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    const firstSnapshot = sortedHistory[0];
+    const lastSnapshot = sortedHistory[sortedHistory.length - 1];
+    const now = new Date();
+    const january = new Date(now.getFullYear(), 0, 1); // 1er janvier de l'année en cours
+    
+    // Trouver le snapshot le plus proche de janvier
+    const januarySnapshot = sortedHistory.find(s => {
+      const snapshotDate = new Date(s.date);
+      return snapshotDate >= january;
+    }) || firstSnapshot;
+
+    // Calculs depuis janvier
+    const establishmentsSinceJanuary = lastSnapshot.overview.totalEstablishments - januarySnapshot.overview.totalEstablishments;
+    const premiumSinceJanuary = lastSnapshot.overview.premiumCount - januarySnapshot.overview.premiumCount;
+    const revenueSinceJanuary = lastSnapshot.revenue.currentMonth - januarySnapshot.revenue.currentMonth;
+    
+    // Pourcentages d'évolution depuis janvier
+    const establishmentsGrowthSinceJanuary = januarySnapshot.overview.totalEstablishments > 0
+      ? ((lastSnapshot.overview.totalEstablishments - januarySnapshot.overview.totalEstablishments) / januarySnapshot.overview.totalEstablishments) * 100
+      : 0;
+    
+    const premiumGrowthSinceJanuary = januarySnapshot.overview.premiumCount > 0
+      ? ((lastSnapshot.overview.premiumCount - januarySnapshot.overview.premiumCount) / januarySnapshot.overview.premiumCount) * 100
+      : 0;
+    
+    const revenueGrowthSinceJanuary = januarySnapshot.revenue.currentMonth > 0
+      ? ((lastSnapshot.revenue.currentMonth - januarySnapshot.revenue.currentMonth) / januarySnapshot.revenue.currentMonth) * 100
+      : 0;
+
+    // Calculs depuis le début de l'historique
+    const establishmentsSinceStart = lastSnapshot.overview.totalEstablishments - firstSnapshot.overview.totalEstablishments;
+    const premiumSinceStart = lastSnapshot.overview.premiumCount - firstSnapshot.overview.premiumCount;
+    const revenueSinceStart = lastSnapshot.revenue.currentMonth - firstSnapshot.revenue.currentMonth;
+    
+    const establishmentsGrowthSinceStart = firstSnapshot.overview.totalEstablishments > 0
+      ? ((lastSnapshot.overview.totalEstablishments - firstSnapshot.overview.totalEstablishments) / firstSnapshot.overview.totalEstablishments) * 100
+      : 0;
+    
+    const premiumGrowthSinceStart = firstSnapshot.overview.premiumCount > 0
+      ? ((lastSnapshot.overview.premiumCount - firstSnapshot.overview.premiumCount) / firstSnapshot.overview.premiumCount) * 100
+      : 0;
+    
+    const revenueGrowthSinceStart = firstSnapshot.revenue.currentMonth > 0
+      ? ((lastSnapshot.revenue.currentMonth - firstSnapshot.revenue.currentMonth) / firstSnapshot.revenue.currentMonth) * 100
+      : 0;
+
+    // Compter le nombre total d'établissements créés (somme des nouveaux établissements)
+    const totalNewEstablishments = sortedHistory.reduce((sum, snapshot) => sum + snapshot.newEstablishments.thisMonth, 0);
+
+    return {
+      firstSnapshot,
+      lastSnapshot,
+      januarySnapshot,
+      establishmentsSinceJanuary,
+      premiumSinceJanuary,
+      revenueSinceJanuary,
+      establishmentsGrowthSinceJanuary,
+      premiumGrowthSinceJanuary,
+      revenueGrowthSinceJanuary,
+      establishmentsSinceStart,
+      premiumSinceStart,
+      revenueSinceStart,
+      establishmentsGrowthSinceStart,
+      premiumGrowthSinceStart,
+      revenueGrowthSinceStart,
+      totalNewEstablishments
+    };
+  };
+
+  const metrics = calculateMetrics();
+
   // Préparer les données pour les graphiques
   const overviewData = historyData.history.map(snapshot => ({
     date: new Date(snapshot.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
@@ -285,6 +366,178 @@ export default function ProfessionalsHistoryPage() {
             </span>
           </div>
         </div>
+
+        {/* Métriques concrètes */}
+        {metrics && (() => {
+          const firstDate = new Date(metrics.firstSnapshot.date);
+          const lastDate = new Date(metrics.lastSnapshot.date);
+          const januaryDate = new Date(metrics.januarySnapshot.date);
+          const currentMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+          
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+              {/* Établissements depuis janvier */}
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Établissements</p>
+                    <p className="text-xs text-gray-400">
+                      Depuis le {januaryDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <TrendingUp className={`w-5 h-5 ${metrics.establishmentsGrowthSinceJanuary >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                </div>
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  {metrics.establishmentsSinceJanuary >= 0 ? '+' : ''}{metrics.establishmentsSinceJanuary}
+                </p>
+                <p className={`text-sm font-medium ${metrics.establishmentsGrowthSinceJanuary >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {metrics.establishmentsGrowthSinceJanuary >= 0 ? '+' : ''}{metrics.establishmentsGrowthSinceJanuary.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {metrics.lastSnapshot.overview.totalEstablishments} établissements au {lastDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                </p>
+              </div>
+
+              {/* Premium depuis janvier */}
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Premium</p>
+                    <p className="text-xs text-gray-400">
+                      Depuis le {januaryDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <TrendingUp className={`w-5 h-5 ${metrics.premiumGrowthSinceJanuary >= 0 ? 'text-orange-500' : 'text-red-500'}`} />
+                </div>
+                <p className="text-3xl font-bold text-orange-600 mb-1">
+                  {metrics.premiumSinceJanuary >= 0 ? '+' : ''}{metrics.premiumSinceJanuary}
+                </p>
+                <p className={`text-sm font-medium ${metrics.premiumGrowthSinceJanuary >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {metrics.premiumGrowthSinceJanuary >= 0 ? '+' : ''}{metrics.premiumGrowthSinceJanuary.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {metrics.lastSnapshot.overview.premiumCount} premium au {lastDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                </p>
+              </div>
+
+              {/* Recettes depuis janvier */}
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Recettes</p>
+                    <p className="text-xs text-gray-400">
+                      Depuis le {januaryDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <TrendingUp className={`w-5 h-5 ${metrics.revenueGrowthSinceJanuary >= 0 ? 'text-green-500' : 'text-red-500'}`} />
+                </div>
+                <p className="text-3xl font-bold text-green-600 mb-1">
+                  {metrics.revenueSinceJanuary >= 0 ? '+' : ''}{metrics.revenueSinceJanuary.toFixed(2)} €
+                </p>
+                <p className={`text-sm font-medium ${metrics.revenueGrowthSinceJanuary >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {metrics.revenueGrowthSinceJanuary >= 0 ? '+' : ''}{metrics.revenueGrowthSinceJanuary.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {metrics.lastSnapshot.revenue.currentMonth.toFixed(2)} € en {currentMonth.toLocaleDateString('fr-FR', { month: 'long' })}
+                </p>
+              </div>
+
+              {/* Total créés sur la période */}
+              <div className="bg-white rounded-lg shadow-sm border p-6">
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Total créés</p>
+                    <p className="text-xs text-gray-400">
+                      Du {firstDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} au {lastDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                    </p>
+                  </div>
+                  <Calendar className="w-5 h-5 text-blue-500" />
+                </div>
+                <p className="text-3xl font-bold text-blue-600 mb-1">
+                  {metrics.totalNewEstablishments}
+                </p>
+                <p className="text-sm text-gray-600">
+                  établissements créés
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  sur {historyData.total} snapshot{historyData.total > 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Impact sur le CA - Carte détaillée */}
+        {metrics && (() => {
+          const firstDate = new Date(metrics.firstSnapshot.date);
+          const lastDate = new Date(metrics.lastSnapshot.date);
+          const januaryDate = new Date(metrics.januarySnapshot.date);
+          const currentMonth = new Date(lastDate.getFullYear(), lastDate.getMonth(), 1);
+          const lastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+          
+          return (
+            <div className="bg-gradient-to-r from-orange-50 to-white rounded-lg shadow-sm border border-orange-200 p-6 mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Impact sur le chiffre d'affaires</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Évolution depuis le {januaryDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    (Premier snapshot de {currentMonth.getFullYear()})
+                  </p>
+                  <p className={`text-2xl font-bold ${metrics.revenueGrowthSinceJanuary >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {metrics.revenueGrowthSinceJanuary >= 0 ? '+' : ''}{metrics.revenueGrowthSinceJanuary.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {metrics.revenueSinceJanuary >= 0 ? '+' : ''}{metrics.revenueSinceJanuary.toFixed(2)} €
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    Évolution depuis le {firstDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    (Premier snapshot disponible)
+                  </p>
+                  <p className={`text-2xl font-bold ${metrics.revenueGrowthSinceStart >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {metrics.revenueGrowthSinceStart >= 0 ? '+' : ''}{metrics.revenueGrowthSinceStart.toFixed(1)}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {metrics.revenueSinceStart >= 0 ? '+' : ''}{metrics.revenueSinceStart.toFixed(2)} €
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">
+                    CA du {currentMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    (Snapshot du {lastDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })})
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {metrics.lastSnapshot.revenue.currentMonth.toFixed(2)} €
+                  </p>
+                  <p className={`text-sm font-medium mt-1 ${metrics.lastSnapshot.revenue.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {metrics.lastSnapshot.revenue.growth >= 0 ? '+' : ''}{metrics.lastSnapshot.revenue.growth.toFixed(1)}% vs {lastMonth.toLocaleDateString('fr-FR', { month: 'long' })}
+                  </p>
+                </div>
+              </div>
+              {metrics.totalNewEstablishments > 0 && (
+                <div className="mt-4 pt-4 border-t border-orange-200">
+                  <p className="text-sm text-gray-600">
+                    <strong>{metrics.totalNewEstablishments} établissements créés</strong> entre le{' '}
+                    <strong>{firstDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong> et le{' '}
+                    <strong>{lastDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</strong> ont généré une{' '}
+                    <strong className={metrics.revenueGrowthSinceStart >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {metrics.revenueGrowthSinceStart >= 0 ? 'augmentation' : 'diminution'}
+                    </strong>
+                    {' '}du chiffre d'affaires de <strong>{Math.abs(metrics.revenueSinceStart).toFixed(2)} €</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Onglets */}
         <div className="mb-6">

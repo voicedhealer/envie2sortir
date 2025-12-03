@@ -12,23 +12,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
     }
 
-    // Récupérer les statistiques actuelles en réutilisant la logique
-    // On va directement utiliser le code de génération des stats
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({ error: 'Configuration Supabase manquante' }, { status: 500 });
-    }
-
-    const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
-    const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    });
-
     // Appeler l'API stats pour récupérer les données
     const baseUrl = request.headers.get('host') 
       ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('host')}`

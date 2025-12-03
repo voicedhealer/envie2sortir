@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { isAdmin } from '@/lib/supabase/helpers';
 
 export async function GET(request: NextRequest) {
   try {
+    // Vérifier l'authentification admin pour accéder aux analytics de recherche
+    const adminCheck = await isAdmin();
+    if (!adminCheck) {
+      return NextResponse.json({ error: 'Accès refusé. Admin requis.' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '30d'; // 7d, 30d, 90d, 1y
     

@@ -83,6 +83,7 @@ export default async function middleware(req: NextRequest) {
     }
 
     // Pour les routes dashboard et admin, appliquer la sécurité supplémentaire
+    // Note: Les routes admin sont exclues du rate limiting dans applySecurityMiddleware
     if (pathname.startsWith('/dashboard') || pathname.startsWith('/admin')) {
       try {
         // Vérification CSRF
@@ -91,7 +92,7 @@ export default async function middleware(req: NextRequest) {
           return csrfCheck;
         }
 
-        // Rate limiting et autres protections
+        // Rate limiting et autres protections (les routes admin sont exclues du rate limiting)
         const securityCheck = await applySecurityMiddleware(req, pathname);
         if (securityCheck) {
           return securityCheck;
@@ -99,6 +100,20 @@ export default async function middleware(req: NextRequest) {
       } catch (error) {
         console.error('❌ Erreur sécurité middleware:', error);
         // En cas d'erreur de sécurité, continuer quand même
+      }
+    }
+    
+    // Pour les routes API admin, appliquer la sécurité mais exclure du rate limiting
+    if (pathname.startsWith('/api/admin/') || pathname.startsWith('/api/analytics/')) {
+      try {
+        // Vérification CSRF uniquement (pas de rate limiting pour les routes admin)
+        const csrfCheck = await validateCSRFMiddleware(req);
+        if (csrfCheck) {
+          return csrfCheck;
+        }
+        // Les routes admin sont déjà exclues du rate limiting dans applySecurityMiddleware
+      } catch (error) {
+        console.error('❌ Erreur sécurité middleware API admin:', error);
       }
     }
 

@@ -208,6 +208,29 @@ function EnvieSearchContent() {
         if (reset) {
           setEstablishments(data.results);
           setQuery(data.query);
+          
+          // Mettre à jour le resultCount dans search_analytics
+          if (envie && data.pagination) {
+            try {
+              const searchResponse = await fetch('/api/analytics/search/track', {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  searchTerm: envie.trim(),
+                  resultCount: data.pagination.totalResults,
+                }),
+              });
+              if (searchResponse.ok) {
+                console.log('✅ [EnvieSearch] resultCount mis à jour:', data.pagination.totalResults);
+              } else {
+                console.warn('⚠️ [EnvieSearch] Impossible de mettre à jour resultCount');
+              }
+            } catch (err) {
+              console.warn('⚠️ [EnvieSearch] Erreur mise à jour resultCount:', err);
+            }
+          }
         } else {
           setEstablishments(prev => [...prev, ...data.results]);
         }
