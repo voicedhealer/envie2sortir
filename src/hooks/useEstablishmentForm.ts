@@ -1075,12 +1075,9 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         } else if (formData.subscriptionPlan === 'premium' && !formData.subscriptionPlanType) {
           newErrors.subscriptionPlanType = "Veuillez choisir entre paiement mensuel ou annuel";
         }
-        break;
-      
-      case 6:
-        // Validation de l'acceptation des conditions générales (seulement en mode création)
-        if (!isEditMode && !formData.termsAccepted) {
-          newErrors.termsAccepted = "Vous devez accepter les conditions générales d'utilisation";
+        // Validation de l'acceptation des conditions générales (obligatoire pour passer à l'étape suivante)
+        if (!formData.termsAccepted) {
+          newErrors.termsAccepted = "Vous devez accepter les conditions générales de vente (CGV) et les conditions générales d'utilisation (CGU)";
         }
         break;
       

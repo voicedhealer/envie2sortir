@@ -186,6 +186,7 @@ export default function SubscriptionStep({
             name="acceptCGV"
             checked={formData.termsAccepted || false}
             onChange={(e) => onInputChange('termsAccepted', e.target.checked)}
+            required
             className={`mt-1 w-4 h-4 ${
               formData.subscriptionPlan === 'premium' 
                 ? 'text-orange-600 focus:ring-orange-500' 
