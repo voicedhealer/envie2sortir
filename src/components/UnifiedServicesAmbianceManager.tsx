@@ -65,6 +65,9 @@ export default function UnifiedServicesAmbianceManager({
       });
     });
     
+    // ✅ CORRECTION : Créer un Set pour tracker les items déjà ajoutés (pour éviter les doublons)
+    const addedItems = new Set<string>();
+    
     // Organiser chaque item
     items.forEach(item => {
       // Vérifier si l'item a un marqueur de rubrique
@@ -103,17 +106,54 @@ export default function UnifiedServicesAmbianceManager({
         
         console.log('🔍 ORGANISATION - Item:', cleanItem, 'Rubrique:', rubrique, 'Section:', mainSection);
         
+        // ✅ CORRECTION : Créer une clé unique pour cet item dans cette rubrique
+        const itemKey = `${cleanItem.toLowerCase()}|${mainSection}|${rubrique}`;
+        
         // Ajouter dans la rubrique choisie par l'utilisateur
+        // ✅ CORRECTION : Vérifier que la sous-catégorie existe avant d'ajouter
         if (organized[mainSection] && organized[mainSection][rubrique]) {
-          organized[mainSection][rubrique].push(cleanItem);
+          // Vérifier qu'on n'ajoute pas déjà cet item dans cette sous-catégorie
+          if (!addedItems.has(itemKey) && !organized[mainSection][rubrique].includes(cleanItem)) {
+            organized[mainSection][rubrique].push(cleanItem);
+            addedItems.add(itemKey);
+          }
+        } else {
+          console.warn(`⚠️ Sous-catégorie "${rubrique}" non trouvée dans la section "${mainSection}" pour l'item "${cleanItem}"`);
         }
       } else {
         // Format ancien : utiliser la catégorisation automatique
         // ✅ NETTOYAGE : Supprimer les icônes automatiques
         const cleanItem = item.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
-        const { mainCategory, subCategory } = categorizeItem(cleanItem);
+        
+        // ✅ CORRECTION : Déterminer la section principale selon le tableau d'origine
+        // pour éviter les catégorisations incorrectes
+        let mainCategory: string;
+        if (Array.isArray(services) && services.includes(item)) {
+          mainCategory = 'equipements-services';
+        } else if (Array.isArray(informationsPratiques) && informationsPratiques.includes(item)) {
+          mainCategory = 'informations-pratiques';
+        } else if (Array.isArray(paymentMethods) && paymentMethods.includes(item)) {
+          mainCategory = 'moyens-paiement';
+        } else if (Array.isArray(ambiance) && ambiance.includes(item)) {
+          // Si l'item vient de ambiance, forcer ambiance-specialites
+          mainCategory = 'ambiance-specialites';
+        } else {
+          // Fallback : utiliser la catégorisation automatique
+          const categorized = categorizeItem(cleanItem);
+          mainCategory = categorized.mainCategory;
+        }
+        
+        const { subCategory } = categorizeItem(cleanItem);
+        
+        // ✅ CORRECTION : Créer une clé unique pour cet item dans cette sous-catégorie
+        const itemKey = `${cleanItem.toLowerCase()}|${mainCategory}|${subCategory}`;
+        
         if (organized[mainCategory] && organized[mainCategory][subCategory]) {
-          organized[mainCategory][subCategory].push(cleanItem);
+          // Vérifier qu'on n'ajoute pas déjà cet item dans cette sous-catégorie
+          if (!addedItems.has(itemKey) && !organized[mainCategory][subCategory].includes(cleanItem)) {
+            organized[mainCategory][subCategory].push(cleanItem);
+            addedItems.add(itemKey);
+          }
         }
       }
     });

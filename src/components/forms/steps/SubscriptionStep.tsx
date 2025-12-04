@@ -5,6 +5,7 @@ interface SubscriptionStepProps {
   formData: {
     subscriptionPlan: 'free' | 'premium';
     subscriptionPlanType?: 'monthly' | 'annual';
+    termsAccepted?: boolean;
   };
   errors: Record<string, string>;
   onInputChange: (field: string | number | symbol, value: any) => void;
@@ -172,28 +173,52 @@ export default function SubscriptionStep({
         </div>
       </div>
       
-      {/* Checkbox d'acceptation des CGV */}
-      {formData.subscriptionPlan === 'premium' && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 mt-6">
-          <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
-              id="acceptCGV"
-              name="acceptCGV"
-              className="mt-1 w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
-            />
-            <label htmlFor="acceptCGV" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
-              J'accepte les{' '}
-              <a href="/cgv" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-500 underline">
-                Conditions Générales de Vente (CGV)
-              </a>
-              {' '}et les{' '}
-              <a href="/conditions" target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:text-orange-500 underline">
-                Conditions Générales d'Utilisation (CGU)
-              </a>
-            </label>
-          </div>
+      {/* Checkbox d'acceptation des CGV - Affichée pour tous les plans */}
+      <div className={`rounded-xl p-5 mt-6 ${
+        formData.subscriptionPlan === 'premium' 
+          ? 'bg-orange-50 border border-orange-200' 
+          : 'bg-gray-50 border border-gray-200'
+      }`}>
+        <div className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="acceptCGV"
+            name="acceptCGV"
+            checked={formData.termsAccepted || false}
+            onChange={(e) => onInputChange('termsAccepted', e.target.checked)}
+            className={`mt-1 w-4 h-4 ${
+              formData.subscriptionPlan === 'premium' 
+                ? 'text-orange-600 focus:ring-orange-500' 
+                : 'text-gray-600 focus:ring-gray-500'
+            } border-gray-300 rounded focus:ring-2`}
+          />
+          <label htmlFor="acceptCGV" className="text-sm text-gray-700 leading-relaxed cursor-pointer">
+            J'accepte les{' '}
+            <a href="/cgv" target="_blank" rel="noopener noreferrer" className={`${
+              formData.subscriptionPlan === 'premium' 
+                ? 'text-orange-600 hover:text-orange-500' 
+                : 'text-gray-600 hover:text-gray-500'
+            } underline`}>
+              Conditions Générales de Vente (CGV)
+            </a>
+            {' '}et les{' '}
+            <a href="/conditions" target="_blank" rel="noopener noreferrer" className={`${
+              formData.subscriptionPlan === 'premium' 
+                ? 'text-orange-600 hover:text-orange-500' 
+                : 'text-gray-600 hover:text-gray-500'
+            } underline`}>
+              Conditions Générales d'Utilisation (CGU)
+            </a>
+          </label>
         </div>
+      </div>
+      
+      {/* Message d'erreur pour termsAccepted */}
+      {errors.termsAccepted && (
+        <p className="text-red-500 text-sm mt-2 flex items-center gap-2">
+          <span>⚠️</span>
+          {errors.termsAccepted}
+        </p>
       )}
       
       {/* Message d'erreur */}

@@ -211,7 +211,8 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
           <SubscriptionStep
             formData={{
               subscriptionPlan: formData.subscriptionPlan,
-              subscriptionPlanType: formData.subscriptionPlanType
+              subscriptionPlanType: formData.subscriptionPlanType,
+              termsAccepted: formData.termsAccepted
             }}
             errors={errors}
             onInputChange={(field: string | number | symbol, value: any) => handleInputChange(field as string, value)}

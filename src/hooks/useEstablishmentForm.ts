@@ -1077,6 +1077,13 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         }
         break;
       
+      case 6:
+        // Validation de l'acceptation des conditions générales (seulement en mode création)
+        if (!isEditMode && !formData.termsAccepted) {
+          newErrors.termsAccepted = "Vous devez accepter les conditions générales d'utilisation";
+        }
+        break;
+      
       case 7:
         break;
       
