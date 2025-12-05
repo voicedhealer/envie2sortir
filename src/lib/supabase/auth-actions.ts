@@ -310,6 +310,8 @@ export async function signUpProfessional(
     companyName: string;
     legalStatus: string;
     subscriptionPlan: string;
+    termsAcceptedCGV?: boolean;
+    termsAcceptedCGU?: boolean;
   },
   establishmentData: {
     name: string;
@@ -426,7 +428,11 @@ export async function signUpProfessional(
         company_name: professionalData.companyName,
         legal_status: professionalData.legalStatus,
         subscription_plan: professionalData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
-        siret_verified: false
+        siret_verified: false,
+        terms_accepted_cgv: professionalData.termsAcceptedCGV || false,
+        terms_accepted_cgu: professionalData.termsAcceptedCGU || false,
+        terms_accepted_cgv_at: professionalData.termsAcceptedCGV ? new Date().toISOString() : null,
+        terms_accepted_cgu_at: professionalData.termsAcceptedCGU ? new Date().toISOString() : null
       })
       .select()
       .single();

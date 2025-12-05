@@ -132,6 +132,9 @@ export default function ServicesStep({
         onPaymentMethodsChange={(paymentMethodsArray) => {
           // ✅ CORRECTION : Sauvegarder directement le tableau, sans conversion
           console.log('💾 SAUVEGARDE - Moyens de paiement (tableau):', paymentMethodsArray);
+          // ✅ Vérifier qu'on ne perd pas les items existants
+          console.log('💾 VÉRIFICATION - Nombre d\'items:', paymentMethodsArray.length);
+          console.log('💾 VÉRIFICATION - Détail des items:', paymentMethodsArray);
           onInputChange('paymentMethods', paymentMethodsArray);
         }}
         isEditMode={isEditMode}

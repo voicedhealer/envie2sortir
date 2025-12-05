@@ -212,7 +212,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
             formData={{
               subscriptionPlan: formData.subscriptionPlan,
               subscriptionPlanType: formData.subscriptionPlanType,
-              termsAccepted: formData.termsAccepted
+              termsAcceptedCGV: formData.termsAcceptedCGV
             }}
             errors={errors}
             onInputChange={(field: string | number | symbol, value: any) => handleInputChange(field as string, value)}
@@ -291,7 +291,7 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
               siretActivity: formData.siretActivity,
               siretCreationDate: formData.siretCreationDate,
               siretEffectifs: formData.siretEffectifs,
-              termsAccepted: formData.termsAccepted,
+              termsAcceptedCGU: formData.termsAcceptedCGU,
               // Données d'enrichissement
               enrichmentData: enrichmentData,
               theForkLink: formData.theForkLink,
@@ -409,25 +409,39 @@ export default function ProfessionalRegistrationForm({ establishment, isEditMode
                   nextStep();
                 }
               }}
-              disabled={currentStep === 0 && !phoneVerification.isVerified}
+              disabled={
+                (currentStep === 0 && !phoneVerification.isVerified) ||
+                (currentStep === 6 && !isEditMode && !formData.termsAcceptedCGV)
+              }
               className={`px-6 py-2 rounded-lg transition-all ${
-                currentStep === 0 && !phoneVerification.isVerified
+                (currentStep === 0 && !phoneVerification.isVerified) ||
+                (currentStep === 6 && !isEditMode && !formData.termsAcceptedCGV)
                   ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               }`}
             >
-              {currentStep === 0 && !phoneVerification.isVerified ? 'Validez votre téléphone' : 'Suivant'}
+              {currentStep === 0 && !phoneVerification.isVerified 
+                ? 'Validez votre téléphone' 
+                : currentStep === 6 && !isEditMode && !formData.termsAcceptedCGV
+                ? 'Acceptez les CGV pour continuer'
+                : 'Suivant'}
             </button>
           ) : currentStep === 8 ? (
             <button
               type="button"
               data-testid="form-button-submit"
               onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting || (!isEditMode && !formData.termsAcceptedCGU)}
+              className={`px-6 py-2 rounded-lg transition-all ${
+                isSubmitting || (!isEditMode && !formData.termsAcceptedCGU)
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
             >
               {isSubmitting 
                 ? (submitProgress || (isEditMode ? 'Modification en cours...' : 'Création en cours...'))
+                : !isEditMode && !formData.termsAcceptedCGU
+                ? 'Acceptez les CGU pour finaliser'
                 : (isEditMode ? "Sauvegarder les modifications" : "Créer l'établissement")
               }
             </button>

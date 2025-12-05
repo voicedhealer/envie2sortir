@@ -94,6 +94,8 @@ export async function POST(request: NextRequest) {
       legalStatus: formData.get('legalStatus') as string,
       subscriptionPlan: formData.get('subscriptionPlan') as string || 'free',
       subscriptionPlanType: formData.get('subscriptionPlanType') as 'monthly' | 'annual' || 'monthly',
+      termsAcceptedCGV: formData.get('termsAcceptedCGV') === 'true',
+      termsAcceptedCGU: formData.get('termsAcceptedCGU') === 'true',
     };
 
     // Fonction pour extraire city et postalCode de l'adresse complète
@@ -418,16 +420,25 @@ export async function POST(request: NextRequest) {
     // Si premium est sélectionné, créer une session Stripe
     let checkoutUrl = null;
     if (professionalData.subscriptionPlan === 'premium') {
+      console.log('💳 [Registration] Plan Premium détecté, création de la session Stripe...');
+      console.log('💳 [Registration] Plan type:', professionalData.subscriptionPlanType || 'monthly');
       try {
         const { isStripeConfigured, getStripe, STRIPE_PRICE_IDS, getBaseUrl } = await import('@/lib/stripe/config');
-        if (isStripeConfigured()) {
+        
+        if (!isStripeConfigured()) {
+          console.error('❌ [Registration] Stripe n\'est pas configuré');
+          console.error('❌ [Registration] Vérifiez les variables d\'environnement STRIPE_SECRET_KEY, STRIPE_PRICE_ID_MONTHLY, STRIPE_PRICE_ID_ANNUAL');
+        } else {
+          console.log('✅ [Registration] Stripe est configuré');
           const stripe = getStripe();
           const { createClient: createClientAdmin } = await import('@supabase/supabase-js');
           
           const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
           const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
           
-          if (supabaseUrl && supabaseServiceKey) {
+          if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('❌ [Registration] Variables Supabase manquantes pour créer le customer Stripe');
+          } else {
             const adminClient = createClientAdmin(supabaseUrl, supabaseServiceKey, {
               auth: { autoRefreshToken: false, persistSession: false }
             });
@@ -435,18 +446,22 @@ export async function POST(request: NextRequest) {
             // Créer ou récupérer le customer Stripe
             let customerId = result.professional.stripe_customer_id;
             if (!customerId) {
+              console.log('💳 [Registration] Création d\'un nouveau customer Stripe...');
               const customer = await stripe.customers.create({
                 email: result.professional.email,
                 name: `${result.professional.firstName} ${result.professional.lastName}`,
                 metadata: { professional_id: result.professional.id },
               });
               customerId = customer.id;
+              console.log('✅ [Registration] Customer Stripe créé:', customerId);
 
               // Sauvegarder le customer_id
               await adminClient
                 .from('professionals')
                 .update({ stripe_customer_id: customerId })
                 .eq('id', result.professional.id);
+            } else {
+              console.log('✅ [Registration] Customer Stripe existant:', customerId);
             }
 
             // Créer la session de checkout avec le plan choisi (mensuel ou annuel)
@@ -455,17 +470,28 @@ export async function POST(request: NextRequest) {
               ? STRIPE_PRICE_IDS.annual 
               : STRIPE_PRICE_IDS.monthly;
             
+            console.log('💳 [Registration] Plan type:', planType);
+            console.log('💳 [Registration] Price ID:', priceId);
+            
             if (!priceId) {
-              throw new Error(`Aucun prix Stripe configuré pour le plan ${planType}`);
+              const errorMsg = `Aucun prix Stripe configuré pour le plan ${planType}`;
+              console.error('❌ [Registration]', errorMsg);
+              console.error('❌ [Registration] STRIPE_PRICE_IDS:', STRIPE_PRICE_IDS);
+              throw new Error(errorMsg);
             }
+
+            const baseUrl = getBaseUrl();
+            console.log('💳 [Registration] Création de la session Stripe...');
+            console.log('💳 [Registration] Success URL:', `${baseUrl}/dashboard/subscription?success=true`);
+            console.log('💳 [Registration] Cancel URL:', `${baseUrl}/dashboard/subscription?canceled=true`);
 
             const session = await stripe.checkout.sessions.create({
               customer: customerId,
               mode: 'subscription',
               payment_method_types: ['card'],
               line_items: [{ price: priceId, quantity: 1 }],
-              success_url: `${getBaseUrl()}/dashboard/subscription?success=true`,
-              cancel_url: `${getBaseUrl()}/dashboard/subscription?canceled=true`,
+              success_url: `${baseUrl}/dashboard/subscription?success=true`,
+              cancel_url: `${baseUrl}/dashboard/subscription?canceled=true`,
               metadata: { 
                 professional_id: result.professional.id,
                 plan_type: planType,
@@ -479,13 +505,22 @@ export async function POST(request: NextRequest) {
             });
 
             checkoutUrl = session.url;
+            console.log('✅ [Registration] Session Stripe créée avec succès');
+            console.log('✅ [Registration] Session ID:', session.id);
+            console.log('✅ [Registration] Checkout URL:', checkoutUrl);
           }
         }
-      } catch (stripeError) {
-        console.warn('Erreur lors de la création de la session Stripe:', stripeError);
-        // Ne pas bloquer l'inscription si Stripe échoue
+      } catch (stripeError: any) {
+        console.error('❌ [Registration] Erreur lors de la création de la session Stripe:', stripeError);
+        console.error('❌ [Registration] Message:', stripeError?.message);
+        console.error('❌ [Registration] Stack:', stripeError?.stack);
+        // Ne pas bloquer l'inscription si Stripe échoue, mais logger l'erreur
       }
+    } else {
+      console.log('ℹ️ [Registration] Plan gratuit sélectionné, pas de session Stripe nécessaire');
     }
+    
+    console.log('📋 [Registration] Résultat final - checkoutUrl:', checkoutUrl);
 
     // TODO: Upload des photos (prochaine étape)
     // TODO: Envoyer email de confirmation (prochaine étape)

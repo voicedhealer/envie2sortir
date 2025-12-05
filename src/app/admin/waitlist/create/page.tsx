@@ -256,7 +256,8 @@ export default function AdminWaitlistCreatePage() {
           <SubscriptionStep
             formData={{
               subscriptionPlan: formData.subscriptionPlan,
-              subscriptionPlanType: formData.subscriptionPlanType
+              subscriptionPlanType: formData.subscriptionPlanType,
+              termsAcceptedCGV: formData.termsAcceptedCGV
             }}
             errors={errors}
             onInputChange={(field: string | number | symbol, value: any) => handleInputChange(field as string, value)}
@@ -310,7 +311,7 @@ export default function AdminWaitlistCreatePage() {
               siretActivity: formData.siretActivity,
               siretCreationDate: formData.siretCreationDate,
               siretEffectifs: formData.siretEffectifs,
-              termsAccepted: formData.termsAccepted,
+              termsAcceptedCGU: formData.termsAcceptedCGU,
               enrichmentData: enrichmentData,
               theForkLink: formData.theForkLink,
               uberEatsLink: formData.uberEatsLink,

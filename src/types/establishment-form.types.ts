@@ -132,7 +132,8 @@ export type ProfessionalData = {
   subscriptionPlanType?: 'monthly' | 'annual'; // Type d'abonnement (mensuel ou annuel) pour le plan premium
   
   // Acceptation des conditions
-  termsAccepted?: boolean;
+  termsAcceptedCGV?: boolean;
+  termsAcceptedCGU?: boolean;
   
   // === DONNÉES HYBRIDES ===
   hybridAccessibilityDetails?: any;

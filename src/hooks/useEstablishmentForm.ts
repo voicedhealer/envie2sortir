@@ -48,6 +48,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       setCurrentStep(7);
     }
   }, [currentStep, isEditMode]);
+  
   const [submitProgress, setSubmitProgress] = useState<string>('');
   const [formData, setFormData] = useState<ProfessionalData>(() => {
     // Pré-remplir avec les données existantes si en mode édition
@@ -102,7 +103,8 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         informationsPratiques: establishment.informationsPratiques || [],
         subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free',
         subscriptionPlanType: "monthly", // Par défaut mensuel (on ne peut pas récupérer le type depuis l'établissement existant)
-        termsAccepted: false
+        termsAcceptedCGV: false,
+        termsAcceptedCGU: false
       };
     }
     
@@ -135,7 +137,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       activities: [],
       services: [],
       ambiance: [],
-      paymentMethods: [],
+      paymentMethods: ["Espèces|especes-autres"], // ✅ "Espèces" ajouté par défaut dans "Espèces et autres"
       tags: [],
       photos: [],
       hours: {},
@@ -144,9 +146,41 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       informationsPratiques: [],
       subscriptionPlan: "free",
       subscriptionPlanType: "monthly", // Par défaut mensuel
-      termsAccepted: false
+      termsAcceptedCGV: false,
+      termsAcceptedCGU: false
     };
   });
+
+  // ✅ Ajouter "Espèces" par défaut dans "Espèces et autres" à l'étape 4 si absent
+  // ✅ CORRECTION : Ne pas déclencher si on a déjà des moyens de paiement depuis l'enrichissement
+  useEffect(() => {
+    if (!isEditMode && currentStep === 4) {
+      // Vérifier si on a déjà des moyens de paiement
+      const hasPaymentMethods = Array.isArray(formData.paymentMethods) && formData.paymentMethods.length > 0;
+      
+      // Vérifier si "Espèces" est déjà présent
+      const hasEspeces = hasPaymentMethods && 
+        formData.paymentMethods.some(pm => {
+          const cleanPm = pm.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+          const itemWithoutMarker = cleanPm.split('|')[0].trim().toLowerCase();
+          return itemWithoutMarker === 'espèces' || itemWithoutMarker === 'especes' || itemWithoutMarker === 'cash';
+        });
+      
+      // ✅ CORRECTION : Ne pas ajouter "Espèces" si on a déjà des moyens de paiement depuis l'enrichissement
+      // L'enrichissement Google devrait déjà inclure "Espèces" si disponible
+      if (!hasEspeces && !hasPaymentMethods) {
+        setFormData(prev => ({
+          ...prev,
+          paymentMethods: [...(Array.isArray(prev.paymentMethods) ? prev.paymentMethods : []), "Espèces|especes-autres"]
+        }));
+        console.log('✅ [useEstablishmentForm] "Espèces" ajouté automatiquement dans "Espèces et autres" (aucun moyen de paiement existant)');
+      } else if (hasPaymentMethods && !hasEspeces) {
+        // Si on a des moyens de paiement mais pas "Espèces", on peut l'ajouter
+        // mais seulement si l'utilisateur n'a pas encore interagi avec cette section
+        console.log('ℹ️ [useEstablishmentForm] Moyens de paiement existants détectés, "Espèces" non ajouté automatiquement');
+      }
+    }
+  }, [currentStep, isEditMode, formData.paymentMethods]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -632,6 +666,23 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
     if (field === 'accountFirstName' || field === 'accountLastName') {
       console.log(`Hook - ${field} changé:`, value);
     }
+    
+    // ✅ CORRECTION : Gérer spécifiquement termsAcceptedCGV et termsAcceptedCGU pour garantir un boolean
+    if (field === 'termsAcceptedCGV' || field === 'termsAcceptedCGU') {
+      const booleanValue = Boolean(value);
+      console.log(`🔘 [handleInputChange] ${field}:`, value, '->', booleanValue);
+      setFormData(prev => ({ ...prev, [field]: booleanValue }));
+      // Effacer l'erreur si la checkbox est cochée
+      if (booleanValue && errors[field]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[field];
+          return newErrors;
+        });
+      }
+      return;
+    }
+    
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       
@@ -894,9 +945,37 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
       services: enrichmentData.servicesArray || [],
       ambiance: enrichmentData.ambianceArray || [],
       activities: enrichmentData.activities || [],
-      paymentMethods: enrichmentData.paymentMethodsArray ? 
-        convertPaymentMethodsArrayToObject(enrichmentData.paymentMethodsArray) : 
-        prev.paymentMethods,
+      // ✅ CORRECTION : Conserver les moyens de paiement sous forme de tableau avec marqueurs
+      // au lieu de les convertir en objet, pour préserver tous les items
+      paymentMethods: enrichmentData.paymentMethodsArray && enrichmentData.paymentMethodsArray.length > 0
+        ? enrichmentData.paymentMethodsArray.map((method: string) => {
+            // Ajouter les marqueurs de rubrique si absents
+            if (!method.includes('|')) {
+              const methodLower = method.toLowerCase();
+              if (methodLower.includes('carte') && (methodLower.includes('crédit') || methodLower.includes('credit'))) {
+                return `${method}|cartes-bancaires`;
+              }
+              if (methodLower.includes('carte') && methodLower.includes('débit')) {
+                return `${method}|cartes-bancaires`;
+              }
+              if (methodLower.includes('nfc') || methodLower.includes('mobile')) {
+                return `${method}|paiements-mobiles`;
+              }
+              if (methodLower.includes('espèces') || methodLower.includes('cash')) {
+                return `${method}|especes-autres`;
+              }
+              if (methodLower.includes('titre') || methodLower.includes('restaurant')) {
+                return `${method}|especes-autres`;
+              }
+              if (methodLower.includes('pluxee')) {
+                return `${method}|especes-autres`;
+              }
+              // Par défaut, mettre dans espèces et autres
+              return `${method}|especes-autres`;
+            }
+            return method;
+          })
+        : prev.paymentMethods,
       informationsPratiques: enrichmentData.informationsPratiques || prev.informationsPratiques,
       address: enrichmentData.address ? {
         ...parseAddressFromGoogle(enrichmentData.address),
@@ -1075,9 +1154,9 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         } else if (formData.subscriptionPlan === 'premium' && !formData.subscriptionPlanType) {
           newErrors.subscriptionPlanType = "Veuillez choisir entre paiement mensuel ou annuel";
         }
-        // Validation de l'acceptation des conditions générales (obligatoire pour passer à l'étape suivante)
-        if (!formData.termsAccepted) {
-          newErrors.termsAccepted = "Vous devez accepter les conditions générales de vente (CGV) et les conditions générales d'utilisation (CGU)";
+        // ✅ Validation de l'acceptation des CGV (Conditions Générales de Vente) pour l'abonnement
+        if (!formData.termsAcceptedCGV) {
+          newErrors.termsAcceptedCGV = "Vous devez accepter les Conditions Générales de Vente (CGV) pour continuer";
         }
         break;
       
@@ -1085,9 +1164,9 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         break;
       
       case 8:
-        // Validation de l'acceptation des conditions générales (seulement en mode création)
-        if (!isEditMode && !formData.termsAccepted) {
-          newErrors.termsAccepted = "Vous devez accepter les conditions générales d'utilisation";
+        // ✅ Validation de l'acceptation des CGU (Conditions Générales d'Utilisation) de la plateforme
+        if (!isEditMode && !formData.termsAcceptedCGU) {
+          newErrors.termsAcceptedCGU = "Vous devez accepter les Conditions Générales d'Utilisation (CGU) pour finaliser votre inscription";
         }
         break;
     }
@@ -1299,6 +1378,16 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         setSubmitProgress('Traitement des données...');
         const result = await response.json();
         
+        // ✅ DEBUG : Logs détaillés pour Stripe
+        console.log('📋 [handleSubmit] Réponse API reçue:', {
+          success: result.success,
+          hasCheckoutUrl: !!result.checkoutUrl,
+          checkoutUrl: result.checkoutUrl,
+          subscriptionPlan: formData.subscriptionPlan,
+          hasAutoLogin: !!result.autoLogin,
+          hasProfessional: !!result.professional
+        });
+        
         if (!response.ok) {
           // Afficher les détails de l'erreur en mode développement
           console.error('❌ Erreur API:', result);
@@ -1319,6 +1408,12 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           }
           
           throw new Error(errorMessage);
+        }
+        
+        // ✅ VÉRIFICATION : Si premium est sélectionné mais pas de checkoutUrl, afficher un avertissement
+        if (formData.subscriptionPlan === 'premium' && !result.checkoutUrl) {
+          console.warn('⚠️ [handleSubmit] Plan Premium sélectionné mais pas de checkoutUrl dans la réponse');
+          console.warn('⚠️ [handleSubmit] Cela peut indiquer que Stripe n\'est pas configuré ou qu\'il y a eu une erreur');
         }
         
         // ✅ CORRECTION : Authentifier l'utilisateur AVANT de rediriger vers Stripe
@@ -1347,13 +1442,17 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
               
               // Si une URL de checkout Stripe est fournie, rediriger vers Stripe APRÈS authentification
               if (result.checkoutUrl) {
-                console.log('💳 Redirection vers Stripe Checkout (utilisateur authentifié)...');
+                console.log('💳 [handleSubmit] Redirection vers Stripe Checkout (utilisateur authentifié)...');
+                console.log('💳 [handleSubmit] URL Stripe:', result.checkoutUrl);
                 // ✅ CORRECTION : Stocker l'email et le mot de passe pour reconnexion après Stripe
                 // (en cas de perte de session lors de la redirection externe)
                 localStorage.setItem('pending_stripe_email', result.professional.email);
                 sessionStorage.setItem('pending_stripe_password', formData.accountPassword);
+                // Utiliser window.location.href pour forcer la redirection
                 window.location.href = result.checkoutUrl;
                 return;
+              } else {
+                console.warn('⚠️ [handleSubmit] Pas de checkoutUrl alors que premium est sélectionné');
               }
               
               // Sinon, rediriger vers le dashboard
@@ -1373,9 +1472,12 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           // Si pas d'autoLogin mais qu'il y a un checkoutUrl, rediriger quand même vers Stripe
           // (cas où l'authentification a déjà été faite ailleurs)
           if (result.checkoutUrl) {
-            console.log('💳 Redirection vers Stripe Checkout...');
+            console.log('💳 [handleSubmit] Redirection vers Stripe Checkout (sans autoLogin)...');
+            console.log('💳 [handleSubmit] URL Stripe:', result.checkoutUrl);
             window.location.href = result.checkoutUrl;
             return;
+          } else {
+            console.warn('⚠️ [handleSubmit] Pas de checkoutUrl et pas d\'autoLogin');
           }
           
           console.log('⚠️ Pas de connexion automatique, redirection vers page de connexion');

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 
@@ -1142,9 +1142,60 @@ export function useSupabaseSession(): UseSupabaseSessionReturn {
     }
   };
 
+  // ✅ CORRECTION : Toujours enrichir la session avec notre user qui a le rôle
+  // C'est crucial pour que AdminLayout puisse vérifier session.user.role
+  const enrichedSession = useMemo(() => {
+    if (!session) return null;
+    
+    // ✅ IMPORTANT : Toujours remplacer session.user par notre user enrichi
+    // car session.user de Supabase n'a pas la propriété 'role' directement
+    // Notre user enrichi a la propriété 'role' qui est nécessaire pour les vérifications
+    
+    // ✅ CORRECTION : Extraire la logique de création du user fallback pour éviter les problèmes d'initialisation
+    let enrichedUser: SessionUser;
+    
+    if (user) {
+      enrichedUser = user;
+    } else {
+      // Créer un user enrichi depuis les métadonnées si user n'est pas encore disponible
+      const userMetadata = session.user?.user_metadata || {};
+      const appMetadata = session.user?.app_metadata || {};
+      const roleFromMetadata = appMetadata.role || userMetadata.role || 'user';
+      
+      enrichedUser = {
+        id: session.user?.id || '',
+        email: session.user?.email || '',
+        role: (roleFromMetadata === 'admin' ? 'admin' : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | 'admin',
+        firstName: userMetadata.first_name || userMetadata.firstName || null,
+        lastName: userMetadata.last_name || userMetadata.lastName || null,
+        userType: (roleFromMetadata === 'admin' ? undefined : roleFromMetadata === 'professional' ? 'professional' : 'user') as 'user' | 'professional' | undefined
+      };
+    }
+    
+    try {
+      const newSession = {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+        expires_at: session.expires_at,
+        expires_in: session.expires_in,
+        token_type: session.token_type,
+        user: enrichedUser
+      };
+      
+      return newSession;
+    } catch (error) {
+      console.error('❌ [useSupabaseSession] Erreur lors de la création de enrichedSession:', error);
+      // En cas d'erreur, retourner la session originale mais avec user enrichi si disponible
+      return {
+        ...session,
+        user: enrichedUser
+      };
+    }
+  }, [session, user]);
+
   return {
     user,
-    session: session ? { ...session, user: user } : null, // Remplacer explicitement session.user par notre user enrichi
+    session: enrichedSession,
     loading,
     signOut: handleSignOut,
     refreshSession // ✅ Exporter la fonction de rafraîchissement

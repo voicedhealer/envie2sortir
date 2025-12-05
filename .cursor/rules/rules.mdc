@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+
+1 - 500 à 600 lignes de code par fichier avant de refactorisé le fichier
+2 - toujours réexpliqué ce que tu va faire et demander un confirmation avant d'écrire du code qui modifie ou creer une fonction ou un algorytme
+3 - regarde si un fichier test existe sinon creer le et éffectue un où des tests aprés la création de code ou la modification d'un fichier
+---

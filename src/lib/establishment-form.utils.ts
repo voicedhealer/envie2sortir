@@ -201,17 +201,20 @@ export function convertPaymentMethodsObjectToArray(paymentMethodsObj: any) {
     return paymentMethodsObj;
   }
   
-  // Si c'est un objet, le convertir en tableau
+  // Si c'est un objet, le convertir en tableau avec marqueurs de rubrique
   if (typeof paymentMethodsObj === 'object') {
     const methods: string[] = [];
     
-    if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit');
-    if (paymentMethodsObj.debitCards) methods.push('Cartes de débit');
-    if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC');
-    // ❌ SUPPRIMÉ : "Espèces uniquement" - personne n'accepte juste des espèces !
-    // if (paymentMethodsObj.cashOnly) methods.push('Espèces uniquement');
-    if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant');
-    if (paymentMethodsObj.pluxee) methods.push('Pluxee');
+    // ✅ CORRECTION : Ajouter les marqueurs de rubrique pour respecter l'organisation
+    if (paymentMethodsObj.creditCards) methods.push('Cartes de crédit|cartes-bancaires');
+    if (paymentMethodsObj.debitCards) methods.push('Cartes de débit|cartes-bancaires');
+    if (paymentMethodsObj.nfc) methods.push('Paiement mobile NFC|paiements-mobiles');
+    if (paymentMethodsObj.restaurantVouchers) methods.push('Titres restaurant|especes-autres');
+    if (paymentMethodsObj.pluxee) methods.push('Pluxee|especes-autres');
+    // ✅ CORRECTION : Ajouter "Espèces" si cashOnly ou cash est true
+    if (paymentMethodsObj.cashOnly || paymentMethodsObj.cash) {
+      methods.push('Espèces|especes-autres');
+    }
     
     return methods;
   }
@@ -234,7 +237,16 @@ export function convertPaymentMethodsArrayToObject(paymentMethodsArray: string[]
   const paymentMethodsObj: any = {};
   
   paymentMethodsArray.forEach(method => {
-    const methodLower = method.toLowerCase();
+    // ✅ CORRECTION : Extraire le nom de l'item si il y a un marqueur (format "item|rubrique")
+    let cleanMethod = method;
+    if (method.includes('|')) {
+      cleanMethod = method.split('|')[0].trim();
+    }
+    
+    // ✅ NETTOYAGE : Supprimer les icônes automatiques
+    cleanMethod = cleanMethod.replace(/^[⚠️✅❌🔴🟡🟢⭐🔥💡🎯📢🎁📊💬✨🦋]+\s*/, '').trim();
+    
+    const methodLower = cleanMethod.toLowerCase();
     
     // Cartes bancaires
     if (methodLower.includes('carte') && (methodLower.includes('crédit') || methodLower.includes('credit'))) {
@@ -251,7 +263,8 @@ export function convertPaymentMethodsArrayToObject(paymentMethodsArray: string[]
     
     // Espèces
     if (methodLower.includes('espèces') || methodLower.includes('cash')) {
-      paymentMethodsObj.cashOnly = true;
+      paymentMethodsObj.cash = true; // ✅ CORRECTION : Utiliser 'cash' au lieu de 'cashOnly'
+      paymentMethodsObj.cashOnly = true; // Garder pour compatibilité
     }
     
     // Titres restaurant
@@ -262,13 +275,6 @@ export function convertPaymentMethodsArrayToObject(paymentMethodsArray: string[]
     // Pluxee
     if (methodLower.includes('pluxee')) {
       paymentMethodsObj.pluxee = true;
-    }
-    
-    // Pour les autres moyens non reconnus, on les ajoute comme propriétés booléennes
-    if (!paymentMethodsObj.creditCards && !paymentMethodsObj.debitCards && 
-        !paymentMethodsObj.nfc && !paymentMethodsObj.cashOnly && 
-        !paymentMethodsObj.restaurantVouchers && !paymentMethodsObj.pluxee) {
-      paymentMethodsObj[methodLower.replace(/\s+/g, '')] = true;
     }
   });
   

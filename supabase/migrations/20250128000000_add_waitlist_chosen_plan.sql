@@ -20,3 +20,4 @@ COMMENT ON COLUMN professionals.waitlist_chosen_plan_type IS 'Type d''abonnement
 
 
 
+

@@ -5,7 +5,7 @@ interface SubscriptionStepProps {
   formData: {
     subscriptionPlan: 'free' | 'premium';
     subscriptionPlanType?: 'monthly' | 'annual';
-    termsAccepted?: boolean;
+    termsAcceptedCGV?: boolean;
   };
   errors: Record<string, string>;
   onInputChange: (field: string | number | symbol, value: any) => void;
@@ -184,8 +184,12 @@ export default function SubscriptionStep({
             type="checkbox"
             id="acceptCGV"
             name="acceptCGV"
-            checked={formData.termsAccepted || false}
-            onChange={(e) => onInputChange('termsAccepted', e.target.checked)}
+            checked={!!formData.termsAcceptedCGV}
+            onChange={(e) => {
+              const newValue = e.target.checked;
+              console.log('🔘 Checkbox CGV changée:', newValue);
+              onInputChange('termsAcceptedCGV', newValue);
+            }}
             required
             className={`mt-1 w-4 h-4 ${
               formData.subscriptionPlan === 'premium' 
@@ -202,23 +206,16 @@ export default function SubscriptionStep({
             } underline`}>
               Conditions Générales de Vente (CGV)
             </a>
-            {' '}et les{' '}
-            <a href="/conditions" target="_blank" rel="noopener noreferrer" className={`${
-              formData.subscriptionPlan === 'premium' 
-                ? 'text-orange-600 hover:text-orange-500' 
-                : 'text-gray-600 hover:text-gray-500'
-            } underline`}>
-              Conditions Générales d'Utilisation (CGU)
-            </a>
+            {' '}pour l'abonnement
           </label>
         </div>
       </div>
       
-      {/* Message d'erreur pour termsAccepted */}
-      {errors.termsAccepted && (
+      {/* Message d'erreur pour termsAcceptedCGV */}
+      {errors.termsAcceptedCGV && (
         <p className="text-red-500 text-sm mt-2 flex items-center gap-2">
           <span>⚠️</span>
-          {errors.termsAccepted}
+          {errors.termsAcceptedCGV}
         </p>
       )}
       

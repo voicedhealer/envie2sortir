@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSupabaseSession } from '@/hooks/useSupabaseSession';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/lib/fake-toast';
+import { getSubscriptionDisplayInfo, SubscriptionType } from '@/lib/subscription-utils';
 
 interface Professional {
   id: string;
@@ -16,6 +17,10 @@ interface Professional {
   legalStatus: string;
   siretVerified: boolean;
   siretVerifiedAt: string | null;
+  termsAcceptedCgv: boolean | null;
+  termsAcceptedCgu: boolean | null;
+  termsAcceptedCgvAt: string | null;
+  termsAcceptedCguAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,7 +36,7 @@ interface Establishment {
   email: string | null;
   website: string | null;
   status: 'pending' | 'approved' | 'rejected';
-  subscription: 'FREE' | 'PREMIUM';
+  subscription: SubscriptionType;
   rejectionReason: string | null;
   rejectedAt: string | null;
   lastModifiedAt: string | null;
@@ -44,6 +49,8 @@ interface Establishment {
     events: number;
     comments: number;
     favorites: number;
+    menus: number;
+    deals: number;
   };
 }
 
@@ -444,305 +451,438 @@ export default function AdminEstablishmentsPage() {
 
         {/* Modal de visualisation des détails */}
         {showViewModal && selectedEstablishment && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    Détails de l'établissement
-                  </h3>
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
+            <div className="relative top-10 mx-auto p-6 border w-11/12 max-w-5xl shadow-2xl rounded-xl bg-white">
+              {/* En-tête */}
+              <div className="mb-6">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                      Détails de l'établissement
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Récapitulatif des informations et gestion administrative
+                    </p>
+                  </div>
                   <button
                     onClick={() => {
                       setShowViewModal(false);
                       setSelectedEstablishment(null);
                     }}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
+                
+                {/* Nom de l'établissement avec badges */}
+                <div className="flex items-center justify-between mt-4 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <h4 className="text-2xl font-bold text-gray-900">{selectedEstablishment.name}</h4>
+                    <div className="flex items-center space-x-2">
+                      {getStatusBadge(selectedEstablishment.status)}
+                      {(() => {
+                        const subscriptionInfo = getSubscriptionDisplayInfo(selectedEstablishment.subscription);
+                        return (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${subscriptionInfo.badgeColor}`}>
+                            {subscriptionInfo.isWaitlistBeta ? '🚀 Beta Premium' : subscriptionInfo.label === 'Premium' ? '⭐ Premium' : '📋 Basic'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                  {selectedEstablishment.slug && (
+                    <a
+                      href={`/etablissements/${selectedEstablishment.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      Voir le site
+                    </a>
+                  )}
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Informations de l'établissement */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">🏢 Établissement</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Nom</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEstablishment.name}</p>
+              {/* Description */}
+              {selectedEstablishment.description && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <div>
+                      <h5 className="text-sm font-semibold text-blue-900 mb-1">Description</h5>
+                      <p className="text-sm text-gray-700 leading-relaxed">{selectedEstablishment.description}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Deux colonnes principales */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
+                {/* Colonne gauche : Coordonnées Établissement */}
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    <h4 className="text-lg font-semibold text-gray-900">Coordonnées Établissement</h4>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Adresse</label>
+                      <div className="flex items-start space-x-2">
+                        <svg className="w-4 h-4 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <p className="text-sm text-gray-900">{selectedEstablishment.address}</p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Description</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEstablishment.description || 'Aucune description'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Adresse</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEstablishment.address}</p>
-                        {selectedEstablishment.city && (
-                          <p className="mt-1 text-sm text-gray-600">{selectedEstablishment.city}</p>
+                      {selectedEstablishment.city && (
+                        <p className="text-sm text-gray-600 ml-6">{selectedEstablishment.city}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        {selectedEstablishment.phone ? (
+                          <a href={`tel:${selectedEstablishment.phone}`} className="text-sm text-blue-600 hover:text-blue-800">
+                            {selectedEstablishment.phone}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">Non renseigné</span>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Téléphone établissement</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {selectedEstablishment.phone ? (
-                              <a href={`tel:${selectedEstablishment.phone}`} className="text-blue-600 hover:text-blue-800">
-                                {selectedEstablishment.phone}
-                              </a>
-                            ) : (
-                              <span className="text-gray-500 italic">Non renseigné</span>
-                            )}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Email établissement</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            {selectedEstablishment.email ? (
-                              <a href={`mailto:${selectedEstablishment.email}`} className="text-blue-600 hover:text-blue-800">
-                                {selectedEstablishment.email}
-                              </a>
-                            ) : (
-                              <span className="text-gray-500 italic">Non renseigné</span>
-                            )}
-                          </p>
-                        </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        </svg>
+                        {selectedEstablishment.email ? (
+                          <a href={`mailto:${selectedEstablishment.email}`} className="text-sm text-blue-600 hover:text-blue-800">
+                            {selectedEstablishment.email}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">Non renseigné</span>
+                        )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Site web</label>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {selectedEstablishment.website ? (
-                            <a href={selectedEstablishment.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800">
-                              {selectedEstablishment.website}
-                            </a>
-                          ) : 'Non renseigné'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Statut</label>
-                        <div className="mt-1">
-                          {getStatusBadge(selectedEstablishment.status)}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Plan d'abonnement</label>
-                        <div className="mt-1">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            selectedEstablishment.subscription === 'PREMIUM' 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {selectedEstablishment.subscription === 'PREMIUM' ? '⭐ Premium' : '📋 Basic'}
-                          </span>
-                        </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Site web</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        {selectedEstablishment.website ? (
+                          <a href={selectedEstablishment.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-800">
+                            {selectedEstablishment.website}
+                          </a>
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">Non renseigné</span>
+                        )}
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Informations du professionnel */}
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 mb-4">👤 Professionnel</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Nom complet</label>
-                        <p className="mt-1 text-sm text-gray-900">
+                {/* Colonne droite : Informations Professionnel */}
+                <div className="bg-white border border-gray-200 rounded-lg p-5">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <h4 className="text-lg font-semibold text-gray-900">Informations Professionnel</h4>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <p className="text-sm text-gray-900">
                           {selectedEstablishment.owner.firstName} {selectedEstablishment.owner.lastName}
                         </p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Entreprise</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEstablishment.owner.companyName}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Entreprise</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg>
+                        <p className="text-sm text-gray-900">{selectedEstablishment.owner.companyName}</p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">SIRET</label>
-                        <p className="mt-1 text-sm text-gray-900">
-                          {selectedEstablishment.owner.siret}
-                          {selectedEstablishment.owner.siretVerified && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                              ✅ Vérifié
-                            </span>
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Statut légal</label>
-                        <p className="mt-1 text-sm text-gray-900">{selectedEstablishment.owner.legalStatus}</p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Email professionnel</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            <a href={`mailto:${selectedEstablishment.owner.email}`} className="text-blue-600 hover:text-blue-800">
-                              {selectedEstablishment.owner.email}
-                            </a>
-                          </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">SIRET</label>
+                      <p className="text-sm text-gray-900">
+                        {selectedEstablishment.owner.siret}
+                        {selectedEstablishment.owner.siretVerified && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            ✅ Vérifié
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Statut légal</label>
+                      <p className="text-sm text-gray-900">{selectedEstablishment.owner.legalStatus}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-2">CONTACT PRO</label>
+                      <div className="space-y-2 pl-2">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          <span className="text-xs text-gray-600">Email pro:</span>
+                          <a href={`mailto:${selectedEstablishment.owner.email}`} className="text-sm text-blue-600 hover:text-blue-800">
+                            {selectedEstablishment.owner.email}
+                          </a>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Téléphone professionnel</label>
-                          <p className="mt-1 text-sm text-gray-900">
-                            <a href={`tel:${selectedEstablishment.owner.phone}`} className="text-blue-600 hover:text-blue-800">
-                              {selectedEstablishment.owner.phone}
-                            </a>
-                          </p>
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                          </svg>
+                          <span className="text-xs text-gray-600">Téléphone pro:</span>
+                          <a href={`tel:${selectedEstablishment.owner.phone}`} className="text-sm text-blue-600 hover:text-blue-800">
+                            {selectedEstablishment.owner.phone}
+                          </a>
                         </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Date d'inscription</label>
-                        <p className="mt-1 text-sm text-gray-900">
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Date d'inscription</label>
+                      <div className="flex items-center space-x-2">
+                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p className="text-sm text-gray-900">
                           {formatDate(selectedEstablishment.owner.createdAt)}
                         </p>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Activité de l'établissement</label>
-                        <div className="mt-1">
-                          {selectedEstablishment.activities && Array.isArray(selectedEstablishment.activities) && selectedEstablishment.activities.length > 0 ? (
-                            <div className="flex flex-wrap gap-2">
-                              {selectedEstablishment.activities.map((activity: string, index: number) => (
-                                <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {activity}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Activités de l'établissement</label>
+                      <div className="mt-1">
+                        {selectedEstablishment.activities && Array.isArray(selectedEstablishment.activities) && selectedEstablishment.activities.length > 0 ? (
+                          <div className="flex flex-wrap gap-2">
+                            {selectedEstablishment.activities.map((activity: string, index: number) => (
+                              <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                {activity}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-500 italic">Non renseigné</span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Acceptation des conditions */}
+                    <div className="pt-4 border-t border-gray-200">
+                      <h5 className="text-sm font-semibold text-gray-900 mb-3">📋 Acceptation des conditions</h5>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">CGV (Conditions Générales de Vente)</label>
+                          <div className="flex items-center space-x-2">
+                            {selectedEstablishment.owner.termsAcceptedCgv ? (
+                              <>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✅ Acceptées
                                 </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 italic">Non renseigné</span>
-                          )}
+                                {selectedEstablishment.owner.termsAcceptedCgvAt && (
+                                  <span className="text-xs text-gray-500">
+                                    le {formatDate(selectedEstablishment.owner.termsAcceptedCgvAt)}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                ❌ Non acceptées
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">CGU (Conditions Générales d'Utilisation)</label>
+                          <div className="flex items-center space-x-2">
+                            {selectedEstablishment.owner.termsAcceptedCgu ? (
+                              <>
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  ✅ Acceptées
+                                </span>
+                                {selectedEstablishment.owner.termsAcceptedCguAt && (
+                                  <span className="text-xs text-gray-500">
+                                    le {formatDate(selectedEstablishment.owner.termsAcceptedCguAt)}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                ❌ Non acceptées
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Statistiques */}
-                <div className="mt-8 border-t pt-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">📊 Statistiques</h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-gray-600">Images</p>
-                      <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.images}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-gray-600">Événements</p>
-                      <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.events}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-gray-600">Commentaires</p>
-                      <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.comments}</p>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm font-medium text-gray-600">Favoris</p>
-                      <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.favorites}</p>
-                    </div>
+              {/* Statistiques */}
+              <div className="mt-6 bg-white border border-gray-200 rounded-lg p-5">
+                <div className="flex items-center space-x-2 mb-4">
+                  <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <h4 className="text-lg font-semibold text-gray-900">Statistiques</h4>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.images}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Images</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.events}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Événements</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.comments}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Commentaires</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.favorites}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Favoris</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.menus || 0}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Menu</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+                    <p className="text-2xl font-semibold text-gray-900">{selectedEstablishment._count.deals || 0}</p>
+                    <p className="text-sm font-medium text-gray-600 mt-1">Bons plans</p>
                   </div>
                 </div>
+              </div>
 
-                {/* Actions */}
-                <div className="mt-8 border-t pt-6">
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">Actions administratives</h4>
-                  <div className="flex flex-wrap gap-3">
-                    {/* Bouton Fermer */}
-                    <button
-                      onClick={() => {
-                        setShowViewModal(false);
-                        setSelectedEstablishment(null);
-                      }}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-                    >
-                      Fermer
-                    </button>
+              {/* Actions */}
+              <div className="mt-6 border-t border-gray-200 pt-6">
+                <div className="flex flex-wrap gap-3 justify-end">
+                  {/* Bouton Fermer */}
+                  <button
+                    onClick={() => {
+                      setShowViewModal(false);
+                      setSelectedEstablishment(null);
+                    }}
+                    className="px-6 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Fermer
+                  </button>
 
-                    {/* Actions selon le statut */}
-                    {selectedEstablishment.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            handleAction(selectedEstablishment.id, 'approve');
-                          }}
-                          disabled={actionLoading === selectedEstablishment.id}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Approuver
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            setShowRejectModal(true);
-                          }}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Rejeter
-                        </button>
-                      </>
-                    )}
+                  {/* Actions selon le statut */}
+                  {selectedEstablishment.status === 'pending' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          handleAction(selectedEstablishment.id, 'approve');
+                        }}
+                        disabled={actionLoading === selectedEstablishment.id}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Approuver
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          setShowRejectModal(true);
+                        }}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Rejeter
+                      </button>
+                    </>
+                  )}
 
-                    {selectedEstablishment.status === 'approved' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            handleAction(selectedEstablishment.id, 'pending');
-                          }}
-                          disabled={actionLoading === selectedEstablishment.id}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Remettre en attente
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            setShowDeleteModal(true);
-                          }}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Supprimer
-                        </button>
-                      </>
-                    )}
+                  {selectedEstablishment.status === 'approved' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          handleAction(selectedEstablishment.id, 'pending');
+                        }}
+                        disabled={actionLoading === selectedEstablishment.id}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-orange-600 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Remettre en attente
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          setShowDeleteModal(true);
+                        }}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Supprimer
+                      </button>
+                    </>
+                  )}
 
-                    {selectedEstablishment.status === 'rejected' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            handleAction(selectedEstablishment.id, 'approve');
-                          }}
-                          disabled={actionLoading === selectedEstablishment.id}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Approuver
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowViewModal(false);
-                            setShowDeleteModal(true);
-                          }}
-                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                          Supprimer
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {selectedEstablishment.status === 'rejected' && (
+                    <>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          handleAction(selectedEstablishment.id, 'approve');
+                        }}
+                        disabled={actionLoading === selectedEstablishment.id}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        Approuver
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowViewModal(false);
+                          setShowDeleteModal(true);
+                        }}
+                        className="inline-flex items-center px-6 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Supprimer
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

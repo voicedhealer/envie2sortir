@@ -39,7 +39,7 @@ interface SummaryStepProps {
     // Champs supplémentaires
     whatsappPhone?: string;
     messengerUrl?: string;
-    termsAccepted?: boolean;
+    termsAcceptedCGU?: boolean;
     // Données d'enrichissement
     theForkLink?: string;
     uberEatsLink?: string;
@@ -125,28 +125,37 @@ export default function SummaryStepWrapper({
       
       {/* Conditions d'utilisation (seulement en mode création) */}
       {!isEditMode && (
-        <div className="text-sm text-gray-600">
-          <label className="flex items-start space-x-2">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+          <label className="flex items-start space-x-3 cursor-pointer">
             <input 
               type="checkbox" 
-              className="mt-1 rounded text-blue-600 focus:ring-blue-500" 
-              checked={formData.termsAccepted || false}
-              onChange={(e) => onInputChange?.('termsAccepted', e.target.checked)}
+              id="acceptCGU"
+              name="acceptCGU"
+              className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2" 
+              checked={formData.termsAcceptedCGU || false}
+              onChange={(e) => {
+                const newValue = e.target.checked;
+                console.log('🔘 Checkbox CGU changée:', newValue);
+                onInputChange?.('termsAcceptedCGU', newValue);
+              }}
               required 
             />
-            <span>
+            <span className="text-sm text-gray-700 leading-relaxed">
               J'accepte les{' '}
-              <a href="/conditions" className="text-blue-600 underline">
-                conditions générales d'utilisation
+              <a href="/conditions" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                Conditions Générales d'Utilisation (CGU)
               </a>
-              {' '}et la{' '}
-              <a href="/politique-confidentialite" className="text-blue-600 underline">
-                politique de confidentialité
+              {' '}de la plateforme{' '}
+              <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                et la politique de confidentialité
               </a>
             </span>
           </label>
-          {errors?.termsAccepted && (
-            <p className="text-red-500 text-xs mt-1">{errors.termsAccepted}</p>
+          {errors?.termsAcceptedCGU && (
+            <p className="text-red-500 text-sm mt-2 flex items-center gap-2">
+              <span>⚠️</span>
+              {errors.termsAcceptedCGU}
+            </p>
           )}
         </div>
       )}

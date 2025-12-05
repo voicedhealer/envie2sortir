@@ -128,22 +128,49 @@ export default function UnifiedServicesAmbianceManager({
         // ✅ CORRECTION : Déterminer la section principale selon le tableau d'origine
         // pour éviter les catégorisations incorrectes
         let mainCategory: string;
+        let subCategory: string;
+        
         if (Array.isArray(services) && services.includes(item)) {
           mainCategory = 'equipements-services';
+          const categorized = categorizeItem(cleanItem);
+          subCategory = categorized.subCategory;
         } else if (Array.isArray(informationsPratiques) && informationsPratiques.includes(item)) {
           mainCategory = 'informations-pratiques';
+          const categorized = categorizeItem(cleanItem);
+          subCategory = categorized.subCategory;
         } else if (Array.isArray(paymentMethods) && paymentMethods.includes(item)) {
+          // ✅ CORRECTION : Pour les moyens de paiement, déterminer la sous-catégorie intelligemment
           mainCategory = 'moyens-paiement';
+          const methodLower = cleanItem.toLowerCase();
+          
+          // Déterminer la sous-catégorie selon le type de moyen de paiement
+          if (methodLower.includes('carte') && (methodLower.includes('crédit') || methodLower.includes('credit'))) {
+            subCategory = 'cartes-bancaires';
+          } else if (methodLower.includes('carte') && methodLower.includes('débit')) {
+            subCategory = 'cartes-bancaires';
+          } else if (methodLower.includes('nfc') || methodLower.includes('mobile')) {
+            subCategory = 'paiements-mobiles';
+          } else if (methodLower.includes('espèces') || methodLower.includes('cash')) {
+            subCategory = 'especes-autres';
+          } else if (methodLower.includes('titre') || methodLower.includes('restaurant')) {
+            subCategory = 'especes-autres';
+          } else if (methodLower.includes('pluxee')) {
+            subCategory = 'especes-autres';
+          } else {
+            // Par défaut, mettre dans espèces et autres
+            subCategory = 'especes-autres';
+          }
         } else if (Array.isArray(ambiance) && ambiance.includes(item)) {
           // Si l'item vient de ambiance, forcer ambiance-specialites
           mainCategory = 'ambiance-specialites';
+          const categorized = categorizeItem(cleanItem);
+          subCategory = categorized.subCategory;
         } else {
           // Fallback : utiliser la catégorisation automatique
           const categorized = categorizeItem(cleanItem);
           mainCategory = categorized.mainCategory;
+          subCategory = categorized.subCategory;
         }
-        
-        const { subCategory } = categorizeItem(cleanItem);
         
         // ✅ CORRECTION : Créer une clé unique pour cet item dans cette sous-catégorie
         const itemKey = `${cleanItem.toLowerCase()}|${mainCategory}|${subCategory}`;

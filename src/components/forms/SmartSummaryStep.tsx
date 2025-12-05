@@ -852,14 +852,11 @@ export default function SmartSummaryStep({ data, onEdit }: SmartSummaryStepProps
             {(data as any).subscriptionPlan === 'premium' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm text-blue-900">
-                  ✓ Vous acceptez les{' '}
+                  ✓ Vous avez accepté les{' '}
                   <a href="/cgv" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">
                     Conditions Générales de Vente (CGV)
                   </a>
-                  {' '}et les{' '}
-                  <a href="/conditions" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-700">
-                    Conditions Générales d'Utilisation (CGU)
-                  </a>
+                  {' '}pour l'abonnement
                 </p>
               </div>
             )}

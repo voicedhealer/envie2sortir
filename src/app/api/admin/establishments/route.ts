@@ -53,6 +53,10 @@ export async function GET(request: NextRequest) {
           legal_status,
           siret_verified,
           siret_verified_at,
+          terms_accepted_cgv,
+          terms_accepted_cgu,
+          terms_accepted_cgv_at,
+          terms_accepted_cgu_at,
           created_at,
           updated_at
         )
@@ -108,12 +112,14 @@ export async function GET(request: NextRequest) {
 
     // Convertir snake_case -> camelCase et calculer les compteurs
     const formattedEstablishments = await Promise.all((establishments || []).map(async (est: any) => {
-      // Compter les images, événements, commentaires, favoris
-      const [imagesCount, eventsCount, commentsCount, favoritesCount] = await Promise.all([
+      // Compter les images, événements, commentaires, favoris, menus, deals
+      const [imagesCount, eventsCount, commentsCount, favoritesCount, menusCount, dealsCount] = await Promise.all([
         supabase.from('images').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
         supabase.from('events').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
         supabase.from('user_comments').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
-        supabase.from('user_favorites').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id)
+        supabase.from('user_favorites').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
+        supabase.from('establishment_menus').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id),
+        supabase.from('daily_deals').select('*', { count: 'exact', head: true }).eq('establishment_id', est.id)
       ]);
 
       const owner = est.owner ? (Array.isArray(est.owner) ? est.owner[0] : est.owner) : null;
@@ -147,6 +153,10 @@ export async function GET(request: NextRequest) {
           legalStatus: owner.legal_status,
           siretVerified: owner.siret_verified,
           siretVerifiedAt: owner.siret_verified_at,
+          termsAcceptedCgv: owner.terms_accepted_cgv ?? null,
+          termsAcceptedCgu: owner.terms_accepted_cgu ?? null,
+          termsAcceptedCgvAt: owner.terms_accepted_cgv_at ?? null,
+          termsAcceptedCguAt: owner.terms_accepted_cgu_at ?? null,
           createdAt: owner.created_at,
           updatedAt: owner.updated_at
         } : null,
@@ -154,7 +164,9 @@ export async function GET(request: NextRequest) {
           images: imagesCount.count || 0,
           events: eventsCount.count || 0,
           comments: commentsCount.count || 0,
-          favorites: favoritesCount.count || 0
+          favorites: favoritesCount.count || 0,
+          menus: menusCount.count || 0,
+          deals: dealsCount.count || 0
         }
       };
     }));
