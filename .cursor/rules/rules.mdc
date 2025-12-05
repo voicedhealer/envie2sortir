@@ -1,7 +1,28 @@
 ---
+description: "Règles globales de développement et refactoring"
+globs: ["*"]
 alwaysApply: true
-
-1 - 500 à 600 lignes de code par fichier avant de refactorisé le fichier
-2 - toujours réexpliqué ce que tu va faire et demander un confirmation avant d'écrire du code qui modifie ou creer une fonction ou un algorytme
-3 - regarde si un fichier test existe sinon creer le et éffectue un où des tests aprés la création de code ou la modification d'un fichier
 ---
+
+# Règles de développement
+
+# Contexte & Stack Technique
+- **Projet** : Envie2Sortir - Plateforme de découverte d'activités locales.
+- **Tech** : React 19, Next.js 15 (App Router), TypeScript, Tailwind CSS, Supabase (PostgreSQL).
+
+# Règles de Développement
+1.  **Longueur des fichiers** : Maintenir les fichiers sous 500-600 lignes. Proposer un refactoring si cette limite est dépassée.
+2.  **Processus** :
+    -   **Étape 1** : Expliquer le plan en français.
+    -   **Étape 2** : Attendre mon "OK".
+    -   **Étape 3** : Générer le code.
+    -   **Étape 4** : Vérifier l'existence de tests ou en créer si nécessaire.
+3.  **Style de Code** :
+    -   Utiliser des composants fonctionnels.
+    -   Utiliser un typage strict (pas de `any`).
+    -   Privilégier `const` plutôt que `let`.
+4.  **Sécurité** : 
+    -   Ne jamais coder les clés API en dur (utiliser les variables d'environnement).
+    -   Toujours respecter les règles RLS (Row Level Security) de Supabase.
+
+

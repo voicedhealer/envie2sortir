@@ -27,19 +27,42 @@ export async function POST(request: NextRequest) {
     if (url.includes('goo.gl') || url.includes('maps.app.goo.gl')) {
       console.log('🔗 URL raccourcie détectée, résolution...');
       try {
-        // Suivre la redirection pour obtenir l'URL complète
+        // Utiliser GET au lieu de HEAD pour mieux gérer les redirections
         const response = await fetch(url, { 
-          method: 'HEAD', 
-          redirect: 'follow' 
+          method: 'GET', 
+          redirect: 'follow',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          }
         });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
         finalUrl = response.url;
         console.log('✅ URL résolue:', finalUrl);
+        
+        // Si la résolution n'a pas fonctionné (même URL), essayer une autre méthode
+        if (finalUrl === url || finalUrl.includes('goo.gl') || finalUrl.includes('maps.app.goo.gl')) {
+          console.log('⚠️ URL toujours raccourcie après résolution, tentative alternative...');
+          // Essayer de suivre la redirection manuellement en lisant le body
+          const text = await response.text();
+          // Chercher une redirection dans le HTML
+          const redirectMatch = text.match(/<meta[^>]*http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)["']/i) ||
+                               text.match(/window\.location\s*=\s*["']([^"']+)["']/i) ||
+                               text.match(/location\.href\s*=\s*["']([^"']+)["']/i);
+          
+          if (redirectMatch && redirectMatch[1]) {
+            finalUrl = redirectMatch[1];
+            console.log('✅ URL résolue via parsing HTML:', finalUrl);
+          }
+        }
       } catch (e) {
         console.error('❌ Erreur résolution URL raccourcie:', e);
-        return NextResponse.json(
-          { error: 'Impossible de résoudre l\'URL raccourcie' },
-          { status: 400 }
-        );
+        // Ne pas échouer immédiatement, essayer d'extraire directement depuis l'URL raccourcie
+        console.log('⚠️ Tentative d\'extraction directe depuis l\'URL raccourcie...');
+        // Continuer avec l'URL originale, extractPlaceIdFromUrl pourra peut-être extraire quelque chose
       }
     }
 
@@ -91,8 +114,13 @@ export async function POST(request: NextRequest) {
 function extractPlaceIdFromUrl(url: string): string | null {
   console.log('🔍 Extraction Place ID depuis:', url);
   
-    // Vérifier que c'est bien une URL Google Maps
-  if (!url.includes('google.com/maps') && !url.includes('maps.google.com')) {
+  // Vérifier que c'est bien une URL Google Maps (plus permissif pour les URLs raccourcies)
+  const isGoogleMapsUrl = url.includes('google.com/maps') || 
+                         url.includes('maps.google.com') || 
+                         url.includes('goo.gl') || 
+                         url.includes('maps.app.goo.gl');
+  
+  if (!isGoogleMapsUrl) {
     console.log('❌ URL ne semble pas être une URL Google Maps');
     return null;
   }
@@ -100,19 +128,25 @@ function extractPlaceIdFromUrl(url: string): string | null {
   // Extraction du Place ID depuis différents formats d'URL Google
   const patterns = [
     // Format classique avec place_id
-    /place_id=([a-zA-Z0-9_-]+)/,
+    /[?&]place_id=([a-zA-Z0-9_-]+)/,
     // Format avec !3m1!4b1!4m6!3m5!1s (format complexe - le plus important)
     /!3m1!4b1!4m6!3m5!1s([a-zA-Z0-9_:]+)/,
-    // Format avec 1s (le plus courant pour les URLs modernes)
-    /1s([a-zA-Z0-9_:]+)/,
+    // Format avec 1s (le plus courant pour les URLs modernes) - amélioré
+    /[!\/]1s([a-zA-Z0-9_:%\/-]+)/,
     // Format avec !16s (nouveau format)
     /!16s([a-zA-Z0-9_%\/-]+)/,
     // Format avec !1s (autre format moderne)
     /!1s([a-zA-Z0-9_%\/-]+)/,
     // Format avec data
-    /data=([^&]+)/,
+    /[?&]data=([^&]+)/,
     // Format avec !8m2!3d!4d!16s (format avec coordonnées)
-    /!8m2!3d[^!]+!4d[^!]+!16s([a-zA-Z0-9_%\/-]+)/
+    /!8m2!3d[^!]+!4d[^!]+!16s([a-zA-Z0-9_%\/-]+)/,
+    // Format avec ChIJ (Place ID standard)
+    /ChIJ[a-zA-Z0-9_-]+/,
+    // Format avec /place/ dans l'URL (nom encodé)
+    /\/place\/([^\/\?]+)/,
+    // Format avec !2e0 (nouveau format 2024)
+    /!2e0!3m2!1s([a-zA-Z0-9_:]+)!2sen/
   ];
 
   // Essayer d'extraire les coordonnées si aucun Place ID n'est trouvé
@@ -137,8 +171,23 @@ function extractPlaceIdFromUrl(url: string): string | null {
         // Ignorer les erreurs de décodage
       }
       
-      // Vérifier que c'est un Place ID valide (contient des deux-points ou commence par 0x)
-      if (placeId.includes(':') || placeId.startsWith('0x') || (placeId.length > 15 && /[0-9]/.test(placeId))) {
+      // Nettoyer le Place ID (enlever les caractères de fin comme !, ?, &, etc.)
+      placeId = placeId.replace(/[!?&].*$/, '').trim();
+      
+      // Vérifier que c'est un Place ID valide
+      // Place ID valide si :
+      // - Contient des deux-points (format standard)
+      // - Commence par 0x (ancien format)
+      // - Commence par ChIJ (format standard Google)
+      // - A une longueur > 15 et contient des chiffres (format encodé)
+      // - Est un nom de lieu encodé (contient %)
+      const isValidPlaceId = placeId.includes(':') || 
+                            placeId.startsWith('0x') || 
+                            placeId.startsWith('ChIJ') ||
+                            (placeId.length > 15 && /[0-9]/.test(placeId)) ||
+                            placeId.includes('%');
+      
+      if (isValidPlaceId) {
         console.log('✅ Place ID valide:', placeId);
         return placeId;
       } else {

@@ -52,7 +52,7 @@ interface UpdateEstablishmentData {
   priceMin?: number;
   priceMax?: number;
   informationsPratiques?: string[];
-  subscription?: 'FREE' | 'PREMIUM';
+  subscription?: SubscriptionType;
   status?: 'approved' | 'pending' | 'rejected';
   hours?: {
     monday?: { open: string; close: string; isOpen: boolean };
@@ -422,7 +422,10 @@ export async function PUT(
       
       updateData.informations_pratiques = JSON.stringify(informationsPratiquesArray);
     }
-    if (body.subscription !== undefined) updateData.subscription = body.subscription;
+    // ⚠️ IMPORTANT : Ne jamais permettre la modification de subscription via cette route
+    // Le champ subscription ne peut être modifié que par un admin via /api/admin/establishments/actions
+    // Cela préserve WAITLIST_BETA, PREMIUM, etc. lors des modifications par les professionnels
+    // if (body.subscription !== undefined) updateData.subscription = body.subscription;
 
     // Ajouter les coordonnées GPS si fournies
     if (body.latitude !== undefined) updateData.latitude = body.latitude;

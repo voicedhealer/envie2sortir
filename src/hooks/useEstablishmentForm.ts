@@ -101,7 +101,7 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
         priceMin: establishment.priceMin || undefined,
         priceMax: establishment.priceMax || undefined,
         informationsPratiques: establishment.informationsPratiques || [],
-        subscriptionPlan: establishment.subscription === 'PREMIUM' ? 'premium' : 'free',
+        subscriptionPlan: establishment.subscription === 'PREMIUM' || establishment.subscription === 'WAITLIST_BETA' ? 'premium' : 'free',
         subscriptionPlanType: "monthly", // Par défaut mensuel (on ne peut pas récupérer le type depuis l'établissement existant)
         termsAcceptedCGV: false,
         termsAcceptedCGU: false
@@ -1256,7 +1256,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
           priceMin: formData.priceMin,
           priceMax: formData.priceMax,
           informationsPratiques: formData.informationsPratiques,
-          subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
+          // ⚠️ IMPORTANT : Ne pas modifier subscription en mode édition
+          // Le champ subscription (WAITLIST_BETA, PREMIUM, FREE) ne peut être modifié que par un admin
+          // En mode édition, on ne l'envoie pas pour préserver la valeur actuelle
+          // subscription: formData.subscriptionPlan === 'premium' ? 'PREMIUM' : 'FREE',
           ...(establishment.status === 'rejected' && {
             status: 'pending',
             rejectionReason: null,

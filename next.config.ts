@@ -50,8 +50,8 @@ const nextConfig: NextConfig = {
   // Réduire le bundle en production
   productionBrowserSourceMaps: false,
   
-  // Mode standalone pour Docker
-  output: 'standalone',
+  // Mode standalone pour Docker (uniquement en production)
+  ...(process.env.NODE_ENV === 'production' && { output: 'standalone' }),
   
   // Optimiser les chunks webpack
   webpack: (config, { isServer, dev }) => {
