@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Briefcase, CheckCircle, Loader2, X } from 'lucide-react';
+import { Briefcase, CheckCircle, Loader2, LogIn, UserPlus } from 'lucide-react';
+import ProfessionalLoginForm from './ProfessionalLoginForm';
 
 enum LoadingState {
   IDLE = 'IDLE',
@@ -10,7 +11,10 @@ enum LoadingState {
   ERROR = 'ERROR',
 }
 
+type TabType = 'signup' | 'login';
+
 const ProfessionalForm: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('signup');
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<LoadingState>(LoadingState.IDLE);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +84,48 @@ const ProfessionalForm: React.FC = () => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4">
+    <div className="w-full space-y-4">
+      {/* Sélecteur d'onglets */}
+      <div className="flex gap-2 mb-4 bg-white/5 rounded-lg p-1 border border-white/10">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('signup');
+            setError(null);
+            setStatus(LoadingState.IDLE);
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md transition-all font-medium text-sm ${
+            activeTab === 'signup'
+              ? 'bg-[#ff751f] text-white shadow-lg shadow-[#ff751f]/20'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <UserPlus size={18} />
+          Inscription
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('login');
+            setError(null);
+            setStatus(LoadingState.IDLE);
+          }}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-md transition-all font-medium text-sm ${
+            activeTab === 'login'
+              ? 'bg-[#ff751f] text-white shadow-lg shadow-[#ff751f]/20'
+              : 'text-gray-400 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <LogIn size={18} />
+          Connexion
+        </button>
+      </div>
+
+      {/* Contenu selon l'onglet actif */}
+      {activeTab === 'login' ? (
+        <ProfessionalLoginForm />
+      ) : (
+        <form onSubmit={handleSubmit} className="w-full space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -180,6 +225,8 @@ const ProfessionalForm: React.FC = () => {
         )}
       </button>
     </form>
+      )}
+    </div>
   );
 };
 

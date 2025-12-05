@@ -15,6 +15,70 @@ export default async function middleware(req: NextRequest) {
     const { pathname } = req.nextUrl;
     const searchParams = req.nextUrl.searchParams;
 
+    // Mettre à jour la session Supabase (gère l'authentification)
+    let supabaseResponse: NextResponse;
+    try {
+      supabaseResponse = await updateSession(req);
+    } catch (error) {
+      console.error('❌ Erreur updateSession dans middleware:', error);
+      supabaseResponse = NextResponse.next();
+    }
+
+    // Vérifier si l'utilisateur est un professionnel (pour limiter l'accès)
+    let isProfessional = false;
+    let professionalId: string | null = null;
+    let establishmentSlug: string | null = null;
+
+    try {
+      const { createServerClient } = await import('@supabase/ssr');
+      const cookieStore = await import('next/headers').then(m => m.cookies());
+      
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() {
+              return cookieStore.getAll();
+            },
+            setAll() {
+              // Ne rien faire ici, géré par updateSession
+            },
+          },
+        }
+      );
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Vérifier si c'est un professionnel
+        const { data: professional } = await supabase
+          .from('professionals')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (professional) {
+          isProfessional = true;
+          professionalId = professional.id;
+
+          // Récupérer le slug de l'établissement du professionnel
+          const { data: establishment } = await supabase
+            .from('establishments')
+            .select('slug')
+            .eq('owner_id', professional.id)
+            .maybeSingle();
+
+          if (establishment) {
+            establishmentSlug = establishment.slug;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Erreur vérification professionnel dans middleware:', error);
+      // En cas d'erreur, continuer sans restriction
+    }
+
     // Si le mode "wait" est activé, rediriger toutes les routes vers /wait
     // sauf certaines exceptions
     if (WAIT_MODE_ENABLED) {
@@ -30,18 +94,67 @@ export default async function middleware(req: NextRequest) {
         '/public',                  // Assets publics
       ];
 
-      // Vérifier si la route actuelle est autorisée
-      const isAllowed = allowedPaths.some(path => pathname.startsWith(path)) ||
-                        pathname.startsWith('/_next') ||
-                        pathname.startsWith('/api/newsletter') ||
-                        pathname.startsWith('/api/wait') ||
-                        pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/);
+      // Si c'est un professionnel authentifié, autoriser l'accès au dashboard et à la page de modification
+      if (isProfessional) {
+        const professionalAllowedPaths = [
+          '/dashboard',
+          '/api/professional',
+          '/api/dashboard',
+        ];
 
-      // Si la route n'est pas autorisée, rediriger vers /wait
-      if (!isAllowed && pathname !== '/wait') {
-        const url = req.nextUrl.clone();
-        url.pathname = '/wait';
-        return NextResponse.redirect(url);
+        // Autoriser la page de modification de leur établissement
+        if (establishmentSlug && pathname === `/etablissements/${establishmentSlug}/modifier`) {
+          // Route autorisée
+        } else if (professionalAllowedPaths.some(path => pathname.startsWith(path))) {
+          // Route autorisée
+        } else if (pathname.startsWith('/_next') || pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/)) {
+          // Assets autorisés
+        } else {
+          // Rediriger vers le dashboard
+          const url = req.nextUrl.clone();
+          url.pathname = '/dashboard';
+          return NextResponse.redirect(url);
+        }
+      } else {
+        // Pour les non-professionnels, vérifier si la route est autorisée
+        const isAllowed = allowedPaths.some(path => pathname.startsWith(path)) ||
+                          pathname.startsWith('/_next') ||
+                          pathname.startsWith('/api/newsletter') ||
+                          pathname.startsWith('/api/wait') ||
+                          pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/);
+
+        // Si la route n'est pas autorisée, rediriger vers /wait
+        if (!isAllowed && pathname !== '/wait') {
+          const url = req.nextUrl.clone();
+          url.pathname = '/wait';
+          return NextResponse.redirect(url);
+        }
+      }
+    } else {
+      // Si le mode wait n'est pas activé mais que c'est un professionnel,
+      // limiter l'accès au dashboard et à la page de modification de leur établissement
+      if (isProfessional) {
+        const professionalAllowedPaths = [
+          '/dashboard',
+          '/api/professional',
+          '/api/dashboard',
+          '/wait', // Permettre l'accès à la page wait pour se connecter
+          '/api/wait',
+        ];
+
+        // Autoriser la page de modification de leur établissement
+        const isOwnEstablishmentEdit = establishmentSlug && 
+          pathname === `/etablissements/${establishmentSlug}/modifier`;
+
+        if (!isOwnEstablishmentEdit && 
+            !professionalAllowedPaths.some(path => pathname.startsWith(path)) &&
+            !pathname.startsWith('/_next') &&
+            !pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/)) {
+          // Rediriger vers le dashboard
+          const url = req.nextUrl.clone();
+          url.pathname = '/dashboard';
+          return NextResponse.redirect(url);
+        }
       }
     }
 
@@ -72,15 +185,6 @@ export default async function middleware(req: NextRequest) {
       }
     }
 
-    // Mettre à jour la session Supabase (gère l'authentification)
-    let supabaseResponse: NextResponse;
-    try {
-      supabaseResponse = await updateSession(req);
-    } catch (error) {
-      console.error('❌ Erreur updateSession dans middleware:', error);
-      // En cas d'erreur Supabase, continuer quand même pour éviter de bloquer le site
-      supabaseResponse = NextResponse.next();
-    }
 
     // Pour les routes dashboard et admin, appliquer la sécurité supplémentaire
     // Note: Les routes admin sont exclues du rate limiting dans applySecurityMiddleware
