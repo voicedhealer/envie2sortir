@@ -117,6 +117,14 @@ export async function POST(request: NextRequest) {
     }
 
     const imageUrl = uploadResult.data.url;
+    
+    console.log('✅ Image événement uploadée:', {
+      fileName,
+      storagePath,
+      imageUrl,
+      urlLength: imageUrl?.length || 0,
+      isPublicUrl: imageUrl?.includes('supabase.co') || false
+    });
 
     const responseTime = Date.now() - startTime;
     recordAPIMetric('/api/upload/event-image', 'POST', 200, responseTime, {
@@ -129,7 +137,8 @@ export async function POST(request: NextRequest) {
       fileName,
       fileSize: file.size,
       fileType: file.type,
-      responseTime
+      responseTime,
+      imageUrl
     });
     
     return NextResponse.json({ 

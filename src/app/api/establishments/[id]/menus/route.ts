@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { requireEstablishment } from '@/lib/supabase/helpers';
+import { hasPremiumAccess, type SubscriptionType } from '@/lib/subscription-utils';
 import { EstablishmentMenu } from '@/types/menu.types';
 
 // GET /api/establishments/[id]/menus - Récupérer les menus d'un établissement
@@ -36,8 +37,8 @@ export async function GET(
       return NextResponse.json({ error: 'Établissement non trouvé' }, { status: 404 });
     }
 
-    // Vérifier que l'utilisateur a un plan Premium
-    if (establishment.subscription !== 'PREMIUM') {
+    // Vérifier que l'utilisateur a un plan Premium (inclut WAITLIST_BETA)
+    if (!hasPremiumAccess(establishment.subscription as SubscriptionType)) {
       return NextResponse.json({ 
         error: 'Cette fonctionnalité est réservée aux comptes Premium' 
       }, { status: 403 });

@@ -127,6 +127,13 @@ export default function ImageUpload({
         throw new Error(result.error || 'Erreur lors de l\'upload');
       }
 
+      console.log('✅ Image uploadée avec succès:', {
+        imageUrl: result.imageUrl,
+        uploadType,
+        hasImageUrl: !!result.imageUrl,
+        urlLength: result.imageUrl?.length || 0
+      });
+
       onImageUpload(result.imageUrl);
       setShowSuccessMessage(true);
     } catch (error) {

@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       modality: event.modality,
       startDate: event.start_date,
       endDate: event.end_date,
-      imageUrl: event.image_url,
+      imageUrl: event.image_url || null,
       price: event.price,
       priceUnit: event.price_unit,
       maxCapacity: event.max_capacity,
@@ -66,6 +66,13 @@ export async function GET(request: NextRequest) {
       createdAt: event.created_at,
       updatedAt: event.updated_at
     }));
+    
+    console.log('📤 Événements formatés:', formattedEvents.map(e => ({
+      id: e.id,
+      title: e.title,
+      hasImageUrl: !!e.imageUrl,
+      imageUrl: e.imageUrl || 'Aucune image'
+    })));
 
     return NextResponse.json({ events: formattedEvents });
 
@@ -105,6 +112,13 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { title, description, modality, startDate, endDate, imageUrl, price, priceUnit, maxCapacity } = body;
+    
+    console.log('📥 Données événement reçues:', {
+      title,
+      hasImageUrl: !!imageUrl,
+      imageUrl: imageUrl || 'Aucune image',
+      imageUrlLength: imageUrl?.length || 0
+    });
 
     // Validation
     if (!title || !startDate) {
@@ -112,6 +126,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Créer l'événement
+    console.log('💾 Insertion événement avec image_url:', imageUrl || null);
     const { data: event, error: eventError } = await supabase
       .from('events')
       .insert({
@@ -128,6 +143,15 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+    
+    if (event) {
+      console.log('✅ Événement créé:', {
+        id: event.id,
+        title: event.title,
+        image_url: event.image_url,
+        hasImageUrl: !!event.image_url
+      });
+    }
 
     if (eventError || !event) {
       console.error('Erreur création événement:', eventError);

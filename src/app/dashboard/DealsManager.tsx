@@ -1043,7 +1043,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {upcomingDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans à venir</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {upcomingDeals.map(deal => (
                   <DealCard
                     key={deal.id}
@@ -1061,7 +1061,7 @@ export default function DealsManager({ establishmentId, isPremium }: DealsManage
           {pastDeals.length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">Bons plans passés</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                 {pastDeals.map(deal => (
                   <DealCard
                     key={deal.id}

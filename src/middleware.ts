@@ -71,6 +71,9 @@ export default async function middleware(req: NextRequest) {
 
           if (establishment) {
             establishmentSlug = establishment.slug;
+            console.log('🔍 [Middleware] Slug établissement récupéré:', establishmentSlug);
+          } else {
+            console.log('⚠️ [Middleware] Aucun établissement trouvé pour le professionnel:', professional.id);
           }
         }
       }
@@ -87,6 +90,8 @@ export default async function middleware(req: NextRequest) {
         '/wait',                    // La page d'attente elle-même
         '/api/newsletter',          // API newsletter
         '/api/wait',                // API pour la page d'attente
+        '/api/public',              // API publiques (avis, menus, etc.)
+        '/api/deals',               // API des bons plans (publique)
         '/_next',                   // Assets Next.js
         '/favicon',                 // Favicon
         '/robots.txt',              // Robots.txt
@@ -99,19 +104,55 @@ export default async function middleware(req: NextRequest) {
         const professionalAllowedPaths = [
           '/dashboard',
           '/api/professional',
-          '/api/dashboard',
+          '/api/dashboard', // Inclut /api/dashboard/images/*, /api/dashboard/images/reorder, etc.
           '/api/csrf', // API CSRF pour les tokens
           '/api/stripe', // API Stripe pour la gestion des abonnements
+          '/api/etablissements/images', // API des images d'établissement
+          '/api/messaging', // API de messagerie
+          '/api/upload', // API d'upload d'images
+          '/api/public', // API publiques (avis, menus, etc.) - pour voir leur page publique
+          '/api/deals', // API des bons plans (publique) - pour voir les bons plans
+          '/api/siret', // API de vérification SIRET/INSEE
+          '/api/check-siret', // API de vérification d'existence SIRET
+          '/api/geocode', // API de géocodage
+          '/api/establishments', // API des établissements (menus, etc.)
+          '/api/analytics', // API analytics (clics, événements, etc.)
+          '/api/auth', // API d'authentification (verify-establishment, etc.)
+          '/api/user', // API utilisateur (favoris, commentaires) - pour voir leur page publique
+          '/api/events', // API événements (engagement, etc.) - pour voir leur page publique
         ];
 
-        // Autoriser la page de modification de leur établissement
-        if (establishmentSlug && pathname === `/etablissements/${establishmentSlug}/modifier`) {
+        // Autoriser la page de modification, la page publique et les événements de leur établissement
+        // Vérifier aussi les routes API avec paramètres de requête
+        const isOwnEstablishmentRoute = establishmentSlug && (
+          pathname === `/etablissements/${establishmentSlug}/modifier` ||
+          pathname === `/etablissements/${establishmentSlug}` ||
+          pathname.startsWith(`/api/etablissements/${establishmentSlug}/`) ||
+          pathname.startsWith(`/etablissements/${establishmentSlug}/`)
+        );
+        
+        if (isOwnEstablishmentRoute) {
+          console.log('✅ [Middleware] Route autorisée pour établissement:', pathname, 'slug:', establishmentSlug);
           // Route autorisée
+        } else if (pathname.startsWith('/api/etablissements/') && establishmentSlug) {
+          // Vérifier si c'est une route API d'établissement qui correspond au slug
+          const slugFromPath = pathname.match(/^\/api\/etablissements\/([^\/]+)/)?.[1];
+          if (slugFromPath === establishmentSlug) {
+            console.log('✅ [Middleware] Route API établissement autorisée:', pathname, 'slug:', establishmentSlug);
+            // Route autorisée
+          } else {
+            console.log('❌ [Middleware] Route API établissement refusée:', pathname, 'slug attendu:', establishmentSlug, 'slug trouvé:', slugFromPath);
+            // Rediriger vers le dashboard
+            const url = req.nextUrl.clone();
+            url.pathname = '/dashboard';
+            return NextResponse.redirect(url);
+          }
         } else if (professionalAllowedPaths.some(path => pathname.startsWith(path))) {
           // Route autorisée
-        } else if (pathname.startsWith('/_next') || pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/)) {
+        } else if (pathname.startsWith('/_next') || pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot|webmanifest|json)$/) || pathname === '/site.webmanifest' || pathname === '/robots.txt' || pathname === '/sitemap.xml') {
           // Assets autorisés
         } else {
+          console.log('❌ [Middleware] Route refusée pour professionnel:', pathname, 'slug:', establishmentSlug);
           // Rediriger vers le dashboard
           const url = req.nextUrl.clone();
           url.pathname = '/dashboard';
@@ -123,7 +164,10 @@ export default async function middleware(req: NextRequest) {
                           pathname.startsWith('/_next') ||
                           pathname.startsWith('/api/newsletter') ||
                           pathname.startsWith('/api/wait') ||
-                          pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/);
+                          pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot|webmanifest|json)$/) ||
+                          pathname === '/site.webmanifest' ||
+                          pathname === '/robots.txt' ||
+                          pathname === '/sitemap.xml';
 
         // Si la route n'est pas autorisée, rediriger vers /wait
         if (!isAllowed && pathname !== '/wait') {
@@ -139,21 +183,42 @@ export default async function middleware(req: NextRequest) {
         const professionalAllowedPaths = [
           '/dashboard',
           '/api/professional',
-          '/api/dashboard',
+          '/api/dashboard', // Inclut /api/dashboard/images/*, /api/dashboard/images/reorder, etc.
           '/api/csrf', // API CSRF pour les tokens
           '/api/stripe', // API Stripe pour la gestion des abonnements
+          '/api/etablissements/images', // API des images d'établissement
+          '/api/messaging', // API de messagerie
+          '/api/upload', // API d'upload d'images
+          '/api/public', // API publiques (avis, menus, etc.) - pour voir leur page publique
+          '/api/deals', // API des bons plans (publique) - pour voir les bons plans
+          '/api/siret', // API de vérification SIRET/INSEE
+          '/api/check-siret', // API de vérification d'existence SIRET
+          '/api/geocode', // API de géocodage
+          '/api/establishments', // API des établissements (menus, etc.)
+          '/api/analytics', // API analytics (clics, événements, etc.)
+          '/api/auth', // API d'authentification (verify-establishment, etc.)
+          '/api/user', // API utilisateur (favoris, commentaires) - pour voir leur page publique
+          '/api/events', // API événements (engagement, etc.) - pour voir leur page publique
           '/wait', // Permettre l'accès à la page wait pour se connecter
           '/api/wait',
         ];
 
-        // Autoriser la page de modification de leur établissement
-        const isOwnEstablishmentEdit = establishmentSlug && 
-          pathname === `/etablissements/${establishmentSlug}/modifier`;
+        // Autoriser la page de modification, la page publique et les événements de leur établissement
+        // Vérifier aussi les routes API avec paramètres de requête
+        const isOwnEstablishmentPage = establishmentSlug && (
+          pathname === `/etablissements/${establishmentSlug}/modifier` ||
+          pathname === `/etablissements/${establishmentSlug}` ||
+          pathname.startsWith(`/api/etablissements/${establishmentSlug}/`) ||
+          pathname.startsWith(`/etablissements/${establishmentSlug}/`)
+        );
 
-        if (!isOwnEstablishmentEdit && 
+        if (!isOwnEstablishmentPage && 
             !professionalAllowedPaths.some(path => pathname.startsWith(path)) &&
             !pathname.startsWith('/_next') &&
-            !pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot)$/)) {
+            !pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|css|js|woff|woff2|ttf|eot|webmanifest|json)$/) &&
+            pathname !== '/site.webmanifest' &&
+            pathname !== '/robots.txt' &&
+            pathname !== '/sitemap.xml') {
           // Rediriger vers le dashboard
           const url = req.nextUrl.clone();
           url.pathname = '/dashboard';
