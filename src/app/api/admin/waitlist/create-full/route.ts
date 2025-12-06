@@ -68,15 +68,21 @@ export async function POST(request: NextRequest) {
     // Récupérer le plan choisi (free ou premium)
     const chosenPlan = (formData.get('subscriptionPlan') as string) || 'free';
     const chosenPlanType = (formData.get('subscriptionPlanType') as string) || 'monthly';
+    
+    // ✅ CORRECTION : Récupérer les acceptations CGV/CGU
+    const termsAcceptedCGV = formData.get('termsAcceptedCGV') === 'true' || formData.get('termsAcceptedCGV') === true;
+    const termsAcceptedCGU = formData.get('termsAcceptedCGU') === 'true' || formData.get('termsAcceptedCGU') === true;
 
     const professionalData = {
       siret: formData.get('siret') as string,
       companyName: formData.get('companyName') as string,
       legalStatus: formData.get('legalStatus') as string,
-      subscriptionPlan: 'waitlist_beta' as const, // FORCER en waitlist
+      subscriptionPlan: chosenPlan === 'premium' ? 'waitlist_beta' as const : 'free' as const, // Waitlist uniquement si premium
       subscriptionPlanType: 'monthly' as const, // Pas utilisé en waitlist mais requis
       chosenPlan: chosenPlan as 'free' | 'premium', // Plan choisi pour l'activation future
       chosenPlanType: chosenPlanType as 'monthly' | 'annual', // Type d'abonnement choisi
+      termsAcceptedCGV,
+      termsAcceptedCGU,
     };
 
     const establishmentData = {
@@ -261,7 +267,8 @@ export async function POST(request: NextRequest) {
     const authUserId = authData.user.id;
 
     try {
-      // Créer le Professional avec WAITLIST_BETA et stocker le plan choisi
+      // Créer le Professional avec le plan approprié
+      const subscriptionPlan = professionalData.subscriptionPlan === 'waitlist_beta' ? 'WAITLIST_BETA' : 'FREE';
       const { data: professional, error: professionalError } = await adminClient
         .from('professionals')
         .insert({
@@ -273,10 +280,15 @@ export async function POST(request: NextRequest) {
           phone: accountData.phone,
           company_name: professionalData.companyName,
           legal_status: professionalData.legalStatus,
-          subscription_plan: 'WAITLIST_BETA', // FORCER en waitlist
+          subscription_plan: subscriptionPlan, // FREE ou WAITLIST_BETA selon le plan choisi
           waitlist_chosen_plan: professionalData.chosenPlan, // Plan choisi (free ou premium)
           waitlist_chosen_plan_type: professionalData.chosenPlan === 'premium' ? professionalData.chosenPlanType : null, // Type d'abonnement si premium
           siret_verified: false,
+          // ✅ CORRECTION : Sauvegarder les acceptations CGV/CGU
+          terms_accepted_cgv: professionalData.termsAcceptedCGV || false,
+          terms_accepted_cgu: professionalData.termsAcceptedCGU || false,
+          terms_accepted_cgv_at: professionalData.termsAcceptedCGV ? new Date().toISOString() : null,
+          terms_accepted_cgu_at: professionalData.termsAcceptedCGU ? new Date().toISOString() : null,
         })
         .select()
         .single();
@@ -369,7 +381,7 @@ export async function POST(request: NextRequest) {
 
       const addressComponents = parseAddressComponents(establishmentData.address);
 
-      // Créer l'établissement avec WAITLIST_BETA
+      // Créer l'établissement avec le plan approprié
       const { data: establishment, error: establishmentError } = await adminClient
         .from('establishments')
         .insert({
@@ -384,7 +396,7 @@ export async function POST(request: NextRequest) {
           longitude: finalCoordinates?.longitude || null,
           owner_id: professional.id,
           status: 'pending',
-          subscription: 'WAITLIST_BETA', // FORCER en waitlist
+          subscription: subscriptionPlan, // FREE ou WAITLIST_BETA selon le plan choisi
           activities: establishmentData.activities,
           services: establishmentData.services,
           ambiance: establishmentData.ambiance,
@@ -511,7 +523,7 @@ export async function POST(request: NextRequest) {
       try {
         await logSubscriptionChange(
           establishment.id,
-          'WAITLIST_BETA',
+          subscriptionPlan,
           professional.id,
           'admin_waitlist_creation'
         );
@@ -523,7 +535,7 @@ export async function POST(request: NextRequest) {
       await adminClient.from('subscription_logs').insert({
         professional_id: professional.id,
         old_status: null,
-        new_status: 'WAITLIST_BETA',
+        new_status: subscriptionPlan,
         reason: 'admin_waitlist_full_creation',
       });
 

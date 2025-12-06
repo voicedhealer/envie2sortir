@@ -153,8 +153,9 @@ export async function GET(request: NextRequest) {
           legalStatus: owner.legal_status,
           siretVerified: owner.siret_verified,
           siretVerifiedAt: owner.siret_verified_at,
-          termsAcceptedCgv: owner.terms_accepted_cgv ?? null,
-          termsAcceptedCgu: owner.terms_accepted_cgu ?? null,
+          // ✅ CORRECTION : Ne pas convertir false en null (false est une valeur valide)
+          termsAcceptedCgv: owner.terms_accepted_cgv !== null && owner.terms_accepted_cgv !== undefined ? owner.terms_accepted_cgv : null,
+          termsAcceptedCgu: owner.terms_accepted_cgu !== null && owner.terms_accepted_cgu !== undefined ? owner.terms_accepted_cgu : null,
           termsAcceptedCgvAt: owner.terms_accepted_cgv_at ?? null,
           termsAcceptedCguAt: owner.terms_accepted_cgu_at ?? null,
           createdAt: owner.created_at,

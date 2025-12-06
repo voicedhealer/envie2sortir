@@ -1345,6 +1345,10 @@ export function useEstablishmentForm({ establishment, isEditMode = false }: UseE
             formDataToSend.append(key, JSON.stringify(value));
           } else if (Array.isArray(value)) {
             formDataToSend.append(key, JSON.stringify(value));
+          } else if (key === 'termsAcceptedCGV' || key === 'termsAcceptedCGU') {
+            // ✅ CORRECTION : Convertir explicitement les booléens en string "true" ou "false"
+            formDataToSend.append(key, value === true ? 'true' : 'false');
+            console.log(`🔘 [handleSubmit] ${key}:`, value, '->', value === true ? 'true' : 'false');
           } else if (value !== undefined && value !== null) {
             formDataToSend.append(key, value.toString());
           }

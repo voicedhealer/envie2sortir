@@ -114,9 +114,9 @@ export async function POST(request: NextRequest) {
 function extractPlaceIdFromUrl(url: string): string | null {
   console.log('🔍 Extraction Place ID depuis:', url);
   
-  // Vérifier que c'est bien une URL Google Maps (plus permissif pour les URLs raccourcies)
-  const isGoogleMapsUrl = url.includes('google.com/maps') || 
-                         url.includes('maps.google.com') || 
+  // Vérifier que c'est bien une URL Google Maps (accepter tous les domaines Google)
+  const isGoogleMapsUrl = (url.includes('google.') && url.includes('/maps')) || 
+                         url.includes('maps.google.') || 
                          url.includes('goo.gl') || 
                          url.includes('maps.app.goo.gl');
   
@@ -129,14 +129,16 @@ function extractPlaceIdFromUrl(url: string): string | null {
   const patterns = [
     // Format classique avec place_id
     /[?&]place_id=([a-zA-Z0-9_-]+)/,
+    // Format avec !3m5!1s (format moderne avec Place ID 0x...:0x...) - capturer jusqu'au ! suivant
+    /!3m5!1s([0-9a-fx:]+?)(?=!|$)/i,
     // Format avec !3m1!4b1!4m6!3m5!1s (format complexe - le plus important)
-    /!3m1!4b1!4m6!3m5!1s([a-zA-Z0-9_:]+)/,
+    /!3m1!4b1!4m6!3m5!1s([a-zA-Z0-9_:]+?)(?=!|$)/,
+    // Format avec 1s suivi d'un Place ID (0x...:0x... ou autre) - capturer jusqu'au ! suivant
+    /!1s([0-9a-fx:]+?)(?=!|$)/i,
     // Format avec 1s (le plus courant pour les URLs modernes) - amélioré
     /[!\/]1s([a-zA-Z0-9_:%\/-]+)/,
     // Format avec !16s (nouveau format)
     /!16s([a-zA-Z0-9_%\/-]+)/,
-    // Format avec !1s (autre format moderne)
-    /!1s([a-zA-Z0-9_%\/-]+)/,
     // Format avec data
     /[?&]data=([^&]+)/,
     // Format avec !8m2!3d!4d!16s (format avec coordonnées)
@@ -176,13 +178,14 @@ function extractPlaceIdFromUrl(url: string): string | null {
       
       // Vérifier que c'est un Place ID valide
       // Place ID valide si :
-      // - Contient des deux-points (format standard)
+      // - Contient des deux-points (format standard, ex: 0x...:0x...)
       // - Commence par 0x (ancien format)
       // - Commence par ChIJ (format standard Google)
       // - A une longueur > 15 et contient des chiffres (format encodé)
       // - Est un nom de lieu encodé (contient %)
+      // - Contient au moins un 'x' suivi de chiffres hexadécimaux (format 0x...)
       const isValidPlaceId = placeId.includes(':') || 
-                            placeId.startsWith('0x') || 
+                            placeId.match(/0x[0-9a-f]+/i) || 
                             placeId.startsWith('ChIJ') ||
                             (placeId.length > 15 && /[0-9]/.test(placeId)) ||
                             placeId.includes('%');

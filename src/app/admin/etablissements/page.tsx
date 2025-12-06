@@ -485,9 +485,18 @@ export default function AdminEstablishmentsPage() {
                       {getStatusBadge(selectedEstablishment.status)}
                       {(() => {
                         const subscriptionInfo = getSubscriptionDisplayInfo(selectedEstablishment.subscription);
+                        // Afficher le badge selon le type d'abonnement réel
+                        let badgeText = '';
+                        if (subscriptionInfo.isWaitlistBeta) {
+                          badgeText = '🚀 Beta Premium';
+                        } else if (subscriptionInfo.label === 'Premium') {
+                          badgeText = '⭐ Premium';
+                        } else {
+                          badgeText = '📋 Basic';
+                        }
                         return (
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${subscriptionInfo.badgeColor}`}>
-                            {subscriptionInfo.isWaitlistBeta ? '🚀 Beta Premium' : subscriptionInfo.label === 'Premium' ? '⭐ Premium' : '📋 Basic'}
+                            {badgeText}
                           </span>
                         );
                       })()}
@@ -698,43 +707,53 @@ export default function AdminEstablishmentsPage() {
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">CGV (Conditions Générales de Vente)</label>
                           <div className="flex items-center space-x-2">
-                            {selectedEstablishment.owner.termsAcceptedCgv ? (
-                              <>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  ✅ Acceptées
-                                </span>
-                                {selectedEstablishment.owner.termsAcceptedCgvAt && (
-                                  <span className="text-xs text-gray-500">
-                                    le {formatDate(selectedEstablishment.owner.termsAcceptedCgvAt)}
+                            {(() => {
+                              // ✅ CORRECTION : Vérifier explicitement true (pas seulement truthy)
+                              const isAccepted = selectedEstablishment.owner.termsAcceptedCgv === true || selectedEstablishment.owner.termsAcceptedCgv === 'true';
+                              console.log('🔍 [Modal] CGV - termsAcceptedCgv:', selectedEstablishment.owner.termsAcceptedCgv, 'Type:', typeof selectedEstablishment.owner.termsAcceptedCgv, 'isAccepted:', isAccepted);
+                              return isAccepted ? (
+                                <>
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    ✅ Acceptées
                                   </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                ❌ Non acceptées
-                              </span>
-                            )}
+                                  {selectedEstablishment.owner.termsAcceptedCgvAt && (
+                                    <span className="text-xs text-gray-500">
+                                      le {formatDate(selectedEstablishment.owner.termsAcceptedCgvAt)}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  ❌ Non acceptées
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">CGU (Conditions Générales d'Utilisation)</label>
                           <div className="flex items-center space-x-2">
-                            {selectedEstablishment.owner.termsAcceptedCgu ? (
-                              <>
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                  ✅ Acceptées
-                                </span>
-                                {selectedEstablishment.owner.termsAcceptedCguAt && (
-                                  <span className="text-xs text-gray-500">
-                                    le {formatDate(selectedEstablishment.owner.termsAcceptedCguAt)}
+                            {(() => {
+                              // ✅ CORRECTION : Vérifier explicitement true (pas seulement truthy)
+                              const isAccepted = selectedEstablishment.owner.termsAcceptedCgu === true || selectedEstablishment.owner.termsAcceptedCgu === 'true';
+                              console.log('🔍 [Modal] CGU - termsAcceptedCgu:', selectedEstablishment.owner.termsAcceptedCgu, 'Type:', typeof selectedEstablishment.owner.termsAcceptedCgu, 'isAccepted:', isAccepted);
+                              return isAccepted ? (
+                                <>
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    ✅ Acceptées
                                   </span>
-                                )}
-                              </>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                ❌ Non acceptées
-                              </span>
-                            )}
+                                  {selectedEstablishment.owner.termsAcceptedCguAt && (
+                                    <span className="text-xs text-gray-500">
+                                      le {formatDate(selectedEstablishment.owner.termsAcceptedCguAt)}
+                                    </span>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  ❌ Non acceptées
+                                </span>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
