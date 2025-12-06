@@ -100,6 +100,8 @@ export default async function middleware(req: NextRequest) {
           '/dashboard',
           '/api/professional',
           '/api/dashboard',
+          '/api/csrf', // API CSRF pour les tokens
+          '/api/stripe', // API Stripe pour la gestion des abonnements
         ];
 
         // Autoriser la page de modification de leur établissement
@@ -138,6 +140,8 @@ export default async function middleware(req: NextRequest) {
           '/dashboard',
           '/api/professional',
           '/api/dashboard',
+          '/api/csrf', // API CSRF pour les tokens
+          '/api/stripe', // API Stripe pour la gestion des abonnements
           '/wait', // Permettre l'accès à la page wait pour se connecter
           '/api/wait',
         ];

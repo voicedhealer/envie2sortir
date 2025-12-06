@@ -256,7 +256,8 @@ function SubscriptionContent() {
     );
   }
 
-  const isPremium = subscription?.plan === 'PREMIUM';
+  // ✅ CORRECTION : WAITLIST_BETA est aussi considéré comme Premium
+  const isPremium = subscription?.plan === 'PREMIUM' || subscription?.plan === 'WAITLIST_BETA';
   const hasActiveSubscription = subscription?.subscription?.status === 'active' || subscription?.subscription?.status === 'trialing';
 
   return (
@@ -397,18 +398,55 @@ function SubscriptionContent() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">
-                    Plan Premium
+                    {subscription?.plan === 'WAITLIST_BETA' ? '🚀 Plan Beta Premium' : 'Plan Premium'}
                   </h2>
                   <p className="text-gray-600 mt-1">
-                    {subscription?.subscription?.planType === 'annual' 
-                      ? '305€/an (25,42€/mois)' 
-                      : '29,90€/mois'}
+                    {subscription?.plan === 'WAITLIST_BETA' ? (
+                      <span className="text-green-600 font-semibold">Gratuit pendant la période d'essai (30 jours)</span>
+                    ) : (
+                      subscription?.subscription?.planType === 'annual' 
+                        ? '305€/an (25,42€/mois)' 
+                        : '29,90€/mois'
+                    )}
                   </p>
                 </div>
-                <span className="px-4 py-2 bg-[#ff751f] text-white rounded-full font-semibold">
-                  Actif
+                <span className={`px-4 py-2 rounded-full font-semibold ${
+                  subscription?.plan === 'WAITLIST_BETA' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-[#ff751f] text-white'
+                }`}>
+                  {subscription?.plan === 'WAITLIST_BETA' ? 'Période d\'essai' : 'Actif'}
                 </span>
               </div>
+              
+              {/* Message pour WAITLIST_BETA */}
+              {subscription?.plan === 'WAITLIST_BETA' && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-300 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0">
+                      <span className="text-2xl">🎁</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-purple-900 font-bold text-base mb-1">
+                        Période d'essai gratuite activée
+                      </p>
+                      <p className="text-purple-800 text-sm mb-2">
+                        Vous profitez actuellement de toutes les fonctionnalités Premium gratuitement pendant 30 jours.
+                        Après cette période, votre abonnement passera à 0€/mois (gratuit) jusqu'au lancement officiel.
+                      </p>
+                      {subscription?.subscription?.currentPeriodEnd && (
+                        <p className="text-purple-700 text-xs">
+                          Fin de la période d'essai : {new Date(subscription.subscription.currentPeriodEnd).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {subscription?.subscription && (
                 <div className="space-y-4 mb-6">

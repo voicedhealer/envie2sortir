@@ -86,7 +86,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // ✅ CORRECTION : Gérer WAITLIST_BETA (Premium gratuit en période d'essai)
+    // Si le plan est WAITLIST_BETA et qu'il n'y a pas d'abonnement Stripe,
+    // on retourne un abonnement "trialing" fictif pour l'affichage
     if (!professional.stripe_subscription_id) {
+      // Si c'est WAITLIST_BETA, simuler un abonnement en période d'essai
+      if (professional.subscription_plan === 'WAITLIST_BETA') {
+        return NextResponse.json({
+          subscription: {
+            id: 'waitlist_beta',
+            status: 'trialing', // Statut "trialing" pour indiquer la période d'essai
+            currentPeriodStart: new Date().toISOString(),
+            // Période d'essai de 30 jours
+            currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            cancelAtPeriodEnd: false,
+            canceledAt: null,
+            planType: 'annual', // Par défaut, on affiche comme annuel (gratuit)
+            scheduledChange: null,
+          },
+          plan: 'WAITLIST_BETA',
+        });
+      }
+      
       return NextResponse.json({
         subscription: null,
         plan: professional.subscription_plan,

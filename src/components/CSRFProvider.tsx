@@ -16,11 +16,23 @@ export function CSRFProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await fetch('/api/csrf/token');
       if (response.ok) {
-        const data = await response.json();
-        setCsrfToken(data.token);
+        // ✅ CORRECTION : Vérifier que la réponse est bien du JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setCsrfToken(data.token);
+        } else {
+          // Si ce n'est pas du JSON, c'est probablement une redirection HTML
+          console.warn('⚠️ [CSRF] Réponse non-JSON reçue, probablement une redirection');
+        }
       }
-    } catch (error) {
-      console.error('Failed to refresh CSRF token:', error);
+    } catch (error: any) {
+      // ✅ CORRECTION : Ne pas logger l'erreur si c'est juste une redirection en mode wait
+      if (error.message && error.message.includes('JSON')) {
+        console.warn('⚠️ [CSRF] Impossible de parser la réponse JSON (probablement une redirection)');
+      } else {
+        console.error('Failed to refresh CSRF token:', error);
+      }
     }
   };
 
